@@ -1591,6 +1591,7 @@ if (auth) {
       window._appInited = false;
       // Desuscribir listener del documento del usuario al cerrar sesión
       if(typeof _detachCurrentUserListener === 'function') _detachCurrentUserListener();
+      if(typeof stopRealtime === 'function') stopRealtime();
       var inviteToken = _getInviteToken();
       if (inviteToken) {
         var appRoot = $('app-root');
