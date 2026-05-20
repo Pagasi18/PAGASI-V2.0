@@ -6,11 +6,32 @@ function motoEsc(v){
   return String(v==null?'':v).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});
 }
 
+function creditoAsignadoMoto(m){
+  if(!m) return null;
+  var lista = Array.isArray(S.creds) ? S.creds : [];
+  var directId = m.creditoId || m.credId || '';
+  if(directId){
+    var directo = lista.find(function(c){return c && !c.eliminado && String(c.id)===String(directId);});
+    if(directo) return directo;
+  }
+  return lista.find(function(c){
+    return c && !c.eliminado && String(c.motoId)===String(m.id) && esCreditoVigenteParaInventario(c);
+  }) || null;
+}
+
 function motoRow(m){
   const estadoBdg={disponible:'b-g',financiada:'b-p',recuperada:'b-a',inventario:'b-b'};
   const estadoOpts=['disponible','financiada','recuperada','inventario'];
   var idArg = JSON.stringify(m.id);
   var cliente = m.cliente || m.propietario || '';
+  var cred = creditoAsignadoMoto(m);
+  var credArg = cred ? JSON.stringify(cred.id) : '';
+  var avance = '';
+  if(cred && typeof getCreditoCuotasPagadas==='function' && typeof getCreditoTotalCuotas==='function'){
+    avance = getCreditoCuotasPagadas(cred)+'/'+getCreditoTotalCuotas(cred)+' cuotas';
+  }else if(cred){
+    avance = cred.estado || 'activo';
+  }
   return `<tr id="mc-${motoEsc(m.id)}">
     <td>
       <div class="tdm">${motoEsc(m.modelo||'Sin modelo')}${m.anio?` <span style="font-size:10px;color:var(--ink3);font-weight:700">${motoEsc(m.anio)}</span>`:''}</div>
@@ -25,6 +46,7 @@ function motoRow(m){
     <td><div class="tdm">${fmt(m.precio)}</div><div class="tds">Inicial ${fmt(m.ini)}</div></td>
     <td><div class="tdm" style="color:var(--p1)">${fmt(m.cuotaM)}</div><div class="tds">${fmt(m.cuotaQ)} quincenal</div></td>
     <td><div class="tdm">${fmt(m.totalPagado)}</div><div class="tds">total plan</div></td>
+    <td>${cred?`<button class="btn btn-g btn-xs" onclick="event.stopPropagation();openAmort(${credArg})">${motoEsc(cred.id||'Credito')}</button><div class="tds">${motoEsc(avance)}</div>`:'<span style="color:var(--ink3);font-size:11px">-</span>'}</td>
     <td>${cliente?`<span class="bdg b-p">${motoEsc(cliente)}</span>`:'<span style="color:var(--ink3);font-size:11px">-</span>'}</td>
     <td onclick="event.stopPropagation()">
       <div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap">
@@ -97,7 +119,7 @@ function renderMotoGrid(){
         ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','precio','Precio')}
         ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','cuotaM','Cuotas')}
         ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','totalPagado','Total')}
-        <th>Cliente</th><th></th>
+        <th>Credito</th><th>Cliente</th><th></th>
       </tr></thead>
       <tbody>${sorted.map(motoRow).join('')}</tbody>
     </table></div>
@@ -130,11 +152,14 @@ function renderMotosEliminadasBloque(){
 
 function filterMotos(q){
   var _M = _concFiltrar(S.motos||[]);
-  const f = q?_M.filter(m=>`${m.modelo} ${m.vin} ${m.cliente||''}`.toLowerCase().includes(q.toLowerCase())):_M.filter(m=>!m.eliminado&&(S.mTab==='todas'?true:m.estado===S.mTab));
+  const f = q?_M.filter(function(m){
+    var cr = creditoAsignadoMoto(m);
+    return `${m.modelo} ${m.vin} ${m.cliente||''} ${m.creditoId||''} ${cr&&cr.id||''} ${cr&&(cr.cli||cr.cliente)||''}`.toLowerCase().includes(q.toLowerCase());
+  }):_M.filter(m=>!m.eliminado&&(S.mTab==='todas'?true:m.estado===S.mTab));
   const g=$('mgr');
   var elimHTML=_M.filter(m=>m.eliminado).length
   ?'<div style="margin-top:14px;padding:10px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)">'+'<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px">Motos eliminadas</div>'+_M.filter(m=>m.eliminado).map(function(m){return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rim)">'+'<div style="flex:1"><span style="font-size:12px;font-weight:700;opacity:0.6;text-decoration:line-through">'+motoEsc(m.modelo)+'</span>'+'<span style="font-size:10px;color:var(--ink3);margin-left:6px">'+motoEsc(m.vin)+'</span></div>'+'<span style="font-size:10px;color:var(--red)">Del '+motoEsc(m.eliminadoPor||'Admin')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoRazon?' - '+motoEsc(m.eliminadoRazon):'')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoEn?' - '+motoEsc(m.eliminadoEn.split('T')[0]):'')+'</span>'+'</div>';}).join('')+'</div>':'';
-  if(g) g.innerHTML=(f.length?`<div class="card" style="margin-bottom:14px"><div class="ch"><div><div class="ct">Listado de motocicletas</div><div class="cs">${f.length} resultado${f.length!==1?'s':''}</div></div></div><div class="tw tw-compact"><table><thead><tr><th>Motocicleta</th><th>Marca</th><th>Estado</th><th>Precio</th><th>Cuotas</th><th>Total</th><th>Cliente</th><th></th></tr></thead><tbody>${f.map(motoRow).join('')}</tbody></table></div></div>`:`<div class="empty"><span class="e-ic">MOT</span><div class="e-tt">Sin resultados para "${motoEsc(q)}"</div></div>`)+elimHTML;
+  if(g) g.innerHTML=(f.length?`<div class="card" style="margin-bottom:14px"><div class="ch"><div><div class="ct">Listado de motocicletas</div><div class="cs">${f.length} resultado${f.length!==1?'s':''}</div></div></div><div class="tw tw-compact"><table><thead><tr><th>Motocicleta</th><th>Marca</th><th>Estado</th><th>Precio</th><th>Cuotas</th><th>Total</th><th>Credito</th><th>Cliente</th><th></th></tr></thead><tbody>${f.map(motoRow).join('')}</tbody></table></div></div>`:`<div class="empty"><span class="e-ic">MOT</span><div class="e-tt">Sin resultados para "${motoEsc(q)}"</div></div>`)+elimHTML;
 }
 
 // PAGO DE COMPRA DE MOTO — helpers compartidos
