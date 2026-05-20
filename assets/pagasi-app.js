@@ -155,6 +155,7 @@ function clean(o){
 var _rtUnsubs = [];
 var _rtTimer = null;
 var _rtStarted = false;
+var _rtRenderPending = false;
 
 function _docsArray(snap){
   return snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
@@ -195,12 +196,23 @@ function scheduleRealtimeRender(){
     _rtTimer = null;
     if(!S || !S.currentUser) return;
     try{ if(typeof updateBadge==='function') updateBadge(); }catch(e){}
-    if(typeof _isModalOpen==='function' && _isModalOpen()) return;
+    if(typeof _isModalOpen==='function' && _isModalOpen()){
+      _rtRenderPending = true;
+      return;
+    }
     if(!S.page || typeof nav!=='function') return;
+    _rtRenderPending = false;
     var focus = _captureFocus();
     nav(S.page);
     _restoreFocus(focus);
   }, 350);
+}
+
+function flushRealtimeRender(){
+  if(!_rtRenderPending || !S || !S.currentUser || !S.page || typeof nav!=='function') return;
+  _rtRenderPending = false;
+  try{ if(typeof updateBadge==='function') updateBadge(); }catch(e){}
+  nav(S.page);
 }
 
 function _aplicarConcesionarioActivoRealtime(){
@@ -1340,6 +1352,7 @@ function closeM(){
   $('mft').style.display='';
   if($('mbd')) $('mbd').style.padding='';
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar</button>`;
+  if(typeof flushRealtimeRender === 'function') flushRealtimeRender();
 }
 function saveM(){if(S.saveFn)S.saveFn();}
 function topAct(){
