@@ -21,6 +21,12 @@ function creditoAsignadoMoto(m){
 
 function motoRow(m){
   const estadoBdg={disponible:'b-g',financiada:'b-p',recuperada:'b-a',inventario:'b-b'};
+  const estadoStyle={
+    disponible:'background:rgba(16,185,129,.12);color:#059669;border:1px solid rgba(16,185,129,.28)',
+    financiada:'background:rgba(37,99,235,.12);color:#2563eb;border:1px solid rgba(37,99,235,.28)',
+    recuperada:'background:rgba(244,63,94,.12);color:#e11d48;border:1px solid rgba(244,63,94,.28)',
+    inventario:'background:rgba(100,116,139,.14);color:#475569;border:1px solid rgba(100,116,139,.28)'
+  };
   const estadoOpts=['disponible','financiada','recuperada','inventario'];
   var idArg = JSON.stringify(m.id);
   var cliente = m.cliente || m.propietario || '';
@@ -39,7 +45,7 @@ function motoRow(m){
     </td>
     <td class="tds">${motoEsc(m.marca||'-')}</td>
     <td>
-      <select class="bdg ${estadoBdg[m.estado]||'b-g'}" onchange="changeMotoStatus(${idArg},this.value)" title="Cambiar estado" style="cursor:pointer;border:none;font-weight:800;font-size:10px">
+      <select class="bdg ${estadoBdg[m.estado]||'b-g'}" onchange="changeMotoStatus(${idArg},this.value)" title="Cambiar estado" style="cursor:pointer;font-weight:800;font-size:10px;${estadoStyle[m.estado]||estadoStyle.disponible}">
         ${estadoOpts.map(function(o){return `<option value="${o}" ${m.estado===o?'selected':''}>${o}</option>`;}).join('')}
       </select>
     </td>
