@@ -1,2 +1,2 @@
-// Pagasi module: centro
-PG.centro = function(){ return wtHTML(); };
+// Pagasi module: aprobaciones
+PG.aprobaciones = function(){ return _aprRender(); };
