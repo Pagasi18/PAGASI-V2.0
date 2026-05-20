@@ -1,1186 +1,285 @@
-// Logica de alertas, recibos, facturas y libro SENIAT. Extraido mecanicamente de assets/pagasi-app.js.
-function mostrarAlertaMora(){
-  var hoy = new Date().toDateString();
-  if(sessionStorage.getItem('mora_alert_dismissed') === hoy) return;
-
-  var enMora = S.creds.filter(function(c){ return c.mora > 0 && !c.eliminado && c.estado !== 'completado'; });
-  if(!enMora.length) return;
-
-  var critico = enMora.filter(function(c){ return c.mora > 30; });
-  var alto = enMora.filter(function(c){ return c.mora > 15 && c.mora <= 30; });
-  var moderado = enMora.filter(function(c){ return c.mora > 0 && c.mora <= 15; });
-
-  function grupoHTML(lista, color, icon, label){
-    if(!lista.length) return '';
-    return '<div style="margin-bottom:14px">'
-      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:'+color+';margin-bottom:8px">'+icon+' '+label+' ('+lista.length+')</div>'
-      +'<div style="display:flex;flex-direction:column;gap:6px">'
-      +lista.map(function(c){
-        var cl = S.clientes.find(function(x){ return x.nombre===c.cli; })||{};
-        return '<div style="display:flex;align-items:center;gap:10px;background:var(--surf2);border-radius:10px;padding:9px 12px;border-left:3px solid '+color+'">'
-          +'<div style="flex:1;min-width:0">'
-            +'<div style="font-size:12.5px;font-weight:700;color:var(--ink)">'+c.cli+'</div>'
-            +'<div style="font-size:10.5px;color:var(--ink3);margin-top:1px">'+c.id+' Â· '+c.modelo+(cl.tel?' Â· '+cl.tel:'')+'</div>'
-          +'</div>'
-          +'<div style="text-align:right;flex-shrink:0;margin-right:10px">'
-            +'<div style="font-family:var(--fd);font-weight:900;font-size:16px;color:'+color+'">'+c.mora+'d</div>'
-            +'<div style="font-size:10px;color:var(--ink3)">mora</div>'
-          +'</div>'
-          +'<button class="btn btn-p btn-sm" onclick="closeM();openPagoRapido(\''+c.id+'\')">Cobrar</button>'
-          +(cl.tel?'<button class="btn btn-g btn-sm" onclick="window.open(\'https://wa.me/'+cl.tel.replace(/\D/g,'')+'\',\'_blank\')" title="WhatsApp">WA</button>':'')
-        +'</div>';
-      }).join('')
-      +'</div></div>';
+// Calculos financieros y helpers de planes. Extraido mecanicamente de assets/pagasi-app.js.
+function calcMoto(precio, planOverride=null){
+  const plan = planOverride || PLAN;
+  const precioNum = parseFloat(precio)||0;
+  const inicialPct = parseFloat(plan&&plan.inicial)||0;
+  const factor = parseFloat(plan&&plan.factor)||0;
+  const plazo = parseInt(plan&&plan.plazo,10)||0;
+  const ini = precioNum * inicialPct;
+  const fin = precioNum - ini;
+  const total = fin * factor;
+  const cuotaM = plazo>0 ? (total / plazo) : 0;
+  const cuotaQ = cuotaM / 2;
+  const totalPagado = ini + total;
+  return {ini,fin,total,cuotaM,cuotaQ,totalPagado};
+}
+function pmtRate(periodRate, nper, pv){
+  periodRate=parseFloat(periodRate)||0;
+  nper=parseInt(nper,10)||0;
+  pv=parseFloat(pv)||0;
+  if(nper<=0||pv<=0) return 0;
+  if(Math.abs(periodRate)<1e-9) return pv/nper;
+  return (pv*periodRate)/(1-Math.pow(1+periodRate,-nper));
+}
+function solveQuincenalRate(montoFinanciado, cuotaQ, totalCuotas){
+  var pv=parseFloat(montoFinanciado)||0;
+  var pmt=parseFloat(cuotaQ)||0;
+  var n=parseInt(totalCuotas,10)||0;
+  if(pv<=0||pmt<=0||n<=0) return 0;
+  var ratio=(pmt*n)/pv;
+  if(ratio<=1.000001) return 0;
+  var low=0, high=1;
+  for(var i=0;i<80;i++){ var test=pmtRate(high,n,pv); if(test>=pmt) break; high*=2; }
+  for(var j=0;j<80;j++){ var mid=(low+high)/2; var val=pmtRate(mid,n,pv); if(Math.abs(val-pmt)<1e-7) return mid; if(val>pmt) high=mid; else low=mid; }
+  return (low+high)/2;
+}
+function calcCustomPlan(precioBaseReal, inicialReal, cuotaQ, plazoMeses){
+  var precio=parseFloat(precioBaseReal)||0;
+  var ini=parseFloat(inicialReal)||0;
+  var cuota=parseFloat(cuotaQ)||0;
+  var plazo=parseInt(plazoMeses,10)||0;
+  var totalCuotas=Math.max(0,plazo*2);
+  var fin=Math.max(0, precio-ini);
+  var total=cuota*totalCuotas;
+  var totalPagado=ini+total;
+  var factor=fin>0 ? (total/fin) : 0;
+  var inicialPct=precio>0 ? (ini/precio) : 0;
+  var tasaQ=solveQuincenalRate(fin, cuota, totalCuotas);
+  var tasaMensual=tasaQ*2*100;
+  var apy=(Math.pow(1+tasaQ,24)-1)*100;
+  return {precioBaseReal:precio, ini:ini, fin:fin, total:total, cuotaQ:cuota, cuotaM:cuota*2, totalPagado:totalPagado, plazo:plazo, totalCuotas:totalCuotas, factor:factor, inicialPct:inicialPct, tasaQuincenal:tasaQ*100, tasaMensual:tasaMensual, apy:apy};
+}
+// â”€â”€ CALCULADORA APY: dada precio, %inicial, APY objetivo y plazo, calcula la cuota quincenal â”€â”€
+function calcApyPlan(precioBaseReal, inicialPct, apyObjetivo, plazoMeses){
+  var precio=parseFloat(precioBaseReal)||0;
+  var iniPct=parseFloat(inicialPct)||0;
+  var apy=parseFloat(apyObjetivo)||0;
+  var plazo=parseInt(plazoMeses,10)||0;
+  var totalCuotas=Math.max(0, plazo*2);
+  var ini=precio*iniPct;
+  var fin=Math.max(0, precio-ini);
+  // tasa quincenal a partir del APY: (1+APY)^(1/24) - 1
+  var tasaQ = Math.pow(1 + apy/100, 1/24) - 1;
+  var cuotaQ = pmtRate(tasaQ, totalCuotas, fin);
+  var total = cuotaQ*totalCuotas;
+  var totalPagado = ini+total;
+  var factor = fin>0 ? (total/fin) : 0;
+  var tasaMensual = tasaQ*2*100;
+  return {precioBaseReal:precio, ini:ini, fin:fin, total:total, cuotaQ:cuotaQ, cuotaM:cuotaQ*2, totalPagado:totalPagado, plazo:plazo, totalCuotas:totalCuotas, factor:factor, inicialPct:iniPct, tasaQuincenal:tasaQ*100, tasaMensual:tasaMensual, apy:apy};
+}
+function getWzPlanConfig(){
+  var modo=((document.getElementById('wz_plan_mode')||{}).value)||WZ.planMode||'global';
+  var precioBase=parseFloat(((document.getElementById('wz_precio_base_real')||{}).value));
+  if(!(precioBase>0)) precioBase=parseFloat(WZ.precioBaseReal||WZ.precio)||0;
+  if(modo!=='custom'){
+    var baseCalc=calcMoto(precioBase||WZ.precio||0);
+    return {mode:'global', precioBaseReal:precioBase||parseFloat(WZ.precio)||0, ini:baseCalc.ini, fin:baseCalc.fin, total:baseCalc.total, cuotaQ:baseCalc.cuotaQ, cuotaM:baseCalc.cuotaM, totalPagado:baseCalc.totalPagado, plazo:PLAN.plazo, totalCuotas:PLAN.plazo*2, factor:PLAN.factor, inicialPct:PLAN.inicial, tasaMensual:PLAN.tasaMensual, apy:PLAN.apy, sourcePlan:{plazo:PLAN.plazo, factor:PLAN.factor, inicial:PLAN.inicial, tasaMensual:PLAN.tasaMensual, apy:PLAN.apy}};
   }
-
-  $('mic').textContent = '';
-  $('mtt').textContent = 'Alertas de Mora â€” '+enMora.length+' cliente'+(enMora.length!==1?'s':'');
-  $('msb').textContent = 'RevisiÃ³n al ' + new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
-  $('modal-box').className = 'modal modal-lg';
-  $('mbd').innerHTML =
-    '<div style="max-height:65vh;overflow-y:auto;padding:4px 2px">'
-    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">'
-      +'<div style="background:rgba(231,76,60,0.08);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(231,76,60,0.2)">'
-        +'<div style="font-size:22px;font-weight:900;color:var(--red)">'+critico.length+'</div>'
-        +'<div style="font-size:10px;color:var(--ink3);margin-top:2px"> CrÃ­tico +30d</div>'
-      +'</div>'
-      +'<div style="background:rgba(245,166,35,0.08);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(245,166,35,0.2)">'
-        +'<div style="font-size:22px;font-weight:900;color:var(--amber)">'+alto.length+'</div>'
-        +'<div style="font-size:10px;color:var(--ink3);margin-top:2px"> Alto 16â€“30d</div>'
-      +'</div>'
-      +'<div style="background:rgba(245,166,35,0.05);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(245,166,35,0.15)">'
-        +'<div style="font-size:22px;font-weight:900;color:var(--amber)">'+moderado.length+'</div>'
-        +'<div style="font-size:10px;color:var(--ink3);margin-top:2px"> Moderado 1â€“15d</div>'
-      +'</div>'
-    +'</div>'
-    +grupoHTML(critico, 'var(--red)', '', 'CRÃTICO â€” MÃ¡s de 30 dÃ­as')
-    +grupoHTML(alto, 'var(--amber)', '', 'ALTO â€” 16 a 30 dÃ­as')
-    +grupoHTML(moderado, '#c9a227', '', 'MODERADO â€” 1 a 15 dÃ­as')
-    +'</div>';
-  $('mft').innerHTML =
-    '<button class="btn btn-g" onclick="sessionStorage.setItem(\'mora_alert_dismissed\',\''+hoy+'\');closeM()">Ignorar por hoy</button>'
-    +'<button class="btn btn-p" onclick="closeM();nav(\'cobranza\')">Ver gestiÃ³n de cobranza</button>';
-  $('ov').style.display = 'flex';
-}
-
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// FEATURE 2: RECIBO / COMPROBANTE DE PAGO
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-function ofrecerRecibo(pago, cred){
-  $('mic').textContent = 'âœ“';
-  $('mtt').textContent = 'Pago Registrado';
-  $('msb').textContent = 'El pago fue guardado exitosamente';
-  $('modal-box').className = 'modal';
-  $('mbd').innerHTML =
-    '<div style="text-align:center;padding:10px 0 16px">'
-    +'<div style="width:56px;height:56px;border-radius:50%;background:var(--greens);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">'
-    +'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>'
-    +'</div>'
-    +'<div style="font-family:var(--fd);font-weight:900;font-size:26px;color:var(--green)">'+fmt(pago.monto)+'</div>'
-    +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">'+cred.cli+' Â· '+pago.id+'</div>'
-    +'<div style="font-size:11px;color:var(--ink3);margin-top:2px">'+pago.fecha+(pago.referencia?' Â· Ref: #'+pago.referencia:'')+'</div>'
-    +'<div style="display:flex;gap:8px;justify-content:center;margin-top:18px">'
-    +'<button class="btn btn-g btn-sm" onclick="closeM()">Cerrar</button>'
-    +'<button class="btn btn-g btn-sm" onclick="closeM();abrirWhatsAppRecibo('+JSON.stringify(pago).replace(/"/g,"&quot;")+')" style="background:#25D366;color:#fff;border:none"> WhatsApp</button>'
-    +'<button class="btn btn-p btn-sm" onclick="imprimirRecibo('+JSON.stringify(pago).replace(/"/g,"&quot;")+','+JSON.stringify(cred).replace(/"/g,"&quot;")+')"> Recibo PDF</button>'
-    +'</div>'
-    +'</div>';
-  $('mft').innerHTML = '';
-  $('ov').style.display = 'flex';
-}
-
-function imprimirRecibo(pago, cred){
-  var empresa = ($('cfg_empresa')&&$('cfg_empresa').value) || 'Pagasi';
-  var fecha = new Date(pago.fecha+'T12:00:00').toLocaleDateString('es-VE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
-    +'<title>Recibo '+pago.id+'</title>'
-    +'<style>'
-    +'*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}'
-    +'body{background:#fff;color:#111;padding:40px}'
-    +'.recibo{max-width:420px;margin:auto;border:1px solid #ddd;border-radius:12px;overflow:hidden}'
-    +'.header{background:#2563EB;color:#fff;padding:24px;text-align:center}'
-    +'.header h1{font-size:22px;font-weight:900;letter-spacing:-0.5px}'
-    +'.header p{font-size:12px;opacity:0.85;margin-top:4px}'
-    +'.badge{background:rgba(255,255,255,0.2);border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;display:inline-block;margin-top:8px}'
-    +'.body{padding:24px}'
-    +'.monto{text-align:center;background:#f0fdf4;border:2px solid #22c55e;border-radius:12px;padding:20px;margin-bottom:20px}'
-    +'.monto .label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#666}'
-    +'.monto .valor{font-size:34px;font-weight:900;color:#16a34a;margin-top:4px}'
-    +'.row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:12px}'
-    +'.row .k{color:#888;font-weight:600}'
-    +'.row .v{font-weight:700;text-align:right;max-width:55%}'
-    +'.footer{background:#f9f9f9;padding:14px;text-align:center;font-size:10px;color:#888;border-top:1px solid #eee}'
-    +'@media print{body{padding:0}.recibo{border:none;border-radius:0}}'
-    +'</style></head><body>'
-    +'<div class="recibo">'
-    +'<div class="header">'
-    +'<h1>'+empresa+'</h1>'
-    +'<p>Comprobante de Pago</p>'
-    +'<div class="badge">'+pago.id+'</div>'
-    +'</div>'
-    +'<div class="body">'
-    +'<div class="monto"><div class="label">Monto recibido</div><div class="valor">'+fmt(pago.monto)+'</div></div>'
-    +'<div class="row"><span class="k">Cliente</span><span class="v">'+pago.cli+'</span></div>'
-    +'<div class="row"><span class="k">CrÃ©dito</span><span class="v">'+pago.cred+'</span></div>'
-    +'<div class="row"><span class="k">VehÃ­culo</span><span class="v">'+(cred.modelo||'â€”')+'</span></div>'
-    +'<div class="row"><span class="k">Fecha</span><span class="v">'+fecha+'</span></div>'
-    +'<div class="row"><span class="k">MÃ©todo de pago</span><span class="v">'+(pago.metodo||'â€”')+'</span></div>'
-    +(pago.referencia?'<div class="row"><span class="k">Referencia</span><span class="v">#'+pago.referencia+'</span></div>':'')
-    +'<div class="row"><span class="k">Cobrador</span><span class="v">'+(pago.cobrador||pago.realizadoPor||'â€”')+'</span></div>'
-    +'<div class="row" style="border:none"><span class="k">Cuotas pagadas</span><span class="v">'+(cred.pagado||'â€”')+' / '+(cred.totalCuotas||cred.plazo*2||'â€”')+'</span></div>'
-    +'</div>'
-    +'<div class="footer">'+empresa+' Â· Documento generado el '+new Date().toLocaleDateString('es-VE')+' Â· Conserve este comprobante</div>'
-    +'</div>'
-    +'<script>window.onload=function(){window.print();}<\/script>'
-    +'</body></html>';
-  var w = window.open('','_blank','width=520,height=700');
-  if(w){ w.document.write(html); w.document.close(); }
-}
-
-function abrirWhatsAppRecibo(pago){
-  var empresa = ($('cfg_empresa')&&$('cfg_empresa').value) || 'Pagasi';
-  var cl = S.clientes.find(function(c){ return c.nombre===pago.cli; })||{};
-  var tel = (cl.tel||'').replace(/\D/g,'');
-  var texto = ' *Comprobante de Pago â€” '+empresa+'*\n\n'
-    +' *Recibo:* '+pago.id+'\n'
-    +' *Cliente:* '+pago.cli+'\n'
-    +' *Monto:* '+fmt(pago.monto)+'\n'
-    +' *Fecha:* '+pago.fecha+'\n'
-    +' *MÃ©todo:* '+(pago.metodo||'â€”')+'\n'
-    +(pago.referencia?' *Referencia:* #'+pago.referencia+'\n':'')
-    +'\n_Gracias por su pago puntual_';
-  var url = 'https://wa.me/'+(tel||'')+( tel?'':'')+'?text='+encodeURIComponent(texto);
-  window.open(url,'_blank');
-}
-
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// FEATURE 3: DASHBOARD DE COBRANZA POR COBRADOR
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-function renderDashboardCobradores(){
-  var hoy = new Date().toISOString().split('T')[0];
-  var inicioSemana = (function(){
-    var d = new Date(); d.setDate(d.getDate()-d.getDay()); return d.toISOString().split('T')[0];
-  })();
-  var inicioMes = hoy.slice(0,7)+'-01';
-
-  var pagosConf = S.pagos.filter(function(p){ return !p.eliminado && p.estado==='confirmado'; });
-
-  // Agrupar por cobrador
-  var porCobrador = {};
-  pagosConf.forEach(function(p){
-    var cob = p.cobrador || p.realizadoPor || 'Sin asignar';
-    if(!porCobrador[cob]) porCobrador[cob]={nombre:cob,hoy:0,semana:0,mes:0,total:0,count:0};
-    var g = porCobrador[cob];
-    g.total += p.monto||0; g.count++;
-    if(p.fecha >= inicioMes) g.mes += p.monto||0;
-    if(p.fecha >= inicioSemana) g.semana += p.monto||0;
-    if(p.fecha === hoy) g.hoy += p.monto||0;
-  });
-
-  var lista = Object.values(porCobrador).sort(function(a,b){ return b.mes-a.mes; });
-  if(!lista.length) return '';
-
-  var rows = lista.map(function(c, i){
-    var medallaColor = i===0?'#F59E0B': i===1?'#94A3B8': i===2?'#CD7F32':'var(--surf2)';
-    var medallaText = i===0?'': i===1?'': i===2?'': '#'+(i+1);
-    return '<tr>'
-      +'<td style="text-align:center;font-size:16px">'+medallaText+'</td>'
-      +'<td>'
-        +'<div style="font-weight:700;font-size:13px;color:var(--ink)">'+c.nombre+'</div>'
-        +'<div style="font-size:10.5px;color:var(--ink3)">'+c.count+' cobro(s) en total</div>'
-      +'</td>'
-      +'<td style="text-align:right;font-family:var(--fd);font-weight:800;color:var(--green)">'+(c.hoy>0?'+'+fmt(c.hoy):'â€”')+'</td>'
-      +'<td style="text-align:right;font-family:var(--fd);font-weight:800;color:var(--p1)">'+(c.semana>0?fmt(c.semana):'â€”')+'</td>'
-      +'<td style="text-align:right;font-family:var(--fd);font-weight:800">'+(c.mes>0?fmt(c.mes):'â€”')+'</td>'
-      +'<td style="text-align:right;font-family:var(--fd);font-weight:700;color:var(--ink3)">'+fmt(c.total)+'</td>'
-      +'</tr>';
-  }).join('');
-
-  var totalHoy = lista.reduce(function(a,c){return a+c.hoy;},0);
-  var totalSemana = lista.reduce(function(a,c){return a+c.semana;},0);
-  var totalMes = lista.reduce(function(a,c){return a+c.mes;},0);
-
-  return '<div class="card" style="margin-top:12px">'
-    +'<div class="ch">'
-      +'<div><div class="ct">Rendimiento de Cobradores</div>'
-      +'<div class="cs">Hoy Â· Esta semana Â· Este mes</div></div>'
-      +'<div style="display:flex;gap:14px">'
-        +'<div style="text-align:center"><div style="font-size:10px;color:var(--ink3)">Hoy</div><div style="font-weight:800;color:var(--green);font-family:var(--fd)">'+fmt(totalHoy)+'</div></div>'
-        +'<div style="text-align:center"><div style="font-size:10px;color:var(--ink3)">Semana</div><div style="font-weight:800;color:var(--p1);font-family:var(--fd)">'+fmt(totalSemana)+'</div></div>'
-        +'<div style="text-align:center"><div style="font-size:10px;color:var(--ink3)">Mes</div><div style="font-weight:800;font-family:var(--fd)">'+fmt(totalMes)+'</div></div>'
-      +'</div>'
-    +'</div>'
-    +'<div style="overflow-x:auto"><table class="tbl" style="margin-top:12px">'
-      +'<thead><tr>'
-        +'<th style="width:40px;text-align:center">#</th>'
-        +'<th>Cobrador</th>'
-        +'<th style="text-align:right">Hoy</th>'
-        +'<th style="text-align:right">Esta semana</th>'
-        +'<th style="text-align:right">Este mes</th>'
-        +'<th style="text-align:right">Total histÃ³rico</th>'
-      +'</tr></thead>'
-      +'<tbody>'+rows+'</tbody>'
-    +'</table></div>'
-  +'</div>';
-}
-
-// â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
-// â•‘  FACTURACIÃ“N SENIAT â€” GeneraciÃ³n de facturas digitales    â•‘
-// â•‘  Sistema correlativo legal: nÃºmeros inmutables,           â•‘
-// â•‘  facturas anulables (no eliminables) segÃºn SENIAT.        â•‘
-// â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-// Devuelve siguiente nÃºmero de factura (correlativo, 8 dÃ­gitos)
-function _facSiguienteNumeroFactura(){
-  var maxN = 0;
-  (S.facturas||[]).forEach(function(f){
-    var n = parseInt(f.numero||'0', 10);
-    if(!isNaN(n) && n > maxN) maxN = n;
-  });
-  return String(maxN + 1).padStart(8, '0');
-}
-
-// Devuelve siguiente nÃºmero de control SENIAT (correlativo, 8 dÃ­gitos con prefijo 00-)
-function _facSiguienteNumeroControl(){
-  var maxN = 0;
-  (S.facturas||[]).forEach(function(f){
-    var nc = (f.numeroControl||'').replace(/^00-/, '');
-    var n = parseInt(nc||'0', 10);
-    if(!isNaN(n) && n > maxN) maxN = n;
-  });
-  return '00-' + String(maxN + 1).padStart(8, '0');
-}
-
-// Busca la factura asociada a un pago (si existe y no estÃ¡ anulada)
-function _facGetByPagoId(pagoId){
-  return (S.facturas||[]).find(function(f){ return f.pagoId === pagoId; });
-}
-
-// Helper: convierte nÃºmero a letras (para factura SENIAT)
-function _numeroALetras(num){
-  var n = parseFloat(num);
-  if(isNaN(n)) return '';
-  var entero = Math.floor(n);
-  var decimal = Math.round((n - entero) * 100);
-  var unidades = ['','UNO','DOS','TRES','CUATRO','CINCO','SEIS','SIETE','OCHO','NUEVE','DIEZ','ONCE','DOCE','TRECE','CATORCE','QUINCE','DIECISEIS','DIECISIETE','DIECIOCHO','DIECINUEVE','VEINTE'];
-  var decenas = ['','','VEINTI','TREINTA','CUARENTA','CINCUENTA','SESENTA','SETENTA','OCHENTA','NOVENTA'];
-  var centenas = ['','CIENTO','DOSCIENTOS','TRESCIENTOS','CUATROCIENTOS','QUINIENTOS','SEISCIENTOS','SETECIENTOS','OCHOCIENTOS','NOVECIENTOS'];
-  function _grupo(num){
-    if(num === 0) return '';
-    if(num <= 20) return unidades[num];
-    if(num < 100){
-      var d = Math.floor(num/10), u = num%10;
-      if(d === 2) return u === 0 ? 'VEINTE' : 'VEINTI'+unidades[u];
-      return decenas[d] + (u ? ' Y '+unidades[u] : '');
-    }
-    if(num === 100) return 'CIEN';
-    if(num < 1000){
-      var c = Math.floor(num/100), r = num%100;
-      return centenas[c] + (r ? ' '+_grupo(r) : '');
-    }
-    return num.toString();
-  }
-  function _miles(num){
-    if(num === 0) return 'CERO';
-    if(num < 1000) return _grupo(num);
-    if(num < 1000000){
-      var m = Math.floor(num/1000), r = num%1000;
-      var sm = m === 1 ? 'MIL' : _grupo(m)+' MIL';
-      return sm + (r ? ' '+_grupo(r) : '');
-    }
-    if(num < 1000000000){
-      var mm = Math.floor(num/1000000), rm = num%1000000;
-      var smm = mm === 1 ? 'UN MILLON' : _grupo(mm)+' MILLONES';
-      return smm + (rm ? ' '+_miles(rm) : '');
-    }
-    return num.toString();
-  }
-  return _miles(entero) + ' CON ' + String(decimal).padStart(2,'0') + '/100 DOLARES';
-}
-
-// Modal: ver detalle de un pago (con opciÃ³n de generar factura)
-function abrirDetallePago(pagoId){
-  var p = (S.pagos||[]).find(function(x){ return x.id === pagoId; });
-  if(!p){ toast('Pago no encontrado','error'); return; }
-  var cred = (S.creds||[]).find(function(x){ return x.id === p.cred; });
-  var fac = _facGetByPagoId(p.id);
-  $('mic').textContent = 'PAG';
-  $('mtt').textContent = 'Detalle del Pago';
-  $('msb').textContent = p.id;
-  $('modal-box').className = 'modal';
-  var estadoLabel = p.estado || 'confirmado';
-  var estadoColor = estadoLabel==='confirmado' ? 'var(--green)' : (estadoLabel==='pendiente' ? 'var(--amber)' : 'var(--red)');
-  var facBlock = '';
-  if(fac){
-    var facColor = fac.anulada ? 'var(--red)' : 'var(--green)';
-    var facLabel = fac.anulada ? 'ANULADA' : 'EMITIDA';
-    facBlock = '<div style="margin-top:14px;padding:12px;background:rgba(0,184,118,0.08);border:1px solid rgba(0,184,118,0.25);border-radius:9px">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
-      + '<div style="font-size:11px;color:var(--ink3);font-weight:700;letter-spacing:.5px">FACTURA ASOCIADA</div>'
-      + '<span class="bdg" style="background:'+facColor+';color:#fff;font-size:9px;padding:2px 7px;border-radius:4px">'+facLabel+'</span>'
-      + '</div>'
-      + '<div style="font-family:var(--fd);font-weight:800;font-size:15px">NÂ° '+fac.numero+'</div>'
-      + '<div style="font-size:11px;color:var(--ink3)">Control SENIAT: '+fac.numeroControl+'</div>'
-      + '<div style="font-size:11px;color:var(--ink3);margin-top:3px">Emitida: '+fmtFechaHora(fac.fechaEmision)+'</div>'
-      + (fac.anulada ? '<div style="font-size:11px;color:var(--red);margin-top:5px">Anulada: '+fmtFechaHora(fac.fechaAnulacion)+'<br>RazÃ³n: '+(fac.razonAnulacion||'â€”')+'</div>' : '')
-      + '</div>';
-  }
-  $('mbd').innerHTML =
-    '<div class="fgr c1" style="gap:10px">'
-    + '<div class="fg"><label>Cliente</label><div style="font-weight:700;font-size:14px;padding:6px 0">'+(p.cli||'â€”')+'</div></div>'
-    + '<div class="fg"><label>CrÃ©dito</label><div style="font-family:var(--fd);font-size:13px;padding:6px 0">'+(p.cred||'â€”')+(cred?' â€” '+cred.modelo:'')+'</div></div>'
-    + '</div>'
-    + '<div class="fgr" style="margin-top:10px;gap:10px">'
-    + '<div class="fg"><label>Fecha</label><div style="font-family:var(--fd);font-size:13px;padding:6px 0">'+(p.fecha||'â€”')+'</div></div>'
-    + '<div class="fg"><label>Monto</label><div style="font-family:var(--fd);font-weight:800;font-size:18px;color:var(--green);padding:6px 0">'+fmt(p.monto||0)+'</div></div>'
-    + '<div class="fg"><label>Recibido en</label><div style="font-size:13px;padding:6px 0">'+(p.metodo||'â€”')+'</div></div>'
-    + '<div class="fg"><label>Cobrador</label><div style="font-size:13px;padding:6px 0">'+(p.cobrador||'â€”')+'</div></div>'
-    + '<div class="fg"><label>Estado</label><div style="padding:6px 0"><span class="bdg" style="background:'+estadoColor+';color:#fff;font-size:10px;padding:3px 9px;border-radius:5px;text-transform:uppercase;font-weight:700">'+estadoLabel+'</span></div></div>'
-    + (p.referencia ? '<div class="fg"><label>Referencia</label><div style="font-family:var(--fd);font-size:12px;padding:6px 0">'+p.referencia+'</div></div>' : '')
-    + '</div>'
-    + facBlock;
-  // Footer: depende si tiene factura o no
-  var ftHtml = '<button class="btn btn-g" onclick="closeM()">Cerrar</button>';
-  if(p.estado === 'confirmado'){
-    if(fac && !fac.anulada){
-      ftHtml += '<button class="btn btn-p" onclick="abrirVerFactura(\''+fac.id+'\')">Ver Factura</button>';
-    } else if(!fac){
-      ftHtml += '<button class="btn btn-p" onclick="abrirGenerarFactura(\''+p.id+'\')">Generar Factura</button>';
+  if(modo==='apy'){
+    var apyObj=parseFloat(((document.getElementById('wz_apy_objetivo')||{}).value))||0;
+    var plazoApy=parseInt(((document.getElementById('wz_apy_plazo')||{}).value),10)||0;
+    var iniSelEl = document.getElementById('wz_apy_inicial_sel');
+    var iniSelRaw = iniSelEl ? iniSelEl.value : '0.50';
+    var iniSel;
+    if(iniSelRaw === 'custom'){
+      iniSel = parseFloat(window._wzCustomPct)||0.50;
     } else {
-      ftHtml += '<button class="btn btn-d" disabled style="opacity:.6">Factura Anulada</button>';
+      iniSel = parseFloat(iniSelRaw);
     }
+    if(!(iniSel>0)) iniSel=0.50; // 50% por defecto
+    var apyCalc=calcApyPlan(precioBase||WZ.precio||0, iniSel, apyObj, plazoApy);
+    apyCalc.mode='apy';
+    apyCalc.sourcePlan={plazo:apyCalc.plazo, factor:apyCalc.factor, inicial:apyCalc.inicialPct, tasaMensual:apyCalc.tasaMensual, apy:apyCalc.apy};
+    return apyCalc;
   }
-  $('mft').innerHTML = ftHtml;
-  $('ov').style.display = 'flex';
+  var inicialReal=parseFloat(((document.getElementById('wz_ini_real')||{}).value));
+  if(!(inicialReal>=0)) inicialReal=parseFloat(WZ.ini)||0;
+  var cuotaQ=parseFloat(((document.getElementById('wz_cuota_q_custom')||{}).value));
+  if(!(cuotaQ>0)) cuotaQ=parseFloat(WZ.cuota)||0;
+  var plazo=parseInt(((document.getElementById('wz_plazo_custom')||{}).value),10);
+  if(!(plazo>0)) plazo=parseInt(WZ.plazo,10)||0;
+  var custom=calcCustomPlan(precioBase,inicialReal,cuotaQ,plazo);
+  custom.mode='custom';
+  custom.sourcePlan={plazo:custom.plazo, factor:custom.factor, inicial:custom.inicialPct, tasaMensual:custom.tasaMensual, apy:custom.apy};
+  return custom;
 }
 
-// Modal: generar factura para un pago
-function abrirGenerarFactura(pagoId){
-  var p = (S.pagos||[]).find(function(x){ return x.id === pagoId; });
-  if(!p){ toast('Pago no encontrado','error'); return; }
-  if(_facGetByPagoId(p.id)){ toast('Este pago ya tiene factura emitida','warning'); return; }
-  var cred = (S.creds||[]).find(function(x){ return x.id === p.cred; });
-  var cliente = (S.clientes||[]).find(function(x){ return x.nombre === p.cli; });
-  var emp = getEmpresa();
-  var nextNum = _facSiguienteNumeroFactura();
-  var nextCtrl = _facSiguienteNumeroControl();
-  $('mic').textContent='FAC';
-  $('mtt').textContent='Generar Factura';
-  $('msb').textContent='Pago '+p.id;
-  $('modal-box').className='modal';
-  $('mbd').innerHTML =
-    '<div style="background:rgba(74,107,255,0.08);border:1px solid rgba(74,107,255,0.25);border-radius:9px;padding:11px;margin-bottom:14px;font-size:11.5px;color:var(--ink2)">'
-    + '<strong style="color:var(--p1)">âš  Importante:</strong> Una vez creada, la factura serÃ¡ inmutable. Solo podrÃ¡ ser anulada (no eliminada) segÃºn las normas SENIAT.'
-    + '</div>'
-    + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin-bottom:8px">NÃšMEROS LEGALES</div>'
-    + '<div class="fgr" style="gap:10px">'
-    + '<div class="fg"><label>NÂ° de Factura</label><input class="fi" id="fac_numero" value="'+nextNum+'" style="font-family:var(--fd);font-weight:700"></div>'
-    + '<div class="fg"><label>NÂ° de Control SENIAT</label><input class="fi" id="fac_control" value="'+nextCtrl+'" style="font-family:var(--fd);font-weight:700"></div>'
-    + '<div class="fg"><label>Fecha de EmisiÃ³n</label><input class="fi" id="fac_fecha" type="date" value="'+(new Date().toISOString().split('T')[0])+'"></div>'
-    + '</div>'
-    + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin:14px 0 8px">DATOS DEL EMISOR (EMPRESA)</div>'
-    + '<div class="fgr" style="gap:10px">'
-    + '<div class="fg"><label>RazÃ³n Social</label><div style="font-weight:700;font-size:13px;padding:6px 0">'+(emp.nombre||'â€”')+'</div></div>'
-    + '<div class="fg"><label>RIF</label><div style="font-family:var(--fd);font-weight:700;font-size:13px;padding:6px 0">'+(emp.rif||'â€”')+'</div></div>'
-    + '<div class="fg" style="grid-column:1/-1"><label>DirecciÃ³n Fiscal</label><div style="font-size:12px;padding:6px 0">'+(emp.direccion||emp.ciudad||'â€”')+'</div></div>'
-    + '</div>'
-    + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin:14px 0 8px">DATOS DEL CLIENTE</div>'
-    + '<div class="fgr" style="gap:10px">'
-    + '<div class="fg"><label>Nombre / RazÃ³n Social</label><input class="fi" id="fac_cli_nom" value="'+(p.cli||'')+'"></div>'
-    + '<div class="fg"><label>C.I. / RIF</label><input class="fi" id="fac_cli_ci" value="'+((cliente&&cliente.ci)||'')+'"></div>'
-    + '<div class="fg"><label>TelÃ©fono</label><input class="fi" id="fac_cli_tel" value="'+((cliente&&cliente.telefono)||'')+'"></div>'
-    + '<div class="fg" style="grid-column:1/-1"><label>DirecciÃ³n</label><input class="fi" id="fac_cli_dir" value="'+((cliente&&(cliente.dir_det||cliente.ciudad_res||cliente.ciudad))||'')+'"></div>'
-    + '</div>'
-    + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin:14px 0 8px">DETALLE DE LA OPERACIÃ“N</div>'
-    + '<div class="fgr c1" style="gap:10px">'
-    + '<div class="fg"><label>Concepto / DescripciÃ³n</label><textarea class="fi" id="fac_concepto" rows="2" style="resize:vertical">Pago de cuota â€” CrÃ©dito '+(p.cred||'')+(cred?' / '+cred.modelo:'')+'</textarea></div>'
-    + '</div>'
-    + '<div class="fgr" style="gap:10px;margin-top:10px">'
-    + '<div class="fg"><label>Subtotal</label><div style="font-family:var(--fd);font-weight:700;font-size:14px;padding:6px 0">'+fmt(p.monto||0)+'</div></div>'
-    + '<div class="fg"><label>IVA (no aplica)</label><div style="font-family:var(--fd);font-size:13px;padding:6px 0;color:var(--ink3)">$0.00</div></div>'
-    + '<div class="fg"><label style="color:var(--green);font-weight:700">TOTAL</label><div style="font-family:var(--fd);font-weight:800;font-size:18px;color:var(--green);padding:6px 0">'+fmt(p.monto||0)+'</div></div>'
-    + '</div>';
-  $('mft').innerHTML =
-    '<button class="btn btn-g" onclick="abrirDetallePago(\''+p.id+'\')">Cancelar</button>'
-    + '<button class="btn btn-p" onclick="crearFactura(\''+p.id+'\')">Crear Factura</button>';
-  $('ov').style.display='flex';
-}
-
-// Crea la factura (luego de revisar el form)
-function crearFactura(pagoId){
-  var p = (S.pagos||[]).find(function(x){ return x.id === pagoId; });
-  if(!p){ toast('Pago no encontrado','error'); return; }
-  var numero = ($('fac_numero')&&$('fac_numero').value||'').trim();
-  var control = ($('fac_control')&&$('fac_control').value||'').trim();
-  if(!numero){ toast('El NÂ° de factura es obligatorio','error'); return; }
-  if(!control){ toast('El NÂ° de control SENIAT es obligatorio','error'); return; }
-  // Validar que el nÃºmero no estÃ© ya usado
-  var dupN = (S.facturas||[]).find(function(f){ return f.numero === numero; });
-  if(dupN){ toast('El NÂ° '+numero+' ya estÃ¡ usado en otra factura','error'); return; }
-  var dupC = (S.facturas||[]).find(function(f){ return f.numeroControl === control; });
-  if(dupC){ toast('El NÂ° de control '+control+' ya estÃ¡ usado','error'); return; }
-  var emp = getEmpresa();
-  var fac = {
-    id: 'FAC-'+Date.now(),
-    numero: numero,
-    numeroControl: control,
-    pagoId: p.id,
-    fechaEmision: ($('fac_fecha')&&$('fac_fecha').value)||new Date().toISOString().split('T')[0],
-    fechaCreacion: new Date().toISOString(),
-    creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
-    creadoPorUid: (S.currentUser&&S.currentUser.uid)||'',
-    // Snapshot del emisor
-    emisor: {
-      nombre: emp.nombre, rif: emp.rif, direccion: emp.direccion||emp.ciudad,
-      ciudad: emp.ciudad, tel: emp.tel, email: emp.email
-    },
-    // Snapshot del cliente
-    cliente: {
-      nombre: ($('fac_cli_nom')&&$('fac_cli_nom').value)||p.cli||'',
-      ci: ($('fac_cli_ci')&&$('fac_cli_ci').value)||'',
-      tel: ($('fac_cli_tel')&&$('fac_cli_tel').value)||'',
-      direccion: ($('fac_cli_dir')&&$('fac_cli_dir').value)||''
-    },
-    concepto: ($('fac_concepto')&&$('fac_concepto').value)||'Pago de cuota',
-    subtotal: p.monto||0,
-    iva: 0,
-    total: p.monto||0,
-    metodo: p.metodo||'',
-    referencia: p.referencia||'',
-    anulada: false
-  };
-  S.facturas.push(fac);
-  DB.saveFactura(fac);
-  toast('Factura '+fac.numero+' emitida âœ“','success');
-  abrirVerFactura(fac.id);
-}
-
-// Modal: ver factura ya emitida
-function abrirVerFactura(facId){
-  var fac = (S.facturas||[]).find(function(x){ return x.id === facId; });
-  if(!fac){ toast('Factura no encontrada','error'); return; }
-  $('mic').textContent='FAC';
-  $('mtt').textContent='Factura '+fac.numero;
-  $('msb').textContent='Control: '+fac.numeroControl;
-  $('modal-box').className='modal';
-  var anuladaBlock = fac.anulada
-    ? '<div style="background:rgba(255,71,87,0.12);border:1px solid rgba(255,71,87,0.35);border-radius:9px;padding:11px;margin-bottom:12px"><div style="color:var(--red);font-weight:800;font-size:13px;margin-bottom:4px">âŠ˜ FACTURA ANULADA</div><div style="font-size:11.5px;color:var(--ink2)">Anulada: '+fmtFechaHora(fac.fechaAnulacion)+' por '+(fac.anuladaPor||'â€”')+'</div><div style="font-size:11.5px;color:var(--ink2);margin-top:3px">RazÃ³n: '+(fac.razonAnulacion||'â€”')+'</div></div>'
-    : '';
-  $('mbd').innerHTML =
-    anuladaBlock
-    + '<div style="background:var(--surf);padding:14px;border-radius:9px;margin-bottom:12px">'
-    + '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:14px">'
-    + '<div><div style="font-size:13px;color:var(--ink3);font-weight:700;letter-spacing:.5px">FACTURA</div>'
-    + '<div style="font-family:var(--fd);font-weight:800;font-size:22px;color:var(--p1)">NÂ° '+fac.numero+'</div>'
-    + '<div style="font-size:11px;color:var(--ink3);margin-top:2px">Control SENIAT: '+fac.numeroControl+'</div></div>'
-    + '<div style="text-align:right">'
-    + '<div style="font-weight:800;font-size:14px">'+(fac.emisor&&fac.emisor.nombre||'â€”')+'</div>'
-    + '<div style="font-family:var(--fd);font-size:11px;color:var(--ink2)">'+(fac.emisor&&fac.emisor.rif||'â€”')+'</div>'
-    + '<div style="font-size:10.5px;color:var(--ink3);margin-top:3px">'+(fac.emisor&&fac.emisor.direccion||'')+'</div>'
-    + (fac.emisor&&fac.emisor.tel?'<div style="font-size:10.5px;color:var(--ink3)">Tel: '+fac.emisor.tel+'</div>':'')
-    + '</div></div>'
-    + '<hr style="border:none;border-top:1px dashed var(--ln);margin:10px 0">'
-    + '<div style="display:flex;justify-content:space-between;gap:14px;margin-bottom:10px">'
-    + '<div style="flex:1"><div style="font-size:10px;color:var(--ink3);font-weight:700;letter-spacing:.5px">FACTURAR A</div>'
-    + '<div style="font-weight:700;font-size:13px;margin-top:2px">'+(fac.cliente&&fac.cliente.nombre||'â€”')+'</div>'
-    + (fac.cliente&&fac.cliente.ci?'<div style="font-family:var(--fd);font-size:11px;color:var(--ink2)">C.I./RIF: '+fac.cliente.ci+'</div>':'')
-    + (fac.cliente&&fac.cliente.tel?'<div style="font-size:11px;color:var(--ink2)">Tel: '+fac.cliente.tel+'</div>':'')
-    + (fac.cliente&&fac.cliente.direccion?'<div style="font-size:11px;color:var(--ink2)">'+fac.cliente.direccion+'</div>':'')
-    + '</div>'
-    + '<div style="text-align:right"><div style="font-size:10px;color:var(--ink3);font-weight:700;letter-spacing:.5px">FECHA</div>'
-    + '<div style="font-family:var(--fd);font-weight:700;font-size:13px;margin-top:2px">'+fmtFecha(fac.fechaEmision)+'</div></div>'
-    + '</div>'
-    + '<hr style="border:none;border-top:1px dashed var(--ln);margin:10px 0">'
-    + '<div style="margin:10px 0"><div style="font-size:10px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin-bottom:5px">CONCEPTO</div>'
-    + '<div style="font-size:13px;line-height:1.5">'+fac.concepto+'</div></div>'
-    + '<hr style="border:none;border-top:1px dashed var(--ln);margin:10px 0">'
-    + '<div style="display:flex;justify-content:flex-end;margin-top:10px">'
-    + '<div style="min-width:240px">'
-    + '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Subtotal:</span><span style="font-family:var(--fd)">'+fmt(fac.subtotal)+'</span></div>'
-    + '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink3)"><span>IVA (no aplica):</span><span style="font-family:var(--fd)">'+fmt(fac.iva||0)+'</span></div>'
-    + '<div style="display:flex;justify-content:space-between;font-size:15px;padding:6px 0;font-weight:800;border-top:2px solid var(--ln);margin-top:5px"><span>TOTAL:</span><span style="font-family:var(--fd);color:var(--green)">'+fmt(fac.total)+'</span></div>'
-    + '</div></div>'
-    + '<div style="font-size:10px;color:var(--ink3);text-align:center;margin-top:14px;padding-top:10px;border-top:1px dashed var(--ln);font-style:italic">Son: '+_numeroALetras(fac.total)+'</div>'
-    + '<div style="font-size:9.5px;color:var(--ink3);text-align:center;margin-top:5px">Emitida el '+fmtFechaHora(fac.fechaCreacion)+' Â· MÃ©todo: '+(fac.metodo||'â€”')+(fac.referencia?' Â· Ref: '+fac.referencia:'')+'</div>'
-    + '</div>';
-  var ftHtml = '<button class="btn btn-g" onclick="abrirDetallePago(\''+fac.pagoId+'\')">â† Volver al pago</button>';
-  if(!fac.anulada){
-    ftHtml += '<button class="btn btn-s" onclick="abrirImprimirFactura(\''+fac.id+'\')">ðŸ–¨ Imprimir</button>';
-    ftHtml += '<button class="btn btn-d" onclick="abrirAnularFactura(\''+fac.id+'\')">Anular</button>';
-  } else {
-    ftHtml += '<button class="btn btn-s" onclick="abrirImprimirFactura(\''+fac.id+'\')">ðŸ–¨ Imprimir copia</button>';
-  }
-  $('mft').innerHTML = ftHtml;
-  $('ov').style.display='flex';
-}
-
-// Modal: elegir formato de impresiÃ³n
-function abrirImprimirFactura(facId){
-  var fac = (S.facturas||[]).find(function(x){ return x.id === facId; });
-  if(!fac){ toast('Factura no encontrada','error'); return; }
-  $('mic').textContent='IMP';
-  $('mtt').textContent='Imprimir Factura';
-  $('msb').textContent='NÂ° '+fac.numero;
-  $('modal-box').className='modal';
-  $('mbd').innerHTML =
-    '<div style="font-size:12.5px;color:var(--ink2);margin-bottom:14px">Selecciona el formato de impresiÃ³n:</div>'
-    + '<div style="display:grid;gap:10px">'
-    + '<button class="btn btn-p" style="padding:14px;text-align:left;display:flex;align-items:center;gap:12px" onclick="imprimirFactura(\''+fac.id+'\',\'carta\')">'
-    + '<span style="font-family:var(--fd);font-weight:800;font-size:18px;width:60px;text-align:center">ðŸ“„</span>'
-    + '<span><div style="font-weight:700;font-size:13.5px">Carta (8.5\" Ã— 11\")</div><div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:400">Impresora estÃ¡ndar â€” Hoja completa</div></span>'
-    + '</button>'
-    + '<button class="btn btn-p" style="padding:14px;text-align:left;display:flex;align-items:center;gap:12px" onclick="imprimirFactura(\''+fac.id+'\',\'media\')">'
-    + '<span style="font-family:var(--fd);font-weight:800;font-size:18px;width:60px;text-align:center">ðŸ“ƒ</span>'
-    + '<span><div style="font-weight:700;font-size:13.5px">Media Carta (8.5\" Ã— 5.5\")</div><div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:400">2 facturas por hoja â€” Ahorro de papel</div></span>'
-    + '</button>'
-    + '<button class="btn btn-p" style="padding:14px;text-align:left;display:flex;align-items:center;gap:12px" onclick="imprimirFactura(\''+fac.id+'\',\'ticket\')">'
-    + '<span style="font-family:var(--fd);font-weight:800;font-size:18px;width:60px;text-align:center">ðŸ§¾</span>'
-    + '<span><div style="font-weight:700;font-size:13.5px">Ticket 80mm</div><div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:400">Impresora tÃ©rmica â€” Comprobante rÃ¡pido</div></span>'
-    + '</button>'
-    + '</div>';
-  $('mft').innerHTML = '<button class="btn btn-g" onclick="abrirVerFactura(\''+fac.id+'\')">â† Volver</button>';
-  $('ov').style.display='flex';
-}
-
-// Genera HTML imprimible y abre ventana de impresiÃ³n
-function imprimirFactura(facId, formato){
-  var fac = (S.facturas||[]).find(function(x){ return x.id === facId; });
-  if(!fac){ toast('Factura no encontrada','error'); return; }
-  var tasaBs = window._tasaBsGlobal || 0;
-  var totalBs = tasaBs ? (fac.total * tasaBs).toFixed(2) : '';
-  var anuladaWatermark = fac.anulada
-    ? '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:80px;color:rgba(255,0,0,.18);font-weight:900;letter-spacing:8px;pointer-events:none;z-index:9999;white-space:nowrap">ANULADA</div>'
-    : '';
-  var pageSize, bodyMaxWidth, bodyPadding, fontSize, fontTitle, headSize, marginTop;
-  if(formato === 'carta'){
-    pageSize = 'Letter';
-    bodyMaxWidth = '7.5in'; bodyPadding = '0.5in';
-    fontSize = '12px'; fontTitle = '24px'; headSize = '14px'; marginTop = '0';
-  } else if(formato === 'media'){
-    pageSize = '8.5in 5.5in';
-    bodyMaxWidth = '7.5in'; bodyPadding = '0.4in 0.5in';
-    fontSize = '11px'; fontTitle = '20px'; headSize = '12px'; marginTop = '0';
-  } else { // ticket
-    pageSize = '80mm auto';
-    bodyMaxWidth = '72mm'; bodyPadding = '4mm';
-    fontSize = '10px'; fontTitle = '14px'; headSize = '11px'; marginTop = '0';
-  }
-  var contenidoFactura = '';
-  if(formato === 'ticket'){
-    // DiseÃ±o compacto monoespaciado para ticket
-    contenidoFactura =
-      '<div style="text-align:center;margin-bottom:6mm">'
-      + '<div style="font-weight:900;font-size:'+fontTitle+';margin-bottom:1mm">'+fac.emisor.nombre+'</div>'
-      + '<div style="font-size:9px">RIF: '+fac.emisor.rif+'</div>'
-      + (fac.emisor.direccion ? '<div style="font-size:9px">'+fac.emisor.direccion+'</div>' : '')
-      + (fac.emisor.tel ? '<div style="font-size:9px">Tel: '+fac.emisor.tel+'</div>' : '')
-      + '</div>'
-      + '<div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:2mm 0;text-align:center;margin-bottom:3mm">'
-      + '<div style="font-weight:900;font-size:12px">FACTURA</div>'
-      + '<div style="font-size:11px;font-weight:700">NÂ° '+fac.numero+'</div>'
-      + '<div style="font-size:9px">Control: '+fac.numeroControl+'</div>'
-      + '</div>'
-      + '<div style="font-size:9.5px;line-height:1.5;margin-bottom:3mm">'
-      + '<div><strong>Fecha:</strong> '+fmtFecha(fac.fechaEmision)+'</div>'
-      + '<div><strong>Cliente:</strong> '+fac.cliente.nombre+'</div>'
-      + (fac.cliente.ci ? '<div><strong>C.I./RIF:</strong> '+fac.cliente.ci+'</div>' : '')
-      + (fac.cliente.tel ? '<div><strong>Tel:</strong> '+fac.cliente.tel+'</div>' : '')
-      + '</div>'
-      + '<div style="border-top:1px dashed #000;padding-top:2mm;margin-bottom:3mm;font-size:10px">'+fac.concepto+'</div>'
-      + '<div style="border-top:1px dashed #000;padding-top:2mm;font-size:10px">'
-      + '<div style="display:flex;justify-content:space-between"><span>Subtotal:</span><span>$'+parseFloat(fac.subtotal).toFixed(2)+'</span></div>'
-      + '<div style="display:flex;justify-content:space-between;color:#666"><span>IVA:</span><span>$'+parseFloat(fac.iva||0).toFixed(2)+'</span></div>'
-      + '<div style="display:flex;justify-content:space-between;font-weight:900;font-size:12px;border-top:1px solid #000;padding-top:1mm;margin-top:1mm"><span>TOTAL:</span><span>$'+parseFloat(fac.total).toFixed(2)+'</span></div>'
-      + (totalBs ? '<div style="display:flex;justify-content:space-between;font-size:9px;color:#666"><span>Total Bs:</span><span>'+totalBs+'</span></div>' : '')
-      + '</div>'
-      + '<div style="text-align:center;font-size:8.5px;margin-top:4mm;font-style:italic">Son: '+_numeroALetras(fac.total)+'</div>'
-      + '<div style="text-align:center;font-size:8.5px;margin-top:2mm;color:#666">'+fmtFechaHora(fac.fechaCreacion)+'</div>'
-      + '<div style="text-align:center;font-size:8px;margin-top:3mm">Â¡Gracias por su pago!</div>';
-  } else {
-    // Carta o Media: formato profesional
-    contenidoFactura =
-      '<table style="width:100%;border-collapse:collapse;margin-bottom:'+ (formato==='media'?'8px':'14px') +'">'
-      + '<tr><td style="vertical-align:top">'
-      + '<div style="font-weight:900;font-size:'+fontTitle+';color:#1a1a1a;margin-bottom:3px">'+fac.emisor.nombre+'</div>'
-      + '<div style="font-size:'+fontSize+'"><strong>RIF:</strong> '+fac.emisor.rif+'</div>'
-      + (fac.emisor.direccion ? '<div style="font-size:'+fontSize+'">'+fac.emisor.direccion+'</div>' : '')
-      + (fac.emisor.tel ? '<div style="font-size:'+fontSize+'">Tel: '+fac.emisor.tel+'</div>' : '')
-      + (fac.emisor.email ? '<div style="font-size:'+fontSize+'">'+fac.emisor.email+'</div>' : '')
-      + '</td><td style="vertical-align:top;text-align:right">'
-      + '<div style="border:2px solid #1a1a1a;padding:8px 14px;display:inline-block">'
-      + '<div style="font-weight:900;font-size:'+headSize+';letter-spacing:1px">FACTURA</div>'
-      + '<div style="font-family:monospace;font-weight:700;font-size:'+headSize+';margin-top:2px">NÂ° '+fac.numero+'</div>'
-      + '<div style="font-family:monospace;font-size:'+fontSize+';margin-top:2px">Control: '+fac.numeroControl+'</div>'
-      + '</div>'
-      + '</td></tr></table>'
-      + '<table style="width:100%;border-collapse:collapse;margin-bottom:'+ (formato==='media'?'8px':'14px') +';font-size:'+fontSize+'">'
-      + '<tr><td style="vertical-align:top;padding-right:12px;width:60%">'
-      + '<div style="font-weight:700;color:#666;font-size:9px;letter-spacing:.5px;margin-bottom:3px">FACTURAR A:</div>'
-      + '<div style="font-weight:700;font-size:'+headSize+'">'+fac.cliente.nombre+'</div>'
-      + (fac.cliente.ci ? '<div>C.I./RIF: '+fac.cliente.ci+'</div>' : '')
-      + (fac.cliente.tel ? '<div>Tel: '+fac.cliente.tel+'</div>' : '')
-      + (fac.cliente.direccion ? '<div>'+fac.cliente.direccion+'</div>' : '')
-      + '</td><td style="vertical-align:top;text-align:right">'
-      + '<div style="font-weight:700;color:#666;font-size:9px;letter-spacing:.5px;margin-bottom:3px">FECHA DE EMISIÃ“N</div>'
-      + '<div style="font-weight:700;font-size:'+headSize+'">'+fmtFecha(fac.fechaEmision)+'</div>'
-      + '</td></tr></table>'
-      + '<table style="width:100%;border-collapse:collapse;margin-bottom:'+ (formato==='media'?'8px':'14px') +';font-size:'+fontSize+'">'
-      + '<thead><tr style="background:#f0f0f0"><th style="text-align:left;padding:8px;border:1px solid #ccc">CONCEPTO / DESCRIPCIÃ“N</th><th style="text-align:right;padding:8px;border:1px solid #ccc;width:120px">MONTO</th></tr></thead>'
-      + '<tbody><tr><td style="padding:10px;border:1px solid #ccc;vertical-align:top">'+fac.concepto+'</td><td style="padding:10px;border:1px solid #ccc;text-align:right;font-family:monospace;font-weight:700">$'+parseFloat(fac.total).toFixed(2)+'</td></tr></tbody>'
-      + '</table>'
-      + '<table style="width:100%;border-collapse:collapse;font-size:'+fontSize+'">'
-      + '<tr><td style="vertical-align:top;padding-right:12px;font-style:italic;color:#555">'
-      + '<div style="font-size:9.5px"><strong>Son:</strong> '+_numeroALetras(fac.total)+'</div>'
-      + (fac.metodo ? '<div style="font-size:9.5px;margin-top:4px"><strong>MÃ©todo de pago:</strong> '+fac.metodo+'</div>' : '')
-      + (fac.referencia ? '<div style="font-size:9.5px"><strong>Referencia:</strong> '+fac.referencia+'</div>' : '')
-      + '</td><td style="vertical-align:top;text-align:right;width:200px">'
-      + '<table style="width:100%;border-collapse:collapse">'
-      + '<tr><td style="text-align:left;padding:3px 8px">Subtotal:</td><td style="text-align:right;padding:3px 8px;font-family:monospace">$'+parseFloat(fac.subtotal).toFixed(2)+'</td></tr>'
-      + '<tr><td style="text-align:left;padding:3px 8px;color:#666">IVA (no aplica):</td><td style="text-align:right;padding:3px 8px;font-family:monospace;color:#666">$'+parseFloat(fac.iva||0).toFixed(2)+'</td></tr>'
-      + '<tr style="border-top:2px solid #1a1a1a"><td style="text-align:left;padding:6px 8px;font-weight:900;font-size:'+headSize+'">TOTAL:</td><td style="text-align:right;padding:6px 8px;font-family:monospace;font-weight:900;font-size:'+headSize+'">$'+parseFloat(fac.total).toFixed(2)+'</td></tr>'
-      + (totalBs ? '<tr><td style="text-align:left;padding:3px 8px;color:#666;font-size:9.5px">Total en Bs:</td><td style="text-align:right;padding:3px 8px;font-family:monospace;color:#666;font-size:9.5px">'+totalBs+'</td></tr>' : '')
-      + '</table></td></tr></table>'
-      + '<div style="text-align:center;font-size:8.5px;color:#999;margin-top:'+(formato==='media'?'8px':'18px')+';padding-top:'+(formato==='media'?'4px':'8px')+';border-top:1px solid #ddd">Emitida el '+fmtFechaHora(fac.fechaCreacion)+'</div>';
-  }
-  var html = '<!doctype html><html><head><meta charset="utf-8"><title>Factura '+fac.numero+'</title>'
-    + '<style>'
-    + '@page{size:'+pageSize+';margin:0}'
-    + '*{box-sizing:border-box;margin:0;padding:0}'
-    + 'body{font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;font-size:'+fontSize+';position:relative;background:#fff}'
-    + '.pf{max-width:'+bodyMaxWidth+';margin:0 auto;padding:'+bodyPadding+';position:relative}'
-    + '@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}'
-    + '</style></head><body>'
-    + '<div class="pf">'+anuladaWatermark+contenidoFactura+'</div>'
-    + '<script>setTimeout(function(){window.print();},250);<\/script>'
-    + '</body></html>';
-  var w = window.open('', '_blank', 'width=900,height=700');
-  if(!w){ toast('No se pudo abrir la ventana de impresiÃ³n. Verifica el bloqueador de popups.','error'); return; }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-}
-
-// Modal: anular factura
-function abrirAnularFactura(facId){
-  var fac = (S.facturas||[]).find(function(x){ return x.id === facId; });
-  if(!fac){ toast('Factura no encontrada','error'); return; }
-  if(fac.anulada){ toast('Esta factura ya estÃ¡ anulada','warning'); return; }
-  $('mic').textContent='AN';
-  $('mtt').textContent='Anular Factura';
-  $('msb').textContent='NÂ° '+fac.numero;
-  $('modal-box').className='modal';
-  $('mbd').innerHTML =
-    '<div style="background:rgba(255,71,87,0.12);border:1px solid rgba(255,71,87,0.35);border-radius:9px;padding:12px;margin-bottom:14px">'
-    + '<div style="font-weight:800;color:var(--red);font-size:13px;margin-bottom:5px">âš  AcciÃ³n irreversible</div>'
-    + '<div style="font-size:11.5px;color:var(--ink2);line-height:1.55">Una factura anulada queda registrada permanentemente como tal. Por exigencia SENIAT:</div>'
-    + '<ul style="font-size:11.5px;color:var(--ink2);margin-top:6px;padding-left:20px;line-height:1.5">'
-    + '<li>El nÃºmero de la factura ('+fac.numero+') no podrÃ¡ reutilizarse</li>'
-    + '<li>El nÃºmero de control ('+fac.numeroControl+') no podrÃ¡ reutilizarse</li>'
-    + '<li>La factura permanecerÃ¡ en el sistema con estado "ANULADA"</li>'
-    + '</ul></div>'
-    + '<div class="fg"><label>RazÃ³n de anulaciÃ³n <span style="color:var(--red)">*</span></label>'
-    + '<textarea class="fi" id="anu_razon" rows="3" placeholder="Ej: Error en datos del cliente, monto incorrecto, etc."></textarea></div>';
-  $('mft').innerHTML =
-    '<button class="btn btn-g" onclick="abrirVerFactura(\''+fac.id+'\')">Cancelar</button>'
-    + '<button class="btn btn-d" onclick="confirmarAnularFactura(\''+fac.id+'\')">Anular Factura</button>';
-  $('ov').style.display='flex';
-}
-
-function confirmarAnularFactura(facId){
-  var fi = (S.facturas||[]).findIndex(function(x){ return x.id === facId; });
-  if(fi < 0){ toast('Factura no encontrada','error'); return; }
-  var razon = ($('anu_razon')&&$('anu_razon').value||'').trim();
-  if(!razon){ toast('Debes indicar la razÃ³n de anulaciÃ³n','error'); return; }
-  S.facturas[fi].anulada = true;
-  S.facturas[fi].fechaAnulacion = new Date().toISOString();
-  S.facturas[fi].razonAnulacion = razon;
-  S.facturas[fi].anuladaPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
-  S.facturas[fi].anuladaPorUid = (S.currentUser&&S.currentUser.uid)||'';
-  DB.saveFactura(S.facturas[fi]);
-  toast('Factura '+S.facturas[fi].numero+' anulada','info');
-  abrirVerFactura(facId);
-}
-
-
-// â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
-// â•‘  LIBRO DE VENTAS SENIAT                                   â•‘
-// â•‘  Reporte fiscal con cÃ¡lculo de IVA y IGTF para entregar   â•‘
-// â•‘  al contador. NO emite facturas legales.                  â•‘
-// â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-// ConfiguraciÃ³n (se guarda en localStorage)
-var _libroSeniatCfg = {
-  ivaActivo: false,        // Â¿Cobro IVA?
-  ivaAlicuota: 16,          // 16, 8, 0
-  esSPE: false,             // Â¿Soy Sujeto Pasivo Especial (cobro IGTF)?
-  igtfAlicuota: 3,          // % IGTF (default 3%)
-  // MÃ©todos que se consideran "moneda extranjera" (gravados con IGTF si esSPE=true)
-  metodosDivisa: ['Zelle','USDT','Efectivo USD','Efectivo','PayPal','Binance','Wise','Cash App','Dolar','DÃ³lar'],
-  // PerÃ­odo seleccionado
-  periodoTipo: 'mes',       // 'mes' | 'rango'
-  periodoMes: '',           // YYYY-MM
-  periodoDesde: '',         // YYYY-MM-DD
-  periodoHasta: ''          // YYYY-MM-DD
-};
-
-function _libroSeniatLoadCfg(){
-  try{
-    var raw = localStorage.getItem('libroSeniatCfg_v1');
-    if(raw){
-      var saved = JSON.parse(raw);
-      Object.keys(saved).forEach(function(k){ _libroSeniatCfg[k] = saved[k]; });
-    }
-  }catch(e){}
-  // Default: mes actual si no hay nada
-  if(!_libroSeniatCfg.periodoMes){
-    var d = new Date();
-    _libroSeniatCfg.periodoMes = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-  }
-}
-
-function _libroSeniatSaveCfg(){
-  try{ localStorage.setItem('libroSeniatCfg_v1', JSON.stringify(_libroSeniatCfg)); }catch(e){}
-}
-
-// Determina si un mÃ©todo de pago es divisa (gravado con IGTF)
-// Estrategia 1: Si el nombre del mÃ©todo coincide con una cuenta bancaria configurada,
-//   usar el campo `moneda` de esa cuenta (USD = divisa, BS = bolÃ­vares)
-// Estrategia 2 (fallback): Si no hay match con cuenta, usar lista de palabras clave
-function _libroSeniatEsDivisa(metodo){
-  if(!metodo) return false;
-  var nombreMetodo = String(metodo).trim();
-  // Buscar cuenta bancaria con ese nombre (insensible a mayÃºsculas)
-  var cuentas = (typeof _cuentasBanc !== 'undefined' && _cuentasBanc) ? _cuentasBanc : [];
-  var cuenta = cuentas.find(function(c){
-    return (c.nombre||'').trim().toLowerCase() === nombreMetodo.toLowerCase();
-  });
-  if(cuenta){
-    // moneda 'USD' o cualquier cosa distinta a 'BS' se considera divisa
-    return (cuenta.moneda||'USD').toUpperCase() !== 'BS';
-  }
-  // Fallback: palabras clave (por si el mÃ©todo no coincide con cuenta configurada)
-  var m = nombreMetodo.toLowerCase();
-  // "Bs" / "bolÃ­vares" / "bolivares" â†’ bolÃ­vares (NO divisa)
-  if(m.indexOf('bs') !== -1 || m.indexOf('bolivar') !== -1 || m.indexOf('bolÃ­var') !== -1) return false;
-  // Si contiene palabras de divisa explÃ­citas
-  return _libroSeniatCfg.metodosDivisa.some(function(d){
-    return m.indexOf(d.toLowerCase()) !== -1;
-  });
-}
-
-// Filtra pagos segÃºn perÃ­odo configurado
-function _libroSeniatFiltrarPagos(){
-  var pagos = (S.pagos||[]).filter(function(p){
-    return !p.eliminado && p.estado==='confirmado';
-  });
-  var desde, hasta;
-  if(_libroSeniatCfg.periodoTipo === 'mes'){
-    var ym = _libroSeniatCfg.periodoMes;
-    if(!ym) return pagos;
-    desde = ym + '-01';
-    var partes = ym.split('-');
-    var lastDay = new Date(parseInt(partes[0]), parseInt(partes[1]), 0).getDate();
-    hasta = ym + '-' + String(lastDay).padStart(2,'0');
-  } else {
-    desde = _libroSeniatCfg.periodoDesde;
-    hasta = _libroSeniatCfg.periodoHasta;
-  }
-  if(!desde || !hasta) return pagos;
-  return pagos.filter(function(p){
-    return p.fecha >= desde && p.fecha <= hasta;
-  });
-}
-
-// Calcula desglose fiscal de un pago segÃºn configuraciÃ³n actual
-// Asume: monto pagado YA INCLUYE IVA (sacar base dividiendo entre 1+iva%)
-function _libroSeniatDesglose(pago){
-  var total = parseFloat(pago.monto)||0;
-  var aliv = _libroSeniatCfg.ivaActivo ? (parseFloat(_libroSeniatCfg.ivaAlicuota)||0) : 0;
-  var base, iva;
-  if(aliv > 0){
-    base = total / (1 + aliv/100);
-    iva = total - base;
-  } else {
-    base = total;
-    iva = 0;
-  }
-  // IGTF aplica solo si es SPE Y mÃ©todo es divisa. IGTF se calcula adicional al total.
-  // Sin embargo, en prÃ¡ctica el IGTF se documenta sobre el monto pagado en divisas (el total recibido)
-  var igtf = 0;
-  var igtfAplica = false;
-  if(_libroSeniatCfg.esSPE && _libroSeniatEsDivisa(pago.metodo)){
-    igtfAplica = true;
-    igtf = total * (parseFloat(_libroSeniatCfg.igtfAlicuota)||0)/100;
-  }
+function _wzCredPlanFields(r, fallback){
+  fallback = fallback || {};
+  r = r || {};
+  var precioBase = r.precioBaseReal || WZ.precio || fallback.precioBaseReal || 0;
+  var factor = r.factor || fallback.factor || PLAN.factor;
+  var inicialPct = (typeof r.inicialPct === 'number') ? r.inicialPct : (fallback.inicialPct != null ? fallback.inicialPct : PLAN.inicial);
+  var tasaMensual = (typeof r.tasaMensual === 'number') ? r.tasaMensual : (fallback.tasaMensual != null ? fallback.tasaMensual : PLAN.tasaMensual);
+  var apy = (typeof r.apy === 'number') ? r.apy : ((fallback.plan && fallback.plan.apy != null) ? fallback.plan.apy : PLAN.apy);
+  var plazo = r.plazo || fallback.plazo || PLAN.plazo;
   return {
-    total: total,
-    base: base,
-    aliv: aliv,
-    iva: iva,
-    igtf: igtf,
-    igtfAplica: igtfAplica,
-    totalConIgtf: total + igtf  // Lo que el cliente debiÃ³ pagar realmente con IGTF
+    precioBaseReal: precioBase,
+    ini: r.ini || fallback.ini || 0,
+    fin: r.fin || fallback.fin || 0,
+    total: r.total || fallback.total || 0,
+    cuota: r.cuotaQ || fallback.cuota || 0,
+    cuotaQ: r.cuotaQ || fallback.cuotaQ || 0,
+    cuotaM: r.cuotaM || fallback.cuotaM || 0,
+    plazo: plazo,
+    totalCuotas: r.totalCuotas || fallback.totalCuotas || (plazo*2),
+    factor: factor,
+    inicialPct: inicialPct,
+    tasaMensual: tasaMensual,
+    planModo: r.mode || fallback.planModo || 'global',
+    plan: {plazo:plazo, factor:factor, inicial:inicialPct, tasaMensual:tasaMensual, apy:apy, precioBaseReal:precioBase}
   };
 }
 
-// Busca CI/RIF del cliente (busca en S.clientes por nombre exacto)
-// Campo correcto: 'cedula' (no 'ci')
-function _libroSeniatGetCI(nombreCliente){
-  if(!nombreCliente) return '';
-  var c = (S.clientes||[]).find(function(x){
-    return (x.nombre||'').trim().toLowerCase() === String(nombreCliente).trim().toLowerCase();
-  });
-  return c ? (c.cedula||c.ci||'') : '';
+function _wzTogglePlanMode(v){
+  WZ.planMode=v||(((document.getElementById('wz_plan_mode')||{}).value)||'global');
+  var box=document.getElementById('wz_plan_custom_box');
+  if(box) box.style.display=WZ.planMode==='custom'?'block':'none';
+  var boxApy=document.getElementById('wz_plan_apy_box');
+  if(boxApy) boxApy.style.display=WZ.planMode==='apy'?'block':'none';
+  var precioBase=document.getElementById('wz_precio_base_real');
+  if(precioBase && !precioBase.value && (WZ.precio||0)>0) precioBase.value=(parseFloat(WZ.precio)||0).toFixed(2);
+  _wzActualizarFinPreview((document.getElementById('wz_precio')||{}).value || WZ.precio || 0);
+  if(typeof _wzMpagoSync==='function') _wzMpagoSync();
+  _wzScore();
 }
 
-// Render principal del tab Libro SENIAT
-function _renderLibroSeniat(){
-  _libroSeniatLoadCfg();
-  var cfg = _libroSeniatCfg;
-  var pagos = _libroSeniatFiltrarPagos();
-  // Ordenar por fecha
-  pagos.sort(function(a,b){ return (a.fecha||'').localeCompare(b.fecha||''); });
-  // Totales
-  var totBase = 0, totIva = 0, totIgtf = 0, totTotal = 0, totConIgtf = 0;
-  var filas = pagos.map(function(p, idx){
-    var d = _libroSeniatDesglose(p);
-    totBase += d.base;
-    totIva += d.iva;
-    totIgtf += d.igtf;
-    totTotal += d.total;
-    totConIgtf += d.totalConIgtf;
-    var ci = _libroSeniatGetCI(p.cli);
-    var fac = (S.facturas||[]).find(function(f){ return f.pagoId === p.id; });
-    var nFac = fac && !fac.anulada ? fac.numero : 'â€”';
-    return '<tr style="border-bottom:1px solid var(--rim2)">'
-      + '<td class="tds" style="padding:6px 8px">'+(idx+1)+'</td>'
-      + '<td class="tds" style="padding:6px 8px">'+(p.fecha||'')+'</td>'
-      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);font-size:10.5px">'+(p.id||'')+'</td>'
-      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);font-size:10.5px">'+nFac+'</td>'
-      + '<td class="tds" style="padding:6px 8px">'+(p.cli||'')+'</td>'
-      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);font-size:10.5px">'+(ci||'<span style="color:var(--red)">SIN CI</span>')+'</td>'
-      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right">'+fmt(d.base)+'</td>'
-      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right;color:var(--ink3)">'+(d.aliv>0 ? d.aliv+'%' : 'â€”')+'</td>'
-      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right">'+fmt(d.iva)+'</td>'
-      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right;'+(d.igtfAplica?'color:var(--amber)':'color:var(--ink3)')+'">'+(d.igtfAplica ? fmt(d.igtf) : 'â€”')+'</td>'
-      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right;font-weight:700">'+fmt(d.total)+'</td>'
-      + '<td class="tds" style="padding:6px 8px;color:var(--ink3);font-size:10.5px">'+(p.metodo||'â€”')+'</td>'
-      + '</tr>';
+// â”€â”€ Comparativo APY: calcula cuotas para iniciales 45%, 50%, 55% â”€â”€
+function _wzApyCompare(){
+  var precio=parseFloat(((document.getElementById('wz_precio_base_real')||{}).value))||parseFloat(WZ.precio)||0;
+  var apy=parseFloat(((document.getElementById('wz_apy_objetivo')||{}).value))||0;
+  var plazo=parseInt(((document.getElementById('wz_apy_plazo')||{}).value),10)||0;
+  var grid=document.getElementById('wz_apy_compare_grid');
+  var box=document.getElementById('wz_apy_compare');
+  if(!grid||!box) return;
+  if(!(precio>0)||!(apy>0)||!(plazo>0)){ box.style.display='none'; _wzActualizarFinPreview(WZ.precio||0); return; }
+  box.style.display='block';
+  var pcts=[0.45,0.50,0.55];
+  var fixedCards = pcts.map(function(p){
+    var r=calcApyPlan(precio,p,apy,plazo);
+    return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:10px;padding:10px">'
+      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--p1);margin-bottom:6px">Inicial '+(p*100).toFixed(0)+'%</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Inicial</div>'
+      +'<div style="font-size:14px;font-weight:900;color:var(--ink);margin-bottom:6px">$'+r.ini.toFixed(2)+'</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Cuota quincenal</div>'
+      +'<div style="font-size:14px;font-weight:900;color:var(--ink);margin-bottom:6px">$'+r.cuotaQ.toFixed(2)+'</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Total a pagar</div>'
+      +'<div style="font-size:13px;font-weight:800;color:var(--ink)">$'+r.totalPagado.toFixed(2)+'</div>'
+      +'</div>';
   }).join('');
-  // PerÃ­odo label
-  var periodoLbl = '';
-  if(cfg.periodoTipo === 'mes' && cfg.periodoMes){
-    var partes = cfg.periodoMes.split('-');
-    var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    periodoLbl = meses[parseInt(partes[1])-1] + ' ' + partes[0];
-  } else if(cfg.periodoTipo === 'rango'){
-    periodoLbl = (cfg.periodoDesde||'?') + ' al ' + (cfg.periodoHasta||'?');
-  }
-  // Mes actual default
-  var mesActual = cfg.periodoMes || (function(){
-    var d = new Date();
-    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-  })();
-  var clientesSinCI = pagos.filter(function(p){ return !_libroSeniatGetCI(p.cli); }).length;
-  return ''
-    + '<div class="card" style="margin-bottom:14px">'
-    + '<div class="ch"><div><div class="ct">âš– Libro de Ventas SENIAT</div><div class="cs">Reporte fiscal Â· No es factura legal</div></div></div>'
-    + '<div style="background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.3);border-radius:9px;padding:11px 13px;font-size:11.5px;color:var(--ink2);line-height:1.55">'
-    + '<strong style="color:var(--amber)">âš  Importante:</strong> Este reporte es un auxiliar contable para entregar a tu contador o al SENIAT en caso de fiscalizaciÃ³n. '
-    + '<strong>No sustituye la facturaciÃ³n legal</strong> (talonarios autorizados, mÃ¡quina fiscal o sistema certificado SENIAT). '
-    + 'Los cÃ¡lculos asumen que el monto cobrado <strong>YA INCLUYE IVA</strong> (base = monto / 1.16 si IVA 16%). Verifica con tu contador antes de entregar.'
-    + '</div>'
-    + '</div>'
-    // â•â•â•â•â•â•â•â• CONFIGURACIÃ“N â•â•â•â•â•â•â•â•
-    + '<div class="card" style="margin-bottom:14px">'
-    + '<div class="ch"><div><div class="ct">ConfiguraciÃ³n fiscal</div><div class="cs">Define cÃ³mo calcular impuestos Â· Pregunta a tu contador</div></div></div>'
-    + '<div class="fgr" style="gap:12px;margin-top:6px">'
-    + '<div class="fg"><label>Â¿Cobras IVA en tus operaciones?</label>'
-    + '<select class="fs" id="ls_iva_activo" onchange="_libroSeniatChange()">'
-    + '<option value="no" '+(!cfg.ivaActivo?'selected':'')+'>No â€” Estoy exento o no aplica</option>'
-    + '<option value="si" '+(cfg.ivaActivo?'selected':'')+'>SÃ­ â€” Cobro IVA</option>'
-    + '</select></div>'
-    + '<div class="fg"><label>AlÃ­cuota IVA</label>'
-    + '<select class="fs" id="ls_iva_aliv" onchange="_libroSeniatChange()" '+(cfg.ivaActivo?'':'disabled')+'>'
-    + '<option value="16" '+(cfg.ivaAlicuota==16?'selected':'')+'>16% (general)</option>'
-    + '<option value="8" '+(cfg.ivaAlicuota==8?'selected':'')+'>8% (reducida)</option>'
-    + '<option value="0" '+(cfg.ivaAlicuota==0?'selected':'')+'>0% (exportaciÃ³n)</option>'
-    + '</select></div>'
-    + '<div class="fg"><label>Â¿Eres Sujeto Pasivo Especial (SPE)?</label>'
-    + '<select class="fs" id="ls_spe" onchange="_libroSeniatChange()">'
-    + '<option value="no" '+(!cfg.esSPE?'selected':'')+'>No â€” No cobro IGTF</option>'
-    + '<option value="si" '+(cfg.esSPE?'selected':'')+'>SÃ­ â€” Soy SPE, cobro IGTF en pagos en divisa</option>'
-    + '</select></div>'
-    + '<div class="fg"><label>AlÃ­cuota IGTF</label>'
-    + '<select class="fs" id="ls_igtf_aliv" onchange="_libroSeniatChange()" '+(cfg.esSPE?'':'disabled')+'>'
-    + '<option value="3" '+(cfg.igtfAlicuota==3?'selected':'')+'>3% (estÃ¡ndar â€” divisas)</option>'
-    + '<option value="2" '+(cfg.igtfAlicuota==2?'selected':'')+'>2% (otros casos)</option>'
-    + '</select></div>'
-    + '</div>'
-    + '<div style="margin-top:8px;padding:10px;background:var(--gs);border-radius:8px;font-size:11px;color:var(--ink3);line-height:1.55">'
-    + '<strong style="color:var(--ink2)">Â¿CÃ³mo se detecta si un pago genera IGTF?</strong> '
-    + 'El sistema usa la <strong>moneda configurada de cada cuenta bancaria</strong> en ConfiguraciÃ³n: '
-    + 'cuentas en <strong>USD</strong> generan IGTF, cuentas en <strong>Bs</strong> no. '
-    + 'Si un mÃ©todo no coincide con ninguna cuenta configurada, se detecta por palabras clave (Zelle, USDT, etc).'
-    + '</div>'
-    + '</div>'
-    // â•â•â•â•â•â•â•â• PERÃODO â•â•â•â•â•â•â•â•
-    + '<div class="card" style="margin-bottom:14px">'
-    + '<div class="ch"><div><div class="ct">PerÃ­odo del reporte</div><div class="cs">'+periodoLbl+'</div></div></div>'
-    + '<div class="fgr" style="gap:12px">'
-    + '<div class="fg"><label>Tipo de perÃ­odo</label>'
-    + '<select class="fs" id="ls_periodo_tipo" onchange="_libroSeniatChange()">'
-    + '<option value="mes" '+(cfg.periodoTipo==='mes'?'selected':'')+'>Por mes</option>'
-    + '<option value="rango" '+(cfg.periodoTipo==='rango'?'selected':'')+'>Rango personalizado</option>'
-    + '</select></div>'
-    + (cfg.periodoTipo==='mes'
-        ? '<div class="fg"><label>Mes</label><input class="fi" type="month" id="ls_mes" value="'+mesActual+'" onchange="_libroSeniatChange()"></div>'
-        : '<div class="fg"><label>Desde</label><input class="fi" type="date" id="ls_desde" value="'+(cfg.periodoDesde||'')+'" onchange="_libroSeniatChange()"></div>'
-          + '<div class="fg"><label>Hasta</label><input class="fi" type="date" id="ls_hasta" value="'+(cfg.periodoHasta||'')+'" onchange="_libroSeniatChange()"></div>')
-    + '</div>'
-    + '</div>'
-    // â•â•â•â•â•â•â•â• TOTALES â•â•â•â•â•â•â•â•
-    + '<div class="card" style="margin-bottom:14px">'
-    + '<div class="ch"><div><div class="ct">Totales del perÃ­odo</div><div class="cs">'+pagos.length+' operaciones</div></div></div>'
-    + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:6px">'
-    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--ink3)"><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Base imponible</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totBase)+'</div></div>'
-    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--p1)"><div style="font-size:9.5px;font-weight:800;color:var(--p1);text-transform:uppercase;letter-spacing:.5px">IVA dÃ©bito fiscal</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totIva)+'</div></div>'
-    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--amber)"><div style="font-size:9.5px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.5px">IGTF percibido</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totIgtf)+'</div></div>'
-    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--green)"><div style="font-size:9.5px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px">Total cobrado</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totTotal)+'</div></div>'
-    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--green)"><div style="font-size:9.5px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px">Total + IGTF</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totConIgtf)+'</div></div>'
-    + '</div>'
-    + (clientesSinCI > 0 ? '<div style="margin-top:10px;padding:9px 11px;background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.25);border-radius:8px;font-size:11px;color:var(--red)">âš  Hay <strong>'+clientesSinCI+' pago'+(clientesSinCI>1?'s':'')+'</strong> con cliente sin CI/RIF registrado. SENIAT lo exige para el libro.</div>' : '')
-    + '</div>'
-    // â•â•â•â•â•â•â•â• TABLA â•â•â•â•â•â•â•â•
-    + '<div class="card">'
-    + '<div class="ch"><div><div class="ct">Detalle de operaciones</div><div class="cs">Estilo Libro de Ventas SENIAT</div></div>'
-    + '<div style="display:flex;gap:6px">'
-    + '<button class="btn btn-g btn-sm" onclick="_libroSeniatExportarCSV()">ðŸ“Š Exportar CSV</button>'
-    + '<button class="btn btn-p btn-sm" onclick="_libroSeniatImprimir()">ðŸ–¨ Imprimir / PDF</button>'
-    + '</div></div>'
-    + (pagos.length === 0
-      ? '<div style="padding:30px 0;text-align:center;color:var(--ink3);font-size:13px">Sin operaciones en este perÃ­odo</div>'
-      : '<div class="tw" style="overflow-x:auto"><table style="font-size:11.5px;min-width:1100px">'
-        + '<thead><tr style="background:var(--gs)">'
-        + '<th style="padding:8px;text-align:left">#</th>'
-        + '<th style="padding:8px;text-align:left">Fecha</th>'
-        + '<th style="padding:8px;text-align:left">Comprob.</th>'
-        + '<th style="padding:8px;text-align:left">NÂ° Factura</th>'
-        + '<th style="padding:8px;text-align:left">Cliente</th>'
-        + '<th style="padding:8px;text-align:left">RIF/C.I.</th>'
-        + '<th style="padding:8px;text-align:right">Base</th>'
-        + '<th style="padding:8px;text-align:right">% IVA</th>'
-        + '<th style="padding:8px;text-align:right">IVA</th>'
-        + '<th style="padding:8px;text-align:right">IGTF</th>'
-        + '<th style="padding:8px;text-align:right">Total</th>'
-        + '<th style="padding:8px;text-align:left">MÃ©todo</th>'
-        + '</tr></thead>'
-        + '<tbody>'+filas+'</tbody>'
-        + '<tfoot><tr style="background:var(--gs);font-weight:800">'
-        + '<td colspan="6" style="padding:9px 8px;text-align:right">TOTALES:</td>'
-        + '<td style="padding:9px 8px;text-align:right;font-family:var(--fd)">'+fmt(totBase)+'</td>'
-        + '<td></td>'
-        + '<td style="padding:9px 8px;text-align:right;font-family:var(--fd);color:var(--p1)">'+fmt(totIva)+'</td>'
-        + '<td style="padding:9px 8px;text-align:right;font-family:var(--fd);color:var(--amber)">'+fmt(totIgtf)+'</td>'
-        + '<td style="padding:9px 8px;text-align:right;font-family:var(--fd);color:var(--green)">'+fmt(totTotal)+'</td>'
-        + '<td></td></tr></tfoot>'
-        + '</table></div>')
-    + '</div>';
+  var prevMode = (window._wzCustomMode === '$') ? '$' : '%';
+  var prevVal = (window._wzCustomVal != null) ? window._wzCustomVal : '';
+  var customCard = ''
+    +'<div style="background:var(--surf);border:2px dashed var(--p1);border-radius:10px;padding:10px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--p1)">Personalizada</div>'
+    +'<div style="display:flex;gap:2px;background:var(--gs);border-radius:6px;padding:2px">'
+    +'<button type="button" id="wz_cust_btn_pct" onclick="_wzApyCustomSetMode(\'%\')" style="border:none;background:'+(prevMode==='%'?'var(--p1)':'transparent')+';color:'+(prevMode==='%'?'#fff':'var(--ink2)')+';padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;cursor:pointer">%</button>'
+    +'<button type="button" id="wz_cust_btn_dol" onclick="_wzApyCustomSetMode(\'$\')" style="border:none;background:'+(prevMode==='$'?'var(--p1)':'transparent')+';color:'+(prevMode==='$'?'#fff':'var(--ink2)')+';padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800;cursor:pointer">$</button>'
+    +'</div>'
+    +'</div>'
+    +'<input type="number" id="wz_cust_input" value="'+prevVal+'" placeholder="'+(prevMode==='%'?'Ej: 60':'Ej: 800')+'" oninput="_wzApyCustomCalc()" style="width:100%;border:1px solid var(--rim);border-radius:6px;padding:5px 8px;font-size:13px;font-weight:700;font-family:var(--fd);margin-bottom:6px">'
+    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Inicial</div>'
+    +'<div id="wz_cust_ini" style="font-size:14px;font-weight:900;color:var(--ink);margin-bottom:6px">$0.00</div>'
+    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Cuota quincenal</div>'
+    +'<div id="wz_cust_cuota" style="font-size:14px;font-weight:900;color:var(--ink);margin-bottom:6px">$0.00</div>'
+    +'<div style="font-size:11px;color:var(--ink3);margin-bottom:2px">Total a pagar</div>'
+    +'<div id="wz_cust_total" style="font-size:13px;font-weight:800;color:var(--ink)">$0.00</div>'
+    +'</div>';
+  grid.innerHTML = fixedCards + customCard;
+  setTimeout(_wzApyCustomCalc, 0);
+  _wzActualizarFinPreview(WZ.precio||0);
+  _wzScore();
 }
 
-// Maneja cualquier cambio en los selects/inputs de configuraciÃ³n
-function _libroSeniatChange(){
-  var cfg = _libroSeniatCfg;
-  var el;
-  el = $('ls_iva_activo'); if(el) cfg.ivaActivo = (el.value === 'si');
-  el = $('ls_iva_aliv'); if(el) cfg.ivaAlicuota = parseFloat(el.value)||0;
-  el = $('ls_spe'); if(el) cfg.esSPE = (el.value === 'si');
-  el = $('ls_igtf_aliv'); if(el) cfg.igtfAlicuota = parseFloat(el.value)||3;
-  el = $('ls_periodo_tipo'); if(el) cfg.periodoTipo = el.value;
-  el = $('ls_mes'); if(el) cfg.periodoMes = el.value;
-  el = $('ls_desde'); if(el) cfg.periodoDesde = el.value;
-  el = $('ls_hasta'); if(el) cfg.periodoHasta = el.value;
-  _libroSeniatSaveCfg();
-  // Re-render
-  if(typeof nav === 'function') nav('reportes');
+// Toggle entre % y $ del cuadro personalizado (wizard crÃ©dito)
+function _wzApyCustomSetMode(mode){
+  window._wzCustomMode = mode;
+  var bp = document.getElementById('wz_cust_btn_pct'), bd = document.getElementById('wz_cust_btn_dol'), inp = document.getElementById('wz_cust_input');
+  if(bp && bd){
+    bp.style.background = (mode==='%')?'var(--p1)':'transparent';
+    bp.style.color = (mode==='%')?'#fff':'var(--ink2)';
+    bd.style.background = (mode==='$')?'var(--p1)':'transparent';
+    bd.style.color = (mode==='$')?'#fff':'var(--ink2)';
+  }
+  if(inp){ inp.placeholder = (mode==='%')?'Ej: 60':'Ej: 800'; }
+  _wzApyCustomCalc();
 }
 
-// Exportar a CSV (formato Libro de Ventas SENIAT)
-function _libroSeniatExportarCSV(){
-  var pagos = _libroSeniatFiltrarPagos();
-  pagos.sort(function(a,b){ return (a.fecha||'').localeCompare(b.fecha||''); });
-  var emp = (typeof getEmpresa === 'function') ? getEmpresa() : {nombre:'',rif:''};
-  var cfg = _libroSeniatCfg;
-  var periodoLbl = '';
-  if(cfg.periodoTipo === 'mes' && cfg.periodoMes){
-    periodoLbl = cfg.periodoMes;
-  } else if(cfg.periodoTipo === 'rango'){
-    periodoLbl = (cfg.periodoDesde||'')+'_a_'+(cfg.periodoHasta||'');
-  }
-  var rows = [];
-  // Encabezado
-  rows.push(['LIBRO DE VENTAS - REPORTE AUXILIAR SENIAT']);
-  rows.push(['Empresa:', emp.nombre||'', 'RIF:', emp.rif||'']);
-  rows.push(['PerÃ­odo:', periodoLbl]);
-  rows.push(['IVA aplicado:', cfg.ivaActivo ? cfg.ivaAlicuota+'%' : 'No aplica']);
-  rows.push(['IGTF (SPE):', cfg.esSPE ? cfg.igtfAlicuota+'% en pagos divisa' : 'No aplica']);
-  rows.push(['Generado:', new Date().toLocaleString('es-VE')]);
-  rows.push([]);
-  // Headers de tabla
-  rows.push(['#','Fecha','NÂ° Comprobante','NÂ° Factura','Cliente','RIF/C.I.','Base Imponible','% IVA','IVA','IGTF','Total','MÃ©todo de pago']);
-  var totBase=0, totIva=0, totIgtf=0, totTotal=0;
-  pagos.forEach(function(p, idx){
-    var d = _libroSeniatDesglose(p);
-    var ci = _libroSeniatGetCI(p.cli);
-    var fac = (S.facturas||[]).find(function(f){ return f.pagoId === p.id; });
-    var nFac = fac && !fac.anulada ? fac.numero : '';
-    rows.push([
-      idx+1,
-      p.fecha||'',
-      p.id||'',
-      nFac,
-      p.cli||'',
-      ci,
-      d.base.toFixed(2),
-      d.aliv,
-      d.iva.toFixed(2),
-      d.igtfAplica ? d.igtf.toFixed(2) : '0.00',
-      d.total.toFixed(2),
-      p.metodo||''
-    ]);
-    totBase+=d.base; totIva+=d.iva; totIgtf+=d.igtf; totTotal+=d.total;
-  });
-  rows.push([]);
-  rows.push(['','','','','','TOTALES:', totBase.toFixed(2), '', totIva.toFixed(2), totIgtf.toFixed(2), totTotal.toFixed(2), '']);
-  // Convertir a CSV
-  var csv = rows.map(function(r){
-    return r.map(function(c){
-      var s = String(c==null?'':c);
-      if(s.indexOf(',')>=0 || s.indexOf('"')>=0 || s.indexOf('\n')>=0){
-        s = '"'+s.replace(/"/g,'""')+'"';
-      }
-      return s;
-    }).join(',');
-  }).join('\n');
-  // Descargar (con BOM para que Excel lo abra bien con tildes)
-  var blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'libro_ventas_seniat_'+(periodoLbl||'reporte')+'.csv';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
-  if(typeof toast === 'function') toast('Libro exportado Â· CSV','success');
-}
-
-// Imprimir (tambiÃ©n permite guardar como PDF desde el diÃ¡logo del navegador)
-function _libroSeniatImprimir(){
-  var pagos = _libroSeniatFiltrarPagos();
-  pagos.sort(function(a,b){ return (a.fecha||'').localeCompare(b.fecha||''); });
-  var emp = (typeof getEmpresa === 'function') ? getEmpresa() : {nombre:'',rif:'',direccion:''};
-  var cfg = _libroSeniatCfg;
-  var periodoLbl = '';
-  if(cfg.periodoTipo === 'mes' && cfg.periodoMes){
-    var partes = cfg.periodoMes.split('-');
-    var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    periodoLbl = meses[parseInt(partes[1])-1] + ' ' + partes[0];
-  } else if(cfg.periodoTipo === 'rango'){
-    periodoLbl = (cfg.periodoDesde||'')+' al '+(cfg.periodoHasta||'');
-  }
-  var totBase=0, totIva=0, totIgtf=0, totTotal=0;
-  var rowsHtml = pagos.map(function(p, idx){
-    var d = _libroSeniatDesglose(p);
-    var ci = _libroSeniatGetCI(p.cli);
-    var fac = (S.facturas||[]).find(function(f){ return f.pagoId === p.id; });
-    var nFac = fac && !fac.anulada ? fac.numero : 'â€”';
-    totBase+=d.base; totIva+=d.iva; totIgtf+=d.igtf; totTotal+=d.total;
-    return '<tr>'
-      +'<td>'+(idx+1)+'</td>'
-      +'<td>'+(p.fecha||'')+'</td>'
-      +'<td style="font-family:monospace;font-size:9px">'+(p.id||'')+'</td>'
-      +'<td style="font-family:monospace;font-size:9px">'+nFac+'</td>'
-      +'<td>'+(p.cli||'')+'</td>'
-      +'<td style="font-family:monospace;font-size:9px">'+(ci||'â€”')+'</td>'
-      +'<td class="num">'+d.base.toFixed(2)+'</td>'
-      +'<td class="num">'+(d.aliv||'â€”')+(d.aliv>0?'%':'')+'</td>'
-      +'<td class="num">'+d.iva.toFixed(2)+'</td>'
-      +'<td class="num">'+(d.igtfAplica ? d.igtf.toFixed(2) : 'â€”')+'</td>'
-      +'<td class="num"><strong>'+d.total.toFixed(2)+'</strong></td>'
-      +'<td style="font-size:9px">'+(p.metodo||'')+'</td>'
-      +'</tr>';
-  }).join('');
-  var html = '<!doctype html><html><head><meta charset="utf-8"><title>Libro de Ventas SENIAT - '+periodoLbl+'</title>'
-    + '<style>'
-    + '@page{size:Letter landscape;margin:.4in}'
-    + '*{box-sizing:border-box}'
-    + 'body{font-family:Arial,sans-serif;color:#000;font-size:10px;margin:0;padding:0}'
-    + '.hd{border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:10px}'
-    + '.hd h1{margin:0;font-size:16px;letter-spacing:1px}'
-    + '.hd .sb{font-size:11px;color:#333;margin-top:2px}'
-    + '.meta{display:flex;justify-content:space-between;font-size:10px;margin-bottom:10px}'
-    + '.meta b{font-weight:700}'
-    + 'table{width:100%;border-collapse:collapse;font-size:9.5px;margin-top:6px}'
-    + 'th{background:#e0e0e0;padding:5px 4px;border:1px solid #888;text-align:left;font-size:9px}'
-    + 'td{padding:4px;border:1px solid #ccc}'
-    + '.num{text-align:right;font-family:monospace}'
-    + 'tfoot td{background:#f0f0f0;font-weight:800;border-top:2px solid #000}'
-    + '.disc{margin-top:14px;padding:8px;background:#fff8e0;border:1px solid #d4a843;font-size:9px;color:#444;line-height:1.5}'
-    + '.foot{margin-top:18px;padding-top:8px;border-top:1px solid #999;display:flex;justify-content:space-between;font-size:8.5px;color:#666}'
-    + '.sig{margin-top:30px;display:flex;justify-content:space-around;font-size:10px}'
-    + '.sig .b{border-top:1px solid #000;width:200px;text-align:center;padding-top:3px}'
-    + '@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}'
-    + '</style></head><body>'
-    + '<div class="hd">'
-    + '<h1>LIBRO DE VENTAS â€” REPORTE AUXILIAR</h1>'
-    + '<div class="sb">Documento de uso interno y contable Â· PerÃ­odo: <b>'+periodoLbl+'</b></div>'
-    + '</div>'
-    + '<div class="meta">'
-    + '<div><b>RazÃ³n social:</b> '+(emp.nombre||'â€”')+'<br><b>RIF:</b> '+(emp.rif||'â€”')
-    + (emp.direccion?'<br><b>Domicilio fiscal:</b> '+emp.direccion:'')+'</div>'
-    + '<div style="text-align:right">'
-    + '<b>IVA:</b> '+(cfg.ivaActivo?cfg.ivaAlicuota+'%':'No aplica')+'<br>'
-    + '<b>IGTF:</b> '+(cfg.esSPE?cfg.igtfAlicuota+'% (SPE)':'No aplica')+'<br>'
-    + '<b>Operaciones:</b> '+pagos.length+'<br>'
-    + '<b>Generado:</b> '+new Date().toLocaleString('es-VE')
-    + '</div></div>'
-    + (pagos.length === 0
-      ? '<p style="text-align:center;padding:40px;color:#666">Sin operaciones en este perÃ­odo.</p>'
-      : '<table>'
-        + '<thead><tr><th>#</th><th>Fecha</th><th>NÂ° Comprob.</th><th>NÂ° Factura</th><th>Cliente</th><th>RIF/C.I.</th><th class="num">Base</th><th class="num">% IVA</th><th class="num">IVA</th><th class="num">IGTF</th><th class="num">Total</th><th>MÃ©todo</th></tr></thead>'
-        + '<tbody>'+rowsHtml+'</tbody>'
-        + '<tfoot><tr>'
-        + '<td colspan="6" style="text-align:right">TOTALES:</td>'
-        + '<td class="num">'+totBase.toFixed(2)+'</td>'
-        + '<td></td>'
-        + '<td class="num">'+totIva.toFixed(2)+'</td>'
-        + '<td class="num">'+totIgtf.toFixed(2)+'</td>'
-        + '<td class="num">'+totTotal.toFixed(2)+'</td>'
-        + '<td></td></tr></tfoot></table>')
-    + '<div class="disc"><strong>Aviso legal:</strong> Este reporte es un documento auxiliar de uso interno y contable. '
-    + 'No sustituye la facturaciÃ³n legal exigida por la Providencia Administrativa SNAT/2011/00071 (talonarios autorizados, mÃ¡quinas fiscales o sistemas de facturaciÃ³n electrÃ³nica certificados por SENIAT). '
-    + 'Los cÃ¡lculos asumen que el monto cobrado YA INCLUYE el IVA. Validar con contador antes de cualquier uso oficial.</div>'
-    + '<div class="sig"><div class="b">Elaborado por</div><div class="b">Revisado por contador</div><div class="b">Firma y sello</div></div>'
-    + '<div class="foot"><div>Pagasi Â· Sistema de gestiÃ³n</div><div>'+new Date().toLocaleString('es-VE')+'</div></div>'
-    + '<script>setTimeout(function(){window.print();},300);<\/script>'
-    + '</body></html>';
-  var w = window.open('', '_blank', 'width=1100,height=800');
-  if(!w){
-    if(typeof toast === 'function') toast('Activa los popups para imprimir','error');
+// Recalcula el cuadro de inicial personalizada (wizard crÃ©dito)
+function _wzApyCustomCalc(){
+  var precio = parseFloat(((document.getElementById('wz_precio_base_real')||{}).value))||parseFloat(WZ.precio)||0;
+  var apy = parseFloat(((document.getElementById('wz_apy_objetivo')||{}).value))||0;
+  var plazo = parseInt(((document.getElementById('wz_apy_plazo')||{}).value),10)||0;
+  var inp = document.getElementById('wz_cust_input');
+  var raw = inp ? inp.value : '';
+  window._wzCustomVal = raw;
+  var iniDol = document.getElementById('wz_cust_ini');
+  var cuoEl = document.getElementById('wz_cust_cuota');
+  var totEl = document.getElementById('wz_cust_total');
+  if(!iniDol || !cuoEl || !totEl) return;
+  if(!(precio>0) || !(apy>0) || !(plazo>0) || raw==='' || isNaN(parseFloat(raw))){
+    iniDol.textContent='$0.00'; cuoEl.textContent='$0.00'; totEl.textContent='$0.00';
     return;
   }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
+  var val = parseFloat(raw)||0;
+  var mode = (window._wzCustomMode==='$')?'$':'%';
+  var pct;
+  if(mode==='%'){
+    pct = val/100;
+  } else {
+    pct = (precio>0) ? (val/precio) : 0;
+  }
+  if(pct < 0) pct = 0;
+  if(pct > 1) pct = 1;
+  try{
+    var r = calcApyPlan(precio, pct, apy, plazo);
+    iniDol.textContent = '$'+r.ini.toFixed(2);
+    cuoEl.textContent = '$'+r.cuotaQ.toFixed(2);
+    totEl.textContent = '$'+r.totalPagado.toFixed(2);
+    window._wzCustomPct = pct;
+    // Actualizar tambiÃ©n el preview financiero del wizard si la inicial seleccionada es "custom"
+    var sel = document.getElementById('wz_apy_inicial_sel');
+    if(sel && sel.value === 'custom'){
+      _wzActualizarFinPreview(WZ.precio||0);
+      _wzMpagoSync();
+      _wzScore();
+    }
+  }catch(e){
+    iniDol.textContent='â€”'; cuoEl.textContent='â€”'; totEl.textContent='â€”';
+  }
 }
 
+// â”€â”€ Guardar el plan APY actual como plan nuevo en planesExtra â”€â”€
+function _wzGuardarPlanApy(){
+  var precio=parseFloat(((document.getElementById('wz_precio_base_real')||{}).value))||parseFloat(WZ.precio)||0;
+  var apy=parseFloat(((document.getElementById('wz_apy_objetivo')||{}).value))||0;
+  var plazo=parseInt(((document.getElementById('wz_apy_plazo')||{}).value),10)||0;
+  var iniSelEl = document.getElementById('wz_apy_inicial_sel');
+  var iniSelRaw = iniSelEl ? iniSelEl.value : '0.50';
+  var iniSel;
+  if(iniSelRaw === 'custom'){
+    iniSel = parseFloat(window._wzCustomPct)||0;
+    if(!(iniSel>0)){ if(typeof toast==='function') toast('Ingresa un valor para la inicial personalizada','error'); return; }
+  } else {
+    iniSel = parseFloat(iniSelRaw)||0.50;
+  }
+  if(!(precio>0)||!(apy>0)||!(plazo>0)){ if(typeof toast==='function') toast('Completa precio, APY y plazo','error'); return; }
+  var r=calcApyPlan(precio,iniSel,apy,plazo);
+  var nombre='APY '+apy.toFixed(1)+'% Â· '+plazo+'m Â· Ini '+(iniSel*100).toFixed(0)+'%';
+  var newPlan={nombre:nombre, plazo:plazo, factor:parseFloat(r.factor.toFixed(4)), inicial:iniSel, tasaMensual:parseFloat(r.tasaMensual.toFixed(2)), apy:apy, moraPct:(PLAN.moraPct||5), diasGracia:(PLAN.diasGracia||5), origen:'apy'};
+  if(!window._planesExtra) window._planesExtra=[];
+  window._planesExtra.push(newPlan);
+  try{ localStorage.setItem('pagasi_planes_extra', JSON.stringify(window._planesExtra)); }catch(_e){}
+  if(typeof db!=='undefined' && db){
+    db.collection('config').doc('planes').set({items:window._planesExtra})
+      .then(function(){ if(typeof toast==='function') toast('Plan "'+nombre+'" guardado','success'); })
+      .catch(function(){ if(typeof toast==='function') toast('Plan guardado localmente','success'); });
+  } else {
+    if(typeof toast==='function') toast('Plan "'+nombre+'" guardado localmente','success');
+  }
+}
 
-// â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
-// â•‘  MÃ“DULO DE COMISIONES                                     â•‘
-// â•‘  - Tarjetas tipo "vendedor" con saldo a pagar             â•‘
-// â•‘  - Pago de comisiones (descuenta de cuenta + crea egreso) â•‘
-// â•‘  - EliminaciÃ³n con opciÃ³n de devolver dinero              â•‘
-// â•‘  - ConfiguraciÃ³n por usuario (fijo o porcentaje)          â•‘
-// â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
-// Defaults globales (usados cuando un usuario activa comisiones sin config previa)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// STATE
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
