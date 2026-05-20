@@ -4,23 +4,14 @@
 // â•‘ 2. Engranaje â†’ ConfiguraciÃ³n del proyecto â•‘
 // â•‘ 3. Tu app Web â†’ copia el objeto firebaseConfig â•‘
 // â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyDt07EYdmvIqjU5a9CGPMQdYz8iBJ69Su8",
-  authDomain: "pagasi-v2.firebaseapp.com",
-  projectId: "pagasi-v2",
-  storageBucket: "pagasi-v2.firebasestorage.app",
-  messagingSenderId: "951911859002",
-  appId: "1:951911859002:web:1eb8f0af7bcbd508474603"
+var FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyDt07EYdmvIqjU5a9CGPMQdYz8iBJ69Su8',
+  authDomain: 'pagasi-v2.firebaseapp.com',
+  projectId: 'pagasi-v2',
+  storageBucket: 'pagasi-v2.firebasestorage.app',
+  messagingSenderId: '951911859002',
+  appId: '1:951911859002:web:1eb8f0af7bcbd508474603'
 };
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
 
 // â”€â”€ Notas de Firestore (consola â†’ Firestore â†’ Reglas): â”€â”€â”€â”€â”€â”€
 // rules_version = '2';
@@ -565,6 +556,9 @@ const S = {
 
 const $=id=>document.getElementById(id);
 const fmt=n=>'$'+parseFloat(n).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
+window.S = S;
+window.$ = $;
+window.fmt = fmt;
 
 // Formatea una fecha ISO o timestamp como "DD/MM/YYYY HH:MM"
 function fmtFechaHora(iso){
@@ -1070,6 +1064,7 @@ function nav(p){
 // Logica de graficos Chart.js movida a logic/charts.js.
 
 const PG = {};
+window.PG = PG;
 
 function showSkeleton(){
   var cnt = $('cnt');
@@ -1525,6 +1520,7 @@ async function doLogin() {
       console.warn('Login error:', e.code, e.message);
     });
 }
+window.doLogin = doLogin;
 
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
