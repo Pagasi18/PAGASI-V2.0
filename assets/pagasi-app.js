@@ -1113,7 +1113,24 @@ function showSkeleton(){
 
 function setCredTab(t){S.credTab=t;S.credFiltro='';window._pages={};nav('creditos');}
 function setCredSort(col){var cur=S.credSort||{col:'id',dir:'asc'};S.credSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('creditos');}
-function liveSearchCred(q){S.credFiltro=q||'';pgSet('creditos',1);nav('creditos');}
+var _credSearchTimer=null;
+function liveSearchCred(q){
+  S.credFiltro=q||'';
+  pgSet('creditos',1);
+  if(_credSearchTimer) clearTimeout(_credSearchTimer);
+  _credSearchTimer=setTimeout(function(){
+    if(!S || S.page!=='creditos') return;
+    var cursor=(q||'').length;
+    nav('creditos');
+    setTimeout(function(){
+      var inp=$('credQ');
+      if(inp){
+        inp.focus();
+        try{ inp.setSelectionRange(cursor,cursor); }catch(e){}
+      }
+    },0);
+  },160);
+}
 function setCliSort(col){var cur=S.cliSort||{col:'nombre',dir:'asc'};S.cliSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('clientes');}
 function setPagosSort(col){var cur=S.pagosSort||{col:'fecha',dir:'desc'};S.pagosSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('pagos');}
 function setMotosSort(col){var cur=S.motosSort||{col:'modelo',dir:'asc'};S.motosSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('motos');}
