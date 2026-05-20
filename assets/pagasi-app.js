@@ -152,6 +152,109 @@ function clean(o){
   return r;
 }
 
+var _rtUnsubs = [];
+var _rtTimer = null;
+var _rtStarted = false;
+
+function _docsArray(snap){
+  return snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+}
+
+function stopRealtime(){
+  _rtUnsubs.forEach(function(unsub){ try{ if(typeof unsub==='function') unsub(); }catch(e){} });
+  _rtUnsubs = [];
+  _rtStarted = false;
+  if(_rtTimer){ clearTimeout(_rtTimer); _rtTimer = null; }
+}
+
+function _captureFocus(){
+  var el = document.activeElement;
+  if(!el || !el.id || !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return null;
+  return {
+    id: el.id,
+    start: typeof el.selectionStart==='number' ? el.selectionStart : null,
+    end: typeof el.selectionEnd==='number' ? el.selectionEnd : null
+  };
+}
+
+function _restoreFocus(f){
+  if(!f || !f.id) return;
+  setTimeout(function(){
+    var el = document.getElementById(f.id);
+    if(!el) return;
+    try{ el.focus(); }catch(e){}
+    if(f.start!==null && typeof el.setSelectionRange==='function'){
+      try{ el.setSelectionRange(f.start, f.end); }catch(e){}
+    }
+  }, 0);
+}
+
+function scheduleRealtimeRender(){
+  if(_rtTimer) clearTimeout(_rtTimer);
+  _rtTimer = setTimeout(function(){
+    _rtTimer = null;
+    if(!S || !S.currentUser) return;
+    try{ if(typeof updateBadge==='function') updateBadge(); }catch(e){}
+    if(typeof _isModalOpen==='function' && _isModalOpen()) return;
+    if(!S.page || typeof nav!=='function') return;
+    var focus = _captureFocus();
+    nav(S.page);
+    _restoreFocus(focus);
+  }, 350);
+}
+
+function _aplicarConcesionarioActivoRealtime(){
+  try{
+    var conc = S.concesionarios || [];
+    var savedConc = localStorage.getItem('concesionarioActivo');
+    if(savedConc && conc.find(function(c){return c.id === savedConc;})) S.concesionarioActivo = savedConc;
+    if(S.currentUser){
+      var asignados = S.currentUser.concesionarios || [];
+      if(asignados.length === 1){
+        S.concesionarioActivo = asignados[0];
+        localStorage.setItem('concesionarioActivo', asignados[0]);
+      } else if(asignados.length > 1 && (!S.concesionarioActivo || asignados.indexOf(S.concesionarioActivo) === -1)){
+        S.concesionarioActivo = asignados[0];
+        localStorage.setItem('concesionarioActivo', asignados[0]);
+      }
+    }
+  }catch(e){}
+}
+
+function startRealtime(){
+  if(!db || !S || !S.currentUser || _rtStarted) return;
+  stopRealtime();
+  _rtStarted = true;
+  [
+    {col:'motos', key:'motos', map:mapMoto},
+    {col:'clientes', key:'clientes'},
+    {col:'creditos', key:'creds', map:mapCred},
+    {col:'pagos', key:'pagos', map:mapPago},
+    {col:'egresos', key:'egresos'},
+    {col:'movimientos', key:'movimientos'},
+    {col:'cuentasPendientes', key:'cuentasPendientes'},
+    {col:'facturas', key:'facturas'},
+    {col:'concesionarios', key:'concesionarios'},
+    {col:'tareas', key:'tareas'}
+  ].forEach(function(spec){
+    try{
+      var unsub = db.collection(spec.col).onSnapshot(function(snap){
+        var arr = _docsArray(snap);
+        if(typeof spec.map==='function') arr = arr.map(spec.map);
+        S[spec.key] = arr;
+        if(spec.key==='motos') saveMotosCache(S.motos);
+        if(spec.key==='concesionarios') _aplicarConcesionarioActivoRealtime();
+        scheduleRealtimeRender();
+      }, function(err){
+        console.warn('Realtime '+spec.col+':', err && (err.message || err));
+      });
+      _rtUnsubs.push(unsub);
+    }catch(e){
+      console.warn('Realtime init '+spec.col+':', e.message);
+    }
+  });
+}
+
 function fechaLocalISO(value){
   var d = value ? new Date(value) : new Date();
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -1468,6 +1571,7 @@ function init() {
     }
     nav(paginaInicial);
     updateBadge();
+    startRealtime();
     iniciarListenerSolicitudes();
     var isMob = window.innerWidth <= 820;
     var mobBar = $('mobile-topbar');
@@ -1480,6 +1584,7 @@ function init() {
     var paginaInicial = isVendedorConcesionarioRole() ? 'motos' : 'dash';
     nav(paginaInicial);
     updateBadge();
+    startRealtime();
     iniciarListenerSolicitudes();
   });
 }
@@ -1812,6 +1917,7 @@ function doLogout() {
   var overlay = document.getElementById('profile-overlay');
   if (overlay) overlay.style.display = 'none';
   document.body.style.overflow = '';
+  if(typeof stopRealtime === 'function') stopRealtime();
   if (auth) {
     auth.signOut();
   } else {
