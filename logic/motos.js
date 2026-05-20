@@ -2,31 +2,38 @@
 // Extraido de assets/pagasi-app.js sin cambiar comportamiento financiero.
 // Los helpers compartidos de pago de compra permanecen en el nucleo por ahora.
 
-function motoCard(m){
+function motoEsc(v){
+  return String(v==null?'':v).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];});
+}
+
+function motoRow(m){
   const estadoBdg={disponible:'b-g',financiada:'b-p',recuperada:'b-a',inventario:'b-b'};
   const estadoOpts=['disponible','financiada','recuperada','inventario'];
-  return`<div class="card" id="mc-${m.id}" style="padding:14px">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-      <div style="flex:1;min-width:0">
-        <div class="mpn" style="margin-bottom:2px">${m.modelo}${m.anio?` <span style="font-size:11px;color:var(--ink3);font-weight:600">· ${m.anio}</span>`:''}</div>
-        <div style="font-size:11px;color:var(--ink3)">VIN · ${m.vin||'—'}${m.color?' · '+m.color:''}</div>
-      </div>
-      <select class="bdg ${estadoBdg[m.estado]||'b-g'}" onchange="changeMotoStatus(${m.id},this.value)" title="Cambiar estado" style="cursor:pointer;border:none;font-weight:700;font-size:10px">
-        ${estadoOpts.map(o=>`<option value="${o}" ${m.estado===o?'selected':''}>${o}</option>`).join('')}
+  var idArg = JSON.stringify(m.id);
+  var cliente = m.cliente || m.propietario || '';
+  return `<tr id="mc-${motoEsc(m.id)}">
+    <td>
+      <div class="tdm">${motoEsc(m.modelo||'Sin modelo')}${m.anio?` <span style="font-size:10px;color:var(--ink3);font-weight:700">${motoEsc(m.anio)}</span>`:''}</div>
+      <div class="tds">VIN ${motoEsc(m.vin||'-')}${m.color?' - '+motoEsc(m.color):''}</div>
+    </td>
+    <td class="tds">${motoEsc(m.marca||'-')}</td>
+    <td>
+      <select class="bdg ${estadoBdg[m.estado]||'b-g'}" onchange="changeMotoStatus(${idArg},this.value)" title="Cambiar estado" style="cursor:pointer;border:none;font-weight:800;font-size:10px">
+        ${estadoOpts.map(function(o){return `<option value="${o}" ${m.estado===o?'selected':''}>${o}</option>`;}).join('')}
       </select>
-    </div>
-    <div class="mp-row"><span class="mp-l">Precio</span><span class="mp-v">${fmt(m.precio)}</span></div>
-    <div class="mp-row"><span class="mp-l">Inicial (${PLAN.inicial*100}%)</span><span class="mp-v">${fmt(m.ini)}</span></div>
-    <div class="mp-row"><span class="mp-l">Cuota mensual</span><span class="mp-v accent">${fmt(m.cuotaM)}</span></div>
-    <div class="mp-row"><span class="mp-l">Cuota quincenal</span><span class="mp-v">${fmt(m.cuotaQ)}</span></div>
-    <div class="mp-row"><span class="mp-l">Total a pagar</span><span class="mp-v">${fmt(m.totalPagado)}</span></div>
-    ${m.cliente?`<div style="margin-top:9px;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink2);background:var(--surf2);padding:5px 8px;border-radius:6px;border:1px solid var(--rim)"><span class="bdg b-p">CLI</span>${m.cliente}</div>`:''}
-    <div style="display:flex;gap:4px;margin-top:10px;padding-top:9px;border-top:1px solid var(--rim)">
-      ${m.estado==='disponible'?`<button class="btn btn-p btn-xs" style="flex:1" onclick="openAddCredConMoto(${m.id})">+ Solicitud</button>`:'<div style="flex:1"></div>'}
-      <button class="btn btn-g btn-xs" onclick="editMoto(${m.id})">Editar</button>
-      <button class="btn btn-d btn-xs" onclick="delMoto(${m.id})">✕</button>
-    </div>
-  </div>`;
+    </td>
+    <td><div class="tdm">${fmt(m.precio)}</div><div class="tds">Inicial ${fmt(m.ini)}</div></td>
+    <td><div class="tdm" style="color:var(--p1)">${fmt(m.cuotaM)}</div><div class="tds">${fmt(m.cuotaQ)} quincenal</div></td>
+    <td><div class="tdm">${fmt(m.totalPagado)}</div><div class="tds">total plan</div></td>
+    <td>${cliente?`<span class="bdg b-p">${motoEsc(cliente)}</span>`:'<span style="color:var(--ink3);font-size:11px">-</span>'}</td>
+    <td onclick="event.stopPropagation()">
+      <div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap">
+        ${m.estado==='disponible'?`<button class="btn btn-p btn-xs" onclick="openAddCredConMoto(${idArg})">Solicitud</button>`:''}
+        <button class="btn btn-g btn-xs" onclick="editMoto(${idArg})">Editar</button>
+        <button class="btn btn-d btn-xs" onclick="delMoto(${idArg})">x</button>
+      </div>
+    </td>
+  </tr>`;
 }
 
 function changeMotoStatus(id, newStatus){
@@ -73,8 +80,29 @@ function renderMotoGrid(){
   const f=S.mTab;
   var _M = _concFiltrar(S.motos||[]);
   const fil = f==='todas'?_M.filter(m=>!m.eliminado):_M.filter(m=>!m.eliminado&&m.estado===f);
-  return fil.length?`<div class="moto-plan-grid">${fil.map(motoCard).join('')}</div>`:
-    `<div class="empty"><span class="e-ic">MOT</span><div class="e-tt">Sin motos en esta categoría</div></div>`;
+  var sort=S.motosSort||{col:'modelo',dir:'asc'};
+  var sorted=fil.slice().sort(function(a,b){
+    var dir=sort.dir==='desc'?-1:1, col=sort.col||'modelo', va, vb;
+    if(col==='precio'||col==='cuotaM'||col==='totalPagado'||col==='anio') return dir*((parseFloat(a[col]||0)||0)-(parseFloat(b[col]||0)||0));
+    va=String(a[col]||'').toLowerCase(); vb=String(b[col]||'').toLowerCase();
+    return dir*(va<vb?-1:va>vb?1:0);
+  });
+  return sorted.length?`<div class="card" style="margin-bottom:14px">
+    <div class="ch"><div><div class="ct">Listado de motocicletas</div><div class="cs">${sorted.length} unidad${sorted.length!==1?'es':''} - ${f==='todas'?'todos los estados':f}</div></div></div>
+    <div class="tw tw-compact"><table>
+      <thead><tr>
+        ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','modelo','Motocicleta')}
+        ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','marca','Marca')}
+        ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','estado','Estado')}
+        ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','precio','Precio')}
+        ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','cuotaM','Cuotas')}
+        ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','totalPagado','Total')}
+        <th>Cliente</th><th></th>
+      </tr></thead>
+      <tbody>${sorted.map(motoRow).join('')}</tbody>
+    </table></div>
+  </div>`:
+    `<div class="empty"><span class="e-ic">MOT</span><div class="e-tt">Sin motos en esta categoria</div></div>`;
 }
 
 // Bloque de motos eliminadas con opción de restaurarlas
@@ -105,11 +133,9 @@ function filterMotos(q){
   const f = q?_M.filter(m=>`${m.modelo} ${m.vin} ${m.cliente||''}`.toLowerCase().includes(q.toLowerCase())):_M.filter(m=>!m.eliminado&&(S.mTab==='todas'?true:m.estado===S.mTab));
   const g=$('mgr');
   var elimHTML=_M.filter(m=>m.eliminado).length
-  ?'<div style="margin-top:14px;padding:10px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)">'+'<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px">Motos eliminadas</div>'+_M.filter(m=>m.eliminado).map(function(m){return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rim)">'+'<div style="flex:1"><span style="font-size:12px;font-weight:700;opacity:0.6;text-decoration:line-through">'+m.modelo+'</span>'+'<span style="font-size:10px;color:var(--ink3);margin-left:6px">'+m.vin+'</span></div>'+'<span style="font-size:10px;color:var(--red)">Del '+(m.eliminadoPor||'Admin')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoRazon?'· '+m.eliminadoRazon:'')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoEn?'· '+m.eliminadoEn.split('T')[0]:'')+'</span>'+'</div>';}).join('')+'</div>':'';
-if(g) g.innerHTML=(f.length?`<div class="moto-plan-grid">${f.map(motoCard).join('')}</div>`:`<div class="empty"><span class="e-ic">◆</span><div class="e-tt">Sin resultados para "${q}"</div></div>`)+elimHTML;
+  ?'<div style="margin-top:14px;padding:10px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)">'+'<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px">Motos eliminadas</div>'+_M.filter(m=>m.eliminado).map(function(m){return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rim)">'+'<div style="flex:1"><span style="font-size:12px;font-weight:700;opacity:0.6;text-decoration:line-through">'+motoEsc(m.modelo)+'</span>'+'<span style="font-size:10px;color:var(--ink3);margin-left:6px">'+motoEsc(m.vin)+'</span></div>'+'<span style="font-size:10px;color:var(--red)">Del '+motoEsc(m.eliminadoPor||'Admin')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoRazon?' - '+motoEsc(m.eliminadoRazon):'')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoEn?' - '+motoEsc(m.eliminadoEn.split('T')[0]):'')+'</span>'+'</div>';}).join('')+'</div>':'';
+  if(g) g.innerHTML=(f.length?`<div class="card" style="margin-bottom:14px"><div class="ch"><div><div class="ct">Listado de motocicletas</div><div class="cs">${f.length} resultado${f.length!==1?'s':''}</div></div></div><div class="tw tw-compact"><table><thead><tr><th>Motocicleta</th><th>Marca</th><th>Estado</th><th>Precio</th><th>Cuotas</th><th>Total</th><th>Cliente</th><th></th></tr></thead><tbody>${f.map(motoRow).join('')}</tbody></table></div></div>`:`<div class="empty"><span class="e-ic">MOT</span><div class="e-tt">Sin resultados para "${motoEsc(q)}"</div></div>`)+elimHTML;
 }
-
-// ══════════════════════════════════════════
 
 // PAGO DE COMPRA DE MOTO — helpers compartidos
 // (usado al crear moto en módulo Motocicletas y

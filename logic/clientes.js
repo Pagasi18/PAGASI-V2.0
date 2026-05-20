@@ -1125,7 +1125,7 @@ function empleadoDashHTML(){
         const px = c._proxima;
         const esHoy = fechaLocalISO(px)===hoyStr;
         const mañana = new Date(hoy); mañana.setDate(hoy.getDate()+1);
-        const esMañana = fechaLocalISO(px)===mañfechaLocalISO(ana);
+        const esMañana = fechaLocalISO(px)===fechaLocalISO(mañana);
         const diaLbl = esHoy?'HOY':esMañana?'MAÑANA':dias[px.getDay()]+' '+px.getDate();
         const diaColor = esHoy?'var(--amber)':esMañana?'var(--p1)':'var(--ink3)';
         return `<tr ${esHoy?'style="background:rgba(232,152,10,.06)"':''}>
