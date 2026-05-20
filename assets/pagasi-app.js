@@ -1,9 +1,9 @@
-﻿// â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
-// â•‘ FIREBASE â€” PEGA TU CONFIG AQUÃ â•‘
-// â•‘ 1. console.firebase.google.com â•‘
-// â•‘ 2. Engranaje â†’ ConfiguraciÃ³n del proyecto â•‘
-// â•‘ 3. Tu app Web â†’ copia el objeto firebaseConfig â•‘
-// â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ╔══════════════════════════════════════════════════════════╗
+// ║ FIREBASE — PEGA TU CONFIG AQUÍ ║
+// ║ 1. console.firebase.google.com ║
+// ║ 2. Engranaje → Configuración del proyecto ║
+// ║ 3. Tu app Web → copia el objeto firebaseConfig ║
+// ╚══════════════════════════════════════════════════════════╝
 var FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDt07EYdmvIqjU5a9CGPMQdYz8iBJ69Su8',
   authDomain: 'pagasi-v2.firebaseapp.com',
@@ -13,7 +13,7 @@ var FIREBASE_CONFIG = {
   appId: '1:951911859002:web:1eb8f0af7bcbd508474603'
 };
 
-// â”€â”€ Notas de Firestore (consola â†’ Firestore â†’ Reglas): â”€â”€â”€â”€â”€â”€
+// ── Notas de Firestore (consola → Firestore → Reglas): ──────
 // rules_version = '2';
 // service cloud.firestore {
 // match /databases/{database}/documents {
@@ -22,7 +22,7 @@ var FIREBASE_CONFIG = {
 //     }
 //   }
 // }
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ────────────────────────────────────────────────────────────
 
 var db = null;
 var auth = null;
@@ -63,13 +63,13 @@ function getCreditoSaldoPendiente(c){
   return Math.max(0, (parseFloat((c&&c.total) || 0)||0) - getCreditoPagosConfirmados(c));
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// nextCredId: Genera el siguiente ID de crÃ©dito MONOTÃ“NICAMENTE.
-// Toma el mÃ¡ximo nÃºmero existente (incluyendo eliminados y cancelados)
-// y le suma 1 â€” asÃ­ un ID nunca se repite aunque se borre uno anterior.
-// Esto preserva la trazabilidad contable: si tenÃ­as CRED-001, CRED-002
-// y CRED-003, y luego eliminas el 002, el siguiente serÃ¡ CRED-004 (no 003).
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════
+// nextCredId: Genera el siguiente ID de crédito MONOTÓNICAMENTE.
+// Toma el máximo número existente (incluyendo eliminados y cancelados)
+// y le suma 1 — así un ID nunca se repite aunque se borre uno anterior.
+// Esto preserva la trazabilidad contable: si tenías CRED-001, CRED-002
+// y CRED-003, y luego eliminas el 002, el siguiente será CRED-004 (no 003).
+// ════════════════════════════════════════════════════════════════════
 function nextCredId(){
   var max = 0;
   var all = (S && Array.isArray(S.creds)) ? S.creds : [];
@@ -87,7 +87,7 @@ function nextCredId(){
 function esMovimientoInicialCredito(m){
   if(!m || m.eliminado) return false;
   var concepto = (m.concepto||'');
-  return m.tipoOperacion==='inicial_credito' || concepto.indexOf('Inicial Â· ')===0;
+  return m.tipoOperacion==='inicial_credito' || concepto.indexOf('Inicial · ')===0;
 }
 function getTotalInicialesCobradas(){
   return (S&&Array.isArray(S.movimientos) ? S.movimientos : []).filter(esMovimientoInicialCredito).reduce(function(a,m){
@@ -100,7 +100,7 @@ function marcarInicialCreditoEliminada(credId, motivo){
   var actor = (S.currentUser&&S.currentUser.nombre)||'Admin';
   S.movimientos.forEach(function(m){
     if(!m || m.eliminado) return;
-    var esDeEsteCredito = m.creditoId===credId || m.conceptoCredito===credId || ((m.concepto||'').indexOf('Inicial Â· ')===0 && (m.concepto||'').indexOf(credId)>=0);
+    var esDeEsteCredito = m.creditoId===credId || m.conceptoCredito===credId || ((m.concepto||'').indexOf('Inicial · ')===0 && (m.concepto||'').indexOf(credId)>=0);
     if(!esDeEsteCredito) return;
     m.eliminado = true;
     m.eliminadoPor = actor;
@@ -140,7 +140,7 @@ function showLoader(msg,sub){
 }
 function hideLoader(){var w=$('ld-wrap');if(w)w.style.display='none';}
 
-// Firebase guarda el mismo objeto â€” sin conversiÃ³n necesaria
+// Firebase guarda el mismo objeto — sin conversión necesaria
 function mapMoto(r){return r;}
 function mapCred(r){return r;}
 function mapPago(r){return r;}
@@ -152,7 +152,14 @@ function clean(o){
   return r;
 }
 
-// Cache local especÃ­fica para motos â€” evita perder unidades nuevas entre sesiones
+function fechaLocalISO(value){
+  var d = value ? new Date(value) : new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().split('T')[0];
+}
+function hoyLocalISO(){ return fechaLocalISO(); }
+
+// Cache local específica para motos — evita perder unidades nuevas entre sesiones
 var MOTOS_CACHE_KEY='pagasi_motos_cache_v1';
 function loadMotosCache(){
   try{
@@ -180,9 +187,9 @@ function delMotoCache(id){
 }
 // Estrategia de merge:
 // - Union de motos remotas y locales.
-// - En caso de conflicto de id, gana la versiÃ³n local (puede tener cambios aÃºn no subidos a Firebase).
-// - Si el cachÃ© local quedÃ³ "sucio" (motos borradas de Firebase que reaparecen), el usuario puede
-// usar el botÃ³n "âŸ³ Resincronizar" del mÃ³dulo de motos para limpiar el cachÃ© local.
+// - En caso de conflicto de id, gana la versión local (puede tener cambios aún no subidos a Firebase).
+// - Si el caché local quedó "sucio" (motos borradas de Firebase que reaparecen), el usuario puede
+// usar el botón "⟳ Resincronizar" del módulo de motos para limpiar el caché local.
 function mergeMotosPreferLocal(remote, local){
   var map={};
   (Array.isArray(remote)?remote:[]).forEach(function(x){ if(x&&x.id!=null) map[String(x.id)]=x; });
@@ -190,24 +197,34 @@ function mergeMotosPreferLocal(remote, local){
   return Object.keys(map).map(function(k){ return map[k]; });
 }
 
-// â”€â”€ DB â€” persistencia con Firestore â”€â”€
-// Cola offline: guarda operaciones pendientes cuando no hay conexiÃ³n
+// ── DB — persistencia con Firestore ──
+// Cola offline: guarda operaciones pendientes cuando no hay conexión
 var _dbQueue = [];
 var _dbOnline = true;
 window.addEventListener('online', function(){ _dbOnline=true; _flushDbQueue(); });
 window.addEventListener('offline', function(){ _dbOnline=false; });
 
 function _dbSilent(fn){
-  // Ejecuta fn() y silencia errores de red (WebChannel transport errors)
+  // Ejecuta fn() y avisa errores reales sin romper los flujos existentes.
   try {
     var p = fn();
-    if(p && p.catch) p.catch(function(e){
+    if(p && p.then) return p.then(function(){ return true; }).catch(function(e){
       var msg = e.message||'';
-      // Ignorar errores de transporte â€” la persistencia offline los reintenta
-      if(msg.includes('transport') || msg.includes('WebChannel') || msg.includes('network') || e.code==='unavailable') return;
+      if(msg.includes('transport') || msg.includes('WebChannel') || msg.includes('network') || e.code==='unavailable'){
+        console.warn('DB write pending/offline:', msg);
+        if(typeof toast==='function') toast('Sin conexi�n estable: Firebase intentar� sincronizar el cambio.','info');
+        return false;
+      }
       console.warn('DB write error:', msg);
+      if(typeof toast==='function') toast('No se pudo guardar en Firebase: '+msg,'error');
+      return false;
     });
-  } catch(e){ console.warn('DB error:', e.message); }
+    return Promise.resolve(true);
+  } catch(e){
+    console.warn('DB error:', e.message);
+    if(typeof toast==='function') toast('No se pudo guardar en Firebase: '+e.message,'error');
+    return Promise.resolve(false);
+  }
 }
 
 function _flushDbQueue(){
@@ -271,16 +288,16 @@ var DB = {
       S.motos = mergeMotosPreferLocal(m.map(mapMoto), motosCacheLocal);
       saveMotosCache(S.motos);
 
-      // â•â•â•â•â•â• SANEAR score_indexa corrupto â•â•â•â•â•â•
-      // En algunos clientes se guardÃ³ el objeto completo del score en lugar del nÃºmero
+      // ══════ SANEAR score_indexa corrupto ══════
+      // En algunos clientes se guardó el objeto completo del score en lugar del número
       var _scoreCorruptos = 0;
       cl.forEach(function(cli){
         if(!cli) return;
         var sr = cli.score_indexa;
-        // Caso 1: objeto â†’ rescatar total/score/valor
+        // Caso 1: objeto → rescatar total/score/valor
         if(sr && typeof sr === 'object' && sr !== null){
           _scoreCorruptos++;
-          if(_scoreCorruptos <= 2) console.log('[SCORE CORRUPTO]', cli.nombre, 'tenÃ­a:', sr);
+          if(_scoreCorruptos <= 2) console.log('[SCORE CORRUPTO]', cli.nombre, 'tenía:', sr);
           var t = parseFloat(sr.total || sr.score || sr.valor || sr.value || 0);
           cli.score_indexa = (t >= 300 && t <= 850) ? t : 0;
           cli._scoreFueCorrupto = true;
@@ -294,7 +311,7 @@ var DB = {
         if(!cli.score_indexa && cli.ingreso){
           var ing = parseFloat(cli.ingreso) || 0;
           var emp = (cli.trabajo || '').toLowerCase();
-          // Score base por ingreso (300 a 750 segÃºn rango)
+          // Score base por ingreso (300 a 750 según rango)
           var base = 300;
           if(ing >= 2000) base = 720;
           else if(ing >= 1000) base = 650;
@@ -302,8 +319,8 @@ var DB = {
           else if(ing >= 300) base = 500;
           else if(ing >= 150) base = 430;
           else base = 380;
-          // Bonus/penalizaciÃ³n por tipo de empleo
-          if(emp.indexOf('formal')>=0 || emp.indexOf('pÃºblico')>=0 || emp.indexOf('publico')>=0) base += 40;
+          // Bonus/penalización por tipo de empleo
+          if(emp.indexOf('formal')>=0 || emp.indexOf('público')>=0 || emp.indexOf('publico')>=0) base += 40;
           else if(emp.indexOf('informal')>=0 || emp.indexOf('indepen')>=0) base -= 20;
           // Limitar 300-850
           cli.score_indexa = Math.max(300, Math.min(850, base));
@@ -316,7 +333,7 @@ var DB = {
 
       S.clientes = cl;
 
-      // Persistir en background los scores saneados â€” sobrescribe el objeto corrupto en Firestore
+      // Persistir en background los scores saneados — sobrescribe el objeto corrupto en Firestore
       setTimeout(function(){
         if(!db) return;
         var fixed = 0;
@@ -355,7 +372,7 @@ var DB = {
             S.concesionarioActivo = asignados[0];
             try{ localStorage.setItem('concesionarioActivo', asignados[0]); }catch(e){}
           } else if(asignados.length > 1){
-            // Si tiene varias y el savedConc no estÃ¡ en su lista, usar la primera
+            // Si tiene varias y el savedConc no está en su lista, usar la primera
             if(!S.concesionarioActivo || asignados.indexOf(S.concesionarioActivo) === -1){
               S.concesionarioActivo = asignados[0];
               try{ localStorage.setItem('concesionarioActivo', asignados[0]); }catch(e){}
@@ -376,103 +393,103 @@ var DB = {
         // Re-render egresos chart if on dashboard
         if(typeof renderDashEgrChart==='function') renderDashEgrChart();
       }, 300);
-      setTimeout(mostrarAlertaMora, 800); // pequeÃ±o delay para que el dashboard cargue
+      setTimeout(mostrarAlertaMora, 800); // pequeño delay para que el dashboard cargue
     }).catch(function(e){
       hideLoader();
       // Si es error de red, trabajar con datos locales sin avisar con error
       if(e.code==='unavailable'||( e.message&&e.message.includes('network'))){
         if(motosCacheLocal.length) S.motos = mergeMotosPreferLocal(S.motos, motosCacheLocal);
-        toast('Sin conexiÃ³n â€” modo offline activo','info');
+        toast('Sin conexión — modo offline activo','info');
       } else {
         if(motosCacheLocal.length) S.motos = mergeMotosPreferLocal(S.motos, motosCacheLocal);
         toast('Error al cargar datos: '+e.message,'error');
       }
     });
   },
-  saveMoto: function(o){ upsertMotoCache(o); if(!db)return; _dbSilent(function(){ return db.collection('motos').doc(String(o.id)).set(clean(o)); }); },
-  delMoto: function(id){ delMotoCache(id); if(!db)return; _dbSilent(function(){ return db.collection('motos').doc(String(id)).delete(); }); },
-  saveCliente: function(o){ if(!db)return; _dbSilent(function(){ return db.collection('clientes').doc(String(o.id)).set(clean(o), {merge:true}); }); },
-  delCliente: function(id){ if(!db)return; _dbSilent(function(){ return db.collection('clientes').doc(String(id)).delete(); }); },
-  saveCred: function(o){ if(!db)return; _dbSilent(function(){ return db.collection('creditos').doc(o.id).set(clean(o)); }); },
-  updateCred: function(id,u){ if(!db)return; _dbSilent(function(){ return db.collection('creditos').doc(id).update(u); }); },
-  savePago: function(o){ if(!db)return; _dbSilent(function(){ return db.collection('pagos').doc(o.id).set(clean(o)); }); },
-  saveEgreso: function(o){ if(!db)return; _dbSilent(function(){ return db.collection('egresos').doc(String(o.id)).set(clean(o)); }); },
-  delEgreso: function(id){ if(!db)return; _dbSilent(function(){ return db.collection('egresos').doc(String(id)).delete(); }); },
-  saveFactura: function(o){ if(!db)return; _dbSilent(function(){ return db.collection('facturas').doc(String(o.id)).set(clean(o)); }); },
-  saveConcesionario: function(o){ if(!db)return; _dbSilent(function(){ return db.collection('concesionarios').doc(String(o.id)).set(clean(o)); }); },
-  delConcesionario: function(id){ if(!db)return; _dbSilent(function(){ return db.collection('concesionarios').doc(String(id)).delete(); }); },
+  saveMoto: function(o){ upsertMotoCache(o); if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('motos').doc(String(o.id)).set(clean(o)); }); },
+  delMoto: function(id){ delMotoCache(id); if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('motos').doc(String(id)).delete(); }); },
+  saveCliente: function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('clientes').doc(String(o.id)).set(clean(o), {merge:true}); }); },
+  delCliente: function(id){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('clientes').doc(String(id)).delete(); }); },
+  saveCred: function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('creditos').doc(o.id).set(clean(o)); }); },
+  updateCred: function(id,u){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('creditos').doc(id).update(u); }); },
+  savePago: function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('pagos').doc(o.id).set(clean(o)); }); },
+  saveEgreso: function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('egresos').doc(String(o.id)).set(clean(o)); }); },
+  delEgreso: function(id){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('egresos').doc(String(id)).delete(); }); },
+  saveFactura: function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('facturas').doc(String(o.id)).set(clean(o)); }); },
+  saveConcesionario: function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('concesionarios').doc(String(o.id)).set(clean(o)); }); },
+  delConcesionario: function(id){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('concesionarios').doc(String(id)).delete(); }); },
 };
 
 // Usuarios e invitaciones en Firestore
 DB.getUsuarios = function(){ if(!db) return Promise.resolve([]); return db.collection('usuarios').get().then(function(s){return s.docs.map(function(d){return Object.assign({uid:d.id},d.data());});}); };
 DB.saveUsuario = function(uid,data){ if(!db) return Promise.resolve(); return db.collection('usuarios').doc(uid).set(data,{merge:true}); };
-DB.updateUsuario = function(uid,data){ if(!db) return; _dbSilent(function(){ return db.collection('usuarios').doc(uid).update(data); }); };
-DB.deleteUsuario = function(uid){ if(!db) return; _dbSilent(function(){ return db.collection('usuarios').doc(uid).delete(); }); };
+DB.updateUsuario = function(uid,data){ if(!db) return Promise.resolve(false); return _dbSilent(function(){ return db.collection('usuarios').doc(uid).update(data); }); };
+DB.deleteUsuario = function(uid){ if(!db) return Promise.resolve(false); return _dbSilent(function(){ return db.collection('usuarios').doc(uid).delete(); }); };
 DB.saveInvitacion = function(token,data){ if(!db) return; return db.collection('invitaciones').doc(token).set(data); };
 DB.getInvitacion = function(token){ if(!db) return Promise.resolve(null); return db.collection('invitaciones').doc(token).get(); };
-DB.usarInvitacion = function(token,uid){ if(!db) return; _dbSilent(function(){ return db.collection('invitaciones').doc(token).update({usado:true,uid:uid,fechaUso:new Date().toISOString()}); }); };
-DB.saveCuenta = function(o){ if(!db)return; _dbSilent(function(){ return db.collection('cuentas').doc(String(o.id)).set(clean(o)); }); };
-DB.delCuenta = function(id){ if(!db)return; _dbSilent(function(){ return db.collection('cuentas').doc(String(id)).delete(); }); };
-DB.updateCuenta = function(id,u){ if(!db)return; _dbSilent(function(){ return db.collection('cuentas').doc(String(id)).update(u); }); };
-DB.saveMovimiento = function(o){ if(!db)return; _dbSilent(function(){ return db.collection('movimientos').doc(o.id).set(clean(o)); }); };
-DB.delMovimiento = function(id){ if(!db)return; _dbSilent(function(){ return db.collection('movimientos').doc(id).delete(); }); };
-DB.saveTarea = function(o){ if(!db)return; _dbSilent(function(){ return db.collection('tareas').doc(String(o.id)).set(clean(o),{merge:true}); }); };
-DB.delTarea = function(id){ if(!db)return; _dbSilent(function(){ return db.collection('tareas').doc(String(id)).delete(); }); };
+DB.usarInvitacion = function(token,uid){ if(!db) return Promise.resolve(false); return _dbSilent(function(){ return db.collection('invitaciones').doc(token).update({usado:true,uid:uid,fechaUso:new Date().toISOString()}); }); };
+DB.saveCuenta = function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('cuentas').doc(String(o.id)).set(clean(o)); }); };
+DB.delCuenta = function(id){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('cuentas').doc(String(id)).delete(); }); };
+DB.updateCuenta = function(id,u){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('cuentas').doc(String(id)).update(u); }); };
+DB.saveMovimiento = function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('movimientos').doc(o.id).set(clean(o)); }); };
+DB.delMovimiento = function(id){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('movimientos').doc(id).delete(); }); };
+DB.saveTarea = function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('tareas').doc(String(o.id)).set(clean(o),{merge:true}); }); };
+DB.delTarea = function(id){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('tareas').doc(String(id)).delete(); }); };
 DB.getTareas = function(){ if(!db) return Promise.resolve([]); return db.collection('tareas').get().then(function(s){return s.docs.map(function(d){return Object.assign({id:d.id},d.data());});}); };
 
 
-// â”€â”€ Lista de mÃ³dulos disponibles â”€â”€
+// ── Lista de módulos disponibles ──
 var MODULOS = [
   {id:'dash', label:'Dashboard', grupo:'Principal'},
   {id:'centro', label:'Centro de trabajo', grupo:'Principal'},
-  {id:'clientes', label:'Clientes', grupo:'GestiÃ³n'},
-  {id:'motos', label:'Motocicletas', grupo:'GestiÃ³n'},
-  {id:'creditos', label:'CrÃ©ditos', grupo:'GestiÃ³n'},
-  {id:'pagos', label:'Pagos', grupo:'GestiÃ³n'},
+  {id:'clientes', label:'Clientes', grupo:'Gestión'},
+  {id:'motos', label:'Motocicletas', grupo:'Gestión'},
+  {id:'creditos', label:'Créditos', grupo:'Gestión'},
+  {id:'pagos', label:'Pagos', grupo:'Gestión'},
   {id:'cobranza', label:'Cobranza', grupo:'Operaciones'},
   {id:'contratos', label:'Contratos', grupo:'Operaciones'},
   {id:'notif', label:'Notificaciones', grupo:'Operaciones'},
-  {id:'reportes', label:'Finanzas', grupo:'AnÃ¡lisis'},
-  {id:'cuentas', label:'Cuentas', grupo:'AnÃ¡lisis'},
-  {id:'comisiones', label:'Comisiones', grupo:'AnÃ¡lisis'},
+  {id:'reportes', label:'Finanzas', grupo:'Análisis'},
+  {id:'cuentas', label:'Cuentas', grupo:'Análisis'},
+  {id:'comisiones', label:'Comisiones', grupo:'Análisis'},
   {id:'concesionarios', label:'Concesionarios', grupo:'Sistema'},
   {id:'aprobaciones', label:'Aprobaciones', grupo:'Operaciones'},
   {id:'plan', label:'Plan & Precios', grupo:'Sistema'},
-  {id:'config', label:'ConfiguraciÃ³n', grupo:'Sistema'},
+  {id:'config', label:'Configuración', grupo:'Sistema'},
   {id:'users', label:'Usuarios', grupo:'Sistema'},
 ];
 
-// (S.currentUser se inicializa despuÃ©s de declarar S)
+// (S.currentUser se inicializa después de declarar S)
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CATÃLOGO OFICIAL PAGASI â€” PLAN GLOBAL CONFIGURABLE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
+// CATÁLOGO OFICIAL PAGASI — PLAN GLOBAL CONFIGURABLE
+// ══════════════════════════════════════════
 const PLAN = {plazo:12, factor:1.935483870967742, inicial:0.45, tasaMensual:12.26, apy:413.34, diasGracia:5, moraPct:5};
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// SCORE CFG â€” PolÃ­tica de riesgo configurable
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
+// SCORE CFG — Política de riesgo configurable
+// ══════════════════════════════════════════
 const SCORE_CFG_DEFAULT = {
   // Pesos de los factores (deben sumar 100)
   pesos: { f1:30, f2:30, f3:20, f4:15, f5:5 },
-  // Umbrales de aprobaciÃ³n
+  // Umbrales de aprobación
   umbrales: {
-    excelente:700, // â‰¥ â†’ aprobaciÃ³n automÃ¡tica
-    bueno: 600, // â‰¥ â†’ aprobar
-    regular: 500, // â‰¥ â†’ revisar manualmente
-    // < regular â†’ rechazar
+    excelente:700, // ≥ → aprobación automática
+    bueno: 600, // ≥ → aprobar
+    regular: 500, // ≥ → revisar manualmente
+    // < regular → rechazar
   },
   // Hard rejects: condiciones que fuerzan rechazo sin importar el resto
   hardReject: {
     ingresoMinimo: 250, // rechazar si ingreso efectivo < este valor (USD/mes)
     ratioCuotaMax: 0.35, // rechazar si cuota/ingreso > 35%
     historialMaloConDeuda:true,// rechazar si hist=malo y deuda=graves
-    sinTelefono: false, // rechazar si no tiene telÃ©fono
+    sinTelefono: false, // rechazar si no tiene teléfono
     sinReferencias: false, // rechazar si no tiene referencia alguna
   },
-  // Ratio cuota/ingreso: polÃ­ticas
+  // Ratio cuota/ingreso: políticas
   ratios: {
-    ideal: 0.20, // â‰¤ â†’ bonus
+    ideal: 0.20, // ≤ → bonus
     aceptable: 0.30,
     alto: 0.40,
     muyAlto: 0.50,
@@ -480,7 +497,7 @@ const SCORE_CFG_DEFAULT = {
   // Ingreso base (para normalizar f2)
   ingreso: {
     minBase: 250, // ingresos por debajo de este valor reciben 0 puntos de base
-    maxBase: 3000, // ingresos desde este valor reciben el mÃ¡ximo de base
+    maxBase: 3000, // ingresos desde este valor reciben el máximo de base
   }
 };
 var SCORE_CFG = JSON.parse(JSON.stringify(SCORE_CFG_DEFAULT));
@@ -584,16 +601,16 @@ function fmtFecha(iso){
 }
 const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a',completado:'b-g',propia:'b-g',cancelado:'b-r'}[s]||'b-x');
-const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'CrÃ©ditos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',notif:'Notificaciones',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'ConfiguraciÃ³n',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios',aprobaciones:'Aprobaciones'};
+const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',notif:'Notificaciones',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios',aprobaciones:'Aprobaciones'};
 
 const EXTRA_PERMS={perm_delete:'Permiso para eliminar'};
 function getCurrentPerms(){ return (S.currentUser&&Array.isArray(S.currentUser.permisos)) ? S.currentUser.permisos : []; }
 function isAdminUser(){ return !!(S.currentUser && S.currentUser.rol==='Administrador'); }
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// PERMISOS POR ROL â€” presets automÃ¡ticos
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
+// PERMISOS POR ROL — presets automáticos
+// ══════════════════════════════════════════
 var ROL_PERMISOS = {
-  // Acceso total: dueÃ±o del sistema
+  // Acceso total: dueño del sistema
   Administrador: ['dash','centro','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','plan','config','users','perm_delete'],
   // Supervisa operaciones, ve reportes, NO toca config ni usuarios
   Gerente: ['dash','centro','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas'],
@@ -606,19 +623,19 @@ var ROL_PERMISOS = {
   // Empleado general: hace casi todo excepto config/users
   Empleado: ['dash','centro','clientes','motos','creditos','pagos','cobranza','contratos','notif'],
   // Vendedor Concesionario: solo calculadora (motos), clientes y solicitudes (creditos)
-  // Los crÃ©ditos que crea quedan en estado 'pendiente_revision' hasta que admin apruebe
+  // Los créditos que crea quedan en estado 'pendiente_revision' hasta que admin apruebe
   'Vendedor Concesionario': ['motos','clientes','creditos'],
 };
 
-// Roles disponibles para invitar (el nombre visible y su descripciÃ³n)
+// Roles disponibles para invitar (el nombre visible y su descripción)
 var ROLES_INFO = {
-  Administrador: { desc:'Control total. Puede gestionar usuarios, configuraciÃ³n y todos los mÃ³dulos.', color:'#2563EB', icon:'ADM' },
-  Gerente: { desc:'Supervisa operaciones y ve reportes. No puede cambiar configuraciÃ³n del sistema.', color:'#e8980a', icon:'GER' },
+  Administrador: { desc:'Control total. Puede gestionar usuarios, configuración y todos los módulos.', color:'#2563EB', icon:'ADM' },
+  Gerente: { desc:'Supervisa operaciones y ve reportes. No puede cambiar configuración del sistema.', color:'#e8980a', icon:'GER' },
   Cobrador: { desc:'Cobra y registra pagos. Ve todos los clientes y la cartera de cobranza.', color:'#06b06a', icon:'COB' },
-  Vendedor: { desc:'Capta clientes y crea solicitudes de crÃ©dito. No ve cobranza ni pagos.', color:'#2194ff', icon:'VEN' },
+  Vendedor: { desc:'Capta clientes y crea solicitudes de crédito. No ve cobranza ni pagos.', color:'#2194ff', icon:'VEN' },
   Contador: { desc:'Acceso exclusivo a pagos, reportes financieros, cuentas y contabilidad.', color:'#9c64ff', icon:'CNT' },
-  Empleado: { desc:'Empleado general. Hace casi todo menos configuraciÃ³n y gestiÃ³n de usuarios.', color:'#ff6b6b', icon:'EMP' },
-  'Vendedor Concesionario': { desc:'Vendedor de un concesionario externo. Solo calculadora, clientes y solicitudes. Los crÃ©ditos requieren aprobaciÃ³n del admin.', color:'#0ea5e9', icon:'VCO' }
+  Empleado: { desc:'Empleado general. Hace casi todo menos configuración y gestión de usuarios.', color:'#ff6b6b', icon:'EMP' },
+  'Vendedor Concesionario': { desc:'Vendedor de un concesionario externo. Solo calculadora, clientes y solicitudes. Los créditos requieren aprobación del admin.', color:'#0ea5e9', icon:'VCO' }
 };
 
 // Helper: devuelve true si el usuario es un Empleado (o legacy Cobrador/Vendedor)
@@ -628,7 +645,7 @@ function isEmpleadoRole(){
   return r === 'Empleado' || r === 'Cobrador' || r === 'Vendedor';
 }
 
-// Vendedor Concesionario: rol especial con sidebar reducido (solo 3 mÃ³dulos)
+// Vendedor Concesionario: rol especial con sidebar reducido (solo 3 módulos)
 function isVendedorConcesionarioRole(){
   if(!S.currentUser) return false;
   return S.currentUser.rol === 'Vendedor Concesionario';
@@ -637,26 +654,26 @@ function isVendedorConcesionarioRole(){
 // Permisos efectivos del usuario actual
 function getPermsEfectivos(){
   if(isAdminUser()) return Object.keys(PGL).concat(['perm_delete']);
-  // Todos los demÃ¡s roles (incluido Empleado / Cobrador / Vendedor):
+  // Todos los demás roles (incluido Empleado / Cobrador / Vendedor):
   // respetar los permisos configurados por el administrador
   return getCurrentPerms();
 }
 
 function hasModuleAccess(key){
   if(isAdminUser()) return true;
-  // Vendedor Concesionario: solo 3 mÃ³dulos permitidos
+  // Vendedor Concesionario: solo 3 módulos permitidos
   if(isVendedorConcesionarioRole()){
     return key === 'motos' || key === 'clientes' || key === 'creditos';
   }
   return getPermsEfectivos().includes(key);
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // LISTENER EN TIEMPO REAL DEL USUARIO ACTUAL
 // Cuando el admin cambia rol/permisos en Firestore, el usuario afectado
-// recibe la actualizaciÃ³n al instante: sidebar se redibuja, mÃ³dulos
+// recibe la actualización al instante: sidebar se redibuja, módulos
 // nuevos aparecen y los retirados desaparecen sin necesidad de re-login.
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 window._currentUserUnsub = null;
 function _detachCurrentUserListener(){
   if(typeof window._currentUserUnsub === 'function'){
@@ -677,16 +694,16 @@ function _attachCurrentUserListener(uid){
       var nuevoRol = data.rol || S.currentUser.rol;
       var nuevosPerms = Array.isArray(data.permisos) ? data.permisos.slice() : (S.currentUser.permisos||[]);
       var newPermsKey = nuevosPerms.slice().sort().join('|');
-      // Si nada cambiÃ³, salir
+      // Si nada cambió, salir
       if(prevRol === nuevoRol && prevPerms === newPermsKey){
-        // Solo actualizar nombre si cambiÃ³
+        // Solo actualizar nombre si cambió
         if(data.nombre && data.nombre !== S.currentUser.nombre){
           S.currentUser.nombre = data.nombre;
           if(typeof updateSidebarFooter === 'function') updateSidebarFooter();
         }
         return;
       }
-      // Si fue suspendido por admin, cerrar sesiÃ³n
+      // Si fue suspendido por admin, cerrar sesión
       if(data.suspendido === true && typeof auth !== 'undefined' && auth){
         try{ toast('Tu cuenta ha sido suspendida','error'); }catch(e){}
         setTimeout(function(){ try{ auth.signOut(); }catch(e){} }, 1200);
@@ -718,27 +735,27 @@ function _attachCurrentUserListener(uid){
           toast('Tus permisos fueron actualizados','info');
         }
       }catch(e){}
-      // Redibujar sidebar (mostrarÃ¡/ocultarÃ¡ mÃ³dulos segÃºn los nuevos permisos)
+      // Redibujar sidebar (mostrará/ocultará módulos según los nuevos permisos)
       if(typeof renderSidebar === 'function') renderSidebar();
       if(typeof updateSidebarFooter === 'function') updateSidebarFooter();
-      // Si la pÃ¡gina actual ya no es accesible, mover al dashboard (o primer mÃ³dulo permitido)
+      // Si la página actual ya no es accesible, mover al dashboard (o primer módulo permitido)
       if(S.page && typeof hasModuleAccess === 'function' && !hasModuleAccess(S.page)){
         var fallback = ['dash','centro','clientes','creditos','pagos','cobranza'].find(function(k){ return hasModuleAccess(k); });
         if(fallback && typeof nav === 'function') nav(fallback);
       } else if(S.page && typeof nav === 'function'){
-        // Repintar la pÃ¡gina actual por si depende de permisos (ej. botones de eliminar)
+        // Repintar la página actual por si depende de permisos (ej. botones de eliminar)
         try{ nav(S.page); }catch(e){}
       }
     }, function(err){
-      // Errores silenciosos: el usuario ya verÃ¡ los cambios al refrescar
+      // Errores silenciosos: el usuario ya verá los cambios al refrescar
       console&&console.warn&&console.warn('Listener usuario:', err && err.message);
     });
   }catch(e){
-    // Si falla, no rompemos nada â€” la sesiÃ³n continÃºa funcionando
+    // Si falla, no rompemos nada — la sesión continúa funcionando
   }
 }
 
-// â”€â”€ Sidebar dinÃ¡mico: solo muestra mÃ³dulos con acceso â”€â”€
+// ── Sidebar dinámico: solo muestra módulos con acceso ──
 function renderSidebar(){
   var sb = document.querySelector('.sb-nav');
   if(!sb) return;
@@ -750,9 +767,9 @@ function renderSidebar(){
     var permsEmp = getCurrentPerms();
     var grposEmp = [
       {label:'Mi Trabajo', keys:['dash','centro']},
-      {label:'GestiÃ³n', keys:['clientes','motos','creditos','pagos']},
+      {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
       {label:'Operaciones',keys:['cobranza','contratos','notif']},
-      {label:'AnÃ¡lisis', keys:['reportes','cuentas','comisiones']},
+      {label:'Análisis', keys:['reportes','cuentas','comisiones']},
       {label:'Sistema', keys:['plan','config','scores','users']},
     ];
     var iconMapEmp = {
@@ -766,7 +783,7 @@ function renderSidebar(){
     var sidebarEmp = '<div style="padding:10px 8px">'
       +'<div style="margin-bottom:6px">'
       +'<button type="button" style="display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:12px;background:var(--p1);color:#fff;border:none;cursor:pointer;font-family:var(--f);font-size:13px;font-weight:700;width:100%" onclick="openAddCred()">'
-      +'<span style="font-size:16px;font-weight:900;line-height:1">ï¼‹</span><span>Nueva Solicitud</span></button>'
+      +'<span style="font-size:16px;font-weight:900;line-height:1">＋</span><span>Nueva Solicitud</span></button>'
       +'</div>'
       + grposEmp.map(function(g){
           var items = g.keys.filter(function(k){ return permsEmp.includes(k); });
@@ -785,13 +802,13 @@ function renderSidebar(){
     return;
   }
 
-  // Vendedor Concesionario: sidebar MUY reducido (solo 3 mÃ³dulos esenciales)
-  // No ve admin, finanzas, GPS, otros concesionarios â€” nada de eso
+  // Vendedor Concesionario: sidebar MUY reducido (solo 3 módulos esenciales)
+  // No ve admin, finanzas, GPS, otros concesionarios — nada de eso
   if(isVendedorConcesionarioRole()){
     var sidebarVC = '<div style="padding:10px 8px">'
       +'<div style="margin-bottom:6px">'
       +'<button type="button" style="display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:12px;background:var(--p1);color:#fff;border:none;cursor:pointer;font-family:var(--f);font-size:13px;font-weight:700;width:100%" onclick="openAddCred()">'
-      +'<span style="font-size:16px;font-weight:900;line-height:1">ï¼‹</span><span>Nueva Solicitud</span></button>'
+      +'<span style="font-size:16px;font-weight:900;line-height:1">＋</span><span>Nueva Solicitud</span></button>'
       +'</div>'
       +'<div class="sb-grp"><div class="sb-lbl">Mi Trabajo</div>'
       +'<button type="button" class="si" data-nav="motos" onclick="nav(\'motos\')"><span class="sic nav-ic">CAL</span><span>Calculadora</span></button>'
@@ -804,13 +821,13 @@ function renderSidebar(){
     return;
   }
 
-  // Otros roles: filtrar mÃ³dulos segÃºn permisos
+  // Otros roles: filtrar módulos según permisos
   var perms = getCurrentPerms();
   var grupos = [
     {label:'Principal', keys:['dash','centro']},
-    {label:'GestiÃ³n', keys:['clientes','motos','creditos','pagos']},
+    {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
     {label:'Operaciones',keys:['cobranza','contratos','notif','aprobaciones']},
-    {label:'AnÃ¡lisis', keys:['reportes','cuentas','comisiones']},
+    {label:'Análisis', keys:['reportes','cuentas','comisiones']},
     {label:'Sistema', keys:['plan','config','concesionarios','scores','users']},
   ];
   var iconMap = {
@@ -858,7 +875,7 @@ function updateSidebarFooter(){
     if(usr) usr.setAttribute('onclick','showAdminProfile()');
   }
 
-  // â”€â”€ Badge de mora automÃ¡tico â”€â”€
+  // ── Badge de mora automático ──
   actualizarBadgeMora();
 }
 
@@ -884,14 +901,14 @@ function actualizarBadgeMora(){
       cob.textContent='';
       cob.style.display='none';
     }
-    // Toast de alerta si hay crÃ©ditos nuevos en mora (mora entre 1-3 dÃ­as)
-    var _moraKey = 'pagasi_mora_alert_'+new Date().toISOString().slice(0,10);
+    // Toast de alerta si hay créditos nuevos en mora (mora entre 1-3 días)
+    var _moraKey = 'pagasi_mora_alert_'+hoyLocalISO();
     if(enMora>0 && !sessionStorage.getItem(_moraKey)){
       var nuevosEnMora = _concFiltrar(S.creds||[]).filter(function(c){return !c.eliminado && c.mora>0 && c.mora<=3 && c.estado==='activo';});
       if(nuevosEnMora.length>0){
         sessionStorage.setItem(_moraKey,'1');
         setTimeout(function(){
-          toast('âš ï¸ '+nuevosEnMora.length+' crÃ©dito'+(nuevosEnMora.length>1?'s':'')+(nuevosEnMora.length>1?' entraron':' entrÃ³')+' en mora hoy','warning',6000);
+          toast('⚠️ '+nuevosEnMora.length+' crédito'+(nuevosEnMora.length>1?'s':'')+(nuevosEnMora.length>1?' entraron':' entró')+' en mora hoy','warning',6000);
         }, 1500);
       }
     }
@@ -899,22 +916,22 @@ function actualizarBadgeMora(){
 }
 function canDeleteAction(){ return isAdminUser() || getCurrentPerms().includes('perm_delete'); }
 
-// â”€â”€ Pantalla de bienvenida para Vendedor â”€â”€
+// ── Pantalla de bienvenida para Vendedor ──
 function requireDeletePermission(){
   if(canDeleteAction()) return true;
   toast('No tienes permiso para eliminar','error');
   return false;
 }
 
-// Variables globales de configuraciÃ³n
+// Variables globales de configuración
 var _cuentasBanc = [];
 var _cobradores = ['Juan Admin'];
-// Datos de la empresa (nombre, RIF, ciudad, tel, email) â€” se usan en contratos y reportes
-// Fuente Ãºnica de verdad que NO depende del DOM (Config solo existe cuando estÃ¡s en esa pÃ¡gina)
+// Datos de la empresa (nombre, RIF, ciudad, tel, email) — se usan en contratos y reportes
+// Fuente única de verdad que NO depende del DOM (Config solo existe cuando estás en esa página)
 var _empresa = { nombre:'Pagasi', rif:'J-00000000-0', ciudad:'Caracas', tel:'', email:'', direccion:'', representante:'', repCI:'' };
 
 // Helper global para leer empresa de forma consistente.
-// Primero intenta el DOM (por si estÃ¡ en Config editÃ¡ndose), si no usa la variable cacheada.
+// Primero intenta el DOM (por si está en Config editándose), si no usa la variable cacheada.
 function getEmpresa(){
   var nombre = ($('cfg_empresa')&&$('cfg_empresa').value) || _empresa.nombre || 'Pagasi';
   var rif = ($('cfg_rif') &&$('cfg_rif').value) || _empresa.rif || 'J-00000000-0';
@@ -940,11 +957,11 @@ function updateBadge(){
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // HISTORY / BACK BUTTON HANDLING
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// Evita que el botÃ³n "atrÃ¡s" del navegador saque al usuario del sistema.
-// Cada navegaciÃ³n interna (nav) hace pushState; el popstate navega
+// ══════════════════════════════════════════
+// Evita que el botón "atrás" del navegador saque al usuario del sistema.
+// Cada navegación interna (nav) hace pushState; el popstate navega
 // internamente o cierra modales abiertos.
 window._navFromPop = false; // flag: evita push cuando venimos de popstate
 
@@ -970,21 +987,21 @@ function _replaceNavState(p){
 }
 
 window.addEventListener('popstate', function(ev){
-  // Si hay un modal abierto, ciÃ©rralo y vuelve a poner el estado
-  // (no dejamos que el back "navegue" cuando hay un diÃ¡logo).
+  // Si hay un modal abierto, ciérralo y vuelve a poner el estado
+  // (no dejamos que el back "navegue" cuando hay un diálogo).
   if(_isModalOpen()){
     try { if(typeof closeM==='function') closeM(); } catch(e){}
-    // Reponer el estado para que quedemos en la misma pÃ¡gina
+    // Reponer el estado para que quedemos en la misma página
     _pushNavState(S.page || 'dash');
     return;
   }
-  // Si el usuario aÃºn no ha iniciado sesiÃ³n, no hacemos nada raro
+  // Si el usuario aún no ha iniciado sesión, no hacemos nada raro
   if(!S.currentUser){
     // Reponer para que no se salga
     _pushNavState('login');
     return;
   }
-  // Navegar a la pÃ¡gina del estado (si existe) o al dashboard
+  // Navegar a la página del estado (si existe) o al dashboard
   var target = (ev.state && ev.state.page) ? ev.state.page : 'dash';
   window._navFromPop = true;
   try { nav(target); } finally { window._navFromPop = false; }
@@ -997,14 +1014,14 @@ function nav(p){
     if(!hasModuleAccess(p)){
       document.querySelectorAll('.si').forEach(function(e){e.classList.remove('on');});
       $('pgT').textContent = 'Sin acceso'; if($('pgT-mob')) $('pgT-mob').textContent='Sin acceso';
-      $('cnt').innerHTML = '<div class="empty" style="padding:80px 20px;text-align:center"><div style="font-size:48px;margin-bottom:14px;opacity:0.4">ðŸ”’</div><div class="e-tt" style="font-size:18px;font-weight:800;margin-bottom:8px">Acceso restringido</div><div style="font-size:13px;color:var(--ink3);line-height:1.6;max-width:380px;margin:0 auto">No tienes permiso para ver este mÃ³dulo.<br>Contacta al administrador.</div></div>';
+      $('cnt').innerHTML = '<div class="empty" style="padding:80px 20px;text-align:center"><div style="font-size:48px;margin-bottom:14px;opacity:0.4">🔒</div><div class="e-tt" style="font-size:18px;font-weight:800;margin-bottom:8px">Acceso restringido</div><div style="font-size:13px;color:var(--ink3);line-height:1.6;max-width:380px;margin:0 auto">No tienes permiso para ver este módulo.<br>Contacta al administrador.</div></div>';
       return;
     }
   }
   // Registrar en el history del navegador (solo si NO venimos de popstate,
   // para evitar duplicados infinitos al dar back).
   if(!window._navFromPop){
-    // Si es la primera navegaciÃ³n de la sesiÃ³n, reemplazamos el estado base;
+    // Si es la primera navegación de la sesión, reemplazamos el estado base;
     // en las siguientes, hacemos push.
     if(!window.history.state || !window.history.state.app){
       _replaceNavState(p);
@@ -1054,13 +1071,13 @@ function nav(p){
       }
     }
   } else {
-    $('cnt').innerHTML=`<div class="empty"><span class="e-ic" style="font-size:28px;opacity:0.3;display:block;margin-bottom:10px">Â·Â·Â·</span><div class="e-tt">En desarrollo</div></div>`;
+    $('cnt').innerHTML=`<div class="empty"><span class="e-ic" style="font-size:28px;opacity:0.3;display:block;margin-bottom:10px">···</span><div class="e-tt">En desarrollo</div></div>`;
   }
   updateBadge();
   wtInjectDataLabels();
 }
 
-// â”€â”€ Mobile: inyectar data-label en celdas de tabla para CSS card layout â”€â”€
+// ── Mobile: inyectar data-label en celdas de tabla para CSS card layout ──
 // Logica de graficos Chart.js movida a logic/charts.js.
 
 const PG = {};
@@ -1088,9 +1105,9 @@ function showSkeleton(){
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // MOTO CARD
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 
 // Helpers de pago/egreso para compra de motos movidos a logic/moto-pagos.js.
 
@@ -1100,20 +1117,20 @@ function liveSearchCred(q){S.credFiltro=q||'';pgSet('creditos',1);nav('creditos'
 function setCliSort(col){var cur=S.cliSort||{col:'nombre',dir:'asc'};S.cliSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('clientes');}
 function setPagosSort(col){var cur=S.pagosSort||{col:'fecha',dir:'desc'};S.pagosSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('pagos');}
 function setMotosSort(col){var cur=S.motosSort||{col:'modelo',dir:'asc'};S.motosSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('motos');}
-function _thSort(sortState,setFn,col,label){var isActive=sortState.col===col;var arrow=isActive?(sortState.dir==='asc'?'â†‘':'â†“'):'';return '<th onclick="'+setFn+'(\''+col+'\')" style="cursor:pointer;user-select:none;white-space:nowrap">'+label+(arrow?' <span style="color:var(--p1);font-size:10px">'+arrow+'</span>':'<span style="color:var(--ink3);font-size:9px;opacity:.4"> â‡…</span>')+'</th>';}
+function _thSort(sortState,setFn,col,label){var isActive=sortState.col===col;var arrow=isActive?(sortState.dir==='asc'?'↑':'↓'):'';return '<th onclick="'+setFn+'(\''+col+'\')" style="cursor:pointer;user-select:none;white-space:nowrap">'+label+(arrow?' <span style="color:var(--p1);font-size:10px">'+arrow+'</span>':'<span style="color:var(--ink3);font-size:9px;opacity:.4"> ⇅</span>')+'</th>';}
 function getCuotasVencidas(c){
-  // Devuelve cuÃ¡ntas cuotas estÃ¡n vencidas sin pagar
+  // Devuelve cuántas cuotas están vencidas sin pagar
   if(!c||c.estado==='completado'||c.estado==='cancelado') return 0;
   var mora = parseInt(c.mora||0,10);
   if(mora<=0) return 0;
-  return Math.ceil(mora/15); // 1 cuota cada 15 dÃ­as
+  return Math.ceil(mora/15); // 1 cuota cada 15 días
 }
 function setPagosTab(t){S.pagosTab=t;window._pages={};nav('pagos');}
 function setReportesTab(t){S.reportesTab=t;nav('reportes');}
 window.setReportesTab=setReportesTab;
 
-// Resincroniza S.motos con Firebase, descartando el cachÃ© local.
-// Ãštil cuando el cachÃ© local tiene motos "fantasma" que ya no existen en Firebase
+// Resincroniza S.motos con Firebase, descartando el caché local.
+// Útil cuando el caché local tiene motos "fantasma" que ya no existen en Firebase
 // (p.ej. duplicados creados por un bug antiguo, o motos borradas manualmente desde la consola de Firebase).
 
 function confirmarEliminacion(opts){
@@ -1121,27 +1138,27 @@ function confirmarEliminacion(opts){
   window._delAuditCallback = opts.onConfirm;
   $('mic').textContent='Del';
   $('mtt').textContent = opts.titulo || 'Eliminar registro';
-  $('msb').textContent = 'Esta acciÃ³n quedarÃ¡ registrada con tu nombre';
+  $('msb').textContent = 'Esta acción quedará registrada con tu nombre';
   $('modal-box').className='modal';
   $('mbd').innerHTML = '<div style="text-align:center;padding:8px 0 14px">'
     +'<div style="font-size:40px;margin-bottom:10px"></div>'
-    +'<div style="font-size:14px;font-weight:800;margin-bottom:6px">'+(opts.descripcion||'Â¿Confirmar eliminaciÃ³n?')+'</div>'
-    +'<div style="color:var(--ink3);font-size:12px;margin-bottom:14px">QuedarÃ¡ registrado como eliminado por <strong>'+((S.currentUser&&S.currentUser.nombre)||'Administrador')+'</strong></div>'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:6px">'+(opts.descripcion||'¿Confirmar eliminación?')+'</div>'
+    +'<div style="color:var(--ink3);font-size:12px;margin-bottom:14px">Quedará registrado como eliminado por <strong>'+((S.currentUser&&S.currentUser.nombre)||'Administrador')+'</strong></div>'
     +'</div>'
-    +'<div class="fg"><label>RazÃ³n de la eliminaciÃ³n (obligatorio)</label>'
+    +'<div class="fg"><label>Razón de la eliminación (obligatorio)</label>'
     +'<select class="fs" id="del_razon">'
-    +'<option value="">â€” Seleccionar â€”</option>'
+    +'<option value="">— Seleccionar —</option>'
     +'<option>Error de captura</option>'
     +'<option>Pago duplicado</option>'
-    +'<option>Cliente solicitÃ³ reverso</option>'
+    +'<option>Cliente solicitó reverso</option>'
     +'<option>Monto incorrecto</option>'
-    +'<option>OperaciÃ³n cancelada</option>'
+    +'<option>Operación cancelada</option>'
     +'<option>Orden del administrador</option>'
     +'<option>Otro</option>'
     +'</select></div>'
     +'<div class="fg" style="margin-top:8px" id="del_otro_wrap" style="display:none">'
-    +'<label>Especifica la razÃ³n</label>'
-    +'<input class="fi" id="del_otro" placeholder="Describe la razÃ³n..."></div>';
+    +'<label>Especifica la razón</label>'
+    +'<input class="fi" id="del_otro" placeholder="Describe la razón..."></div>';
   // Show text input when "Otro" selected
   setTimeout(function(){
     var sel = $('del_razon');
@@ -1159,7 +1176,7 @@ function ejecutarEliminacionAuditada(){
   if(!requireDeletePermission()) return;
   var razon = ($('del_razon')&&$('del_razon').value)||'';
   if(razon==='Otro') razon = ($('del_otro')&&$('del_otro').value.trim())||'Otro';
-  if(!razon){ toast('Debes seleccionar una razÃ³n','error'); return; }
+  if(!razon){ toast('Debes seleccionar una razón','error'); return; }
   var auditInfo = {
     eliminado: true,
     eliminadoPor: (S.currentUser&&S.currentUser.nombre)||'Administrador',
@@ -1179,14 +1196,14 @@ function auditBadge(item){
   var fecha = item.eliminadoEn ? item.eliminadoEn.split('T')[0] : '';
   return '<div style="background:var(--reds);border:1px solid rgba(240,75,106,0.3);border-radius:6px;padding:4px 9px;font-size:10px;display:flex;align-items:center;gap:6px;margin-top:4px">'
     +'<span style="font-weight:900;color:var(--red)">Del ELIMINADO</span>'
-    +'<span style="color:var(--ink3)">por <strong>'+por+'</strong>'+(fecha?' Â· '+fecha:'')+(razon?' Â· '+razon:'')+'</span>'
+    +'<span style="color:var(--ink3)">por <strong>'+por+'</strong>'+(fecha?' · '+fecha:'')+(razon?' · '+razon:'')+'</span>'
     +'</div>';
 }
 
 // CLIENTE CRUD
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 
-// â•â•â• RESTAURAR PAGO ELIMINADO â•â•â•
+// ═══ RESTAURAR PAGO ELIMINADO ═══
 // Logica de pagos, cobranza, mora y liquidaciones movida a logic/pagos.js.
 
 // Logica de contratos y documentos legales movida a logic/contratos.js.
@@ -1207,12 +1224,12 @@ function closeM(){
 function saveM(){if(S.saveFn)S.saveFn();}
 function topAct(){
   var p=S.page;
-  // Solicitud es el punto de entrada Ãºnico para clientes + motos + financiamientos
+  // Solicitud es el punto de entrada único para clientes + motos + financiamientos
   if(p==='dash') openAddCred();
   else if(p==='centro') openWtTask();
   else if(p==='clientes') openAddCred();
   else if(p==='creditos') openAddCred();
-  // Inventario de motos: sÃ­ se pueden agregar unidades sueltas al stock
+  // Inventario de motos: sí se pueden agregar unidades sueltas al stock
   else if(p==='motos') openAddMoto();
   // Operaciones
   else if(p==='pagos') openAddPago();
@@ -1261,16 +1278,16 @@ function updateTopbar(){
 }
 function toast(msg,type='info'){
   const c=$('toasts'),t=document.createElement('div');t.className=`toast ${type}`;
-  const ic={success:'âœ“',error:'OFF',info:'â„¹ï¸',warn:''};
-  t.innerHTML=`<span>${ic[type]||'â„¹ï¸'}</span><span>${msg}</span>`;c.appendChild(t);
+  const ic={success:'✓',error:'OFF',info:'ℹ️',warn:''};
+  t.innerHTML=`<span>${ic[type]||'ℹ️'}</span><span>${msg}</span>`;c.appendChild(t);
   setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(12px)';t.style.transition='all .26s';},3000);
   setTimeout(()=>t.remove(),3300);
 }
 
-// GUARDAR CONFIGURACIÃ“N
+// GUARDAR CONFIGURACIÓN
 
 
-// Mora auto recalculation â€” refresh every 5 minutes while app is open
+// Mora auto recalculation — refresh every 5 minutes while app is open
 (function(){
   function autoMora(){ if(typeof calcularMoraAuto==='function' && S.creds && S.creds.length) calcularMoraAuto(); }
   setInterval(autoMora, 5*60*1000);
@@ -1278,23 +1295,23 @@ function toast(msg,type='info'){
 
 function recargarDesdeFirebase(){
   if(!db){
-    toast('Firebase no estÃ¡ configurado','error');
+    toast('Firebase no está configurado','error');
     return;
   }
-  if(!confirm('Â¿Limpiar el cachÃ© local y recargar todos los valores desde Firebase?\n\nSe descartarÃ¡n los cambios sin guardar en pantalla.')) return;
+  if(!confirm('¿Limpiar el caché local y recargar todos los valores desde Firebase?\n\nSe descartarán los cambios sin guardar en pantalla.')) return;
 
   toast('Sincronizando con Firebase...','info');
 
-  // 1) Limpiar cachÃ© en memoria de configuraciÃ³n
+  // 1) Limpiar caché en memoria de configuración
   try {
     _empresa = { nombre:'Pagasi', rif:'J-00000000-0', ciudad:'Caracas', tel:'', email:'', direccion:'', representante:'', repCI:'' };
     _cuentasBanc = [];
     _cobradores = ['Juan Admin'];
     window._tasaBsGlobal = 1;
     window._planesExtra = [];
-  } catch(e){ /* variables pueden no estar definidas todavÃ­a */ }
+  } catch(e){ /* variables pueden no estar definidas todavía */ }
 
-  // 2) Limpiar cachÃ© de motos en localStorage para forzar lectura limpia
+  // 2) Limpiar caché de motos en localStorage para forzar lectura limpia
   try {
     if(typeof localStorage !== 'undefined'){
       localStorage.removeItem('motosCache');
@@ -1302,7 +1319,7 @@ function recargarDesdeFirebase(){
     }
   } catch(e){}
 
-  // 3) Recargar configuraciones especÃ­ficas desde Firestore
+  // 3) Recargar configuraciones específicas desde Firestore
   var tareas = [];
 
   // Empresa
@@ -1371,15 +1388,15 @@ function recargarDesdeFirebase(){
     }).catch(function(){})
   );
 
-  // 4) Recargar todos los datos principales (motos, clientes, crÃ©ditos, pagos, etc.)
-  // a travÃ©s de DB.load() â€” recarga PLAN, CATALOGO, planes extra, etc.
+  // 4) Recargar todos los datos principales (motos, clientes, créditos, pagos, etc.)
+  // a través de DB.load() — recarga PLAN, CATALOGO, planes extra, etc.
   tareas.push(
     (typeof DB !== 'undefined' && DB.load) ? DB.load() : Promise.resolve()
   );
 
   Promise.all(tareas).then(function(){
-    toast('âœ“ Datos recargados desde Firebase','success');
-    // Re-render de la pÃ¡gina actual para reflejar los nuevos valores
+    toast('✓ Datos recargados desde Firebase','success');
+    // Re-render de la página actual para reflejar los nuevos valores
     if(typeof nav === 'function' && S && S.page){
       nav(S.page);
     } else if(typeof nav === 'function'){
@@ -1390,8 +1407,8 @@ function recargarDesdeFirebase(){
   });
 }
 
-// PUNTO 1 â€” FINIQUITO DE CONTRATO
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// PUNTO 1 — FINIQUITO DE CONTRATO
+// ══════════════════════════════════════════
 // Logica de finiquitos, PDFs, CSV, paginacion y reportes movida a logic/reportes.js.
 
 // Logica de cuentas, movimientos, historial y pendientes movida a logic/cuentas.js.
@@ -1408,11 +1425,11 @@ function init() {
 
   cargarHistorialNotificaciones();
 
-  // Cargar datos desde Firebase o usar datos locales de demostraciÃ³n
+  // Cargar datos desde Firebase o usar datos locales de demostración
   DB.load().then(function() {
-    // â”€â”€ MigraciÃ³n Ãºnica: crÃ©ditos existentes (sin contratoFirmado) â†’ confirmados automÃ¡ticamente â”€â”€
-    // Los crÃ©ditos creados ANTES de esta versiÃ³n ya tienen historial contable,
-    // asÃ­ que se marcan como firmados sin tocar nada mÃ¡s.
+    // ── Migración única: créditos existentes (sin contratoFirmado) → confirmados automáticamente ──
+    // Los créditos creados ANTES de esta versión ya tienen historial contable,
+    // así que se marcan como firmados sin tocar nada más.
     (function _migrarContratoFirmado(){
       try {
         (S.creds||[]).forEach(function(c){
@@ -1425,10 +1442,10 @@ function init() {
       } catch(e){ console.warn('migrarContratoFirmado error:', e); }
     })();
     renderSidebar();
-    // Vendedor Concesionario â†’ calculadora (motos). Otros roles â†’ dashboard.
+    // Vendedor Concesionario → calculadora (motos). Otros roles → dashboard.
     var paginaInicial = isVendedorConcesionarioRole() ? 'motos' : 'dash';
     if(!hasModuleAccess(paginaInicial)){
-      // Fallback: ir al primer mÃ³dulo accesible
+      // Fallback: ir al primer módulo accesible
       var candidatos = ['motos','clientes','creditos','dash','centro'];
       paginaInicial = candidatos.find(function(p){ return hasModuleAccess(p); }) || 'dash';
     }
@@ -1450,7 +1467,7 @@ function init() {
   });
 }
 
-// â”€â”€ AUTENTICACIÃ“N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── AUTENTICACIÓN ──────────────────────────────────────────
 var _doLoginInProgress = false;
 async function doLogin() {
   // Guard: prevent concurrent/loop calls
@@ -1473,13 +1490,13 @@ async function doLogin() {
 
   // Validate email before hitting Firebase
   if (auth && email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    if (errEl) { errEl.textContent = 'El email no tiene un formato vÃ¡lido.'; errEl.style.display = 'block'; }
+    if (errEl) { errEl.textContent = 'El email no tiene un formato válido.'; errEl.style.display = 'block'; }
     _doLoginInProgress = false;
     return;
   }
 
   if (!email || !pass) {
-    if (errEl) { errEl.textContent = 'Ingresa tu email y contraseÃ±a.'; errEl.style.display = 'block'; }
+    if (errEl) { errEl.textContent = 'Ingresa tu email y contraseña.'; errEl.style.display = 'block'; }
     _doLoginInProgress = false;
     return;
   }
@@ -1492,7 +1509,7 @@ async function doLogin() {
     _doLoginInProgress = false;
     return;
   }
-  showLoader('Iniciando sesiÃ³n...', '');
+  showLoader('Iniciando sesión...', '');
   auth.signInWithEmailAndPassword(email, pass)
     .then(function() { hideLoader(); _doLoginInProgress = false; })
     .catch(function(e) {
@@ -1500,12 +1517,12 @@ async function doLogin() {
       _doLoginInProgress = false;
       if (errEl) {
         if (e.code === 'auth/network-request-failed') {
-          errEl.textContent = 'Sin conexiÃ³n a internet. Verifica tu red e intenta de nuevo.';
+          errEl.textContent = 'Sin conexión a internet. Verifica tu red e intenta de nuevo.';
           errEl.style.background = 'rgba(232,152,10,0.08)';
           errEl.style.borderColor = 'rgba(232,152,10,0.3)';
           errEl.style.color = 'var(--amber)';
         } else if (e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
-          errEl.textContent = 'Usuario o contraseÃ±a incorrectos.';
+          errEl.textContent = 'Usuario o contraseña incorrectos.';
           errEl.style.background = '';
           errEl.style.borderColor = '';
           errEl.style.color = '';
@@ -1523,19 +1540,19 @@ async function doLogin() {
 window.doLogin = doLogin;
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// BACKUP â€” Exportar e Importar datos
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════════
+// BACKUP — Exportar e Importar datos
+// ══════════════════════════════════════════════════
 
 
 function showAdminProfile() {
   var user = S.currentUser || {};
   var nombre = user.nombre || user.email || 'Usuario';
-  var email = (auth && auth.currentUser) ? auth.currentUser.email : (user.email || 'â€”');
+  var email = (auth && auth.currentUser) ? auth.currentUser.email : (user.email || '—');
   var rol = user.rol || 'Administrador';
   var inicial = nombre.charAt(0).toUpperCase();
 
-  // â”€â”€ Stats del usuario actual â”€â”€
+  // ── Stats del usuario actual ──
   var solCreadas = S.creds.filter(function(c){ return c.creadoPor === nombre; }).length;
   var misPagos = S.pagos.filter(function(p){ return !p.eliminado && p.cobrador === nombre; });
   var misPagosConf = misPagos.filter(function(p){ return p.estado==='confirmado'; });
@@ -1544,14 +1561,14 @@ function showAdminProfile() {
   var credsActivos = S.creds.filter(function(c){ return !c.eliminado && c.estado === 'activo'; }).length;
   var misClientes= new Set(misPagosConf.map(function(p){ return p.cli; })).size;
 
-  // â”€â”€ Chart: actividad Ãºltimas 12 semanas (pagos cobrados por el user) â”€â”€
+  // ── Chart: actividad últimas 12 semanas (pagos cobrados por el user) ──
   var hoyProf = new Date(); hoyProf.setHours(0,0,0,0);
   var semProf = [];
   for(var i=11;i>=0;i--){
     var ini = new Date(hoyProf); ini.setDate(hoyProf.getDate() - (i*7 + hoyProf.getDay()));
     var fin = new Date(ini); fin.setDate(ini.getDate()+6);
-    var iniS = ini.toISOString().slice(0,10);
-    var finS = fin.toISOString().slice(0,10);
+    var iniS = fechaLocalISO(ini);
+    var finS = fechaLocalISO(fin);
     var tot = misPagosConf
       .filter(function(p){ return p.fecha>=iniS && p.fecha<=finS; })
       .reduce(function(a,p){ return a+p.monto; }, 0);
@@ -1559,7 +1576,7 @@ function showAdminProfile() {
   }
   var maxSemProf = Math.max(1, ...semProf.map(function(s){ return s.tot; }));
 
-  // â”€â”€ Top 5 clientes mÃ¡s atendidos â”€â”€
+  // ── Top 5 clientes más atendidos ──
   var topClientesMap = {};
   misPagosConf.forEach(function(p){
     if(!topClientesMap[p.cli]) topClientesMap[p.cli] = {nombre:p.cli, total:0, count:0};
@@ -1568,7 +1585,7 @@ function showAdminProfile() {
   });
   var topClientesList = Object.values(topClientesMap).sort(function(a,b){ return b.total-a.total; }).slice(0,5);
 
-  // â”€â”€ Actividad mes actual vs mes anterior â”€â”€
+  // ── Actividad mes actual vs mes anterior ──
   var mesAct = hoyProf.getFullYear()+'-'+String(hoyProf.getMonth()+1).padStart(2,'0');
   var mesAnt = new Date(hoyProf.getFullYear(), hoyProf.getMonth()-1, 1);
   var mesAntK = mesAnt.getFullYear()+'-'+String(mesAnt.getMonth()+1).padStart(2,'0');
@@ -1582,7 +1599,7 @@ function showAdminProfile() {
   var rolColors = {Administrador:'var(--p1)',Gerente:'var(--p2)',Empleado:'var(--green)',Vendedor:'var(--green)',Cobrador:'var(--green)',Contador:'var(--ink3)'};
   var rolColor = rolColors[rol] || 'var(--p1)';
 
-  // MÃ³dulos accesibles
+  // Módulos accesibles
   var perms = isAdminUser() ? Object.keys(PGL) : (user.permisos || []);
   var modList = perms.filter(function(k){ return PGL[k]; }).map(function(k){ return PGL[k]; });
 
@@ -1600,9 +1617,9 @@ function showAdminProfile() {
   overlay.innerHTML =
     // Header
     '<div style="position:sticky;top:0;z-index:10;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--rim);padding:0 20px;height:56px;display:flex;align-items:center;gap:12px">'
-    + '<button onclick="document.getElementById(\'profile-overlay\').style.display=\'none\';document.body.style.overflow=\'\'" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--rim);background:var(--surf2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--ink3);flex-shrink:0">âœ•</button>'
+    + '<button onclick="document.getElementById(\'profile-overlay\').style.display=\'none\';document.body.style.overflow=\'\'" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--rim);background:var(--surf2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--ink3);flex-shrink:0">✕</button>'
     + '<div style="font-size:15px;font-weight:800;letter-spacing:-.3px;flex:1">Mi Perfil</div>'
-    + '<button class="btn btn-d btn-sm" onclick="doLogout()" style="gap:6px">Cerrar sesiÃ³n</button>'
+    + '<button class="btn btn-d btn-sm" onclick="doLogout()" style="gap:6px">Cerrar sesión</button>'
     + '</div>'
 
     // Body
@@ -1621,17 +1638,17 @@ function showAdminProfile() {
     // 6 KPI stats
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px;margin-bottom:14px">'
       + _profKpi('Cobrado total', fmt(totalCobrado), 'var(--green)', 'TOT')
-      + _profKpi('Este mes', fmt(cobradoMesAct), pctCrecimiento>=0?'var(--p1)':'var(--red)', (pctCrecimiento>=0?'â†‘':'â†“')+' '+Math.abs(pctCrecimiento)+'%')
+      + _profKpi('Este mes', fmt(cobradoMesAct), pctCrecimiento>=0?'var(--p1)':'var(--red)', (pctCrecimiento>=0?'↑':'↓')+' '+Math.abs(pctCrecimiento)+'%')
       + _profKpi('Pagos registrados', pagosReg, 'var(--p1)', 'PAG')
       + _profKpi('Solicitudes creadas', solCreadas, 'var(--amber)', 'SOL')
       + _profKpi('Clientes atendidos', misClientes, 'var(--green)', 'CLI')
-      + _profKpi('CrÃ©ditos activos', credsActivos, 'var(--p1)', 'ACT')
+      + _profKpi('Créditos activos', credsActivos, 'var(--p1)', 'ACT')
     + '</div>'
 
-    // Chart: cobros Ãºltimas 12 semanas
+    // Chart: cobros últimas 12 semanas
     + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:18px;margin-bottom:14px">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
-        + '<div><div style="font-size:14px;font-weight:800">Mi actividad de cobros</div><div style="font-size:11.5px;color:var(--ink3)">Ãšltimas 12 semanas</div></div>'
+        + '<div><div style="font-size:14px;font-weight:800">Mi actividad de cobros</div><div style="font-size:11.5px;color:var(--ink3)">Últimas 12 semanas</div></div>'
         + '<div style="font-weight:900;font-size:15px;color:var(--green)">'+ fmt(semProf.reduce(function(a,s){return a+s.tot;}, 0)) +'</div>'
       + '</div>'
       + (misPagosConf.length > 0
@@ -1646,13 +1663,13 @@ function showAdminProfile() {
               + '</div>';
             }).join('')
         + '</div>'
-        : '<div style="text-align:center;padding:40px 0;color:var(--ink3);font-size:12.5px">AÃºn no tienes pagos registrados a tu nombre</div>')
+        : '<div style="text-align:center;padding:40px 0;color:var(--ink3);font-size:12.5px">Aún no tienes pagos registrados a tu nombre</div>')
     + '</div>'
 
     // Top clientes
     + (topClientesList.length > 0
       ? '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:18px;margin-bottom:14px">'
-        + '<div style="font-size:14px;font-weight:800;margin-bottom:12px">Tus top 5 clientes <span style="color:var(--ink3);font-weight:500;font-size:11.5px">Â· por monto cobrado</span></div>'
+        + '<div style="font-size:14px;font-weight:800;margin-bottom:12px">Tus top 5 clientes <span style="color:var(--ink3);font-weight:500;font-size:11.5px">· por monto cobrado</span></div>'
         + topClientesList.map(function(c,i){
             var pct = totalCobrado>0 ? Math.round(c.total/totalCobrado*100) : 0;
             return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--rim2)">'
@@ -1670,9 +1687,9 @@ function showAdminProfile() {
       + '</div>'
       : '')
 
-    // MÃ³dulos accesibles
+    // Módulos accesibles
     + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:18px;margin-bottom:14px">'
-      + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">MÃ³dulos con acceso</div>'
+      + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Módulos con acceso</div>'
       + (isAdminUser()
           ? '<div style="display:flex;flex-wrap:wrap;gap:6px"><span style="background:var(--gs);color:var(--p1);font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid var(--rim2)">Acceso total al sistema</span></div>'
           : (modList.length
@@ -1682,14 +1699,14 @@ function showAdminProfile() {
             : '<div style="color:var(--ink3);font-size:13px">Solo nueva solicitud</div>'))
     + '</div>'
 
-    // Info de sesiÃ³n
+    // Info de sesión
     + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:18px;margin-bottom:14px">'
-      + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">InformaciÃ³n de sesiÃ³n</div>'
+      + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Información de sesión</div>'
       + [
-          ['Firebase', db ? 'â— Conectado Â· pagasi-b859b' : 'â— Sin conexiÃ³n', db ? 'var(--green)' : 'var(--red)'],
+          ['Firebase', db ? '● Conectado · pagasi-b859b' : '● Sin conexión', db ? 'var(--green)' : 'var(--red)'],
           ['Email', email, 'var(--ink)'],
-          ['UID', (auth && auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid.slice(0,20)+'â€¦' : '--', 'var(--ink3)'],
-          ['Ãšltimo acceso', (auth && auth.currentUser && auth.currentUser.metadata && auth.currentUser.metadata.lastSignInTime) ? new Date(auth.currentUser.metadata.lastSignInTime).toLocaleString('es-VE') : 'â€”', 'var(--ink3)'],
+          ['UID', (auth && auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid.slice(0,20)+'…' : '--', 'var(--ink3)'],
+          ['Último acceso', (auth && auth.currentUser && auth.currentUser.metadata && auth.currentUser.metadata.lastSignInTime) ? new Date(auth.currentUser.metadata.lastSignInTime).toLocaleString('es-VE') : '—', 'var(--ink3)'],
         ].map(function(row){
           return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--rim2)">'
             + '<span style="font-size:12.5px;color:var(--ink3)">'+ row[0] +'</span>'
@@ -1698,20 +1715,20 @@ function showAdminProfile() {
         }).join('')
     + '</div>'
 
-    // Cambiar contraseÃ±a
+    // Cambiar contraseña
     + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:18px;margin-bottom:14px">'
-      + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:14px">Cambiar ContraseÃ±a</div>'
+      + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:14px">Cambiar Contraseña</div>'
       + '<div style="display:flex;flex-direction:column;gap:10px">'
-        + '<div class="fg"><label>ContraseÃ±a actual</label><input id="prof-pass-current" type="password" class="fi" placeholder="Tu contraseÃ±a actual" autocomplete="current-password" style="width:100%"></div>'
-        + '<div class="fg"><label>Nueva contraseÃ±a</label><input id="prof-pass1" type="password" class="fi" placeholder="MÃ­nimo 6 caracteres" autocomplete="new-password" style="width:100%"></div>'
-        + '<div class="fg"><label>Confirmar contraseÃ±a</label><input id="prof-pass2" type="password" class="fi" placeholder="Repetir contraseÃ±a" autocomplete="new-password" style="width:100%"></div>'
+        + '<div class="fg"><label>Contraseña actual</label><input id="prof-pass-current" type="password" class="fi" placeholder="Tu contraseña actual" autocomplete="current-password" style="width:100%"></div>'
+        + '<div class="fg"><label>Nueva contraseña</label><input id="prof-pass1" type="password" class="fi" placeholder="Mínimo 6 caracteres" autocomplete="new-password" style="width:100%"></div>'
+        + '<div class="fg"><label>Confirmar contraseña</label><input id="prof-pass2" type="password" class="fi" placeholder="Repetir contraseña" autocomplete="new-password" style="width:100%"></div>'
         + '<div id="prof-msg" style="display:none;font-size:12px;padding:9px 12px;border-radius:9px"></div>'
-        + '<button class="btn btn-p btn-sm" onclick="cambiarPasswordPerfil()" style="align-self:flex-start">Actualizar contraseÃ±a</button>'
+        + '<button class="btn btn-p btn-sm" onclick="cambiarPasswordPerfil()" style="align-self:flex-start">Actualizar contraseña</button>'
       + '</div>'
     + '</div>'
 
-    // Cerrar sesiÃ³n
-    + '<button class="btn btn-d" onclick="doLogout()" style="width:100%;justify-content:center;padding:12px;border-radius:12px;font-size:13.5px">Cerrar sesiÃ³n</button>'
+    // Cerrar sesión
+    + '<button class="btn btn-d" onclick="doLogout()" style="width:100%;justify-content:center;padding:12px;border-radius:12px;font-size:13.5px">Cerrar sesión</button>'
 
     + '</div>'; // end body
 }
@@ -1736,23 +1753,23 @@ function cambiarPasswordPerfil() {
     msg.style.color = ok ? '#27ae60' : '#e74c3c';
     msg.textContent = txt;
   }
-  if (!pCur) return showMsg(' IngresÃ¡ tu contraseÃ±a actual', false);
-  if (p1.length < 6) return showMsg(' La contraseÃ±a debe tener al menos 6 caracteres', false);
-  if (p1 !== p2) return showMsg('Las contraseÃ±as no coinciden', false);
+  if (!pCur) return showMsg(' Ingresá tu contraseña actual', false);
+  if (p1.length < 6) return showMsg(' La contraseña debe tener al menos 6 caracteres', false);
+  if (p1 !== p2) return showMsg('Las contraseñas no coinciden', false);
   var user = auth && auth.currentUser;
-  if (!user) return showMsg(' No hay sesiÃ³n activa', false);
+  if (!user) return showMsg(' No hay sesión activa', false);
   if (!user.email) return showMsg(' El usuario no tiene email asociado', false);
 
-  showMsg('Verificandoâ€¦', true);
+  showMsg('Verificando…', true);
 
-  // Reautenticar con la contraseÃ±a actual y luego actualizar
+  // Reautenticar con la contraseña actual y luego actualizar
   var credential = firebase.auth.EmailAuthProvider.credential(user.email, pCur);
   user.reauthenticateWithCredential(credential)
     .then(function() {
       return user.updatePassword(p1);
     })
     .then(function() {
-      showMsg('âœ“ ContraseÃ±a actualizada correctamente', true);
+      showMsg('✓ Contraseña actualizada correctamente', true);
       if ($('prof-pass-current')) $('prof-pass-current').value = '';
       if ($('prof-pass1')) $('prof-pass1').value = '';
       if ($('prof-pass2')) $('prof-pass2').value = '';
@@ -1760,13 +1777,13 @@ function cambiarPasswordPerfil() {
     .catch(function(e) {
       var code = e && e.code;
       if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-        showMsg(' La contraseÃ±a actual es incorrecta', false);
+        showMsg(' La contraseña actual es incorrecta', false);
       } else if (code === 'auth/too-many-requests') {
-        showMsg(' Demasiados intentos. EsperÃ¡ un momento e intentÃ¡ de nuevo.', false);
+        showMsg(' Demasiados intentos. Esperá un momento e intentá de nuevo.', false);
       } else if (code === 'auth/weak-password') {
-        showMsg(' La nueva contraseÃ±a es demasiado dÃ©bil', false);
+        showMsg(' La nueva contraseña es demasiado débil', false);
       } else if (code === 'auth/network-request-failed') {
-        showMsg(' Error de conexiÃ³n. VerificÃ¡ tu internet.', false);
+        showMsg(' Error de conexión. Verificá tu internet.', false);
       } else {
         showMsg(' ' + (e.message || 'Error al actualizar'), false);
       }
@@ -1774,7 +1791,7 @@ function cambiarPasswordPerfil() {
 }
 
 function doLogout() {
-  // Cerrar perfil overlay si estÃ¡ abierto
+  // Cerrar perfil overlay si está abierto
   var overlay = document.getElementById('profile-overlay');
   if (overlay) overlay.style.display = 'none';
   document.body.style.overflow = '';
@@ -1785,7 +1802,7 @@ function doLogout() {
   }
 }
 
-// â”€â”€ Mobile Menu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Mobile Menu ──────────────────────────
 function openMobileMenu(){
   var sidebarEl = document.querySelector('.sb') || document.querySelector('.sidebar');
   var ov = $('sb-overlay');
@@ -1801,7 +1818,7 @@ function closeMobileMenu(){
   document.body.style.overflow = '';
 }
 
-// Cerrar menÃº automÃ¡ticamente al navegar en mÃ³vil
+// Cerrar menú automáticamente al navegar en móvil
 (function(){
   if(typeof window.nav !== 'function') return;
   var _origNav = window.nav;
@@ -1812,9 +1829,9 @@ function closeMobileMenu(){
   };
 })();
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 // MOBILE BOTTOM NAV & SEARCH
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════
 function mbbSelect(page){
   document.querySelectorAll('.mbb-btn').forEach(function(b){ b.classList.remove('on'); });
   var btn = $('mbb-'+page);
@@ -1834,7 +1851,7 @@ function updateMobileNav(){
         +'<button class="mbb-btn'+(page==='cobranza'?' on':'')+'" onclick="nav(\'cobranza\');mbbSelect(\'cobranza\')">'
         +'<span class="mbb-ic">COB</span><span>Cobranza</span></button>'
         +'<button class="mbb-btn" onclick="openAddCred()" style="color:var(--p1)">'
-        +'<span class="mbb-ic" style="background:var(--p1);color:#fff">ï¼‹</span><span>Solicitud</span></button>'
+        +'<span class="mbb-ic" style="background:var(--p1);color:#fff">＋</span><span>Solicitud</span></button>'
         +'<button class="mbb-btn'+(page==='creditos'?' on':'')+'" onclick="nav(\'creditos\');mbbSelect(\'creditos\')">'
         +'<span class="mbb-ic">SOL</span><span>Solicitudes</span></button>';
       return;
@@ -1870,19 +1887,19 @@ function mobSearch(q){
   var results = [];
   S.clientes.filter(c=>!c.eliminado).forEach(function(c){
     if((c.nombre+' '+c.cedula+' '+c.tel).toLowerCase().includes(val))
-      results.push({icon:'CLI',titulo:c.nombre,sub:c.cedula+' Â· '+c.tel,fn:function(){ closeMobSearch(); nav('clientes'); setTimeout(function(){verCliente(c.id);},100); }});
+      results.push({icon:'CLI',titulo:c.nombre,sub:c.cedula+' · '+c.tel,fn:function(){ closeMobSearch(); nav('clientes'); setTimeout(function(){verCliente(c.id);},100); }});
   });
   S.creds.filter(c=>!c.eliminado).forEach(function(c){
     if((c.id+' '+c.cli+' '+c.modelo).toLowerCase().includes(val))
-      results.push({icon:'â‰¡',titulo:c.cli+' â€” '+c.modelo,sub:c.id+' Â· '+c.estado,fn:function(){ closeMobSearch(); nav('creditos'); setTimeout(function(){openAmort(c.id);},100); }});
+      results.push({icon:'≡',titulo:c.cli+' — '+c.modelo,sub:c.id+' · '+c.estado,fn:function(){ closeMobSearch(); nav('creditos'); setTimeout(function(){openAmort(c.id);},100); }});
   });
   S.motos.filter(m=>!m.eliminado).forEach(function(m){
     if((m.modelo+' '+(m.vin||'')+' '+(m.cliente||'')).toLowerCase().includes(val))
-      results.push({icon:'MOT',titulo:m.modelo,sub:(m.vin||'Sin VIN')+' Â· '+m.estado,fn:function(){ closeMobSearch(); nav('motos'); }});
+      results.push({icon:'MOT',titulo:m.modelo,sub:(m.vin||'Sin VIN')+' · '+m.estado,fn:function(){ closeMobSearch(); nav('motos'); }});
   });
   S.pagos.filter(p=>!p.eliminado).forEach(function(p){
     if((p.cli+' '+p.id).toLowerCase().includes(val))
-      results.push({icon:'PAG',titulo:p.cli,sub:fmt(p.monto)+' Â· '+p.fecha,fn:function(){ closeMobSearch(); nav('pagos'); }});
+      results.push({icon:'PAG',titulo:p.cli,sub:fmt(p.monto)+' · '+p.fecha,fn:function(){ closeMobSearch(); nav('pagos'); }});
   });
   window._mobSrchFns = results.map(function(r){ return r.fn; });
   if(!results.length){
@@ -1896,7 +1913,7 @@ function mobSearch(q){
         '<div style="font-size:14px;font-weight:600;color:var(--ink)">'+r.titulo+'</div>'+
         '<div style="font-size:11.5px;color:var(--ink3);margin-top:1px">'+r.sub+'</div>'+
       '</div>'+
-      '<span style="color:var(--ink3);font-size:18px;font-weight:200">â€º</span>'+
+      '<span style="color:var(--ink3);font-size:18px;font-weight:200">›</span>'+
     '</div>';
   }).join('');
 }
