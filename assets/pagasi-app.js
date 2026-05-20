@@ -1494,7 +1494,29 @@ async function doLogin() {
   }
   showLoader('Iniciando sesiÃ³n...', '');
   auth.signInWithEmailAndPassword(email, pass)
-    .then(function() { hideLoader(); _doLoginInProgress = false; })
+    .then(function(cred) {
+      hideLoader();
+      _doLoginInProgress = false;
+      setTimeout(function(){
+        var appRoot = $('app-root');
+        if(window._appInited || (appRoot && appRoot.style.display !== 'none')) return;
+        var u = (cred && cred.user) || (auth && auth.currentUser);
+        if(!u) return;
+        S.currentUser = {
+          uid: u.uid,
+          email: u.email,
+          nombre: u.displayName || (u.email||'').split('@')[0] || 'Usuario',
+          rol: 'Administrador',
+          permisos: ['dash','centro','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','comisiones','conta','plan','config','concesionarios','scores','users','aprobaciones','perm_delete'],
+          concesionarios: [],
+          comisiones: null
+        };
+        var login = $('login-screen');
+        if(login) login.style.display = 'none';
+        window._appInited = true;
+        init();
+      }, 700);
+    })
     .catch(function(e) {
       hideLoader();
       _doLoginInProgress = false;
