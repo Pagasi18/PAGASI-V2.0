@@ -28,7 +28,7 @@ PG.pagos = function(){
   const dias = [];
   for(let i=13;i>=0;i--){
     const d = new Date(hoy); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
-    const k = d.toISOString().slice(0,10);
+    const k = fechaLocalISO(d);
     const tot = confs.filter(p=>p.fecha===k).reduce((a,p)=>a+p.monto,0);
     dias.push({k,d,tot,lbl:d.getDate()});
   }

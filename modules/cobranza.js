@@ -19,11 +19,11 @@ PG.cobranza = function(){
 
   // Pagos confirmados hoy y esta semana
   var hoy = new Date(); hoy.setHours(0,0,0,0);
-  var hoyStr = hoy.toISOString().slice(0,10);
+  var hoyStr = fechaLocalISO(hoy);
   var iniSemana = new Date(hoy); iniSemana.setDate(hoy.getDate() - hoy.getDay());
-  var iniSemanaStr = iniSemana.toISOString().slice(0,10);
+  var iniSemanaStr = fechaLocalISO(iniSemana);
   var iniMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-  var iniMesStr = iniMes.toISOString().slice(0,10);
+  var iniMesStr = fechaLocalISO(iniMes);
 
   var pagosHoy = _SPAGOS.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha===hoyStr;});
   var cobradoHoy = pagosHoy.reduce(function(a,p){return a+p.monto;},0);
@@ -44,8 +44,8 @@ PG.cobranza = function(){
   for(let i=7;i>=0;i--){
     const inicio = new Date(hoy); inicio.setDate(hoy.getDate() - (i*7 + hoy.getDay()));
     const fin = new Date(inicio); fin.setDate(inicio.getDate()+6);
-    const iniStr = inicio.toISOString().slice(0,10);
-    const finStr = fin.toISOString().slice(0,10);
+    const iniStr = fechaLocalISO(inicio);
+    const finStr = fechaLocalISO(fin);
     const tot = _SPAGOS
       .filter(p=>!p.eliminado && p.estado==='confirmado' && p.fecha>=iniStr && p.fecha<=finStr)
       .reduce((a,p)=>a+p.monto,0);
@@ -65,7 +65,7 @@ PG.cobranza = function(){
   var dias14 = [];
   for(var d=13; d>=0; d--){
     var dia = new Date(hoy); dia.setDate(hoy.getDate()-d);
-    var diaStr = dia.toISOString().slice(0,10);
+    var diaStr = fechaLocalISO(dia);
     var tot = _SPAGOS.filter(function(p){return !p.eliminado && p.estado==='confirmado' && p.fecha===diaStr;}).reduce(function(a,p){return a+p.monto;},0);
     var diaLbl = String(dia.getDate()).padStart(2,'0');
     var dayOfWeek = dia.getDay();

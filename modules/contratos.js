@@ -18,7 +18,7 @@ PG.contratos = function(){
 
   // Contratos del mes
   var hoy = new Date();
-  var iniMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0,10);
+  var iniMes = fechaLocalISO(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
   var nuevosMes = credsActivos.filter(function(c){return c.fecha && c.fecha >= iniMes;}).length;
 
   // Contratos por tipo de documento (contamos los 3 tipos)

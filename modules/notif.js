@@ -32,7 +32,7 @@ PG.notif = function(){
   var diasNotif = [];
   for(let i=13;i>=0;i--){
     let d = new Date(hoyNotif); d.setDate(d.getDate()-i);
-    let k = d.toISOString().slice(0,10);
+    let k = fechaLocalISO(d);
     let n = historial.filter(h=>h.fecha && h.fecha.startsWith(k)).reduce((a,h)=>a+(h.cantidad||1),0);
     diasNotif.push({lbl:d.getDate(), n});
   }
