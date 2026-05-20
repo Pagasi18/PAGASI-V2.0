@@ -1,2 +1,2 @@
-// Pagasi module: comisiones
-PG.comisiones = function(){ return _comisionesRender(); };
+// Pagasi module: concesionarios
+PG.concesionarios = function(){ return _concRender(); };

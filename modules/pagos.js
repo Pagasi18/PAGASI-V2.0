@@ -1,389 +1,300 @@
-// Pagasi module: notif
-PG.notif = function(){
-  // Build real recipient lists
-  var moraClientes = _concFiltrar(S.creds||[]).filter(c=>c.mora>0).map(function(c){
-    var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
-    return {nombre:c.cli, tel:cl.tel||'', cred:c.id, mora:c.mora, cuota:c.cuotaQ||c.cuota, modelo:c.modelo};
-  });
-  var proximasCuotas = _concFiltrar(S.creds||[]).filter(function(c){
-    if(c.estado!=='activo'||!c.fecha) return false;
-    var inicio=new Date(c.fecha);
-    var siguiente=new Date(inicio.getTime()+((c.pagado+1)*15*24*60*60*1000));
-    var diff=Math.floor((siguiente-new Date())/(24*60*60*1000));
-    return diff>=0&&diff<=7;
-  }).map(function(c){
-    var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
-    return {nombre:c.cli, tel:cl.tel||'', cred:c.id, cuota:c.cuotaQ||c.cuota, modelo:c.modelo};
-  });
+// Pagasi module: pagos
+PG.pagos = function(){
+  const allPagos = _concFiltrar(S.pagos||[]).filter(p=>!p.eliminado);
+  const confs = allPagos.filter(p=>p.estado==='confirmado');
+  const pends = allPagos.filter(p=>p.estado==='pendiente');
+  const totalConf= confs.reduce((a,p)=>a+p.monto,0);
+  const totalPend= pends.reduce((a,p)=>a+p.monto,0);
 
-  // ── Segmentos de urgencia ──
-  var moraCritica = moraClientes.filter(c=>c.mora>60);
-  var moraAlta = moraClientes.filter(c=>c.mora>30 && c.mora<=60);
-  var moraMedia = moraClientes.filter(c=>c.mora>15 && c.mora<=30);
-  var moraBaja = moraClientes.filter(c=>c.mora>0 && c.mora<=15);
-  var clientesActivos = S.clientes.filter(c=>!c.eliminado&&c.estado==='activo');
-  var conTelefono = clientesActivos.filter(c=>c.tel&&c.tel.replace(/[^0-9]/g,'').length>=7);
-  var sinTelefono = clientesActivos.length - conTelefono.length;
-  var pctCobertura = clientesActivos.length>0 ? Math.round(conTelefono.length/clientesActivos.length*100) : 0;
+  // Mes actual
+  const hoy = new Date();
+  const mesKey = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0');
+  const pagosMes = confs.filter(p=>p.fecha && p.fecha.startsWith(mesKey));
+  const totalMes = pagosMes.reduce((a,p)=>a+p.monto,0);
+  const promMes = pagosMes.length ? totalMes/pagosMes.length : 0;
 
-  // ── Historial: envíos por día (últimos 14 días) ──
-  var historial = window._notifHistorial || [];
-  var hoyNotif = new Date(); hoyNotif.setHours(0,0,0,0);
-  var diasNotif = [];
+  // Por método/cuenta
+  const porMetodo = {};
+  confs.forEach(function(p){
+    var k = p.metodo||'Sin especificar';
+    if(!porMetodo[k]) porMetodo[k]={nombre:k,total:0,count:0};
+    porMetodo[k].total += p.monto;
+    porMetodo[k].count++;
+  });
+  const metodosList = Object.values(porMetodo).sort((a,b)=>b.total-a.total);
+  const topMetodo = metodosList[0]||{nombre:'—',total:0};
+
+  // Últimos 14 días para el mini chart
+  const dias = [];
   for(let i=13;i>=0;i--){
-    let d = new Date(hoyNotif); d.setDate(d.getDate()-i);
-    let k = d.toISOString().slice(0,10);
-    let n = historial.filter(h=>h.fecha && h.fecha.startsWith(k)).reduce((a,h)=>a+(h.cantidad||1),0);
-    diasNotif.push({lbl:d.getDate(), n});
+    const d = new Date(hoy); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
+    const k = d.toISOString().slice(0,10);
+    const tot = confs.filter(p=>p.fecha===k).reduce((a,p)=>a+p.monto,0);
+    dias.push({k,d,tot,lbl:d.getDate()});
   }
-  var maxNotif = Math.max(1, ...diasNotif.map(d=>d.n));
-  var totalEnviados = historial.reduce((a,h)=>a+(h.cantidad||1),0);
+  const maxDia = Math.max(1,...dias.map(d=>d.tot));
 
-  setTimeout(function(){
-    renderHistorialNotificaciones();
-    var btn=$('notif-send-btn');
-    if(btn) btn.onclick=function(){ enviarNotificaciones(); };
-    var tipoSel=$('notif-tipo');
-    if(tipoSel) tipoSel.onchange=function(){ actualizarPreviewNotif(); actualizarTipoDesc(); };
-    var destSel=$('notif-dest');
-    if(destSel) destSel.onchange=function(){ actualizarPreviewNotif(); };
-    if(typeof nxAcUpdateHint==='function') nxAcUpdateHint();
-    actualizarPreviewNotif();
-    actualizarTipoDesc();
-  }, 80);
+  // Filtro por tab
+  const tab = S.pagosTab||'todos';
+  const pagosEliminados = S.pagos.filter(p=>p.eliminado);
+  let filtered = allPagos;
+  if(tab==='confirmados') filtered = confs;
+  if(tab==='pendientes') filtered = pends;
+  if(tab==='archivados') filtered = pagosEliminados;
+
+  // ─── Sort pagos ───
+  var _ps = S.pagosSort||{col:'fecha',dir:'desc'};
+  filtered = filtered.slice().sort(function(a,b){
+    var col=_ps.col, dir=_ps.dir==='asc'?1:-1;
+    if(col==='fecha'){return dir*((a.fecha||'').localeCompare(b.fecha||''));}
+    if(col==='monto'){return dir*(parseFloat(a.monto||0)-parseFloat(b.monto||0));}
+    if(col==='cli'){return dir*((a.cli||'').toLowerCase().localeCompare((b.cli||'').toLowerCase()));}
+    if(col==='cred'){return dir*((a.cred||'').localeCompare(b.cred||''));}
+    if(col==='metodo'){return dir*((a.metodo||'').localeCompare(b.metodo||''));}
+    if(col==='cobrador'){return dir*((a.cobrador||'').localeCompare(b.cobrador||''));}
+    if(col==='estado'){return dir*((a.estado||'').localeCompare(b.estado||''));}
+    if(col==='id'){return dir*((a.id||'').localeCompare(b.id||''));}
+    return 0;
+  });
+
+  // ─── Filtro por rango de fechas ───
+  var _pDesde = S.pagosDesde||'';
+  var _pHasta = S.pagosHasta||'';
+  if(_pDesde) filtered = filtered.filter(function(p){ return (p.fecha||'') >= _pDesde; });
+  if(_pHasta) filtered = filtered.filter(function(p){ return (p.fecha||'') <= _pHasta; });
+
+  // Cuotas próximas (mismo criterio que dashboard) — créditos activos con cuota próxima o vencida
+  const proximasCuotas = _concFiltrar(S.creds||[]).filter(function(c){
+    if(c.eliminado) return false;
+    if(c.estado!=='activo'||!c.fecha) return false;
+    const start=new Date(c.fecha);
+    const cuotaNum=(c.pagado||0)+1;
+    const vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
+    const diff=Math.round((vence-new Date())/(24*60*60*1000));
+    return diff<=14 && diff>=-30; // muestra hasta 30 días de atraso y próximas 14 días
+  }).map(function(c){
+    const start=new Date(c.fecha);
+    const cuotaNum=(c.pagado||0)+1;
+    const vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
+    const diff=Math.round((vence-new Date())/(24*60*60*1000));
+    return { cred:c, cuotaNum:cuotaNum, diff:diff };
+  }).sort(function(a,b){ return a.diff-b.diff; }); // los más urgentes/atrasados primero
 
   return`<div class="page">
 
   ${pageBanner(
-    'Comunicaciones · WhatsApp',
-    'Notificaciones',
-    '<b>'+totalEnviados+'</b> mensajes enviados históricamente · <b>'+conTelefono.length+'</b> clientes con WhatsApp (<b>'+pctCobertura+'%</b> cobertura)'
+    'Transacciones · Cobros',
+    'Pagos',
+    '<b>'+allPagos.length+'</b> pagos registrados · Cobrado total: <b>'+fmt(totalConf)+'</b> · Este mes: <b>'+fmt(totalMes)+'</b>',
+    [
+      {label:'↓ Exportar CSV', onclick:"exportarCSV('pagos')"},
+      {label:'＋ Registrar Pago', onclick:'openAddPago()', primary:true}
+    ]
   )}
 
-  <!-- KPIs compactos · segmentos de mora/vencimiento -->
-  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px">
-    <div class="stat" style="border-top:3px solid var(--red)">
-      <div class="st-v" style="color:var(--red);font-size:22px">${moraClientes.length}</div>
-      <div class="st-l">En mora</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:3px">${moraCritica.length+moraAlta.length} graves</div>
+  <!-- KPI cards -->
+  <div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:14px">
+    <div class="stat" style="border-left:3px solid var(--green)">
+      <div class="st-ic" style="background:var(--greens);color:var(--green);font-size:9px;font-weight:800">✓</div>
+      <div class="st-v" style="color:var(--green);font-size:18px">${fmt(totalConf)}</div>
+      <div class="st-l">Cobrado confirmado <span style="opacity:.6;font-size:10px">${confs.length}</span></div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--amber)">
-      <div class="st-v" style="color:var(--amber);font-size:22px">${proximasCuotas.length}</div>
-      <div class="st-l">Vencen 7d</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:3px">Próximas cuotas</div>
+    <div class="stat" style="border-left:3px solid var(--amber)">
+      <div class="st-ic" style="background:var(--ambers);color:var(--amber);font-size:9px;font-weight:800">PND</div>
+      <div class="st-v" style="color:var(--amber);font-size:18px">${fmt(totalPend)}</div>
+      <div class="st-l">Pendiente por confirmar <span style="opacity:.6;font-size:10px">${pends.length}</span></div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--p1)">
-      <div class="st-v" style="color:var(--p1);font-size:22px">${S.creds.filter(c=>c.estado==='activo').length}</div>
-      <div class="st-l">Activos</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:3px">Créditos al día</div>
+    <div class="stat" style="border-left:3px solid var(--p1)">
+      <div class="st-ic" style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800">MES</div>
+      <div class="st-v" style="color:var(--p1);font-size:18px">${fmt(totalMes)}</div>
+      <div class="st-l">Cobrado este mes <span style="opacity:.6;font-size:10px">${pagosMes.length} pagos</span></div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--green)">
-      <div class="st-v" style="color:var(--green);font-size:22px">${conTelefono.length}</div>
-      <div class="st-l">Con WhatsApp</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:3px">${pctCobertura}% cobertura</div>
+    <div class="stat" style="border-left:3px solid var(--p1)">
+      <div class="st-ic" style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800">AVG</div>
+      <div class="st-v" style="color:var(--p1);font-size:18px">${fmt(promMes)}</div>
+      <div class="st-l">Promedio por pago (mes)</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--ink3)">
-      <div class="st-v" style="color:var(--ink3);font-size:22px">${sinTelefono}</div>
-      <div class="st-l">Sin teléfono</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:3px">Requieren datos</div>
-    </div>
-    <div class="stat" style="border-top:3px solid var(--p1)">
-      <div class="st-v" style="color:var(--p1);font-size:22px">${totalEnviados}</div>
-      <div class="st-l">Enviados histórico</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:3px">Todos los canales</div>
+    <div class="stat" style="border-left:3px solid var(--green)">
+      <div class="st-ic" style="background:var(--greens);color:var(--green);font-size:9px;font-weight:800">TOP</div>
+      <div class="st-v" style="color:var(--green);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${topMetodo.nombre || '—'}</div>
+      <div class="st-l">Método más usado · ${fmt(topMetodo.total)}</div>
     </div>
   </div>
 
-  <!-- Segmentos por urgencia + actividad 14 días -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+  <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-bottom:12px">
 
+    <!-- Chart últimos 14 días -->
     <div class="card">
-      <div class="ch"><div><div class="ct">Segmentos por urgencia</div><div class="cs">Usa los botones de abajo para notificar a cada grupo</div></div></div>
-      <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px">
-        ${[
-          ['Crítico · +60 días de atraso', moraCritica.length, '#8B0000', 'rgba(139,0,0,.08)','mora_grave'],
-          ['Alta · 31 a 60 días', moraAlta.length, 'var(--red)', 'rgba(217,59,90,.07)','mora_grave'],
-          ['Media · 16 a 30 días', moraMedia.length, 'var(--amber)', 'var(--ambers)','mora'],
-          ['Baja · 1 a 15 días', moraBaja.length, 'var(--amber)', 'rgba(232,152,10,.05)','mora'],
-          ['Cuotas esta semana', proximasCuotas.length, 'var(--p1)', 'var(--gs)','cuota'],
-        ].map(function(row){
-          var lbl=row[0], n=row[1], col=row[2], bg=row[3];
-          var disabled = n===0;
-          return '<div style="display:flex;align-items:center;gap:10px;padding:10px 13px;background:'+bg+';border:1px solid var(--rim);border-radius:10px;'+(disabled?'opacity:.5':'')+'">'
-            +'<div style="width:36px;height:36px;border-radius:9px;background:'+col+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;flex-shrink:0">'+n+'</div>'
-            +'<div style="flex:1;min-width:0;font-size:12.5px;font-weight:700">'+lbl+'</div>'
-            +'</div>';
-        }).join('')}
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="ch"><div><div class="ct">Actividad últimos 14 días</div><div class="cs">Mensajes enviados por día</div></div>
-        <div style="font-weight:900;font-size:18px;color:var(--p1);font-family:var(--fd)">${diasNotif.reduce((a,d)=>a+d.n,0)}</div>
-      </div>
-      <div style="display:flex;align-items:flex-end;gap:3px;height:130px;margin-top:14px">
-        ${diasNotif.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
-          <div style="font-size:9px;font-weight:800;color:${d.n>0?'var(--p1)':'var(--ink3)'};height:12px">${d.n>0?d.n:''}</div>
+      <div class="ch"><div><div class="ct">Cobros últimos 14 días</div><div class="cs">Pagos confirmados por día</div></div></div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:10px">
+        ${dias.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+          <div style="font-size:8.5px;font-weight:700;color:var(--ink3);height:12px">${d.tot>0?fmt(d.tot).replace('$','$').slice(0,6):''}</div>
           <div style="flex:1;width:100%;display:flex;align-items:flex-end">
-            <div style="width:100%;background:${d.n>0?'linear-gradient(180deg,var(--p1),#60A5FA)':'var(--rim)'};border-radius:3px 3px 0 0;height:${d.n>0?Math.max(8,Math.round(d.n/maxNotif*100)):4}px;transition:height .3s"></div>
+            <div style="width:100%;background:${d.tot>0?'var(--p1)':'var(--rim)'};border-radius:3px 3px 0 0;height:${d.tot>0?Math.max(6,Math.round(d.tot/maxDia*90)):3}px;transition:height .3s"></div>
           </div>
           <div style="font-size:9px;color:var(--ink3);font-weight:600">${d.lbl}</div>
         </div>`).join('')}
       </div>
-      ${totalEnviados===0?'<div style="text-align:center;color:var(--ink3);font-size:11.5px;margin-top:12px;padding:10px;background:var(--gs);border-radius:8px;border:1px dashed var(--rim2)">Aún no has enviado notificaciones. Usa el panel de abajo para empezar.</div>':''}
     </div>
 
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr 1.3fr;gap:14px">
-
-  <!-- Panel izquierdo: Formulario -->
-  <div class="card">
-    <div class="ch" style="border-bottom:2px solid var(--rim);padding-bottom:10px;margin-bottom:14px">
-      <div>
-        <div class="ct" style="font-size:14px">Nuevo envío</div>
-        <div style="font-size:11px;color:var(--ink3)">Elige plantilla, destinatarios y envía por WhatsApp</div>
-      </div>
-    </div>
-
-    <!-- PASO 1: Plantilla -->
-    <div class="nx-step">
-      <div class="nx-step-head">
-        <div class="nx-step-num">1</div>
-        <div class="nx-step-title">Plantilla</div>
-        <div class="nx-step-sub" id="nx-tpl-counter">Selecciona una</div>
-      </div>
-
-      <div class="nx-cat-tabs" id="nx-cat-tabs">
-        <button type="button" class="nx-cat-tab is-active" data-cat="all" onclick="setNxCat('all')">Todas</button>
-        <button type="button" class="nx-cat-tab" data-cat="bienvenida" onclick="setNxCat('bienvenida')">Bienvenida</button>
-        <button type="button" class="nx-cat-tab" data-cat="pagos" onclick="setNxCat('pagos')">Pagos</button>
-        <button type="button" class="nx-cat-tab" data-cat="cobranza" onclick="setNxCat('cobranza')">Cobranza</button>
-        <button type="button" class="nx-cat-tab" data-cat="cierre" onclick="setNxCat('cierre')">Cierre</button>
-        <button type="button" class="nx-cat-tab" data-cat="otros" onclick="setNxCat('otros')">Otros</button>
-      </div>
-
-      <div class="nx-tpl-grid" id="nx-tpl-grid">
-        <button type="button" class="nx-tpl-card is-active" data-tipo="lead_bienvenida" data-cat="bienvenida" onclick="setNotifTipo('lead_bienvenida')">
-          <div class="nx-tpl-head">
-            <div class="nx-tpl-icon" style="background:rgba(37,99,235,.12);color:var(--p1)"></div>
-            <div class="nx-tpl-name">Bienvenida Lead</div>
+    <!-- Métodos de pago -->
+    <div class="card">
+      <div class="ch"><div><div class="ct">Por método / cuenta</div><div class="cs">Cobros confirmados totales</div></div></div>
+      ${metodosList.length ? metodosList.slice(0,6).map(function(m){
+        var pct = totalConf>0 ? Math.round(m.total/totalConf*100) : 0;
+        return `<div style="margin-bottom:9px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+            <span style="font-weight:700">${m.nombre}</span>
+            <span style="color:var(--ink3)">${fmt(m.total)} <span style="opacity:.6;font-size:10px">${pct}%</span></span>
           </div>
-          <div class="nx-tpl-desc">Saludo formal al nuevo interesado</div>
-        </button>
-        <button type="button" class="nx-tpl-card" data-tipo="bienvenida_activo" data-cat="bienvenida" onclick="setNotifTipo('bienvenida_activo')">
-          <div class="nx-tpl-head">
-            <div class="nx-tpl-icon" style="background:rgba(37,99,235,.12);color:var(--p1)"></div>
-            <div class="nx-tpl-name">Cliente activo</div>
+          <div style="height:6px;background:var(--rim);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:var(--p1);border-radius:3px"></div>
           </div>
-          <div class="nx-tpl-desc">Para clientes con cuenta aprobada</div>
-        </button>
-        <button type="button" class="nx-tpl-card" data-tipo="cuota" data-cat="pagos" onclick="setNotifTipo('cuota')">
-          <div class="nx-tpl-head">
-            <div class="nx-tpl-icon" style="background:rgba(37,99,235,.12);color:var(--p1)"></div>
-            <div class="nx-tpl-name">Recordatorio cuota</div>
-          </div>
-          <div class="nx-tpl-desc">Aviso corto antes del vencimiento</div>
-        </button>
-        <button type="button" class="nx-tpl-card" data-tipo="confirmado" data-cat="pagos" onclick="setNotifTipo('confirmado')">
-          <div class="nx-tpl-head">
-            <div class="nx-tpl-icon" style="background:rgba(39,174,96,.14);color:#27ae60"></div>
-            <div class="nx-tpl-name">Pago recibido</div>
-          </div>
-          <div class="nx-tpl-desc">Confirma recepción y próxima fecha</div>
-        </button>
-        <button type="button" class="nx-tpl-card" data-tipo="cuenta" data-cat="pagos" onclick="setNotifTipo('cuenta')">
-          <div class="nx-tpl-head">
-            <div class="nx-tpl-icon" style="background:rgba(37,99,235,.12);color:var(--p1)"></div>
-            <div class="nx-tpl-name">Estado de cuenta</div>
-          </div>
-          <div class="nx-tpl-desc">Resumen completo de su plan</div>
-        </button>
-        <button type="button" class="nx-tpl-card" data-tipo="mora" data-cat="cobranza" onclick="setNotifTipo('mora')">
-          <div class="nx-tpl-head">
-            <div class="nx-tpl-icon" style="background:rgba(232,152,10,.14);color:var(--amber)">️</div>
-            <div class="nx-tpl-name">Aviso de mora</div>
-          </div>
-          <div class="nx-tpl-desc">Notifica atraso con datos completos</div>
-        </button>
-        <button type="button" class="nx-tpl-card" data-tipo="mora_grave" data-cat="cobranza" onclick="setNotifTipo('mora_grave')">
-          <div class="nx-tpl-head">
-            <div class="nx-tpl-icon" style="background:rgba(217,59,90,.14);color:var(--red)"></div>
-            <div class="nx-tpl-name">Mora urgente</div>
-          </div>
-          <div class="nx-tpl-desc">Aviso por mora prolongada</div>
-        </button>
-        <button type="button" class="nx-tpl-card" data-tipo="acuerdo" data-cat="cobranza" onclick="setNotifTipo('acuerdo')">
-          <div class="nx-tpl-head">
-            <div class="nx-tpl-icon" style="background:rgba(37,99,235,.12);color:var(--p1)"></div>
-            <div class="nx-tpl-name">Acuerdo de pago</div>
-          </div>
-          <div class="nx-tpl-desc">Formaliza el acuerdo por escrito</div>
-        </button>
-        <button type="button" class="nx-tpl-card" data-tipo="liquidacion" data-cat="cierre" onclick="setNotifTipo('liquidacion')">
-          <div class="nx-tpl-head">
-            <div class="nx-tpl-icon" style="background:rgba(39,174,96,.14);color:#27ae60"></div>
-            <div class="nx-tpl-name">Liquidación</div>
-          </div>
-          <div class="nx-tpl-desc">Oferta de cancelación anticipada</div>
-        </button>
-        <button type="button" class="nx-tpl-card" data-tipo="vencimiento" data-cat="cierre" onclick="setNotifTipo('vencimiento')">
-          <div class="nx-tpl-head">
-            <div class="nx-tpl-icon" style="background:rgba(232,152,10,.14);color:var(--amber)"></div>
-            <div class="nx-tpl-name">Vencimiento</div>
-          </div>
-          <div class="nx-tpl-desc">Alerta fin de contrato próximo</div>
-        </button>
-        <button type="button" class="nx-tpl-card" data-tipo="custom" data-cat="otros" onclick="setNotifTipo('custom')">
-          <div class="nx-tpl-head">
-            <div class="nx-tpl-icon" style="background:var(--surf2);color:var(--ink2)">️</div>
-            <div class="nx-tpl-name">Personalizado</div>
-          </div>
-          <div class="nx-tpl-desc">Escribe tu propio mensaje</div>
-        </button>
-      </div>
-
-      <select class="fs" id="notif-tipo" style="display:none">
-        <option value="lead_bienvenida">Bienvenida Lead</option>
-        <option value="bienvenida_activo">Bienvenida Cliente Activo</option>
-        <option value="cuota">Recordatorio de Cuota</option>
-        <option value="confirmado">Pago Recibido</option>
-        <option value="cuenta">Estado de Cuenta Completo</option>
-        <option value="acuerdo">Confirmación de Acuerdo de Pago</option>
-        <option value="mora">Aviso de Mora</option>
-        <option value="mora_grave">Aviso Urgente de Mora</option>
-        <option value="liquidacion">Oferta de Liquidación Anticipada</option>
-        <option value="vencimiento">Aviso de Vencimiento de Contrato</option>
-        <option value="custom">Mensaje Personalizado</option>
-      </select>
-
-      <div id="notif-tipo-desc" style="margin-top:10px;font-size:11.5px;color:var(--ink3);padding:8px 10px;background:var(--surf2);border-radius:8px;border-left:3px solid var(--p1);line-height:1.4">
-        Selecciona una plantilla para ver su descripción.
-      </div>
-
-      <div id="notif-custom-wrap" style="display:none;margin-top:10px">
-        <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">Variables disponibles: <code>{nombre}</code> <code>{cuota}</code> <code>{mora}</code> <code>{modelo}</code> <code>{cuenta}</code> <code>{empresa}</code> <code>{saldo}</code> <code>{cuotaNum}</code> <code>{totalCuotas}</code> <code>{fechaProx}</code></div>
-        <textarea class="fta" id="notif-msg" rows="4" placeholder="Estimado/a {nombre}, le recordamos su próxima cuota de {cuota} con fecha {fechaProx}..."></textarea>
-      </div>
-    </div>
-
-    <!-- PASO 2: Destinatarios -->
-    <div class="nx-step">
-      <div class="nx-step-head">
-        <div class="nx-step-num">2</div>
-        <div class="nx-step-title">Destinatarios</div>
-        <div class="nx-step-sub" id="nx-dest-counter">0 destinatarios</div>
-      </div>
-
-      <div class="nx-seg-grid" id="notif-dest-quick">
-        <button type="button" class="nx-seg is-active" data-dest="leads" onclick="setNotifDestQuick('leads')">
-          <div class="nx-seg-count" id="nx-c-leads">0</div>
-          <div class="nx-seg-info"><div class="nx-seg-lbl">Leads</div><div class="nx-seg-hint">Sin cuenta activa</div></div>
-        </button>
-        <button type="button" class="nx-seg" data-dest="activos" onclick="setNotifDestQuick('activos')">
-          <div class="nx-seg-count" id="nx-c-activos">0</div>
-          <div class="nx-seg-info"><div class="nx-seg-lbl">Activos</div><div class="nx-seg-hint">Con cuenta aprobada</div></div>
-        </button>
-        <button type="button" class="nx-seg" data-dest="proximas" onclick="setNotifDestQuick('proximas')">
-          <div class="nx-seg-count" id="nx-c-proximas">0</div>
-          <div class="nx-seg-info"><div class="nx-seg-lbl">Cuota pendiente</div><div class="nx-seg-hint">Vencen esta semana</div></div>
-        </button>
-        <button type="button" class="nx-seg" data-dest="mora" onclick="setNotifDestQuick('mora')">
-          <div class="nx-seg-count" id="nx-c-mora">0</div>
-          <div class="nx-seg-info"><div class="nx-seg-lbl">En mora</div><div class="nx-seg-hint">Con atraso</div></div>
-        </button>
-      </div>
-
-      <select class="fs" id="notif-dest" style="display:none">
-        <option value="leads">Leads sin cuenta activa</option>
-        <option value="activos">Clientes activos con cuenta</option>
-        <option value="proximas">Clientes con cuota esta semana</option>
-        <option value="mora">Clientes en mora</option>
-        <option value="especifico">Cliente específico</option>
-      </select>
-
-      <!-- Buscador: siempre visible. Filtra dentro del segmento. Si seleccionas uno, se envía solo a ese. -->
-      <div style="margin-top:4px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <div style="font-size:11px;color:var(--ink3);font-weight:600" id="nx-ac-hint">O busca un cliente específico dentro del grupo</div>
-          <button type="button" id="nx-ac-modeswitch" onclick="nxAcToggleScope()" style="border:none;background:transparent;color:var(--p1);font-size:11px;font-weight:700;cursor:pointer;padding:2px 6px;border-radius:6px">Ver todos</button>
-        </div>
-        <div class="nx-ac-wrap">
-          <span class="nx-ac-icon"></span>
-          <input type="text" class="nx-ac-input" id="nx-ac-input" placeholder="Busca por nombre, cuenta, teléfono o cédula..." autocomplete="off" oninput="nxAcFilter()" onfocus="nxAcOpen()" onkeydown="nxAcKey(event)">
-          <button type="button" class="nx-ac-clear" id="nx-ac-clear" onclick="nxAcClearInput()">×</button>
-          <div class="nx-ac-list" id="nx-ac-list"></div>
-        </div>
-        <div id="nx-ac-selected-wrap"></div>
-        <input type="hidden" id="notif-cliente-sel-id" value="">
-        <select id="notif-cliente-sel" style="display:none"></select>
-      </div>
-    </div>
-
-    <!-- PASO 3: Preview -->
-    <div class="nx-step">
-      <div class="nx-step-head">
-        <div class="nx-step-num">3</div>
-        <div class="nx-step-title">Vista previa</div>
-        <div class="nx-step-sub">Así lo verá el cliente</div>
-      </div>
-      <div class="nx-wa-preview">
-        <div id="notif-preview" class="nx-wa-bubble" style="display:none"></div>
-        <div id="notif-preview-empty" class="nx-wa-empty">Selecciona una plantilla para ver el mensaje…</div>
-      </div>
-    </div>
-
-    <!-- Barra de envío -->
-    <div class="nx-send-bar">
-      <div class="nx-send-count">
-        <b id="nx-send-n">0</b>
-        <span id="nx-send-lbl">destinatarios listos</span>
-      </div>
-      <button class="nx-send-btn" id="notif-send-btn">
-        <span style="font-size:15px"></span>
-        <span>Enviar por WhatsApp</span>
-      </button>
-    </div>
-    <div style="text-align:center;font-size:10.5px;color:var(--ink3);margin-top:6px">
-      Se abrirán hasta 5 chats a la vez para evitar bloqueos del navegador
+        </div>`;
+      }).join('') : '<div style="color:var(--ink3);font-size:12px;text-align:center;padding:20px 0">Sin pagos registrados aún</div>'}
     </div>
   </div>
 
-  <!-- Panel derecho: Historial -->
-  <div class="card">
-    <div class="ch" style="border-bottom:2px solid var(--rim);padding-bottom:10px;margin-bottom:14px">
-      <div>
-        <div class="ct" style="font-size:14px">Historial de Envios</div>
-        <div style="font-size:11px;color:var(--ink3)">Registro de todas las notificaciones enviadas</div>
-      </div>
+  <!-- Cuotas Próximas -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="ch" style="margin-bottom:10px">
+      <div><div class="ct">Cuotas Próximas</div><div class="cs">Clientes a cobrar en los próximos 14 días · atrasados primero</div></div>
+      <span class="bdg ${proximasCuotas.length>0?'b-a':'b-g'}">${proximasCuotas.length}</span>
     </div>
-
-    <!-- Clientes sin teléfono -->
-    ${(function(){
-      var sinTel=S.clientes.filter(c=>!c.eliminado&&(!c.tel||c.tel.replace(/[^0-9]/g,'').length<7));
-      if(!sinTel.length) return '';
-      return '<div style="padding:10px 12px;background:rgba(240,150,50,0.08);border:1px solid rgba(240,150,50,0.3);border-radius:8px;margin-bottom:12px">'
-        +'<div style="font-size:11px;font-weight:800;color:var(--amber);margin-bottom:4px">ATENCION: '+sinTel.length+' cliente'+(sinTel.length!==1?'s':'')+' sin telefono registrado</div>'
-        +'<div style="font-size:10.5px;color:var(--ink3)">'+sinTel.slice(0,3).map(c=>c.nombre.split(' ')[0]).join(', ')+(sinTel.length>3?' y '+(sinTel.length-3)+' mas':'')+' — Agregaelos en la ficha del cliente.</div>'
-        +'</div>';
-    })()}
-
-    <div class="lst" id="notif-historial" style="max-height:480px">
-      ${(window._notifHistorial||[]).length
-        ? (window._notifHistorial||[]).map(n=>`<div class="li" style="padding:10px 12px;border-bottom:1px solid var(--rim)">
-            <div style="width:10px;height:10px;border-radius:50%;background:${n.canal==='whatsapp'?'#25D366':'var(--p1)'};flex-shrink:0;margin-top:4px"></div>
+    ${proximasCuotas.length===0 ? '<div style="text-align:center;padding:20px 0;color:var(--ink3);font-size:12px">Sin cuotas próximas ni atrasadas</div>' :
+      `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;max-height:520px;overflow-y:auto">
+      ${proximasCuotas.map(function(item){
+        const c=item.cred, diff=item.diff;
+        const col = diff<0?'var(--red)':diff<=1?'var(--amber)':'var(--green)';
+        const lbl = diff<0?`${Math.abs(diff)}d de atraso`:diff===0?'Vence hoy':diff===1?'Vence mañana':`Vence en ${diff}d`;
+        const badge = diff<0?'ATRASO':diff<=1?'URGENTE':'PRÓXIMO';
+        return `<div style="background:var(--surf2);border:1px solid var(--rim);border-left:3px solid ${col};border-radius:9px;padding:10px 12px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px">
             <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:800;color:var(--ink)">${n.tipo}</div>
-              <div style="font-size:11px;color:var(--ink3);margin-top:2px">${n.dest} — ${n.cantidad} mensaje${n.cantidad!==1?'s':''} — ${n.canal}</div>
-              <div style="font-size:10.5px;color:var(--ink3)">${n.fecha}</div>
-              ${n.mensaje?`<div style="margin-top:6px;padding:8px 10px;background:var(--surf2);border:1px solid var(--rim);border-radius:8px;font-size:11px;white-space:pre-wrap;line-height:1.45;color:var(--ink)">${String(n.mensaje).replace(/</g,'&lt;')}</div>`:''}
+              <div style="font-weight:700;color:var(--ink);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.cli}</div>
+              <div style="font-size:10px;color:var(--ink3);margin-top:1px">${c.id} · Cuota ${item.cuotaNum}/${c.totalCuotas||c.plazo*2||24}</div>
             </div>
-            <span class="bdg b-g" style="align-self:flex-start">enviado</span>
-          </div>`).join('')
-        : '<div style="text-align:center;padding:40px 20px"><div style="font-weight:700;font-size:13px;color:var(--ink2);margin-bottom:4px">Sin envios registrados</div><div style="font-size:12px;color:var(--ink3)">Los mensajes enviados apareceran aqui con fecha y detalles.</div></div>'}
-    </div>
+            <span style="background:${col};color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:4px;letter-spacing:.3px">${badge}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:10.5px;color:${col};font-weight:700">${lbl}</div>
+            <div style="font-weight:800;font-family:var(--fd);font-size:14px;color:var(--ink)">${fmt(c.cuotaQ||c.cuota)}</div>
+          </div>
+          <div style="display:flex;gap:5px">
+            <button class="btn btn-p btn-xs" style="flex:1" onclick="openAddPago('${c.id}')">Cobrar</button>
+            <button class="btn btn-g btn-xs" style="flex:1" onclick="avisarCuotaProxima('${c.id}')" title="Enviar recordatorio al cliente por WhatsApp">Avisar</button>
+          </div>
+        </div>`;
+      }).join('')}
+      </div>`
+    }
   </div>
 
-  </div></div>`;};
+  <!-- Filtro por fecha -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+    <label style="font-size:11px;color:var(--ink3);font-weight:700">Desde:</label>
+    <input type="date" value="${S.pagosDesde||''}" onchange="S.pagosDesde=this.value;pgSet('pagos',1);nav('pagos')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
+    <label style="font-size:11px;color:var(--ink3);font-weight:700">Hasta:</label>
+    <input type="date" value="${S.pagosHasta||''}" onchange="S.pagosHasta=this.value;pgSet('pagos',1);nav('pagos')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
+    ${(S.pagosDesde||S.pagosHasta)?`<button class="btn btn-g btn-sm" onclick="S.pagosDesde='';S.pagosHasta='';nav('pagos')">✕ Limpiar</button>`:''}
+  </div>
 
+  <!-- Filter tabs -->
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+    ${[
+      ['todos','Todos',allPagos.length,'var(--ink2)'],
+      ['confirmados','Confirmados',confs.length,'var(--green)'],
+      ['pendientes','Pendientes',pends.length,'var(--amber)'],
+      ['archivados','Archivados',pagosEliminados.length,'var(--red)'],
+    ].map(function(arr){
+      var k=arr[0], l=arr[1], n=arr[2], col=arr[3];
+      var isActive = tab===k;
+      return '<button class="btn btn-sm'+(isActive?' btn-p':' btn-g')+'" onclick="setPagosTab(\''+k+'\')" style="gap:6px'+(isActive?'':';border-left:3px solid '+col)+'">'+l+' <span style="opacity:.75;font-size:10px;font-weight:900">'+n+'</span></button>';
+    }).join('')}
+  </div>
+
+  <!-- Tabla / Lista -->
+  ${tab==='archivados' ? `
+  <div class="card">
+    <div class="ch">
+      <div><div class="ct" style="color:var(--red)">Pagos archivados</div><div class="cs">${pagosEliminados.length} pago${pagosEliminados.length!==1?'s':''} eliminado${pagosEliminados.length!==1?'s':''} · puedes restaurarlos si fueron eliminados por error</div></div>
+    </div>
+    ${pagosEliminados.length===0?`<div style="text-align:center;padding:40px 20px;color:var(--ink3)">
+      <div style="font-size:13px;font-weight:700;color:var(--green)">Sin pagos archivados</div>
+      <div style="font-size:11.5px;margin-top:4px">Todos los pagos registrados están activos</div>
+    </div>`:`<div class="tw"><table>
+    <thead><tr><th>ID</th><th>Cliente</th><th>Crédito</th><th>Fecha pago</th><th>Monto</th><th>Método</th><th>Eliminado por</th><th>Fecha eliminación</th><th>Razón</th><th>Modo</th><th></th></tr></thead>
+    <tbody>${pagosEliminados.slice().sort(function(a,b){return (b.eliminadoEn||'').localeCompare(a.eliminadoEn||'');}).map(function(p){
+      var fechaElim = p.eliminadoEn ? p.eliminadoEn.split('T')[0] : '—';
+      var modoLbl = p.eliminadoModo==='mantener' ? 'Mantiene en amort.' : 'Eliminado completo';
+      var modoCls = p.eliminadoModo==='mantener' ? 'b-a' : 'b-r';
+      return '<tr style="opacity:.78">'
+        +'<td class="tdm" style="font-family:var(--fd);text-decoration:line-through">'+p.id+'</td>'
+        +'<td class="tdm" style="text-decoration:line-through">'+(p.cli||'—')+'</td>'
+        +'<td class="tds">'+(p.cred||'—')+'</td>'
+        +'<td class="tds">'+(p.fecha||'—')+'</td>'
+        +'<td style="color:var(--red);font-weight:800;font-family:var(--fd);text-decoration:line-through">'+fmt(p.monto)+'</td>'
+        +'<td class="tds">'+(p.metodo||'—')+'</td>'
+        +'<td class="tds" style="color:var(--red);font-weight:700">'+(p.eliminadoPor||'Admin')+'</td>'
+        +'<td class="tds">'+fechaElim+'</td>'
+        +'<td class="tds" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(p.eliminadoRazon||'')+'">'+(p.eliminadoRazon||'Sin razón')+'</td>'
+        +'<td><span class="bdg '+modoCls+'" style="font-size:9px">'+modoLbl+'</span></td>'
+        +'<td><button class="btn btn-p btn-xs" onclick="restaurarPago(\''+p.id+'\')" title="Restaurar este pago">↺ Restaurar</button></td>'
+        +'</tr>';
+    }).join('')}
+    </tbody>
+    </table></div>`}
+  </div>
+  ` : `
+  <div class="card">
+    <div class="ch">
+      <div><div class="ct">Registro de pagos</div><div class="cs">${filtered.length} resultado${filtered.length!==1?'s':''}</div></div>
+      ${pagosEliminados.length>0?`<button class="btn btn-g btn-sm" onclick="setPagosTab('archivados')" style="border-left:3px solid var(--red)">Ver archivados · ${pagosEliminados.length}</button>`:''}
+    </div>
+    <div class="tw"><table>
+    <thead><tr>
+      ${_thSort(_ps,'setPagosSort','id','ID')}
+      ${_thSort(_ps,'setPagosSort','cli','Cliente')}
+      ${_thSort(_ps,'setPagosSort','cred','Crédito')}
+      ${_thSort(_ps,'setPagosSort','fecha','Fecha')}
+      ${_thSort(_ps,'setPagosSort','monto','Monto')}
+      ${_thSort(_ps,'setPagosSort','metodo','Recibido en')}
+      ${_thSort(_ps,'setPagosSort','cobrador','Cobrador')}
+      ${_thSort(_ps,'setPagosSort','estado','Estado')}
+      <th>Factura</th><th></th>
+    </tr></thead>
+    <tbody>${(()=>{const _pp=pgGet('pagos');return filtered.slice((_pp-1)*50,_pp*50).map(p=>{
+      var fac = (S.facturas||[]).find(function(f){ return f.pagoId === p.id; });
+      var facCol = '';
+      if(fac){
+        if(fac.anulada){
+          facCol = '<span class="bdg" style="background:rgba(255,71,87,.2);color:var(--red);font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700">ANULADA</span>';
+        } else {
+          facCol = '<span class="bdg" style="background:rgba(0,184,118,.18);color:var(--green);font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;font-family:var(--fd)">'+fac.numero+'</span>';
+        }
+      } else if(p.estado==='confirmado'){
+        facCol = '<span style="color:var(--ink3);font-size:10.5px">— sin factura —</span>';
+      } else {
+        facCol = '<span style="color:var(--ink3);font-size:10.5px">—</span>';
+      }
+      return `<tr style="cursor:pointer" onclick="abrirDetallePago('${p.id}')">
+      <td class="tdm" style="font-family:var(--fd)">${p.id}</td>
+      <td class="tdm">${p.cli}</td>
+      <td class="tds">${p.cred}</td>
+      <td class="tds">${p.fecha}</td>
+      <td style="color:var(--green);font-weight:800;font-family:var(--fd)">${fmt(p.monto)}</td>
+      <td class="tds">${p.metodo}</td>
+      <td class="tds">${p.cobrador}</td>
+      <td><span class="bdg ${sbg(p.estado)}">${p.estado}</span></td>
+      <td>${facCol}</td>
+      <td onclick="event.stopPropagation()"><div style="display:flex;gap:4px">${p.estado==='pendiente'?`<button class="btn btn-s btn-xs" onclick="confirmarPago('${p.id}')">✓</button>`:''}<button class="btn btn-p btn-xs" onclick="openEditPago('${p.id}')" title="Editar">Editar</button><button class="btn btn-d btn-xs" onclick="confirmarDelPago('${p.id}')" title="Eliminar">Eliminar</button></div></td>
+    </tr>`;
+    }).join('')})()}
+    ${filtered.length===0?`<tr><td colspan="10" style="text-align:center;padding:30px 0;color:var(--ink3);font-size:13px">Sin pagos con este filtro</td></tr>`:''}
+    </tbody>
+  </table></div>
+  </div>
+  `}
+  </div>`+(tab!=='archivados'?pgControls('pagos',filtered.length,50,'pgNav'):'');
+};
 
