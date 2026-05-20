@@ -1825,7 +1825,7 @@ function _wzGuardar(){
     planModo: _finNew.planModo,
     plan: _finNew.plan,
     frecuencia: 'quincenal',
-    fecha: new Date().toISOString().split('T')[0],
+    fecha: hoyLocalISO(),
     estado: ((S.currentUser&&S.currentUser.rol)==='Vendedor Concesionario') ? 'pendiente_revision' : 'activo',
     pagado: 0,
     mora: 0,
@@ -2300,7 +2300,7 @@ function confirmarContratoFirmado(credId){
   var ci = S.creds.findIndex(function(x){ return x.id===credId; });
   if(ci<0) return;
   S.creds[ci].contratoFirmado = true;
-  S.creds[ci].fechaContratoFirmado = new Date().toISOString().split('T')[0];
+  S.creds[ci].fechaContratoFirmado = hoyLocalISO();
   DB.updateCred(credId, { contratoFirmado: true, fechaContratoFirmado: S.creds[ci].fechaContratoFirmado });
   toast('Contrato confirmado. El crÃ©dito estÃ¡ activo contablemente.','success');
   nav('creditos');

@@ -154,11 +154,11 @@ function _comGetSaldo(u){
 function _comStatsRango(u){
   var gen = _comCalcGenerado(u);
   var hoy = new Date();
-  var hoyYmd = hoy.toISOString().split('T')[0];
+  var hoyYmd = fechaLocalISO(hoy);
   // Inicio de semana (lunes)
   var diaSem = hoy.getDay() || 7; // domingo = 7
   var lunes = new Date(hoy.getTime() - (diaSem-1)*86400000);
-  var lunesYmd = lunes.toISOString().split('T')[0];
+  var lunesYmd = fechaLocalISO(lunes);
   // Inicio de mes
   var primMesYmd = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-01';
   var totalPeriodo = function(items, desde){
@@ -378,7 +378,7 @@ function _comExportarCSV(){
   var blob=new Blob(['ï»¿'+csv],{type:'text/csv;charset=utf-8;'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
-  a.href=url; a.download='comisiones-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  a.href=url; a.download='comisiones-'+hoyLocalISO()+'.csv'; a.click();
   URL.revokeObjectURL(url);
   toast('CSV descargado','success');
 }
@@ -521,7 +521,7 @@ function _comAbrirPagar(uid){
     + '<select class="fs" id="comp_cuenta" onchange="_comValidarPago()">'+cuentasOpts+'</select>'
     + '<div id="comp_saldo_warn" style="font-size:10.5px;margin-top:3px;color:var(--ink3)"></div></div>'
     + '<div class="fg"><label>Fecha</label>'
-    + '<input class="fi" type="date" id="comp_fecha" value="'+(new Date().toISOString().split('T')[0])+'"></div>'
+    + '<input class="fi" type="date" id="comp_fecha" value="'+(hoyLocalISO())+'"></div>'
     + '<div class="fg"><label>Notas (opcional)</label>'
     + '<textarea class="fi" id="comp_notas" rows="2" placeholder="Ej: Pago de comisiones primera quincena"></textarea></div>'
     + '</div>';
@@ -560,7 +560,7 @@ function _comGuardarPago(uid){
   if(!u){ toast('Usuario no encontrado','error'); return; }
   var monto = parseFloat(($('comp_monto')&&$('comp_monto').value)||0)||0;
   var cuenta = ($('comp_cuenta')&&$('comp_cuenta').value)||'';
-  var fecha = ($('comp_fecha')&&$('comp_fecha').value)||new Date().toISOString().split('T')[0];
+  var fecha = ($('comp_fecha')&&$('comp_fecha').value)||hoyLocalISO();
   var notas = ($('comp_notas')&&$('comp_notas').value)||'';
   if(monto <= 0){ toast('Monto invÃ¡lido','error'); return; }
   if(!cuenta){ toast('Selecciona una cuenta','error'); return; }
@@ -816,7 +816,7 @@ function _comConfirmarEliminarPago(egId, uid){
         monto: parseFloat(eg.monto)||0,
         cuentaOrigen: null,
         cuentaDestino: mov.cuentaOrigen,
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: hoyLocalISO(),
         referencia: 'Reverso por eliminaciÃ³n Â· ' + razon,
         realizadoPor: quien,
         tasaBs: window._tasaBsGlobal||1,

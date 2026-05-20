@@ -19,7 +19,7 @@ function openAddEgreso(){
     +'<div class="fg"><label>Forma de pago</label><select class="fs" id="eg_forma">'+_metodosOpts+'</select></div>'
     +'</div>'
     +'<div class="fgr" style="gap:8px">'
-    +'<div class="fg"><label>Fecha</label><input class="fi" id="eg_fecha" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div>'
+    +'<div class="fg"><label>Fecha</label><input class="fi" id="eg_fecha" type="date" value="'+hoyLocalISO()+'"></div>'
     +'<div class="fg"><label>Referencia</label><input class="fi" id="eg_notas" placeholder="Opcional"></div>'
     +'</div>'
     +'</div>';
@@ -28,7 +28,7 @@ function openAddEgreso(){
     var monto=parseFloat(($('eg_monto')&&$('eg_monto').value))||0;
     if(!conc||monto<=0){toast('Concepto y monto son obligatorios','error');return false;}
     var newId=S.egresos.length?Math.max.apply(null,S.egresos.map(function(x){return x.id;}))+1:1;
-    var newEg={id:newId,concepto:conc,monto:monto,fecha:($('eg_fecha')&&$('eg_fecha').value)||new Date().toISOString().split('T')[0],categoria:($('eg_cat')&&$('eg_cat').value)||'otros',forma:($('eg_forma')&&$('eg_forma').value)||'',notas:($('eg_notas')&&$('eg_notas').value)||'',eliminado:false};
+    var newEg={id:newId,concepto:conc,monto:monto,fecha:($('eg_fecha')&&$('eg_fecha').value)||hoyLocalISO(),categoria:($('eg_cat')&&$('eg_cat').value)||'otros',forma:($('eg_forma')&&$('eg_forma').value)||'',notas:($('eg_notas')&&$('eg_notas').value)||'',eliminado:false};
     S.egresos.push(newEg);
     DB.saveEgreso(newEg);
 
@@ -121,7 +121,7 @@ function delEgreso(id){
           monto:parseFloat(eg.monto)||0,
           cuentaOrigen:null,
           cuentaDestino:cuentaSalida,
-          fecha:new Date().toISOString().split('T')[0],
+          fecha:hoyLocalISO(),
           referencia:'Reverso por eliminaciÃ³n de egreso #'+eg.id,
           realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
           tasaBs:window._tasaBsGlobal||1,

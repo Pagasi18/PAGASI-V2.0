@@ -157,9 +157,9 @@ function abrirWhatsAppRecibo(pago){
 // FEATURE 3: DASHBOARD DE COBRANZA POR COBRADOR
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderDashboardCobradores(){
-  var hoy = new Date().toISOString().split('T')[0];
+  var hoy = hoyLocalISO();
   var inicioSemana = (function(){
-    var d = new Date(); d.setDate(d.getDate()-d.getDay()); return d.toISOString().split('T')[0];
+    var d = new Date(); d.setDate(d.getDate()-d.getDay()); return fechaLocalISO(d);
   })();
   var inicioMes = hoy.slice(0,7)+'-01';
 
@@ -376,7 +376,7 @@ function abrirGenerarFactura(pagoId){
     + '<div class="fgr" style="gap:10px">'
     + '<div class="fg"><label>NÂ° de Factura</label><input class="fi" id="fac_numero" value="'+nextNum+'" style="font-family:var(--fd);font-weight:700"></div>'
     + '<div class="fg"><label>NÂ° de Control SENIAT</label><input class="fi" id="fac_control" value="'+nextCtrl+'" style="font-family:var(--fd);font-weight:700"></div>'
-    + '<div class="fg"><label>Fecha de EmisiÃ³n</label><input class="fi" id="fac_fecha" type="date" value="'+(new Date().toISOString().split('T')[0])+'"></div>'
+    + '<div class="fg"><label>Fecha de EmisiÃ³n</label><input class="fi" id="fac_fecha" type="date" value="'+(hoyLocalISO())+'"></div>'
     + '</div>'
     + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin:14px 0 8px">DATOS DEL EMISOR (EMPRESA)</div>'
     + '<div class="fgr" style="gap:10px">'
@@ -425,7 +425,7 @@ function crearFactura(pagoId){
     numero: numero,
     numeroControl: control,
     pagoId: p.id,
-    fechaEmision: ($('fac_fecha')&&$('fac_fecha').value)||new Date().toISOString().split('T')[0],
+    fechaEmision: ($('fac_fecha')&&$('fac_fecha').value)||hoyLocalISO(),
     fechaCreacion: new Date().toISOString(),
     creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
     creadoPorUid: (S.currentUser&&S.currentUser.uid)||'',

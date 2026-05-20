@@ -974,7 +974,7 @@ function savePendiente(tipo){
     monto:monto,
     fechaVenc:($('pnd_fecha')||{}).value||'',
     notas:($('pnd_notas')||{}).value||'',
-    creadoEn:new Date().toISOString().split('T')[0],
+    creadoEn:hoyLocalISO(),
     creadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
     pagado:false,
     eliminado:false
@@ -1004,7 +1004,7 @@ function marcarPendientePagado(id){
   var idx=S.cuentasPendientes.findIndex(function(p){return p.id===id;});
   if(idx<0) return;
   S.cuentasPendientes[idx].pagado=true;
-  S.cuentasPendientes[idx].pagadoEn=new Date().toISOString().split('T')[0];
+  S.cuentasPendientes[idx].pagadoEn=hoyLocalISO();
   if(db){db.collection('cuentasPendientes').doc(id).update({pagado:true,pagadoEn:S.cuentasPendientes[idx].pagadoEn}).catch(function(){});}
   nav('cuentas');
   toast('Marcado como '+(S.cuentasPendientes[idx].tipo==='cobrar'?'cobrado':'pagado'),'success');
@@ -1027,7 +1027,7 @@ function openDeposito(cuentaNombre){
     +'<div class="fg"><label>Concepto *</label><input class="fi" id="dep_conc" placeholder="Ej: Cobro cuota, pago inicial..."></div>'
     +'<div class="fgr" style="gap:8px">'
     +'<div class="fg"><label>Monto *</label><input class="fi" id="dep_monto" type="number" step="0.01" placeholder="0.00"></div>'
-    +'<div class="fg"><label>Fecha</label><input class="fi" id="dep_fecha" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div></div>'
+    +'<div class="fg"><label>Fecha</label><input class="fi" id="dep_fecha" type="date" value="'+hoyLocalISO()+'"></div></div>'
     +'<div class="fg"><label>Referencia / Comprobante</label><input class="fi" id="dep_ref" placeholder="Opcional"></div>'
     +'<div class="fgr" style="gap:8px"><div class="fg"><label>Tasa Bs./$</label><input class="fi" id="dep_tasa" type="number" step="0.01" placeholder="Ej: 478.58" value="'+(window._tasaBsGlobal||1)+'"></div>'
     +'<div class="fg"><label>Moneda</label><select class="fs" id="dep_moneda"><option value="USD">USD $</option><option value="BS">Bs.</option></select></div></div>'
@@ -1040,7 +1040,7 @@ function openDeposito(cuentaNombre){
     if(!conc||monto<=0){toast('Concepto y monto obligatorios','error');return false;}
     var mov={id:'MOV-'+Date.now(),tipo:'deposito',concepto:conc,monto:monto,
       cuentaOrigen:null,cuentaDestino:cnombre,
-      fecha:($('dep_fecha')&&$('dep_fecha').value)||new Date().toISOString().split('T')[0],
+      fecha:($('dep_fecha')&&$('dep_fecha').value)||hoyLocalISO(),
       hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
       referencia:($('dep_ref')&&$('dep_ref').value)||'',
       tasaBs:parseFloat(($('dep_tasa')&&$('dep_tasa').value))||window._tasaBsGlobal||1,
@@ -1070,7 +1070,7 @@ function openRetiro(cuentaNombre){
     +'<div class="fg"><label>Concepto *</label><input class="fi" id="ret_conc" placeholder="Ej: Pago proveedor, nÃ³mina..."></div>'
     +'<div class="fgr" style="gap:8px">'
     +'<div class="fg"><label>Monto *</label><input class="fi" id="ret_monto" type="number" step="0.01" placeholder="0.00"></div>'
-    +'<div class="fg"><label>Fecha</label><input class="fi" id="ret_fecha" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div></div>'
+    +'<div class="fg"><label>Fecha</label><input class="fi" id="ret_fecha" type="date" value="'+hoyLocalISO()+'"></div></div>'
     +'<div class="fg"><label>Referencia</label><input class="fi" id="ret_ref" placeholder="Opcional"></div>'
     +'<div class="fgr" style="gap:8px"><div class="fg"><label>Tasa Bs./$</label><input class="fi" id="ret_tasa" type="number" step="0.01" placeholder="Ej: 478.58" value="'+(window._tasaBsGlobal||1)+'"></div>'
     +'<div class="fg"><label>Moneda</label><select class="fs" id="ret_moneda"><option value="USD">USD $</option><option value="BS">Bs.</option></select></div></div>'
@@ -1083,7 +1083,7 @@ function openRetiro(cuentaNombre){
     if(!conc||monto<=0){toast('Concepto y monto obligatorios','error');return false;}
     var mov={id:'MOV-'+Date.now(),tipo:'retiro',concepto:conc,monto:monto,
       cuentaOrigen:cnombre,cuentaDestino:null,
-      fecha:($('ret_fecha')&&$('ret_fecha').value)||new Date().toISOString().split('T')[0],
+      fecha:($('ret_fecha')&&$('ret_fecha').value)||hoyLocalISO(),
       hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
       referencia:($('ret_ref')&&$('ret_ref').value)||'',
       tasaBs:parseFloat(($('ret_tasa')&&$('ret_tasa').value))||window._tasaBsGlobal||1,
@@ -1114,7 +1114,7 @@ function openTransferencia(cuentaNombre){
     +'<div class="fg"><label>Cuenta destino *</label><select class="fs" id="tr_destino">'+opts+'</select></div>'
     +'<div class="fgr" style="gap:8px">'
     +'<div class="fg"><label>Monto *</label><input class="fi" id="tr_monto" type="number" step="0.01" placeholder="0.00"></div>'
-    +'<div class="fg"><label>Fecha</label><input class="fi" id="tr_fecha" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div></div>'
+    +'<div class="fg"><label>Fecha</label><input class="fi" id="tr_fecha" type="date" value="'+hoyLocalISO()+'"></div></div>'
     +'<div class="fg"><label>Concepto</label><input class="fi" id="tr_conc" placeholder="Ej: Traspaso operativo..."></div>'
     +'<div class="fg"><label>Referencia</label><input class="fi" id="tr_ref" placeholder="Opcional"></div>'
     +'<div class="fg"><label>Tasa Bs./$</label><input class="fi" id="tr_tasa" type="number" step="0.01" placeholder="Ej: 478.58" value="'+(window._tasaBsGlobal||1)+'"></div>'
@@ -1129,7 +1129,7 @@ function openTransferencia(cuentaNombre){
     var conc=($('tr_conc')&&$('tr_conc').value)||'Transferencia interna';
     var mov={id:'MOV-'+Date.now(),tipo:'transferencia',concepto:conc,monto:monto,
       cuentaOrigen:orig,cuentaDestino:dest,
-      fecha:($('tr_fecha')&&$('tr_fecha').value)||new Date().toISOString().split('T')[0],
+      fecha:($('tr_fecha')&&$('tr_fecha').value)||hoyLocalISO(),
       hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
       referencia:($('tr_ref')&&$('tr_ref').value)||'',
       tasaBs:parseFloat(($('tr_tasa')&&$('tr_tasa').value))||window._tasaBsGlobal||1,

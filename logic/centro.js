@@ -10,8 +10,8 @@ var WT_NOTIFIED=false;
 var _wtDragId=null;
 
 function wtEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
-function wtToday(){ return new Date().toISOString().slice(0,10); }
-function wtDateAdd(days){ var d=new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
+function wtToday(){ return hoyLocalISO(); }
+function wtDateAdd(days){ var d=new Date(); d.setDate(d.getDate()+days); return fechaLocalISO(d); }
 function wtUserName(){ return (S.currentUser&&(S.currentUser.nombre||S.currentUser.email||S.currentUser.uid))||'Administrador'; }
 function wtIsMine(t){ if(isAdminUser()) return true; var me=(S.currentUser&&S.currentUser.email)||wtUserName(); var ass=String(t.asignadoEmail||t.asignadoA||'').toLowerCase(); var meL=me.toLowerCase(); return !ass||ass===meL||ass.indexOf(meL)>=0||meL.indexOf(ass)>=0; }
 

@@ -480,7 +480,7 @@ function verCliente(id){
   creditos.forEach(function(cr){
     if(cr.fecha) actTimeline.push({fecha:cr.fecha, tipo:'credito', ico:'📋', titulo:'Crédito aprobado: '+cr.id, sub:(cr.modelo||'—')+' · Total: '+fmt(cr.total||0)+' · '+( cr.plazo||'?')+'M', color:'var(--p1)'});
     if(cr.fechaCompletado) actTimeline.push({fecha:cr.fechaCompletado, tipo:'completado', ico:'✅', titulo:'Plan completado: '+cr.id, sub:'Saldado exitosamente · '+cr.modelo, color:'var(--green)'});
-    if(cr.mora>0) actTimeline.push({fecha:new Date().toISOString().slice(0,10), tipo:'mora', ico:'⚠️', titulo:'En mora: '+cr.id, sub:cr.mora+' días · Saldo: '+fmt(cr.saldo||0), color:'var(--red)'});
+    if(cr.mora>0) actTimeline.push({fecha:hoyLocalISO(), tipo:'mora', ico:'⚠️', titulo:'En mora: '+cr.id, sub:cr.mora+' días · Saldo: '+fmt(cr.saldo||0), color:'var(--red)'});
   });
   pagos.forEach(function(p){
     if(!p.eliminado) actTimeline.push({
@@ -887,7 +887,7 @@ function empleadoDashHTML(){
   const me = (S.currentUser && S.currentUser.nombre) || 'Empleado';
   const rol = (S.currentUser && S.currentUser.rol) || 'Empleado';
   const hoy = new Date();
-  const hoyStr = hoy.toISOString().slice(0,10);
+  const hoyStr = fechaLocalISO(hoy);
   const hoyTxt = hoy.toLocaleDateString('es-VE',{weekday:'long',day:'numeric',month:'long'});
   const horaActual = hoy.getHours();
   const saludo = horaActual < 12 ? 'Buenos días' : horaActual < 19 ? 'Buenas tardes' : 'Buenas noches';
@@ -898,12 +898,12 @@ function empleadoDashHTML(){
   const lunesOffset = dow===0?-6:1-dow;
   const lunes = new Date(d); lunes.setDate(d.getDate()+lunesOffset);
   const domingo = new Date(lunes); domingo.setDate(lunes.getDate()+6);
-  const lunesStr = lunes.toISOString().slice(0,10);
-  const domingoStr = domingo.toISOString().slice(0,10);
+  const lunesStr = fechaLocalISO(lunes);
+  const domingoStr = fechaLocalISO(domingo);
 
   // Mes actual
-  const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0,10);
-  const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth()+1, 0).toISOString().slice(0,10);
+  const primerDiaMes = fechaLocalISO(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+  const ultimoDiaMes = fechaLocalISO(new Date(hoy.getFullYear(), hoy.getMonth()+1, 0));
 
   const activos = S.creds.filter(c=>!c.eliminado && c.estado==='activo');
 
@@ -976,7 +976,7 @@ function empleadoDashHTML(){
 
   // ─── CLIENTES POR LLAMAR HOY (mora + vence hoy) ───
   const porLlamarHoy = enMora.slice(0,5).concat(
-    enSemana.filter(c=>c._proxima.toISOString().slice(0,10)===hoyStr).slice(0,3)
+    enSemana.filter(c=>c.fechaLocalISO(_proxima)===hoyStr).slice(0,3)
   );
 
   return `<div class="page">
@@ -1123,9 +1123,9 @@ function empleadoDashHTML(){
       <tbody>${enSemana.slice(0,6).map(c=>{
         const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
         const px = c._proxima;
-        const esHoy = px.toISOString().slice(0,10)===hoyStr;
+        const esHoy = fechaLocalISO(px)===hoyStr;
         const mañana = new Date(hoy); mañana.setDate(hoy.getDate()+1);
-        const esMañana = px.toISOString().slice(0,10)===mañana.toISOString().slice(0,10);
+        const esMañana = fechaLocalISO(px)===mañfechaLocalISO(ana);
         const diaLbl = esHoy?'HOY':esMañana?'MAÑANA':dias[px.getDay()]+' '+px.getDate();
         const diaColor = esHoy?'var(--amber)':esMañana?'var(--p1)':'var(--ink3)';
         return `<tr ${esHoy?'style="background:rgba(232,152,10,.06)"':''}>

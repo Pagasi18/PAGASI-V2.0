@@ -280,7 +280,7 @@ function openAddMoto(id=null){
     DB.saveMoto(obj);
     // ── Crear egresos + movimientos por la compra de la moto (solo nueva) ──
     if(!ed && _pagosMoto && _pagosMoto.length){
-      _mpagoCrearGastos(obj, _pagosMoto, {fecha: new Date().toISOString().split('T')[0]});
+      _mpagoCrearGastos(obj, _pagosMoto, {fecha: hoyLocalISO()});
     }
     closeM();nav('motos');toast(ed?'Moto actualizada':'✓ Moto agregada','success');return true;
   };

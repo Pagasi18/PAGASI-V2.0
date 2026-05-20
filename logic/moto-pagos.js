@@ -159,7 +159,7 @@ function _mpagoValidarContraCosto(prefix, costo){
 function _mpagoCrearGastos(motoObj, pagos, opts){
   opts = opts || {};
   if(!motoObj || !Array.isArray(pagos) || !pagos.length) return [];
-  var fecha = opts.fecha || new Date().toISOString().split('T')[0];
+  var fecha = opts.fecha || hoyLocalISO();
   var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false});
   var quien = (S.currentUser&&S.currentUser.nombre)||'Admin';
   var conceptoBase = 'Compra de moto Â· '+(motoObj.modelo||'')+(motoObj.vin?' Â· VIN '+motoObj.vin:'')+' (Moto #'+motoObj.id+')';
@@ -250,7 +250,7 @@ function _mpagoReversarGastos(motoId, devolver, audit){
           monto: parseFloat(m.monto)||0,
           cuentaOrigen:null,
           cuentaDestino: m.cuentaOrigen,
-          fecha: new Date().toISOString().split('T')[0],
+          fecha: hoyLocalISO(),
           referencia:'Reverso por eliminaciÃ³n de moto #'+motoId,
           realizadoPor: quien,
           tasaBs: window._tasaBsGlobal||1,

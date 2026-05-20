@@ -49,7 +49,7 @@ function openAddPago(preCredId){
     <div class="fgr c1" style="gap:9px"><div class="fg"><label>CrÃ©dito</label><select class="fs" id="p_cred" onchange="updPagoMonto(this)">${S.creds.filter(c=>c.estado==='activo'||c.estado==='mora').map(c=>`<option value="${c.id}" data-cuota="${c.cuota}" data-cuotaq="${c.cuotaQ}" ${preCredId&&String(c.id)===String(preCredId)?'selected':''}>${c.id} â€” ${c.cli} (${c.modelo})</option>`).join('')}</select></div></div>
     <div class="fgr" style="margin-top:9px">
       <div class="fg"><label>Frecuencia</label><input class="fi" value="Quincenal (cada 15 dÃ­as)" readonly style="color:var(--p1);font-weight:700;background:var(--surf)"></div>
-      <div class="fg"><label>Fecha de pago</label><input class="fi" id="p_fecha" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+      <div class="fg"><label>Fecha de pago</label><input class="fi" id="p_fecha" type="date" value="${hoyLocalISO()}"></div>
       <div class="fg"><label>Monto ($)</label><input class="fi" id="p_monto" type="number" placeholder="0.00"></div>
 <div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">${(_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[]).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}${(!_cuentasBanc||!_cuentasBanc.length)?'<option value="">â€” Sin cuentas configuradas â€”</option>':''}</select></div>
       <div class="fg"><label>NÂ° Referencia</label><input class="fi" id="p_ref" placeholder="NÃºmero de referencia o comprobante"></div>
@@ -75,7 +75,7 @@ function openAddPago(preCredId){
     const newPago={
       id:'PAG-'+Date.now(),
       cli:cred.cli,cred:credId,
-      fecha:($('p_fecha')&&$('p_fecha').value)||new Date().toISOString().split('T')[0],
+      fecha:($('p_fecha')&&$('p_fecha').value)||hoyLocalISO(),
       monto:monto,
       metodo:($('p_forma')&&$('p_forma').value)||'Efectivo USD',
       cuenta:($('p_forma')&&$('p_forma').value)||'â€”',
@@ -167,7 +167,7 @@ function openAddPago(preCredId){
       if(cuotasPagadas>=totalCuotas && S.creds[ci].estado!=='completado'){
         recienCompletado = true;
         S.creds[ci].estado='completado';
-        S.creds[ci].fechaCompletado=new Date().toISOString().split('T')[0];
+        S.creds[ci].fechaCompletado=hoyLocalISO();
 
         // â”€â”€ Punto 2: Cambiar estado de la moto a 'propia' â”€â”€
         var mIdx=S.motos.findIndex(function(m){return String(m.id)===String(S.creds[ci].motoId);});
@@ -272,7 +272,7 @@ function openAmort(id){
   const cuota=parseFloat(c.cuotaQ||c.cuota||0);
   const n=c.totalCuotas||(c.plazo*2);
   const pagado=Math.max(0, Math.min(getCreditoCuotasPagadas(c), n));
-  const startDate=new Date((c.fecha||new Date().toISOString().split('T')[0])+'T12:00:00');
+  const startDate=new Date((c.fecha||hoyLocalISO())+'T12:00:00');
   const historial=c.pagosRegistrados||[];
   const saldoProxCuota=(c.saldoProxCuota||0)<0.10?0:(c.saldoProxCuota||0);
   const infoLiquidacion=(c.tipoCierre==='liquidacion_anticipada') ? ('<div class="note" style="margin:8px 0 12px 0"><strong>LiquidaciÃ³n anticipada:</strong> saldo '+fmt(c.saldoOriginalLiquidacion||0)+' Â· descuento '+fmt(c.descuentoLiquidacion||0)+' Â· pago final '+fmt(c.montoLiquidado||0)+'</div>') : '';
@@ -809,7 +809,7 @@ function openLiquidarAnticipado(credId){
     + '<div class="fg"><label>Descuento</label><input id="liq_descuento" class="fi" type="number" min="0" step="0.01" value="0" oninput="updLiquidacionFinal()"></div>'
     + '<div class="fg"><label>Monto final a pagar</label><input id="liq_monto_final" class="fi" type="number" min="0" step="0.01" value="'+saldo.toFixed(2)+'" oninput="updLiquidacionDescuento()"></div>'
     + '<div class="fg"><label>Cuenta destino</label><select id="liq_cuenta" class="fs">'+((((window._cuentasBanc&&window._cuentasBanc.length)?window._cuentasBanc:[{nombre:'Caja principal'}]).map(function(ct){return '<option value="'+ct.nombre+'">'+ct.nombre+'</option>';}).join('')))+'</select></div>'
-    + '<div class="fg"><label>Fecha</label><input id="liq_fecha" class="fi" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div>'
+    + '<div class="fg"><label>Fecha</label><input id="liq_fecha" class="fi" type="date" value="'+hoyLocalISO()+'"></div>'
     + '<div class="fg"><label>Motivo del descuento</label><input id="liq_motivo" class="fi" placeholder="NegociaciÃ³n por pago anticipado"></div>'
     +'</div>'
     +'<div class="fgr" style="gap:10px;margin-top:10px">'
@@ -873,7 +873,7 @@ function ejecutarLiquidacionAnticipada(){
   if(descuento > saldo*0.4){
     if(!confirm('El descuento supera 40% del saldo pendiente. Â¿Deseas continuar?')) return;
   }
-  var fecha=(($('liq_fecha')&&$('liq_fecha').value)||new Date().toISOString().split('T')[0]);
+  var fecha=(($('liq_fecha')&&$('liq_fecha').value)||hoyLocalISO());
   var cuenta=(($('liq_cuenta')&&$('liq_cuenta').value)||(((window._cuentasBanc&&window._cuentasBanc[0]&&window._cuentasBanc[0].nombre))||'Caja principal'));
   var motivo=(($('liq_motivo')&&$('liq_motivo').value)||'LiquidaciÃ³n anticipada').trim();
   var observacion=(($('liq_obs')&&$('liq_obs').value)||'').trim();
@@ -1056,7 +1056,7 @@ function recalcularCreditoDesdePagos(credId){
   pagosAplicables.forEach(function(p){
     var montoRestante=parseFloat(p.monto)||0;
     if(montoRestante<=0) return;
-    var fechaPago=p.fecha||new Date().toISOString().split('T')[0];
+    var fechaPago=p.fecha||hoyLocalISO();
     for(var qi=0;qi<totalCuotas && montoRestante>0.001;qi++){
       if(saldoPorCuota[qi]>0.001){
         var aplicar=Math.min(montoRestante,saldoPorCuota[qi]);
@@ -1075,7 +1075,7 @@ function recalcularCreditoDesdePagos(credId){
     });
     if(liquidacionActiva){
       var descRestante=parseFloat(c.descuentoLiquidacion)||0;
-      var fechaDesc=c.fechaCompletado||new Date().toISOString().split('T')[0];
+      var fechaDesc=c.fechaCompletado||hoyLocalISO();
       for(var qd=0;qd<totalCuotas && descRestante>0.001;qd++){
         if(saldoPorCuota[qd]>0.001){
           var aplicarDesc=Math.min(descRestante,saldoPorCuota[qd]);
@@ -1103,7 +1103,7 @@ function recalcularCreditoDesdePagos(credId){
   S.creds[ci].pagosRegistrados=historial;
   S.creds[ci].saldoProxCuota=saldoProxCuota;
   S.creds[ci].estado=nuevoEstado;
-  if(nuevoEstado==='completado' && !S.creds[ci].fechaCompletado) S.creds[ci].fechaCompletado=new Date().toISOString().split('T')[0];
+  if(nuevoEstado==='completado' && !S.creds[ci].fechaCompletado) S.creds[ci].fechaCompletado=hoyLocalISO();
   if(nuevoEstado!=='completado' && S.creds[ci].fechaCompletado) S.creds[ci].fechaCompletado=null;
 
   // Si el crÃ©dito era liquidaciÃ³n anticipada pero ya no hay pago de liquidaciÃ³n activo,
@@ -1394,7 +1394,7 @@ function openNota(id){
       montoAcordado: monto ? parseFloat(monto) : null,
       fechaCompromiso: fechaComp,
       proximaAccion: prox,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: hoyLocalISO(),
       cobrador: (S.currentUser&&S.currentUser.nombre)||'Admin'
     };
     if(db){

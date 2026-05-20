@@ -317,7 +317,7 @@ function getDashData(tipo, periodo){
     if(!v) return '';
     if(typeof v === 'string') return v.slice(0,10);
     if(v && v.toDate) return v.toDate().toISOString().slice(0,10); // Firestore Timestamp
-    if(v instanceof Date) return v.toISOString().slice(0,10);
+    if(v instanceof Date) return fechaLocalISO(v);
     if(v && v.seconds) return new Date(v.seconds*1000).toISOString().slice(0,10); // Timestamp object
     return String(v).slice(0,10);
   };

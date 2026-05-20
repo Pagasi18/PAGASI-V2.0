@@ -14,7 +14,7 @@ function exportarBackupJSON(){
   var blob=new Blob([json],{type:'application/json'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
-  var fname='backup-pagasi-'+new Date().toISOString().split('T')[0]+'.json';
+  var fname='backup-pagasi-'+hoyLocalISO()+'.json';
   a.href=url;a.download=fname;a.click();
   URL.revokeObjectURL(url);
   toast('Backup exportado: '+fname,'success');
@@ -82,7 +82,7 @@ function exportarBackup(){
   var blob = new Blob([json], {type:'application/json'});
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
-  var fecha = new Date().toISOString().split('T')[0];
+  var fecha = hoyLocalISO();
   a.href = url; a.download = 'backup-pagasi-'+fecha+'.json'; a.click();
   URL.revokeObjectURL(url);
   toast('✓ Backup exportado · '+

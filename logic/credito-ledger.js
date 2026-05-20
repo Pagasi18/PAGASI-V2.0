@@ -22,7 +22,10 @@
 
   function isoDate(d){
     if(!d || isNaN(d.getTime())) return '';
-    return d.toISOString().split('T')[0];
+    if(typeof root.fechaLocalISO === 'function') return root.fechaLocalISO(d);
+    var local = new Date(d);
+    local.setMinutes(local.getMinutes() - local.getTimezoneOffset());
+    return local.toISOString().split('T')[0];
   }
 
   function dateFromISO(s){

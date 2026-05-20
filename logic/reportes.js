@@ -6,7 +6,7 @@ function abrirFiniquito(credId){
   var emp = (typeof getEmpresa==='function') ? getEmpresa() : {nombre:'Pagasi',rif:'',ciudad:'Caracas',tel:'',email:'',direccion:'',representante:'',repCI:''};
   var empresaUp = (emp.nombre||'PAGASI').toUpperCase();
   var totalPagado=getCreditoPagosConfirmados(c);
-  var fechaFin=c.fechaCompletado||new Date().toISOString().split('T')[0];
+  var fechaFin=c.fechaCompletado||hoyLocalISO();
   var totalCuotas = c.totalCuotas||c.plazo*2;
   var mModelo = c.modelo || moto.modelo || '';
   var mVin = c.vin || moto.vin || '';
@@ -170,7 +170,7 @@ function descargarAmortPDF(){
 
   // Fechas
   var fechaInicio = c.fecha || 'â€”';
-  var startDate = new Date((c.fecha||new Date().toISOString().split('T')[0])+'T12:00:00');
+  var startDate = new Date((c.fecha||hoyLocalISO())+'T12:00:00');
   var fechaFin = new Date(startDate.getTime() + (totalCuotas*15*24*60*60*1000));
   var fechaFinStr = fechaFin.toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
   var proxFd = new Date(startDate.getTime() + ((cuotasPag+1)*15*24*60*60*1000));
@@ -384,7 +384,7 @@ function descargarEstadoPDF(){
   var hoy = new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
 
   var fechaInicio = c.fecha || 'â€”';
-  var startDate = new Date((c.fecha||new Date().toISOString().split('T')[0])+'T12:00:00');
+  var startDate = new Date((c.fecha||hoyLocalISO())+'T12:00:00');
 
   // Pagos por cuota (para columna Abonos)
   var historial = c.pagosRegistrados||[];
@@ -508,37 +508,37 @@ function exportarCSV(tipo){
   function row(arr){ return arr.map(esc).join(','); }
 
   if(tipo==='clientes'){
-    filename='clientes-'+new Date().toISOString().split('T')[0]+'.csv';
+    filename='clientes-'+hoyLocalISO()+'.csv';
     rows.push(row(['ID','Nombre','CÃ©dula','TelÃ©fono','Email','Ciudad','Trabajo','Ingreso mensual','Estado','Emergencia','Notas']));
     S.clientes.filter(function(c){return !c.eliminado;}).forEach(function(c){
       rows.push(row([c.id,c.nombre,c.cedula,c.tel,c.email||'',c.ciudad,c.trabajo,c.ingreso,c.estado,c.emergencia||'',c.notas||'']));
     });
   } else if(tipo==='creditos'){
-    filename='creditos-'+new Date().toISOString().split('T')[0]+'.csv';
+    filename='creditos-'+hoyLocalISO()+'.csv';
     rows.push(row(['ID','Cliente','Modelo','Precio','Inicial','Financiado','Total','Cuota mensual','Cuota quincenal','Plazo','Fecha','Estado','Cuotas pagadas','En mora']));
     S.creds.filter(function(c){return !c.eliminado;}).forEach(function(c){
       rows.push(row([c.id,c.cli,c.modelo,c.precio,c.ini,c.fin,c.total,c.cuota,c.cuotaQ||'',c.plazo,c.fecha,c.estado,c.pagado,c.mora||0]));
     });
   } else if(tipo==='pagos'){
-    filename='pagos-'+new Date().toISOString().split('T')[0]+'.csv';
+    filename='pagos-'+hoyLocalISO()+'.csv';
     rows.push(row(['ID','Cliente','CrÃ©dito','Fecha','Monto','MÃ©todo/Cuenta','Cobrador','Estado','Referencia','Tasa Bs','Realizado por']));
     S.pagos.filter(function(p){return !p.eliminado;}).forEach(function(p){
       rows.push(row([p.id,p.cli,p.cred,p.fecha,p.monto,p.metodo,p.cobrador,p.estado,p.referencia||'',p.tasaBs||'',p.realizadoPor||'']));
     });
   } else if(tipo==='egresos'){
-    filename='egresos-'+new Date().toISOString().split('T')[0]+'.csv';
+    filename='egresos-'+hoyLocalISO()+'.csv';
     rows.push(row(['ID','Concepto','Monto','Fecha','CategorÃ­a','Forma de pago','Referencia']));
     S.egresos.filter(function(e){return !e.eliminado;}).forEach(function(e){
       rows.push(row([e.id,e.concepto,e.monto,e.fecha,e.categoria||'',e.forma||'',e.referencia||'']));
     });
   } else if(tipo==='motos'){
-    filename='motos-'+new Date().toISOString().split('T')[0]+'.csv';
+    filename='motos-'+hoyLocalISO()+'.csv';
     rows.push(row(['ID','Modelo','AÃ±o','VIN','Color','Precio','Estado','Cliente','GPS','Notas']));
     S.motos.filter(function(m){return !m.eliminado;}).forEach(function(m){
       rows.push(row([m.id,m.modelo,m.anio||'',m.vin||'',m.color||'',m.precio||0,m.estado,m.cliente||'',m.gps?'Si':'No',m.notas||'']));
     });
   } else if(tipo==='movimientos'){
-    filename='movimientos-cuentas-'+new Date().toISOString().split('T')[0]+'.csv';
+    filename='movimientos-cuentas-'+hoyLocalISO()+'.csv';
     rows.push(row(['ID','Fecha','Hora','Concepto','Tipo','Cuenta Origen','Cuenta Destino','Monto','Referencia','Realizado por','Estado']));
     (S.movimientos||[]).forEach(function(m){
       var estado = m.eliminado ? 'Anulado' : 'Activo';
@@ -557,7 +557,7 @@ function exportarCSV(tipo){
       ]));
     });
   } else if(tipo==='cobranza'){
-    filename='cobranza-mora-'+new Date().toISOString().split('T')[0]+'.csv';
+    filename='cobranza-mora-'+hoyLocalISO()+'.csv';
     rows.push(row(['ID CrÃ©dito','Cliente','Modelo','DÃ­as mora','Cuotas vencidas','Monto mora estimado','Cuota quincenal','Saldo pendiente','TelÃ©fono']));
     var _cobCreds = _concFiltrar(S.creds||[]).filter(function(c){return !c.eliminado && c.mora>0 && c.estado==='activo';});
     _cobCreds.forEach(function(c){
@@ -610,7 +610,7 @@ function exportarCSVCuenta(nombre){
     ]));
   });
   var slug = nombre.replace(/[^a-zA-Z0-9]/g,'-').toLowerCase();
-  var filename = 'cuenta-'+slug+'-'+new Date().toISOString().split('T')[0]+'.csv';
+  var filename = 'cuenta-'+slug+'-'+hoyLocalISO()+'.csv';
   var blob = new Blob(['\uFEFF'+rows.join('\r\n')],{type:'text/csv;charset=utf-8'});
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a'); a.href=url; a.download=filename; a.click();
