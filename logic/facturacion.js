@@ -6,11 +6,11 @@ function openAddEgreso(){
   $('mbd').innerHTML = '<div class="fgr c1" style="gap:9px">'
     +'<div class="fg"><label>Concepto *</label><input class="fi" id="eg_conc" placeholder="Ej: Compra de motos, GPS..."></div>'
     +'<div class="fgr" style="gap:8px">'
-    +'<div class="fg"><label>Categoría</label><select class="fs" id="eg_cat">'
+    +'<div class="fg"><label>CategorÃ­a</label><select class="fs" id="eg_cat">'
     +'<option value="inventario">Inventario / Motos</option>'
     +'<option value="equipos">Equipos (GPS)</option>'
     +'<option value="operativo">Oficina y servicios</option>'
-    +'<option value="nomina">Salarios / Nómina</option>'
+    +'<option value="nomina">Salarios / NÃ³mina</option>'
     +'<option value="otros">Otros</option>'
     +'</select></div>'
     +'<div class="fg"><label>Monto ($) *</label><input class="fi" id="eg_monto" type="number" step="0.01" placeholder="0.00"></div>'
@@ -39,7 +39,7 @@ function openAddEgreso(){
       var mov={
         id:'MOV-'+Date.now(),
         tipo:'retiro',
-        concepto:'Egreso · '+conc,
+        concepto:'Egreso Â· '+conc,
         monto:monto,
         cuentaOrigen:cuentaSalida,
         cuentaDestino:null,
@@ -53,7 +53,7 @@ function openAddEgreso(){
       DB.saveMovimiento(mov);
     }
 
-    toast('Egreso registrado · '+fmt(monto),'success');closeM();nav('conta');return true;
+    toast('Egreso registrado Â· '+fmt(monto),'success');closeM();nav('conta');return true;
   };
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar Egreso</button>`;
   $('ov').style.display='flex';
@@ -65,28 +65,28 @@ function delEgreso(id){
   var eg=S.egresos[i];
   $('mic').textContent='Del';
   $('mtt').textContent='Eliminar Egreso';
-  $('msb').textContent='El registro quedará auditado';
+  $('msb').textContent='El registro quedarÃ¡ auditado';
   $('modal-box').className='modal';
   $('mbd').innerHTML=''
     +'<div style="text-align:center;padding:8px 0 14px">'
     +'<div style="font-size:40px;margin-bottom:10px"></div>'
-    +'<div style="font-size:14px;font-weight:800;margin-bottom:6px">¿Eliminar egreso: '+eg.concepto+' — '+fmt(eg.monto)+'?</div>'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:6px">Â¿Eliminar egreso: '+eg.concepto+' â€” '+fmt(eg.monto)+'?</div>'
     +'<div style="color:var(--ink3);font-size:12px;margin-bottom:14px">Puedes decidir si el dinero regresa o no a la cuenta de origen.</div>'
     +'</div>'
-    +'<div class="fg"><label>Razón de la eliminación</label>'
+    +'<div class="fg"><label>RazÃ³n de la eliminaciÃ³n</label>'
     +'<select class="fs" id="eg_del_razon">'
-    +'<option value="">— Seleccionar —</option>'
+    +'<option value="">â€” Seleccionar â€”</option>'
     +'<option>Error de captura</option>'
     +'<option>Egreso duplicado</option>'
     +'<option>Monto incorrecto</option>'
-    +'<option>Operación cancelada</option>'
+    +'<option>OperaciÃ³n cancelada</option>'
     +'<option>Orden del administrador</option>'
     +'<option>Otro</option>'
     +'</select></div>'
     +'<div class="fg" style="margin-top:8px;display:none" id="eg_del_otro_wrap">'
-    +'<label>Especifica la razón</label>'
-    +'<input class="fi" id="eg_del_otro" placeholder="Describe la razón..."></div>'
-    +'<div class="fg" style="margin-top:10px"><label>¿Qué hacer con el dinero?</label>'
+    +'<label>Especifica la razÃ³n</label>'
+    +'<input class="fi" id="eg_del_otro" placeholder="Describe la razÃ³n..."></div>'
+    +'<div class="fg" style="margin-top:10px"><label>Â¿QuÃ© hacer con el dinero?</label>'
     +'<div style="display:grid;gap:8px">'
     +'<label style="display:flex;gap:8px;align-items:flex-start;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px 12px"><input type="radio" name="eg_retorno" value="si" checked> <span><strong>Regresar el dinero a la cuenta</strong><br><span style="color:var(--ink3);font-size:12px">Crea un movimiento de reverso y suma el monto de nuevo a la cuenta.</span></span></label>'
     +'<label style="display:flex;gap:8px;align-items:flex-start;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px 12px"><input type="radio" name="eg_retorno" value="no"> <span><strong>Eliminar sin regresar el dinero</strong><br><span style="color:var(--ink3);font-size:12px">Solo se anula el egreso, pero no se compensa la cuenta.</span></span></label>'
@@ -98,7 +98,7 @@ function delEgreso(id){
   S.saveFn=function(){
     var razon=($('eg_del_razon')&&$('eg_del_razon').value)||'';
     if(razon==='Otro') razon=(($('eg_del_otro')&&$('eg_del_otro').value)||'').trim()||'Otro';
-    if(!razon){ toast('Debes seleccionar una razón','error'); return false; }
+    if(!razon){ toast('Debes seleccionar una razÃ³n','error'); return false; }
     var devolver=(document.querySelector('input[name="eg_retorno"]:checked')||{}).value!=='no';
     var audit={
       eliminado:true,
@@ -117,12 +117,12 @@ function delEgreso(id){
         var mov={
           id:'MOV-REV-EG-'+Date.now(),
           tipo:'deposito',
-          concepto:'Reverso egreso eliminado · '+eg.concepto,
+          concepto:'Reverso egreso eliminado Â· '+eg.concepto,
           monto:parseFloat(eg.monto)||0,
           cuentaOrigen:null,
           cuentaDestino:cuentaSalida,
           fecha:new Date().toISOString().split('T')[0],
-          referencia:'Reverso por eliminación de egreso #'+eg.id,
+          referencia:'Reverso por eliminaciÃ³n de egreso #'+eg.id,
           realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin',
           tasaBs:window._tasaBsGlobal||1,
           hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
@@ -141,6 +141,6 @@ function delEgreso(id){
 }
 
 // UTILS
-// ══════════════════════════════════════════════════════════════
-// FEATURE 1: ALERTAS DE MORA AUTOMÁTICAS
-// ══════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// FEATURE 1: ALERTAS DE MORA AUTOMÃTICAS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•

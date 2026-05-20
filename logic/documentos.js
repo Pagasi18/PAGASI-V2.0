@@ -29,7 +29,7 @@ function movsCuenta(cid){
     .sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
 }
 
-// ── Helpers ──
+// â”€â”€ Helpers â”€â”€
 function fmtMontoMov(m,cuenta){
   var es=m.cuentaDestino===cuenta;
   var color=es?'var(--green)':'var(--red)';
@@ -41,7 +41,7 @@ function nombreMesEsp(yyyy_mm){
   var p=yyyy_mm.split('-'); return meses[parseInt(p[1])-1]+' '+p[0];
 }
 
-// ── PAGE RENDER ──
+// â”€â”€ PAGE RENDER â”€â”€
 function renderCuentas(){
   // Si hay una cuenta seleccionada, mostrar su detalle
   if(window._cuentasDetalle){
@@ -50,7 +50,7 @@ function renderCuentas(){
 
   var tab=window._cuentasTab||'cuentas';
 
-  // Métricas rápidas para el banner
+  // MÃ©tricas rÃ¡pidas para el banner
   var cuentasList = (typeof _cuentasBanc!=='undefined' && _cuentasBanc)?_cuentasBanc:[];
   var totalSaldo = 0;
   try{
@@ -62,19 +62,19 @@ function renderCuentas(){
   var banner = '';
   if(typeof pageBanner==='function'){
     banner = pageBanner(
-      'Tesorería · Cuentas bancarias',
+      'TesorerÃ­a Â· Cuentas bancarias',
       'Cuentas',
-      '<b>'+nCuentas+'</b> cuenta'+(nCuentas!==1?'s':'')+' bancaria'+(nCuentas!==1?'s':'')+' · Saldo total: <b>'+(typeof fmt==='function'?fmt(totalSaldo):'$'+totalSaldo)+'</b>'+(pendientesCount>0?' · <b>'+pendientesCount+'</b> pendiente'+(pendientesCount!==1?'s':'')+' por confirmar':''),
+      '<b>'+nCuentas+'</b> cuenta'+(nCuentas!==1?'s':'')+' bancaria'+(nCuentas!==1?'s':'')+' Â· Saldo total: <b>'+(typeof fmt==='function'?fmt(totalSaldo):'$'+totalSaldo)+'</b>'+(pendientesCount>0?' Â· <b>'+pendientesCount+'</b> pendiente'+(pendientesCount!==1?'s':'')+' por confirmar':''),
       [
-        {label:'ï¼‹ Nuevo Depósito', onclick:'openDeposito(null)', primary:true},
-        {label:'↓ Exportar CSV', onclick:"exportarCSV('movimientos')"}
+        {label:'ï¼‹ Nuevo DepÃ³sito', onclick:'openDeposito(null)', primary:true},
+        {label:'â†“ Exportar CSV', onclick:"exportarCSV('movimientos')"}
       ]
     );
   }
 
   var tabBar='<div style="display:flex;gap:0;border-bottom:2px solid var(--rim);margin-bottom:20px">'
     +['cuentas','historial','pendientes'].map(function(t){
-      var labels={cuentas:'🏦 Cuentas',historial:'📋 Historial',pendientes:'⏳ Pendientes'};
+      var labels={cuentas:'ðŸ¦ Cuentas',historial:'ðŸ“‹ Historial',pendientes:'â³ Pendientes'};
       var active=tab===t;
       return '<button onclick="switchCuentasTab(\''+t+'\')" style="'
         +'background:none;border:none;padding:11px 20px;font-size:13px;font-weight:'+(active?'800':'600')
@@ -91,14 +91,14 @@ function renderCuentas(){
   return '<div class="page">'+banner+tabBar+body+'</div>';
 }
 
-// ═══════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // TAB 1: CUENTAS BANCARIAS
-// ═══════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderTabCuentasBanc(){
   var cuentas=_cuentasBanc||[];
   var total=cuentas.reduce(function(a,c){return a+saldoCuenta(c.nombre);},0);
 
-  // ═══ Métricas del mes para los KPIs ═══
+  // â•â•â• MÃ©tricas del mes para los KPIs â•â•â•
   var now = new Date();
   var mesKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   var movsMes = (S.movimientos||[]).filter(function(m){
@@ -109,7 +109,7 @@ function renderTabCuentasBanc(){
   var transfMes = movsMes.filter(function(m){return m.tipo==='transferencia';}).length;
   var netoMes = ingresosMes - egresosMes;
 
-  // Últimos 6 meses de flujo neto (para mini-chart)
+  // Ãšltimos 6 meses de flujo neto (para mini-chart)
   var flujo6m = [];
   for(var i=5;i>=0;i--){
     var d = new Date(now.getFullYear(), now.getMonth()-i, 1);
@@ -121,7 +121,7 @@ function renderTabCuentasBanc(){
   }
   var maxFlujo = Math.max(1, ...flujo6m.map(function(f){return Math.max(f.ing,f.eg);}));
 
-  // ═══ KPIs row ═══
+  // â•â•â• KPIs row â•â•â•
   var kpisHTML = '<div class="sg" style="grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px">'
     +'<div class="stat" style="border-top:3px solid var(--p1)">'
       +'<div class="st-v" style="color:var(--p1);font-size:22px">'+fmt(total)+'</div>'
@@ -150,9 +150,9 @@ function renderTabCuentasBanc(){
     +'</div>'
     +'</div>';
 
-  // ═══ Mini chart flujo 6 meses ═══
+  // â•â•â• Mini chart flujo 6 meses â•â•â•
   var chartHTML = '<div class="card" style="margin-bottom:14px">'
-    +'<div class="ch"><div><div class="ct">Flujo de caja · últimos 6 meses</div><div class="cs">Ingresos vs egresos por mes</div></div>'
+    +'<div class="ch"><div><div class="ct">Flujo de caja Â· Ãºltimos 6 meses</div><div class="cs">Ingresos vs egresos por mes</div></div>'
     +'<div style="display:flex;gap:12px;font-size:11px">'
     +'<span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--green)"></span>Ingresos</span>'
     +'<span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--red)"></span>Egresos</span>'
@@ -172,7 +172,7 @@ function renderTabCuentasBanc(){
     }).join('')
     +'</div></div>';
 
-  // ═══ Cards de cuentas — compactas, coherentes con .card del sistema ═══
+  // â•â•â• Cards de cuentas â€” compactas, coherentes con .card del sistema â•â•â•
   var cardsHTML=cuentas.length?cuentas.map(function(c){
     var saldo=saldoCuenta(c.nombre);
     var pctTotal = total>0 ? Math.round(saldo/total*100) : 0;
@@ -189,7 +189,7 @@ function renderTabCuentasBanc(){
 
     return '<div class="card" onclick="verMovsCuenta(\''+c.nombre+'\')" style="cursor:pointer;padding:16px 18px;border-top:3px solid '+accentColor+'">'
 
-      // Fila 1: ícono + nombre + badge moneda
+      // Fila 1: Ã­cono + nombre + badge moneda
       +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
         +'<div style="width:36px;height:36px;border-radius:10px;background:var(--gs);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:'+accentColor+';flex-shrink:0">'+moneda+'</div>'
         +'<div style="flex:1;min-width:0">'
@@ -210,11 +210,11 @@ function renderTabCuentasBanc(){
       // Ingresos/egresos del mes en una fila
       +'<div style="display:flex;gap:12px;margin-bottom:12px;font-size:11.5px">'
         +'<div style="flex:1">'
-          +'<div style="color:var(--ink3);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">↑ Ingresó</div>'
+          +'<div style="color:var(--ink3);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">â†‘ IngresÃ³</div>'
           +'<div style="font-weight:800;color:var(--green);font-family:var(--fd)">'+fmt(ingCuentaMes)+'</div>'
         +'</div>'
         +'<div style="flex:1">'
-          +'<div style="color:var(--ink3);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">↓ Salió</div>'
+          +'<div style="color:var(--ink3);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">â†“ SaliÃ³</div>'
           +'<div style="font-weight:800;color:var(--red);font-family:var(--fd)">'+fmt(egCuentaMes)+'</div>'
         +'</div>'
         +'<div style="flex:1;text-align:right">'
@@ -223,12 +223,12 @@ function renderTabCuentasBanc(){
         +'</div>'
       +'</div>'
 
-      // Botones acción
+      // Botones acciÃ³n
       +'<div style="display:flex;gap:5px;border-top:1px solid var(--rim2);padding-top:10px" onclick="event.stopPropagation()">'
         +'<button class="btn btn-p btn-xs" style="flex:1" onclick="openDeposito(\''+c.nombre+'\')">ï¼‹</button>'
         +'<button class="btn btn-d btn-xs" style="flex:1" onclick="openRetiro(\''+c.nombre+'\')">âˆ’</button>'
-        +'<button class="btn btn-g btn-xs" style="flex:1" onclick="openTransferencia(\''+c.nombre+'\')">⇄</button>'
-        +'<button class="btn btn-g btn-xs" style="flex:1" onclick="verMovsCuenta(\''+c.nombre+'\')">Ver →</button>'
+        +'<button class="btn btn-g btn-xs" style="flex:1" onclick="openTransferencia(\''+c.nombre+'\')">â‡„</button>'
+        +'<button class="btn btn-g btn-xs" style="flex:1" onclick="verMovsCuenta(\''+c.nombre+'\')">Ver â†’</button>'
       +'</div>'
     +'</div>';
   }).join(''):'<div class="empty" style="padding:40px 20px;grid-column:1/-1"><div style="font-size:16px;font-weight:700;margin-bottom:8px">Sin cuentas configuradas</div><div style="font-size:12.5px;color:var(--ink3);margin-bottom:14px">Las cuentas bancarias sirven para registrar ingresos y egresos con trazabilidad completa.</div><button class="btn btn-p btn-sm" onclick="nav(\'config\')">ï¼‹ Crear primera cuenta</button></div>';
@@ -238,7 +238,7 @@ function renderTabCuentasBanc(){
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
       +'<button class="btn btn-p btn-sm" onclick="openDeposito(null)">ï¼‹ Ingresar saldo</button>'
       +'<button class="btn btn-d btn-sm" onclick="openRetiro(null)">âˆ’ Retirar</button>'
-      +'<button class="btn btn-g btn-sm" onclick="openTransferencia(null)">⇄ Transferir</button>'
+      +'<button class="btn btn-g btn-sm" onclick="openTransferencia(null)">â‡„ Transferir</button>'
     +'</div>'
     +'<button class="btn btn-g btn-sm" onclick="nav(\'config\')">ï¼‹ Nueva cuenta</button>'
     +'</div>';
@@ -252,21 +252,21 @@ function renderTabCuentasBanc(){
     + '</div></div>';
 }
 
-// Helper para pluralización
+// Helper para pluralizaciÃ³n
 function nCuentasLbl(n){
   return n+' '+(n===1?'cuenta activa':'cuentas activas');
 }
 
 
-// ═══════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // TAB 2: HISTORIAL
-// ═══════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-// ═══════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // VER MOVIMIENTOS DE UNA CUENTA
-// ═══════════════════════════════════════════════════════
-// DETALLE DE CUENTA BANCARIA — Vista completa con buscador
-// ═══════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// DETALLE DE CUENTA BANCARIA â€” Vista completa con buscador
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function verMovsCuenta(nombre){
   window._cuentasDetalle = nombre;
   window._cuentasTab = 'cuentas';
@@ -274,7 +274,7 @@ function verMovsCuenta(nombre){
 }
 
 function renderDetalleCuenta(nombre){
-  // Mostrar TODOS (incluyendo anulados para auditoría), ordenados por fecha desc
+  // Mostrar TODOS (incluyendo anulados para auditorÃ­a), ordenados por fecha desc
   var todos = (S.movimientos||[]).filter(function(m){
     return m.cuentaOrigen===nombre || m.cuentaDestino===nombre;
   }).sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||'') || (b.hora||'').localeCompare(a.hora||''); });
@@ -300,9 +300,9 @@ function renderDetalleCuenta(nombre){
     var rowStyle = anulado ? 'opacity:0.45' : '';
     var tags = '';
     if(anulado) tags += '<span style="font-size:9.5px;background:rgba(231,76,60,0.12);color:var(--red);border-radius:20px;padding:1px 8px;font-weight:800;margin-left:5px">ANULADO</span>';
-    if(m.tipo==='transferencia') tags += '<span style="font-size:9.5px;background:rgba(37,99,235,0.10);color:var(--p1);border-radius:20px;padding:1px 7px;font-weight:700;margin-left:4px">⇄ Transf.</span>';
+    if(m.tipo==='transferencia') tags += '<span style="font-size:9.5px;background:rgba(37,99,235,0.10);color:var(--p1);border-radius:20px;padding:1px 7px;font-weight:700;margin-left:4px">â‡„ Transf.</span>';
     if(m.referencia) tags += '<span style="font-size:9.5px;background:var(--surf2);color:var(--ink3);border-radius:20px;padding:1px 7px;margin-left:4px">#'+m.referencia+'</span>';
-    if(anulado && m.eliminadoPor) tags += '<span style="font-size:9.5px;color:var(--ink3);margin-left:5px">Anuló: '+m.eliminadoPor+(m.eliminadoEn?' · '+m.eliminadoEn.split('T')[0]:'')+'</span>';
+    if(anulado && m.eliminadoPor) tags += '<span style="font-size:9.5px;color:var(--ink3);margin-left:5px">AnulÃ³: '+m.eliminadoPor+(m.eliminadoEn?' Â· '+m.eliminadoEn.split('T')[0]:'')+'</span>';
 
     var accionCell = '';
     if(!anulado && esAdmin){
@@ -321,7 +321,7 @@ function renderDetalleCuenta(nombre){
       +'<td>'
         +'<div style="font-size:12.5px;font-weight:700;color:var(--ink);'+(anulado?'text-decoration:line-through;':'')+'">'+(m.concepto||m.descripcion||'Movimiento')+tags+'</div>'
         +'<div style="font-size:10.5px;color:var(--ink3);margin-top:2px">'+function(){
-            if(!m.fecha) return '—';
+            if(!m.fecha) return 'â€”';
             if(m.fecha.indexOf('T')!==-1||m.fecha.length>10) return fmtFechaHora(m.fecha);
             var h=(m.hora||'').trim();
             if(h&&(h.indexOf('a. m.')!==-1||h.indexOf('p. m.')!==-1||h.indexOf('a.m.')!==-1||h.indexOf('p.m.')!==-1)){
@@ -332,8 +332,8 @@ function renderDetalleCuenta(nombre){
           }()+'</div>'
       +'</td>'
       +'<td style="font-size:11.5px;color:var(--ink2)">'+(m.tipo==='transferencia'?(esIng?'Desde: ':'Hacia: ')+contrap:contrap)+'</td>'
-      +'<td style="font-size:11px;color:var(--ink3)">'+(m.referencia||'—')+'</td>'
-      +'<td style="font-size:11px;color:var(--ink3)">'+(m.realizadoPor||'—')+'</td>'
+      +'<td style="font-size:11px;color:var(--ink3)">'+(m.referencia||'â€”')+'</td>'
+      +'<td style="font-size:11px;color:var(--ink3)">'+(m.realizadoPor||'â€”')+'</td>'
       +'<td style="text-align:right;font-family:var(--fd);font-weight:800;font-size:14px;color:'+iconColor+';'+(anulado?'text-decoration:line-through;':'')+'">'+monto+'</td>'
       +'<td style="width:36px">'+accionCell+'</td>'
       +'</tr>';
@@ -342,42 +342,42 @@ function renderDetalleCuenta(nombre){
   var rowsHTML = todos.length ? todos.map(buildRow).join('') : '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ink3);font-size:13px">Sin movimientos registrados para esta cuenta</td></tr>';
 
   return '<div class="page">'
-    // ── HEADER: volver + nombre ──
+    // â”€â”€ HEADER: volver + nombre â”€â”€
     +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">'
-      +'<button onclick="window._cuentasDetalle=null;nav(\'cuentas\')" class="btn btn-g btn-sm" style="gap:6px">← Volver</button>'
+      +'<button onclick="window._cuentasDetalle=null;nav(\'cuentas\')" class="btn btn-g btn-sm" style="gap:6px">â† Volver</button>'
       +'<div style="display:flex;align-items:center;gap:10px">'
         +'<div style="width:38px;height:38px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800">BNK</div>'
         +'<div>'
           +'<div style="font-weight:900;font-size:17px;color:var(--ink);letter-spacing:-0.3px">'+nombre+'</div>'
-          +'<div style="font-size:11px;color:var(--ink3)">'+activos.length+' activo(s)'+(todos.length>activos.length?' · '+(todos.length-activos.length)+' anulado(s)':'')+'</div>'
+          +'<div style="font-size:11px;color:var(--ink3)">'+activos.length+' activo(s)'+(todos.length>activos.length?' Â· '+(todos.length-activos.length)+' anulado(s)':'')+'</div>'
         +'</div>'
       +'</div>'
       +'<div style="margin-left:auto;display:flex;gap:8px">'
         +'<button class="btn btn-p btn-sm" onclick="openDeposito(\''+nombre+'\')">ï¼‹ Ingresar</button>'
         +'<button class="btn btn-d btn-sm" onclick="openRetiro(\''+nombre+'\')">âˆ’ Retirar</button>'
-        +'<button class="btn btn-g btn-sm" onclick="openTransferencia(\''+nombre+'\')">⇄ Transferir</button>'
+        +'<button class="btn btn-g btn-sm" onclick="openTransferencia(\''+nombre+'\')">â‡„ Transferir</button>'
       +'</div>'
     +'</div>'
 
-    // ── STATS ──
+    // â”€â”€ STATS â”€â”€
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px">'
       +'<div class="card" style="padding:16px 20px">'
         +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);font-weight:700;margin-bottom:6px">Saldo actual</div>'
         +'<div style="font-family:var(--fd);font-weight:900;font-size:24px;color:var(--ink);letter-spacing:-1px">'+fmt(saldo)+'</div>'
       +'</div>'
       +'<div class="card" style="padding:16px 20px;border-left:3px solid var(--green)">'
-        +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--green);font-weight:700;margin-bottom:6px">↑ Total ingresos</div>'
+        +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--green);font-weight:700;margin-bottom:6px">â†‘ Total ingresos</div>'
         +'<div style="font-family:var(--fd);font-weight:900;font-size:24px;color:var(--green);letter-spacing:-1px">+'+fmt(totalIng)+'</div>'
         +'<div style="font-size:10.5px;color:var(--ink3);margin-top:2px">'+activos.filter(function(m){return m.cuentaDestino===nombre;}).length+' transacciones</div>'
       +'</div>'
       +'<div class="card" style="padding:16px 20px;border-left:3px solid var(--red)">'
-        +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--red);font-weight:700;margin-bottom:6px">↓ Total egresos</div>'
+        +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--red);font-weight:700;margin-bottom:6px">â†“ Total egresos</div>'
         +'<div style="font-family:var(--fd);font-weight:900;font-size:24px;color:var(--red);letter-spacing:-1px">âˆ’'+fmt(totalEg)+'</div>'
         +'<div style="font-size:10.5px;color:var(--ink3);margin-top:2px">'+activos.filter(function(m){return m.cuentaOrigen===nombre;}).length+' transacciones</div>'
       +'</div>'
     +'</div>'
 
-    // ── TABLA CON BUSCADOR ──
+    // â”€â”€ TABLA CON BUSCADOR â”€â”€
     +'<div class="card">'
       +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">'
         // Buscador
@@ -392,8 +392,8 @@ function renderDetalleCuenta(nombre){
         // Filtro tipo
         +'<div style="display:flex;gap:4px">'
           +'<button id="det-f-todos" class="btn btn-p btn-sm" onclick="filtrarDetallePorTipo(\'todos\')">Todos</button>'
-          +'<button id="det-f-ingresos" class="btn btn-g btn-sm" onclick="filtrarDetallePorTipo(\'ingresos\')">↑ Ingresos</button>'
-          +'<button id="det-f-egresos" class="btn btn-g btn-sm" onclick="filtrarDetallePorTipo(\'egresos\')">↓ Egresos</button>'
+          +'<button id="det-f-ingresos" class="btn btn-g btn-sm" onclick="filtrarDetallePorTipo(\'ingresos\')">â†‘ Ingresos</button>'
+          +'<button id="det-f-egresos" class="btn btn-g btn-sm" onclick="filtrarDetallePorTipo(\'egresos\')">â†“ Egresos</button>'
         +'</div>'
         // Contador resultados
         +'<div id="det-count" style="font-size:11.5px;font-weight:700;color:var(--ink3)">'+todos.length+' registro(s)</div>'
@@ -416,7 +416,7 @@ function renderDetalleCuenta(nombre){
   +'</div>';
 }
 
-// ── Filtrar la tabla de detalle por texto ──
+// â”€â”€ Filtrar la tabla de detalle por texto â”€â”€
 function filtrarDetalleCuenta(q){
   var lower = q.trim().toLowerCase();
   var rows = document.querySelectorAll('#det-tbody .det-row');
@@ -430,7 +430,7 @@ function filtrarDetalleCuenta(q){
   if(cnt) cnt.textContent = vis+' resultado(s)';
 }
 
-// ── Filtrar por tipo ──
+// â”€â”€ Filtrar por tipo â”€â”€
 var _detTipo = 'todos';
 function filtrarDetallePorTipo(tipo){
   _detTipo = tipo;
@@ -453,7 +453,7 @@ function filtrarDetallePorTipo(tipo){
   if(cnt) cnt.textContent = vis+' resultado(s)';
 }
 
-// ── Eliminar movimiento desde el detalle ──
+// â”€â”€ Eliminar movimiento desde el detalle â”€â”€
 function anularMovimiento(id, cuenta){
   // Solo administradores pueden anular movimientos
   if(!S.currentUser || S.currentUser.rol !== 'Administrador'){
@@ -465,27 +465,27 @@ function anularMovimiento(id, cuenta){
   var m = S.movimientos[idx];
   if(m.eliminado){ toast('Este movimiento ya fue anulado','error'); return; }
 
-  // Modal de confirmación con razón
+  // Modal de confirmaciÃ³n con razÃ³n
   $('mic').textContent='âŠ˜';
   $('mtt').textContent='Anular movimiento';
-  $('msb').textContent='El movimiento seguirá visible pero no contará en saldos ni contabilidad';
+  $('msb').textContent='El movimiento seguirÃ¡ visible pero no contarÃ¡ en saldos ni contabilidad';
   $('modal-box').className='modal';
   $('mbd').innerHTML=
     '<div style="background:rgba(231,76,60,0.07);border:1px solid rgba(231,76,60,0.2);border-radius:12px;padding:14px 16px;margin-bottom:14px">'
     +'<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:4px">'+(m.concepto||'Movimiento')+'</div>'
-    +'<div style="font-size:12px;color:var(--ink3)">'+(m.fecha||'')+(m.referencia?' · #'+m.referencia:'')+'</div>'
+    +'<div style="font-size:12px;color:var(--ink3)">'+(m.fecha||'')+(m.referencia?' Â· #'+m.referencia:'')+'</div>'
     +'<div style="font-family:var(--fd);font-weight:900;font-size:20px;margin-top:8px;color:var(--red)">'+fmt(m.monto||0)+'</div>'
     +'</div>'
-    +'<div class="fg"><label>Razón de anulación *</label>'
+    +'<div class="fg"><label>RazÃ³n de anulaciÃ³n *</label>'
     +'<input class="fi" id="anul_razon" placeholder="Ej: Error de registro, duplicado, reverso..." autofocus></div>';
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    +'<button class="btn btn-d" onclick="confirmarAnulacion(\''+id+'\',\''+cuenta+'\')">âŠ˜ Confirmar anulación</button>';
+    +'<button class="btn btn-d" onclick="confirmarAnulacion(\''+id+'\',\''+cuenta+'\')">âŠ˜ Confirmar anulaciÃ³n</button>';
   $('ov').style.display='flex';
 }
 
 function confirmarAnulacion(id, cuenta){
   var razon = ($('anul_razon')||{}).value||'';
-  if(!razon.trim()){ toast('La razón de anulación es obligatoria','error'); return; }
+  if(!razon.trim()){ toast('La razÃ³n de anulaciÃ³n es obligatoria','error'); return; }
   var idx = (S.movimientos||[]).findIndex(function(m){return m.id===id;});
   if(idx<0){ closeM(); return; }
   Object.assign(S.movimientos[idx], {
@@ -498,14 +498,14 @@ function confirmarAnulacion(id, cuenta){
   closeM();
   window._cuentasDetalle = cuenta;
   nav('cuentas');
-  toast('Movimiento anulado · quedará visible en auditoría','info');
+  toast('Movimiento anulado Â· quedarÃ¡ visible en auditorÃ­a','info');
 }
 
 function renderTabHistorial(){
   var mes=window._cuentasMes;
   var movs=S.movimientos.filter(function(m){
     var f=(m.fecha||'');
-    return f.startsWith(mes); // incluye anulados para auditoría
+    return f.startsWith(mes); // incluye anulados para auditorÃ­a
   }).sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
 
   // Build month options (last 12 months)
@@ -521,7 +521,7 @@ function renderTabHistorial(){
   var tasaBs=window._tasaBsGlobal||1;
   var esAdmin = S.currentUser && S.currentUser.rol === 'Administrador';
 
-  // ═══ KPIs del mes ═══
+  // â•â•â• KPIs del mes â•â•â•
   var movsActivos = movs.filter(function(m){return !m.eliminado;});
   var totalIngresos = movsActivos.filter(function(m){return m.cuentaDestino && m.tipo!=='transferencia';}).reduce(function(a,m){return a+(m.monto||0);},0);
   var totalEgresos = movsActivos.filter(function(m){return m.cuentaOrigen && m.tipo!=='transferencia';}).reduce(function(a,m){return a+(m.monto||0);},0);
@@ -549,7 +549,7 @@ function renderTabHistorial(){
     +'<div class="stat" style="border-top:3px solid var(--p1)">'
       +'<div class="st-v" style="color:var(--p1);font-size:20px">'+movs.length+'</div>'
       +'<div class="st-l">Movimientos</div>'
-      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+totalTransf+' transferencias'+(anulados>0?' · '+anulados+' anulados':'')+'</div>'
+      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+totalTransf+' transferencias'+(anulados>0?' Â· '+anulados+' anulados':'')+'</div>'
     +'</div>'
     +'<div class="stat" style="border-top:3px solid var(--amber)">'
       +'<div class="st-v" style="color:var(--amber);font-size:20px">'+fmt(promedioPorMov)+'</div>'
@@ -558,7 +558,7 @@ function renderTabHistorial(){
     +'</div>'
     +'</div>';
 
-  // ═══ Mini chart de flujo diario ═══
+  // â•â•â• Mini chart de flujo diario â•â•â•
   var diasEnMes = new Date(parseInt(mes.split('-')[0]), parseInt(mes.split('-')[1]), 0).getDate();
   var flujoDiario = [];
   for(var d=1; d<=diasEnMes; d++){
@@ -571,13 +571,13 @@ function renderTabHistorial(){
   var maxDia = Math.max(1, ...flujoDiario.map(function(f){return Math.max(f.ing,f.eg);}));
 
   var chartDiario = '<div class="card" style="margin-bottom:14px">'
-    +'<div class="ch"><div><div class="ct">Actividad diaria</div><div class="cs">Flujo por día en '+nombreMesEsp(mes)+'</div></div></div>'
+    +'<div class="ch"><div><div class="ct">Actividad diaria</div><div class="cs">Flujo por dÃ­a en '+nombreMesEsp(mes)+'</div></div></div>'
     +'<div style="display:flex;align-items:flex-end;gap:2px;height:90px;margin-top:12px;padding:0 4px">'
     +flujoDiario.map(function(f){
       var hIng = f.ing>0 ? Math.max(3, Math.round(f.ing/maxDia*70)) : 1;
       var hEg = f.eg>0 ? Math.max(3, Math.round(f.eg/maxDia*70)) : 1;
       var showLabel = f.dia%5===0 || f.dia===1;
-      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px" title="Día '+f.dia+': +'+fmt(f.ing)+' / -'+fmt(f.eg)+'">'
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px" title="DÃ­a '+f.dia+': +'+fmt(f.ing)+' / -'+fmt(f.eg)+'">'
         +'<div style="flex:1;width:100%;display:flex;align-items:flex-end;gap:1px">'
         +'<div style="flex:1;background:var(--green);border-radius:2px 2px 0 0;height:'+hIng+'px;opacity:.85"></div>'
         +'<div style="flex:1;background:var(--red);border-radius:2px 2px 0 0;height:'+hEg+'px;opacity:.85"></div>'
@@ -587,18 +587,18 @@ function renderTabHistorial(){
     }).join('')
     +'</div></div>';
 
-  // ═══ Tabla de movimientos ═══
+  // â•â•â• Tabla de movimientos â•â•â•
   var rows=movs.length?movs.map(function(m){
-    var cuenta=m.cuentaDestino||m.cuentaOrigen||'—';
+    var cuenta=m.cuentaDestino||m.cuentaOrigen||'â€”';
     var esIngreso=!!m.cuentaDestino&&m.tipo!=='transferencia';
     var esTransfer = m.tipo==='transferencia';
     var anulado=!!m.eliminado;
     var monto=m.monto||0;
     var tasaM=m.tasaBs||tasaBs;
     var comision=m.comision||0;
-    var realizadoPor=m.realizadoPor||S.currentUser&&S.currentUser.nombre||'—';
+    var realizadoPor=m.realizadoPor||S.currentUser&&S.currentUser.nombre||'â€”';
     var fechaFmt=(function(){
-      if(!m.fecha) return '—';
+      if(!m.fecha) return 'â€”';
       // If hora exists and is a clean HH:MM string, combine directly
       var h = (m.hora||'').trim();
       // Clean up old locale strings with "a. m."/"p. m." notation
@@ -624,7 +624,7 @@ function renderTabHistorial(){
       return m.fecha+(h?' '+h:'');
     })();
     var tipoColor = anulado ? 'var(--ink3)' : (esTransfer ? 'var(--amber)' : (esIngreso ? '#27ae60' : '#e74c3c'));
-    var tipoIcon = esTransfer ? '⇄' : (esIngreso ? '↩' : '↪');
+    var tipoIcon = esTransfer ? 'â‡„' : (esIngreso ? 'â†©' : 'â†ª');
     var tipoBg = anulado ? 'var(--surf2)' : (esTransfer ? 'var(--ambers)' : (esIngreso ? 'var(--greens)' : 'var(--reds)'));
     var anulTag=anulado?'<span style="font-size:9px;background:rgba(231,76,60,0.12);color:var(--red);border-radius:20px;padding:2px 8px;font-weight:800;margin-left:6px">ANULADO</span>':'';
     var anulBtn=(!anulado&&esAdmin)?'<button onclick="anularMovimiento(\''+m.id+'\',null)" title="Anular movimiento" style="background:none;border:none;cursor:pointer;color:var(--ink3);font-size:14px;padding:4px 8px;border-radius:6px;transition:all .15s" onmouseover="this.style.color=\'var(--red)\';this.style.background=\'var(--reds)\'" onmouseout="this.style.color=\'var(--ink3)\';this.style.background=\'none\'">âŠ˜</button>':'';
@@ -639,7 +639,7 @@ function renderTabHistorial(){
       +'<td style="font-size:11.5px">'+realizadoPor+'</td>'
       +'<td class="tdm" style="max-width:220px;'+(anulado?'text-decoration:line-through;':'')+'">'+( m.concepto||'<span style="color:var(--ink3);font-style:italic">sin concepto</span>' )+'</td>'
       +'<td style="text-align:right;white-space:nowrap;font-size:11px;color:var(--ink3)">'+tasaM+' Bs/$</td>'
-      +'<td style="text-align:right;font-size:11px;color:var(--ink3)">'+(comision>0?'BS '+parseFloat(comision).toFixed(2):'—')+'</td>'
+      +'<td style="text-align:right;font-size:11px;color:var(--ink3)">'+(comision>0?'BS '+parseFloat(comision).toFixed(2):'â€”')+'</td>'
       +'<td style="text-align:right;font-weight:800;color:'+montoColor+';white-space:nowrap;font-family:var(--fd);'+(anulado?'text-decoration:line-through;':'')+'">'+(esIngreso?'+':esTransfer?'':'-')+'$'+parseFloat(monto).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'
       +'<td style="text-align:center">'+anulBtn+'</td>'
       +'</tr>';
@@ -653,7 +653,7 @@ function renderTabHistorial(){
         +'<span style="font-size:12.5px;font-weight:700;color:var(--ink3)">Mes</span>'
         +'<select class="fs" onchange="setCuentasMes(this.value)" style="min-width:180px;font-weight:700;color:var(--p1);border-color:rgba(37,99,235,0.3)">'+mesOpts+'</select>'
       +'</div>'
-      +'<button class="btn btn-p btn-sm" onclick="exportHistorialXLS()">↓ Exportar CSV</button>'
+      +'<button class="btn btn-p btn-sm" onclick="exportHistorialXLS()">â†“ Exportar CSV</button>'
     +'</div>'
     +'<div class="card" style="overflow:hidden">'
     +'<div class="ch" style="padding-bottom:10px;border-bottom:1px solid var(--rim2)"><div><div class="ct">Historial detallado</div><div class="cs">Registros de entrada y salida de todas las cuentas bancarias</div></div>'
@@ -665,7 +665,7 @@ function renderTabHistorial(){
     +'<th style="text-align:left;padding:10px 8px;font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px">Usuario</th>'
     +'<th style="text-align:left;padding:10px 8px;font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px">Concepto</th>'
     +'<th style="text-align:right;padding:10px 8px;font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px">Tasa</th>'
-    +'<th style="text-align:right;padding:10px 8px;font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px">Comisión</th>'
+    +'<th style="text-align:right;padding:10px 8px;font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px">ComisiÃ³n</th>'
     +'<th style="text-align:right;padding:10px 8px;font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px">Monto</th>'
     +'<th style="width:40px"></th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table>'
@@ -700,14 +700,14 @@ function exportHistorialXLS(){
   toast('Historial exportado','success');
 }
 
-// ═══════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // TAB 3: CUENTAS PENDIENTES
-// ═══════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderTabPendientes(){
   var subTab=window._cuentasSubTab||'cobrar';
   var ocultarCero=window._ocultarCero!==false;
 
-  // ═══ KPIs de pendientes ═══
+  // â•â•â• KPIs de pendientes â•â•â•
   var credActivosKpi = S.creds.filter(function(c){return !c.eliminado&&(c.estado==='activo'||c.estado==='mora');});
   var totalPorCobrar = credActivosKpi.reduce(function(a,c){return a+(getCreditoSaldoPendiente(c)||0);},0);
   var manualCobrarKpi = (S.cuentasPendientes||[]).filter(function(p){return p.tipo==='cobrar'&&!p.pagado&&!p.eliminado;});
@@ -721,7 +721,7 @@ function renderTabPendientes(){
     +'<div class="stat" style="border-top:3px solid var(--green)">'
       +'<div class="st-v" style="color:var(--green);font-size:22px">'+fmt(totalPorCobrar + totalManualCobrar)+'</div>'
       +'<div class="st-l">Por cobrar</div>'
-      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+credActivosKpi.length+' créditos'+(manualCobrarKpi.length>0?' · '+manualCobrarKpi.length+' manuales':'')+'</div>'
+      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+credActivosKpi.length+' crÃ©ditos'+(manualCobrarKpi.length>0?' Â· '+manualCobrarKpi.length+' manuales':'')+'</div>'
     +'</div>'
     +'<div class="stat" style="border-top:3px solid var(--red)">'
       +'<div class="st-v" style="color:var(--red);font-size:22px">'+fmt(totalManualPagar)+'</div>'
@@ -731,7 +731,7 @@ function renderTabPendientes(){
     +'<div class="stat" style="border-top:3px solid '+(clientesMoraKpi>0?'var(--red)':'var(--green)')+'">'
       +'<div class="st-v" style="color:'+(clientesMoraKpi>0?'var(--red)':'var(--green)')+';font-size:22px">'+clientesMoraKpi+'</div>'
       +'<div class="st-l">En mora</div>'
-      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+clientesAlDiaKpi+' al día</div>'
+      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+clientesAlDiaKpi+' al dÃ­a</div>'
     +'</div>'
     +'<div class="stat" style="border-top:3px solid var(--p1)">'
       +'<div class="st-v" style="color:var(--p1);font-size:22px">'+fmt((totalPorCobrar + totalManualCobrar) - totalManualPagar)+'</div>'
@@ -787,23 +787,23 @@ function renderCobrar(ocultarCero){
 
   var totalCobrar=grupos.reduce(function(a,g){return a+g.total;},0);
 
-  if(!grupos.length && !manualCobrar.length) return '<div class="empty"><span class="e-ic">✓</span><div class="e-tt">Sin cuentas pendientes por cobrar</div><div style="font-size:12px;color:var(--ink3);margin-top:6px"><button class="btn btn-p btn-sm" onclick="openAgregarPendiente(\'cobrar\')">ï¼‹ Agregar pendiente</button></div></div>';
+  if(!grupos.length && !manualCobrar.length) return '<div class="empty"><span class="e-ic">âœ“</span><div class="e-tt">Sin cuentas pendientes por cobrar</div><div style="font-size:12px;color:var(--ink3);margin-top:6px"><button class="btn btn-p btn-sm" onclick="openAgregarPendiente(\'cobrar\')">ï¼‹ Agregar pendiente</button></div></div>';
 
   var rowsManual=manualCobrar.map(function(p,idx){
     return '<tr style="background:rgba(37,99,235,0.03)">'
       +'<td><span style="font-size:10px;background:rgba(37,99,235,0.12);color:var(--p1);border-radius:20px;padding:2px 8px;font-weight:700;margin-right:6px">MANUAL</span>'+p.descripcion+'</td>'
-      +'<td style="text-align:center;color:var(--ink3)">'+( p.contraparte||'—' )+'</td>'
+      +'<td style="text-align:center;color:var(--ink3)">'+( p.contraparte||'â€”' )+'</td>'
       +'<td style="text-align:right;font-weight:700">'+fmt(p.monto||0)+'</td>'
-      +'<td style="text-align:center">'+(p.fechaVenc?'<span style="font-size:11px;color:var(--amber)">'+p.fechaVenc+'</span>':'—')+'</td>'
+      +'<td style="text-align:center">'+(p.fechaVenc?'<span style="font-size:11px;color:var(--amber)">'+p.fechaVenc+'</span>':'â€”')+'</td>'
       +'<td style="text-align:center;display:flex;gap:6px;justify-content:center;align-items:center">'
-      +'<button class="btn btn-p btn-xs" onclick="marcarPendientePagado(\''+p.id+'\')">✓ Cobrado</button>'
-      +'<button class="btn btn-d btn-xs" onclick="delPendiente(\''+p.id+'\')">✕</button>'
+      +'<button class="btn btn-p btn-xs" onclick="marcarPendientePagado(\''+p.id+'\')">âœ“ Cobrado</button>'
+      +'<button class="btn btn-d btn-xs" onclick="delPendiente(\''+p.id+'\')">âœ•</button>'
       +'</td></tr>';
   }).join('');
 
   var rows=grupos.map(function(g,idx){
     var expired=g.creds.some(function(c){return c.estado==='mora';});
-    var diasLabel=expired?'<span style="color:#e74c3c;font-weight:700">Expirado</span>':'<span style="color:var(--ink2)">—</span>';
+    var diasLabel=expired?'<span style="color:#e74c3c;font-weight:700">Expirado</span>':'<span style="color:var(--ink2)">â€”</span>';
     return '<tr>'
       +'<td><span style="cursor:pointer;font-size:11px;color:var(--p1)" onclick="toggleCobrarRow('+idx+')">â–¶</span> Cliente: '+g.cli+'</td>'
       +'<td style="text-align:center;font-weight:700">'+g.pendCount+'</td>'
@@ -832,15 +832,15 @@ function renderCobrar(ocultarCero){
     +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">'
     +'<div><div class="ct" style="color:var(--p1)">Cuentas pendientes por cobrar</div></div>'
     +'<div style="display:flex;gap:10px;align-items:center">'
-    +'<input type="text" class="fi" placeholder="Búsqueda de texto completo..." style="min-width:220px;font-size:12px" oninput="filtrarCobrar(this.value)">'
+    +'<input type="text" class="fi" placeholder="BÃºsqueda de texto completo..." style="min-width:220px;font-size:12px" oninput="filtrarCobrar(this.value)">'
     +'<div style="background:rgba(37,99,235,0.12);border-radius:20px;padding:8px 16px;font-weight:800;font-size:13px;color:var(--p1)">Total: '+fmt(totalCobrarFull)+'</div>'
     +'</div></div>'
     +'<div style="overflow-x:auto"><table class="tbl" id="cobrar-table"><thead><tr>'
-    +'<th>Asunto ↑</th><th style="text-align:center">Contraparte / Cuotas ↑</th>'
-    +'<th style="text-align:right">Por cobrar ↑</th><th style="text-align:center">Vencimiento ↑</th>'
-    +'<th style="text-align:center">Acción</th></tr></thead>'
+    +'<th>Asunto â†‘</th><th style="text-align:center">Contraparte / Cuotas â†‘</th>'
+    +'<th style="text-align:right">Por cobrar â†‘</th><th style="text-align:center">Vencimiento â†‘</th>'
+    +'<th style="text-align:center">AcciÃ³n</th></tr></thead>'
     +'<tbody>'+rows+rowsManual+'</tbody></table></div>'
-    +'<div style="font-size:12px;color:var(--ink3);padding-top:12px">'+(grupos.length+manualCobrar.length)+' resultado(s) — '+(manualCobrar.length)+' manuales</div>'
+    +'<div style="font-size:12px;color:var(--ink3);padding-top:12px">'+(grupos.length+manualCobrar.length)+' resultado(s) â€” '+(manualCobrar.length)+' manuales</div>'
     +'</div>';
 }
 
@@ -859,27 +859,27 @@ function renderPagar(ocultarCero){
     .sort(function(a,b){return b.total-a.total;});
   var totalPagar=grupos.reduce(function(a,g){return a+g.total;},0);
 
-  if(!grupos.length && !manualPagar.length) return '<div class="empty"><span class="e-ic">✓</span><div class="e-tt">Sin cuentas pendientes por pagar</div><div style="font-size:12px;color:var(--ink3);margin-top:6px"><button class="btn btn-d btn-sm" onclick="openAgregarPendiente(\'pagar\')">ï¼‹ Agregar pendiente</button></div></div>';
+  if(!grupos.length && !manualPagar.length) return '<div class="empty"><span class="e-ic">âœ“</span><div class="e-tt">Sin cuentas pendientes por pagar</div><div style="font-size:12px;color:var(--ink3);margin-top:6px"><button class="btn btn-d btn-sm" onclick="openAgregarPendiente(\'pagar\')">ï¼‹ Agregar pendiente</button></div></div>';
 
   var rowsManualPagar=manualPagar.map(function(p){
     return '<tr style="background:rgba(231,76,60,0.03)">'
       +'<td><span style="font-size:10px;background:rgba(231,76,60,0.12);color:#e74c3c;border-radius:20px;padding:2px 8px;font-weight:700;margin-right:6px">MANUAL</span>'+p.descripcion+'</td>'
-      +'<td style="text-align:center;color:var(--ink3)">'+( p.contraparte||'—' )+'</td>'
+      +'<td style="text-align:center;color:var(--ink3)">'+( p.contraparte||'â€”' )+'</td>'
       +'<td style="text-align:right;font-weight:700;color:#e74c3c">'+fmt(p.monto||0)+'</td>'
-      +'<td style="text-align:center">'+(p.fechaVenc?'<span style="font-size:11px;color:var(--amber)">'+p.fechaVenc+'</span>':'—')+'</td>'
+      +'<td style="text-align:center">'+(p.fechaVenc?'<span style="font-size:11px;color:var(--amber)">'+p.fechaVenc+'</span>':'â€”')+'</td>'
       +'<td style="text-align:center;display:flex;gap:6px;justify-content:center;align-items:center">'
-      +'<button class="btn btn-g btn-xs" onclick="marcarPendientePagado(\''+p.id+'\')">✓ Pagado</button>'
-      +'<button class="btn btn-d btn-xs" onclick="delPendiente(\''+p.id+'\')">✕</button>'
+      +'<button class="btn btn-g btn-xs" onclick="marcarPendientePagado(\''+p.id+'\')">âœ“ Pagado</button>'
+      +'<button class="btn btn-d btn-xs" onclick="delPendiente(\''+p.id+'\')">âœ•</button>'
       +'</td></tr>';
   }).join('');
 
   var rows=grupos.map(function(g,idx){
-    var catLabel={inventario:'Inventario',equipos:'Equipos',operativo:'Operativo',nomina:'Nómina',otros:'Otros'}[g.cat]||g.cat;
+    var catLabel={inventario:'Inventario',equipos:'Equipos',operativo:'Operativo',nomina:'NÃ³mina',otros:'Otros'}[g.cat]||g.cat;
     return '<tr>'
       +'<td><span style="cursor:pointer;font-size:11px;color:var(--p1)" onclick="togglePagarRow('+idx+')">â–¶</span> '+catLabel+'</td>'
       +'<td style="text-align:center;font-weight:700">'+g.items.length+'</td>'
       +'<td style="text-align:right;font-weight:700;color:var(--red)">'+fmt(g.total)+'</td>'
-      +'<td style="text-align:center"><span style="color:var(--ink3)">—</span></td>'
+      +'<td style="text-align:center"><span style="color:var(--ink3)">â€”</span></td>'
       +'<td style="text-align:center">'
       +'<button onclick="nav(\'conta\')" class="btn btn-g btn-xs">Ver detalle</button>'
       +'</td></tr>'
@@ -902,15 +902,15 @@ function renderPagar(ocultarCero){
     +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">'
     +'<div><div class="ct" style="color:var(--red,#e74c3c)">Cuentas por pagar</div></div>'
     +'<div style="display:flex;gap:10px;align-items:center">'
-    +'<input type="text" class="fi" placeholder="Búsqueda de texto completo..." style="min-width:220px;font-size:12px">'
+    +'<input type="text" class="fi" placeholder="BÃºsqueda de texto completo..." style="min-width:220px;font-size:12px">'
     +'<div style="background:rgba(231,76,60,0.10);border-radius:20px;padding:8px 16px;font-weight:800;font-size:13px;color:#e74c3c">Total: '+fmt(totalPagarFull)+'</div>'
     +'</div></div>'
     +'<div style="overflow-x:auto"><table class="tbl"><thead><tr>'
-    +'<th>Descripción</th><th style="text-align:center">Contraparte</th>'
+    +'<th>DescripciÃ³n</th><th style="text-align:center">Contraparte</th>'
     +'<th style="text-align:right">Por pagar</th><th style="text-align:center">Vencimiento</th>'
-    +'<th style="text-align:center">Acción</th></tr></thead>'
+    +'<th style="text-align:center">AcciÃ³n</th></tr></thead>'
     +'<tbody>'+rows+rowsManualPagar+'</tbody></table></div>'
-    +'<div style="font-size:12px;color:var(--ink3);padding-top:12px">'+(grupos.length+manualPagar.length)+' resultado(s) — '+(manualPagar.length)+' manuales</div>'
+    +'<div style="font-size:12px;color:var(--ink3);padding-top:12px">'+(grupos.length+manualPagar.length)+' resultado(s) â€” '+(manualPagar.length)+' manuales</div>'
     +'</div>';
 }
 
@@ -936,18 +936,18 @@ function filtrarCobrar(q){
   });
 }
 
-// ── PENDIENTES MANUALES ──────────────────────────────────────────
+// â”€â”€ PENDIENTES MANUALES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function openAgregarPendiente(tipo){
   var esCobrar=tipo==='cobrar';
   var color=esCobrar?'var(--p1)':'#e74c3c';
   var label=esCobrar?'por cobrar':'por pagar';
   $('mic').textContent=esCobrar?'PND':'PAG';
   $('mtt').textContent='Nueva cuenta pendiente '+label;
-  $('msb').textContent='Se agregará a cuentas '+label;
+  $('msb').textContent='Se agregarÃ¡ a cuentas '+label;
   $('modal-box').className='modal';
   $('mbd').innerHTML=
     '<div class="fgr c1" style="gap:10px">'
-    +'<div class="fg"><label>Descripción *</label><input class="fi" id="pnd_desc" placeholder="Ej: Pago alquiler local, Cobro cliente ABC..."></div>'
+    +'<div class="fg"><label>DescripciÃ³n *</label><input class="fi" id="pnd_desc" placeholder="Ej: Pago alquiler local, Cobro cliente ABC..."></div>'
     +'<div class="fg"><label>Contraparte</label><input class="fi" id="pnd_contra" placeholder="Nombre del cliente o proveedor"></div>'
     +'<div class="fgr c2" style="gap:10px">'
     +'<div class="fg"><label>Monto *</label><input class="fi" id="pnd_monto" type="number" min="0" step="0.01" placeholder="0.00"></div>'
@@ -963,8 +963,8 @@ function openAgregarPendiente(tipo){
 function savePendiente(tipo){
   var desc=($('pnd_desc')||{}).value||'';
   var monto=parseFloat(($('pnd_monto')||{}).value||'0');
-  if(!desc.trim()){toast('La descripción es obligatoria','error');return;}
-  if(isNaN(monto)||monto<0){toast('Monto inválido','error');return;}
+  if(!desc.trim()){toast('La descripciÃ³n es obligatoria','error');return;}
+  if(isNaN(monto)||monto<0){toast('Monto invÃ¡lido','error');return;}
   if(!S.cuentasPendientes) S.cuentasPendientes=[];
   var obj={
     id:'PND-'+Date.now(),
@@ -1011,9 +1011,9 @@ function marcarPendientePagado(id){
 }
 
 
-// ── DEPÓSITO ──
+// â”€â”€ DEPÃ“SITO â”€â”€
 function openDeposito(cuentaNombre){
-  $('mic').textContent='✓';$('mtt').textContent='Registrar Depósito';
+  $('mic').textContent='âœ“';$('mtt').textContent='Registrar DepÃ³sito';
   $('msb').textContent=cuentaNombre||'Selecciona la cuenta';
   $('modal-box').className='modal';
   var opts = (_cuentasBanc||[]).map(function(cu){
@@ -1047,16 +1047,16 @@ function openDeposito(cuentaNombre){
       monedaMov:($('dep_moneda')&&$('dep_moneda').value)||'USD',
       realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin'};
     S.movimientos.push(mov); DB.saveMovimiento(mov);
-    closeM(); nav('cuentas'); toast('Depósito registrado · '+fmt(monto),'success'); return true;
+    closeM(); nav('cuentas'); toast('DepÃ³sito registrado Â· '+fmt(monto),'success'); return true;
   };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    +'<button class="btn btn-p" onclick="saveM()">Registrar Depósito</button>';
+    +'<button class="btn btn-p" onclick="saveM()">Registrar DepÃ³sito</button>';
   $('ov').style.display='flex';
 }
 
-// ── RETIRO ──
+// â”€â”€ RETIRO â”€â”€
 function openRetiro(cuentaNombre){
-  $('mic').textContent='●';$('mtt').textContent='Registrar Retiro';
+  $('mic').textContent='â—';$('mtt').textContent='Registrar Retiro';
   $('msb').textContent=cuentaNombre||'Selecciona la cuenta';
   $('modal-box').className='modal';
   var opts = (_cuentasBanc||[]).map(function(cu){
@@ -1067,7 +1067,7 @@ function openRetiro(cuentaNombre){
     +(opts?'<select class="fs" id="ret_cuenta">'+opts+'</select>'
       :'<input class="fi" id="ret_cuenta" placeholder="Nombre de la cuenta">')
     +'</div>'
-    +'<div class="fg"><label>Concepto *</label><input class="fi" id="ret_conc" placeholder="Ej: Pago proveedor, nómina..."></div>'
+    +'<div class="fg"><label>Concepto *</label><input class="fi" id="ret_conc" placeholder="Ej: Pago proveedor, nÃ³mina..."></div>'
     +'<div class="fgr" style="gap:8px">'
     +'<div class="fg"><label>Monto *</label><input class="fi" id="ret_monto" type="number" step="0.01" placeholder="0.00"></div>'
     +'<div class="fg"><label>Fecha</label><input class="fi" id="ret_fecha" type="date" value="'+new Date().toISOString().split('T')[0]+'"></div></div>'
@@ -1090,16 +1090,16 @@ function openRetiro(cuentaNombre){
       monedaMov:($('ret_moneda')&&$('ret_moneda').value)||'USD',
       realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin'};
     S.movimientos.push(mov); DB.saveMovimiento(mov);
-    closeM(); nav('cuentas'); toast('Retiro registrado · '+fmt(monto),'success'); return true;
+    closeM(); nav('cuentas'); toast('Retiro registrado Â· '+fmt(monto),'success'); return true;
   };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
     +'<button class="btn btn-d" onclick="saveM()">Registrar Retiro</button>';
   $('ov').style.display='flex';
 }
 
-// ── TRANSFERENCIA ──
+// â”€â”€ TRANSFERENCIA â”€â”€
 function openTransferencia(cuentaNombre){
-  $('mic').textContent='↻';$('mtt').textContent='Transferencia entre Cuentas';$('msb').textContent='Mueve dinero entre cuentas';
+  $('mic').textContent='â†»';$('mtt').textContent='Transferencia entre Cuentas';$('msb').textContent='Mueve dinero entre cuentas';
   $('modal-box').className='modal';
   var opts = (_cuentasBanc||[]).map(function(cu){
     return '<option value="'+cu.nombre+'">'+cu.nombre+'</option>';
@@ -1107,7 +1107,7 @@ function openTransferencia(cuentaNombre){
   var optsOrig = (_cuentasBanc||[]).map(function(cu){
     return '<option value="'+cu.nombre+'" '+(cu.nombre===cuentaNombre?'selected':'')+'>'+cu.nombre+'</option>';
   }).join('');
-  if(!opts){ toast('Agrega cuentas en Configuración primero','error'); return; }
+  if(!opts){ toast('Agrega cuentas en ConfiguraciÃ³n primero','error'); return; }
   $('mbd').innerHTML='<div class="fgr c1" style="gap:9px">'
     +'<div class="fg"><label>Cuenta origen *</label><select class="fs" id="tr_origen">'+optsOrig+'</select></div>'
     +'<div style="text-align:center;font-size:22px;color:var(--p1);margin:4px 0">â¬‡ï¸</div>'
@@ -1125,7 +1125,7 @@ function openTransferencia(cuentaNombre){
     var monto=parseFloat(($('tr_monto')&&$('tr_monto').value))||0;
     if(!orig||!dest){toast('Selecciona origen y destino','error');return false;}
     if(orig===dest){toast('El origen y destino deben ser distintos','error');return false;}
-    if(monto<=0){toast('Ingresa un monto válido','error');return false;}
+    if(monto<=0){toast('Ingresa un monto vÃ¡lido','error');return false;}
     var conc=($('tr_conc')&&$('tr_conc').value)||'Transferencia interna';
     var mov={id:'MOV-'+Date.now(),tipo:'transferencia',concepto:conc,monto:monto,
       cuentaOrigen:orig,cuentaDestino:dest,
@@ -1136,7 +1136,7 @@ function openTransferencia(cuentaNombre){
       monedaMov:'USD',
       realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin'};
     S.movimientos.push(mov); DB.saveMovimiento(mov);
-    closeM(); nav('cuentas'); toast('Transferencia registrada · '+fmt(monto),'success'); return true;
+    closeM(); nav('cuentas'); toast('Transferencia registrada Â· '+fmt(monto),'success'); return true;
   };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
     +'<button class="btn btn-p" onclick="saveM()">Transferir</button>';
@@ -1155,9 +1155,9 @@ function delMovimiento(id){
 }
 
 
-// ══════════════════════════════════════════
-// NOTIFICACIONES — funciones reales
-// ══════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// NOTIFICACIONES â€” funciones reales
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 
-// ── INIT — arranca la app después del login ─────────────────
+// â”€â”€ INIT â€” arranca la app despuÃ©s del login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
