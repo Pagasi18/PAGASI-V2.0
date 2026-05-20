@@ -1501,6 +1501,9 @@ function _entrarAppConUsuario(user, errEl){
   });
 }
 window._entrarAppConUsuario = _entrarAppConUsuario;
+if (typeof window.iniciarListenerSolicitudes !== 'function') {
+  window.iniciarListenerSolicitudes = function(){};
+}
 async function doLogin() {
   // Guard: prevent concurrent/loop calls
   if (_doLoginInProgress) return;
