@@ -1,543 +1,1610 @@
-// Logica de Scores: politica de riesgo, simulador, recalculo y analisis.
-// Extraido de assets/pagasi-app.js sin cambiar formulas, pesos ni umbrales.
+// Logica de usuarios, roles, permisos e invitaciones.
+// Extraido de assets/pagasi-app.js sin cambiar comportamiento.
 
-// SCORE: mÃ³dulo de polÃ­tica de riesgo
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-var SCORE_FACTOR_META = [
-  {k:'f1', nombre:'Historial crediticio', desc:'Comportamiento previo, mora, deudas, bancos'},
-  {k:'f2', nombre:'Capacidad de pago', desc:'Ingresos, dependientes, ratio cuota/ingreso'},
-  {k:'f3', nombre:'Estabilidad laboral', desc:'Tipo de empleo, antigÃ¼edad, uso de la moto'},
-  {k:'f4', nombre:'GarantÃ­as', desc:'Fiador, vivienda propia, banco activo'},
-  {k:'f5', nombre:'Origen y confianza', desc:'Referido, deudas, remesas'}
-];
-
-function scTab(tab){
-  var card = $('sc-tabs');
-  if(!card) return;
-  var host = card.parentElement;
-  Array.from(host.querySelectorAll('[data-sctab]')).forEach(function(el){
-    var isBtn = el.classList.contains('cf-tab');
-    var match = el.getAttribute('data-sctab')===tab;
-    if(isBtn) el.classList.toggle('is-active', match);
-    else el.classList.toggle('is-active', match);
-  });
-  if(tab==='pesos') scRenderPesos();
-  if(tab==='umbrales') scRenderScalePreview();
+function setUsersTab(tab){
+  S.usersTab = tab;
+  var host = $('users-tab-content');
+  if(!host) return;
+  // Update tab buttons
+  document.querySelectorAll('.us-tab').forEach(function(b){ b.classList.remove('is-active'); });
+  var activeBtn = document.querySelector('.us-tab[onclick*="setUsersTab(\''+tab+'\')"]');
+  if(activeBtn) activeBtn.classList.add('is-active');
+  // Render content
+  if(tab==='usuarios') host.innerHTML = _usersTabUsuariosHTML();
+  else if(tab==='roles') host.innerHTML = _usersTabRolesHTML();
+  else host.innerHTML = _usersTabInvitacionesHTML();
+  // Reload data
+  setTimeout(usersReload, 50);
 }
 
-function scRenderPesos(){
-  var grid = $('sc-pesos-grid');
-  if(!grid) return;
-  var html = '';
-  SCORE_FACTOR_META.forEach(function(f){
-    var val = SCORE_CFG.pesos[f.k]||0;
-    html += '<div style="padding:12px 14px;background:var(--surf2);border-radius:10px;border:1px solid var(--rim)">'
-      + '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:6px;gap:8px">'
-      + '<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:800;color:var(--ink)">'+f.nombre+'</div>'
-      + '<div style="font-size:10.5px;color:var(--ink3);margin-top:1px">'+f.desc+'</div></div>'
-      + '<div style="font-size:22px;font-weight:900;color:var(--p1);font-family:var(--fd);line-height:1" id="sc-pct-'+f.k+'">'+val+'%</div>'
-      + '</div>'
-      + '<input type="range" id="sc-rng-'+f.k+'" min="0" max="60" step="1" value="'+val+'" oninput="scOnPesoChange(\''+f.k+'\', this.value)" style="width:100%;accent-color:var(--p1);cursor:pointer">'
-      + '</div>';
-  });
-  grid.innerHTML = html;
-  scUpdatePesosSum();
-}
-
-function scOnPesoChange(k, v){
-  SCORE_CFG.pesos[k] = parseInt(v,10)||0;
-  var el = $('sc-pct-'+k); if(el) el.textContent = SCORE_CFG.pesos[k]+'%';
-  scUpdatePesosSum();
-}
-
-function scUpdatePesosSum(){
-  var sum = Object.keys(SCORE_CFG.pesos).reduce(function(a,k){return a+(SCORE_CFG.pesos[k]||0);},0);
-  var el = $('sc-pesos-sum');
-  if(el){
-    el.textContent = sum+'%';
-    el.style.color = sum===100 ? 'var(--green)' : sum>100 ? 'var(--red)' : 'var(--amber)';
+// ══════════════════════════════════════════
+// MATRIZ DE ROLES — toggle de permiso por rol
+// Al hacer clic en una celda de la matriz:
+//  1. Se invierte el permiso de ese rol en memoria (ROL_PERMISOS).
+//  2. Se persiste ROL_PERMISOS en Firestore (config/rolesPermisos) para que
+//     sobreviva recargas del navegador.
+//  3. Se actualiza el campo "permisos" de TODOS los usuarios con ese rol
+//     (excepto aquellos cuya configuración fue personalizada manualmente,
+//     pero como el flujo del sistema asigna ROL_PERMISOS al cambiar el rol,
+//     consideramos que todos los usuarios con ese rol siguen el preset).
+//  4. Se redibuja la matriz para reflejar el nuevo estado.
+// El listener en tiempo real se encarga de notificar a los usuarios afectados
+// que tienen sesión activa.
+// ══════════════════════════════════════════
+function toggleRolePerm(rol, modKey){
+  if(!isAdminUser()){ toast('Solo administradores pueden modificar la matriz','error'); return; }
+  if(rol === 'Administrador'){ toast('El Administrador siempre tiene acceso total','info'); return; }
+  if(!db){ toast('Requiere conexión','error'); return; }
+  if(!Array.isArray(ROL_PERMISOS[rol])) ROL_PERMISOS[rol] = [];
+  var idx = ROL_PERMISOS[rol].indexOf(modKey);
+  var dando = idx < 0; // true si se está concediendo el permiso
+  if(dando){
+    ROL_PERMISOS[rol].push(modKey);
+  } else {
+    ROL_PERMISOS[rol].splice(idx, 1);
+  }
+  // Persistir el preset del rol
+  try{
+    var payload = {};
+    payload[rol] = ROL_PERMISOS[rol];
+    db.collection('config').doc('rolesPermisos').set(payload, {merge:true}).catch(function(){});
+  }catch(e){}
+  // Propagar a usuarios existentes con ese rol
+  try{
+    var lista = (typeof _usersCache !== 'undefined' && Array.isArray(_usersCache)) ? _usersCache : [];
+    var afectados = lista.filter(function(u){ return u.rol === rol; });
+    afectados.forEach(function(u){
+      var perms = Array.isArray(u.permisos) ? u.permisos.slice() : [];
+      var i = perms.indexOf(modKey);
+      if(dando && i < 0) perms.push(modKey);
+      else if(!dando && i >= 0) perms.splice(i, 1);
+      // Actualizar en Firestore
+      db.collection('usuarios').doc(u.uid).update({ permisos: perms }).catch(function(){});
+      // Actualizar cache local
+      u.permisos = perms;
+    });
+    if(afectados.length){
+      toast((dando?'Permiso concedido a ':'Permiso retirado de ')+rol+' ('+afectados.length+' usuario'+(afectados.length===1?'':'s')+')','success');
+    } else {
+      toast(dando?'Permiso concedido al rol '+rol:'Permiso retirado del rol '+rol,'success');
+    }
+  }catch(e){}
+  // Repintar matriz para mostrar el nuevo estado visual
+  if(S.usersTab === 'roles'){
+    var host = $('users-tab-content');
+    if(host) host.innerHTML = _usersTabRolesHTML();
+    // Restaurar contadores de usuarios por rol
+    Object.keys(ROLES_INFO).forEach(function(r){
+      var count = (typeof _usersCache !== 'undefined' ? _usersCache : []).filter(function(u){return u.rol===r;}).length;
+      var el = $('role-count-'+r.replace(/\s+/g,'_'));
+      if(el) el.textContent = count;
+    });
   }
 }
 
-function scRenderScalePreview(){
-  var el = $('sc-scale-preview');
-  if(!el) return;
-  var reg = parseInt(($('sc_umb_reg')&&$('sc_umb_reg').value)||SCORE_CFG.umbrales.regular, 10);
-  var bue = parseInt(($('sc_umb_bue')&&$('sc_umb_bue').value)||SCORE_CFG.umbrales.bueno, 10);
-  var exc = parseInt(($('sc_umb_exc')&&$('sc_umb_exc').value)||SCORE_CFG.umbrales.excelente, 10);
-  function pct(v){ return Math.max(0,Math.min(100, (v-300)/(850-300)*100 )); }
-  var html = ''
-    + '<div style="position:absolute;left:0;top:0;bottom:0;width:'+pct(reg)+'%;background:var(--red);opacity:.4"></div>'
-    + '<div style="position:absolute;left:'+pct(reg)+'%;top:0;bottom:0;width:'+(pct(bue)-pct(reg))+'%;background:var(--amber);opacity:.45"></div>'
-    + '<div style="position:absolute;left:'+pct(bue)+'%;top:0;bottom:0;width:'+(pct(exc)-pct(bue))+'%;background:var(--p1);opacity:.45"></div>'
-    + '<div style="position:absolute;left:'+pct(exc)+'%;top:0;bottom:0;right:0;background:var(--green);opacity:.5"></div>'
-    + '<div style="position:absolute;left:'+pct(reg)+'%;top:0;bottom:0;border-left:2px dashed var(--ink2)"><div style="position:absolute;bottom:3px;left:3px;font-size:10px;font-weight:800;color:var(--ink)">'+reg+'</div></div>'
-    + '<div style="position:absolute;left:'+pct(bue)+'%;top:0;bottom:0;border-left:2px dashed var(--ink2)"><div style="position:absolute;bottom:3px;left:3px;font-size:10px;font-weight:800;color:var(--ink)">'+bue+'</div></div>'
-    + '<div style="position:absolute;left:'+pct(exc)+'%;top:0;bottom:0;border-left:2px dashed var(--ink2)"><div style="position:absolute;bottom:3px;left:3px;font-size:10px;font-weight:800;color:var(--ink)">'+exc+'</div></div>'
-    + '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:space-around;font-size:10px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35);pointer-events:none"><span>Rechaza</span><span>Revisa</span><span>Aprueba</span><span>Auto</span></div>';
-  el.innerHTML = html;
+// Cargar preset ROL_PERMISOS desde Firestore (si fue personalizado antes)
+function _cargarRolesPermisosFirestore(){
+  if(!db) return;
+  try{
+    db.collection('config').doc('rolesPermisos').get().then(function(doc){
+      if(!doc || !doc.exists) return;
+      var data = doc.data() || {};
+      Object.keys(ROL_PERMISOS).forEach(function(r){
+        if(Array.isArray(data[r])) ROL_PERMISOS[r] = data[r].slice();
+      });
+      // Si el usuario está viendo la pestaña Roles, refrescar
+      if(S.usersTab === 'roles'){
+        var host = $('users-tab-content');
+        if(host) host.innerHTML = _usersTabRolesHTML();
+      }
+    }).catch(function(){});
+  }catch(e){}
 }
 
-function guardarScoreCfg(){
-  // Pesos
-  SCORE_FACTOR_META.forEach(function(f){
-    var rng = $('sc-rng-'+f.k);
-    if(rng) SCORE_CFG.pesos[f.k] = parseInt(rng.value,10)||0;
+// TAB 1: Lista de usuarios
+function _usersTabUsuariosHTML(){
+  return '<div>'
+    +'<div style="padding:0 0 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+    + '<div class="srch" style="flex:1;min-width:200px"><span class="srch-i"></span><input type="text" id="users-search" placeholder="Buscar por nombre, email o rol..." oninput="_usersFiltroUpdate()"></div>'
+    + '<select class="fs" id="users-filter-rol" onchange="_usersFiltroUpdate()" style="width:auto;min-width:140px">'
+    + '<option value="">Todos los roles</option>'
+    + Object.keys(ROLES_INFO).map(function(r){return '<option value="'+r+'">'+r+'</option>';}).join('')
+    + '</select>'
+    +'</div>'
+    + '<div id="users-list"><div style="padding:40px 20px;text-align:center;color:var(--ink3);font-size:12px">Cargando...</div></div>'
+    +'</div>';
+}
+
+// TAB 2: Matriz de roles y permisos
+function _usersTabRolesHTML(){
+  var roles = Object.keys(ROLES_INFO);
+  var grupos = {};
+  MODULOS.forEach(function(m){
+    if(!grupos[m.grupo]) grupos[m.grupo] = [];
+    grupos[m.grupo].push(m);
   });
-  var sum = Object.keys(SCORE_CFG.pesos).reduce(function(a,k){return a+(SCORE_CFG.pesos[k]||0);},0);
-  if(sum!==100){
-    toast('La suma de pesos debe ser 100% (actualmente '+sum+'%)','error');
+
+  var html = '<div class="card" style="margin-bottom:12px">'
+    +'<div class="ch"><div><div class="ct">Matriz de Roles y Permisos</div><div class="cs">Define qué puede hacer cada rol en el sistema</div></div></div>'
+    +'<div style="padding:14px 6px;overflow-x:auto"><table style="width:100%;border-collapse:separate;border-spacing:0">'
+    // HEADER: roles con íconos y descripción
+    +'<thead><tr>'
+    + '<th style="text-align:left;padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);border-bottom:1px solid var(--rim);position:sticky;left:0;background:var(--surf);z-index:2;min-width:140px">Módulo</th>'
+    + roles.map(function(r){
+         var info = ROLES_INFO[r];
+         var count = ROL_PERMISOS[r] ? ROL_PERMISOS[r].filter(function(p){return p!=='perm_delete';}).length : 0;
+         return '<th style="padding:10px 8px;text-align:center;border-bottom:1px solid var(--rim);min-width:100px">'
+           +'<div style="display:flex;flex-direction:column;align-items:center;gap:3px">'
+           + '<div style="width:32px;height:32px;border-radius:9px;background:'+info.color+'22;color:'+info.color+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">'+info.icon+'</div>'
+           + '<div style="font-size:11px;font-weight:800;color:var(--ink)">'+r+'</div>'
+           + '<div style="font-size:9.5px;color:var(--ink3);font-weight:600">'+count+' módulos</div>'
+           +'</div></th>';
+       }).join('')
+    +'</tr></thead>'
+    +'<tbody>'
+    // Una fila por grupo seguida por sus módulos
+    +Object.keys(grupos).map(function(grupo){
+       return '<tr><td colspan="'+(roles.length+1)+'" style="padding:14px 14px 6px 14px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);background:var(--surf2)">'+grupo+'</td></tr>'
+         +grupos[grupo].map(function(m){
+           return '<tr style="transition:background .12s" onmouseover="this.style.background=\'var(--surf2)\'" onmouseout="this.style.background=\'\'">'
+             +'<td style="padding:9px 14px;font-size:12px;font-weight:600;color:var(--ink);position:sticky;left:0;background:inherit;border-right:1px solid var(--rim)">'+m.label+'</td>'
+             +roles.map(function(r){
+               var hasAccess = (ROL_PERMISOS[r]||[]).indexOf(m.id)>=0;
+               var isAdmin = r==='Administrador';
+               // El rol Administrador siempre tiene acceso a todo: no se puede editar.
+               var clickAttr = isAdmin ? '' : ' onclick="toggleRolePerm(\''+r+'\',\''+m.id+'\')"';
+               var cellCursor = isAdmin ? 'default' : 'pointer';
+               var cellTitle = isAdmin ? 'Administrador siempre tiene acceso' : (hasAccess?'Quitar acceso':'Conceder acceso');
+               return '<td style="text-align:center;padding:8px;cursor:'+cellCursor+'" title="'+cellTitle+'"'+clickAttr+'>'
+                 +(hasAccess
+                   ? '<div style="display:inline-flex;width:24px;height:24px;border-radius:6px;background:'+ROLES_INFO[r].color+';color:#fff;align-items:center;justify-content:center;font-size:13px;font-weight:900" title="Con acceso">✓</div>'
+                   : '<div style="display:inline-flex;width:24px;height:24px;border-radius:6px;background:var(--surf2);color:var(--ink3);align-items:center;justify-content:center;font-size:12px;border:1px solid var(--rim)" title="Sin acceso">–</div>')
+                 +'</td>';
+             }).join('')
+             +'</tr>';
+         }).join('');
+     }).join('')
+    // Fila especial: acciones destructivas (perm_delete)
+    +'<tr><td colspan="'+(roles.length+1)+'" style="padding:14px 14px 6px 14px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--red);background:var(--surf2)"> Acciones críticas</td></tr>'
+    +'<tr>'
+    + '<td style="padding:9px 14px;font-size:12px;font-weight:600;color:var(--ink);position:sticky;left:0;background:inherit;border-right:1px solid var(--rim)">Eliminar registros</td>'
+    + roles.map(function(r){
+        var hasDelete = (ROL_PERMISOS[r]||[]).indexOf('perm_delete')>=0;
+        var isAdmin = r==='Administrador';
+        var clickAttr = isAdmin ? '' : ' onclick="toggleRolePerm(\''+r+'\',\'perm_delete\')"';
+        var cellCursor = isAdmin ? 'default' : 'pointer';
+        var cellTitle = isAdmin ? 'Administrador siempre puede eliminar' : (hasDelete?'Quitar permiso de eliminar':'Conceder permiso de eliminar');
+        return '<td style="text-align:center;padding:8px;cursor:'+cellCursor+'" title="'+cellTitle+'"'+clickAttr+'>'
+          +(hasDelete
+             ? '<div style="display:inline-flex;width:24px;height:24px;border-radius:6px;background:var(--red);color:#fff;align-items:center;justify-content:center;font-size:13px;font-weight:900">✓</div>'
+             : '<div style="display:inline-flex;width:24px;height:24px;border-radius:6px;background:var(--surf2);color:var(--ink3);align-items:center;justify-content:center;font-size:12px;border:1px solid var(--rim)">–</div>')
+          +'</td>';
+      }).join('')
+    +'</tr>'
+    +'</tbody></table></div>'
+    +'</div>'
+    // Tarjetas descriptivas de cada rol
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">'
+    +roles.map(function(r){
+        var info = ROLES_INFO[r];
+        var count = ROL_PERMISOS[r] ? ROL_PERMISOS[r].filter(function(p){return p!=='perm_delete';}).length : 0;
+        return '<div style="background:var(--surf);border:1px solid var(--rim);border-left:4px solid '+info.color+';border-radius:10px;padding:14px">'
+          +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+          + '<div style="width:36px;height:36px;border-radius:9px;background:'+info.color+'22;color:'+info.color+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900">'+info.icon+'</div>'
+          + '<div><div style="font-weight:800;font-size:14px">'+r+'</div><div style="font-size:10px;color:var(--ink3);font-weight:600">'+count+' módulos · <span id="role-count-'+r.replace(/\s+/g,'_')+'">0</span> usuarios</div></div>'
+          +'</div>'
+          +'<div style="font-size:11.5px;color:var(--ink2);line-height:1.5">'+info.desc+'</div>'
+          +'</div>';
+      }).join('')
+    +'</div>';
+
+  return html;
+}
+
+// TAB 3: Invitaciones pendientes
+function _usersTabInvitacionesHTML(){
+  return '<div class="card">'
+    +'<div class="ch"><div><div class="ct">Invitaciones Pendientes</div><div class="cs">Usuarios invitados que aún no han aceptado</div></div></div>'
+    +'<div id="invites-list" style="padding:0">'
+    + '<div style="padding:40px 20px;text-align:center;color:var(--ink3);font-size:12px">Cargando...</div>'
+    +'</div>'
+    +'</div>';
+}
+
+// Global cache de usuarios para filtrado local
+var _usersCache = [];
+
+// Recargar datos de Firestore y actualizar UI
+function usersReload(){
+  if(typeof DB==='undefined' || !DB.getUsuarios){
+    var ul=$('users-list'); if(ul) ul.innerHTML='<div style="padding:24px;text-align:center;color:var(--red);font-size:12px">Sin conexión a Firebase</div>';
     return;
   }
-  // Umbrales
-  var exc = parseInt(($('sc_umb_exc')&&$('sc_umb_exc').value),10);
-  var bue = parseInt(($('sc_umb_bue')&&$('sc_umb_bue').value),10);
-  var reg = parseInt(($('sc_umb_reg')&&$('sc_umb_reg').value),10);
-  if(!(reg<bue && bue<exc)){ toast('Los umbrales deben ser: regular < bueno < excelente','error'); return; }
-  SCORE_CFG.umbrales.excelente = exc;
-  SCORE_CFG.umbrales.bueno = bue;
-  SCORE_CFG.umbrales.regular = reg;
-  // Hard rejects
-  SCORE_CFG.hardReject.ingresoMinimo = parseFloat(($('sc_hr_ing')&&$('sc_hr_ing').value))||0;
-  SCORE_CFG.hardReject.ratioCuotaMax = (parseFloat(($('sc_hr_ratio')&&$('sc_hr_ratio').value))||35)/100;
-  SCORE_CFG.hardReject.historialMaloConDeuda = !!($('sc_hr_histmalo')&&$('sc_hr_histmalo').checked);
-  SCORE_CFG.hardReject.sinTelefono = !!($('sc_hr_notel')&&$('sc_hr_notel').checked);
-  SCORE_CFG.hardReject.sinReferencias = !!($('sc_hr_noref')&&$('sc_hr_noref').checked);
-  // Ratios
-  SCORE_CFG.ratios.ideal = (parseFloat(($('sc_r_ideal')&&$('sc_r_ideal').value))||20)/100;
-  SCORE_CFG.ratios.aceptable = (parseFloat(($('sc_r_ace')&&$('sc_r_ace').value))||30)/100;
-  SCORE_CFG.ratios.alto = (parseFloat(($('sc_r_alto')&&$('sc_r_alto').value))||40)/100;
-  SCORE_CFG.ratios.muyAlto = (parseFloat(($('sc_r_muyalto')&&$('sc_r_muyalto').value))||50)/100;
-  // Ingresos base
-  SCORE_CFG.ingreso.minBase = parseFloat(($('sc_ing_min')&&$('sc_ing_min').value))||100;
-  SCORE_CFG.ingreso.maxBase = parseFloat(($('sc_ing_max')&&$('sc_ing_max').value))||3000;
-
-  try{ localStorage.setItem('pagasi_config_score', JSON.stringify(SCORE_CFG)); }catch(_e){}
+  // Cargar preset de roles personalizado (si existe)
+  if(typeof _cargarRolesPermisosFirestore === 'function') _cargarRolesPermisosFirestore();
+  DB.getUsuarios().then(function(lista){
+    _usersCache = lista || [];
+    // KPIs
+    var total = _usersCache.length;
+    var online = _usersCache.filter(function(u){
+      if(!u.lastLogin) return false;
+      var h = (Date.now() - new Date(u.lastLogin).getTime()) / 3600000;
+      return h < 24;
+    }).length;
+    if($('users-kpi-total')) $('users-kpi-total').textContent = total;
+    if($('users-kpi-online')) $('users-kpi-online').textContent = online;
+    // Role counts (para las tarjetas de roles)
+    Object.keys(ROLES_INFO).forEach(function(r){
+      var count = _usersCache.filter(function(u){return u.rol===r;}).length;
+      var el = $('role-count-'+r.replace(/\s+/g,'_'));
+      if(el) el.textContent = count;
+    });
+    // Render según tab activo
+    if(S.usersTab==='usuarios') _usersRenderList();
+  }).catch(function(e){
+    var ul = $('users-list');
+    if(ul) ul.innerHTML='<div style="padding:24px;text-align:center;color:var(--red);font-size:12px">Error: '+(e.message||'sin conexión')+'</div>';
+  });
+  // Invitaciones
   if(typeof db!=='undefined' && db){
-    db.collection('config').doc('score').set(SCORE_CFG)
-      .then(function(){ toast('PolÃ­tica de riesgo guardada âœ“','success'); })
-      .catch(function(e){ toast('Error: '+e.message,'error'); });
-  } else {
-    toast('PolÃ­tica guardada (local) âœ“','success');
+    db.collection('invitaciones').where('usado','==',false).get().then(function(snap){
+      var count = snap.size;
+      if($('users-kpi-pending')) $('users-kpi-pending').textContent = count;
+      var badge = $('tab-inv-badge');
+      if(badge){ badge.textContent = count; badge.style.display = count>0?'inline-block':'none'; }
+      // Render invites tab si está activo
+      if(S.usersTab==='invitaciones') _usersRenderInvites(snap);
+    }).catch(function(){
+      if($('users-kpi-pending')) $('users-kpi-pending').textContent = '0';
+    });
   }
 }
 
-// â”€â”€ Simulador interactivo â”€â”€
-function abrirScoreSimulador(){
-  $('mic').textContent=''; $('mtt').textContent='Simulador de Score'; $('msb').textContent='Prueba distintos escenarios con la polÃ­tica actual';
-  $('modal-box').className='modal modal-lg';
-  $('mbd').innerHTML = ''
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
-    + '<div>'
-    + '<div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Datos del solicitante</div>'
-    + '<div class="fg"><label>Ingreso mensual (USD)</label><input class="fi" id="sim_ing" type="number" value="500" oninput="scSimular()"></div>'
-    + '<div class="fg"><label>Ingreso familiar (USD)</label><input class="fi" id="sim_ifam" type="number" value="0" oninput="scSimular()"></div>'
-    + '<div class="fg"><label>Cuota quincenal (USD)</label><input class="fi" id="sim_cuota" type="number" value="100" oninput="scSimular()"></div>'
-    + '<div class="fg"><label>Tipo de empleo</label><select class="fs" id="sim_emp" onchange="scSimular()">'
-    + '<option value="formal">Formal</option><option value="publico">PÃºblico</option><option value="independiente">Independiente</option>'
-    + '<option value="comerciante">Comerciante</option><option value="delivery">Delivery</option><option value="remesas">Remesas</option>'
-    + '<option value="informal" selected>Informal</option></select></div>'
-    + '<div class="fg"><label>AntigÃ¼edad (aÃ±os)</label><select class="fs" id="sim_ant" onchange="scSimular()"><option value="1">&lt;1</option><option value="2">1-2</option><option value="3" selected>2-3</option><option value="5">3+</option></select></div>'
-    + '<div class="fg"><label>Historial crediticio</label><select class="fs" id="sim_hist" onchange="scSimular()"><option value="bueno">Bueno</option><option value="ninguno" selected>Ninguno</option><option value="mora_leve">Mora leve pasada</option><option value="malo">Malo</option></select></div>'
-    + '<div class="fg"><label>Deudas actuales</label><select class="fs" id="sim_deuda" onchange="scSimular()"><option value="no" selected>No</option><option value="menores">Menores</option><option value="graves">Graves</option></select></div>'
-    + '<div class="fg"><label>Dependientes</label><select class="fs" id="sim_dep" onchange="scSimular()"><option value="0" selected>0</option><option value="1">1</option><option value="2">2</option><option value="3">3+</option></select></div>'
-    + '<div class="fg"><label>Banco</label><select class="fs" id="sim_banco" onchange="scSimular()"><option value="activa" selected>Cuenta activa</option><option value="inactiva">Inactiva</option><option value="no">Sin cuenta</option></select></div>'
-    + '<div class="fg"><label>Vivienda</label><select class="fs" id="sim_viv" onchange="scSimular()"><option value="propia">Propia</option><option value="familiar" selected>Familiar</option><option value="alquilada">Alquilada</option></select></div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-    + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="sim_fiador" onchange="scSimular()" style="accent-color:var(--p1)">Tiene fiador</label>'
-    + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="sim_tel" onchange="scSimular()" checked style="accent-color:var(--p1)">Tiene telÃ©fono</label>'
-    + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="sim_ref" onchange="scSimular()" checked style="accent-color:var(--p1)">Tiene referencia</label>'
-    + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="sim_rem" onchange="scSimular()" style="accent-color:var(--p1)">Recibe remesas</label>'
-    + '</div>'
-    + '<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">'
-    + '<button class="btn btn-g btn-xs" onclick="scSimPreset(\'alexis\')">Preset: Alexis ($10k)</button>'
-    + '<button class="btn btn-g btn-xs" onclick="scSimPreset(\'carlos\')">Preset: Carlos ($200)</button>'
-    + '<button class="btn btn-g btn-xs" onclick="scSimPreset(\'ideal\')">Preset: Cliente ideal</button>'
-    + '</div>'
-    + '</div>'
-    + '<div id="sim-resultado" style="padding:14px;background:var(--surf2);border-radius:12px;border:1px solid var(--rim);align-self:start">Cargando...</div>'
-    + '</div>';
-  $('mft').innerHTML='<button class="btn btn-p" onclick="closeM()">Cerrar</button>';
-  $('ov').style.display='flex';
-  setTimeout(scSimular, 30);
+function _usersFiltroUpdate(){
+  _usersRenderList();
 }
 
-function scSimPreset(p){
-  if(p==='alexis'){
-    $('sim_ing').value=10000; $('sim_ifam').value=0; $('sim_cuota').value=150;
-    $('sim_emp').value='formal'; $('sim_ant').value='5';
-    $('sim_hist').value='ninguno'; $('sim_deuda').value='no'; $('sim_dep').value='1';
-    $('sim_banco').value='activa'; $('sim_viv').value='propia';
-    $('sim_fiador').checked=false; $('sim_tel').checked=true; $('sim_ref').checked=true; $('sim_rem').checked=false;
-  } else if(p==='carlos'){
-    $('sim_ing').value=200; $('sim_ifam').value=0; $('sim_cuota').value=60;
-    $('sim_emp').value='informal'; $('sim_ant').value='2';
-    $('sim_hist').value='ninguno'; $('sim_deuda').value='no'; $('sim_dep').value='2';
-    $('sim_banco').value='inactiva'; $('sim_viv').value='alquilada';
-    $('sim_fiador').checked=false; $('sim_tel').checked=true; $('sim_ref').checked=true; $('sim_rem').checked=false;
-  } else if(p==='ideal'){
-    $('sim_ing').value=1500; $('sim_ifam').value=0; $('sim_cuota').value=150;
-    $('sim_emp').value='formal'; $('sim_ant').value='5';
-    $('sim_hist').value='bueno'; $('sim_deuda').value='no'; $('sim_dep').value='0';
-    $('sim_banco').value='activa'; $('sim_viv').value='propia';
-    $('sim_fiador').checked=true; $('sim_tel').checked=true; $('sim_ref').checked=true; $('sim_rem').checked=false;
-  }
-  scSimular();
-}
-
-// Motor de cÃ¡lculo reutilizable (usa SCORE_CFG actual)
-// Recalcula el score de un cliente a partir de sus datos actuales y la configuraciÃ³n SCORE_CFG vigente
-function recalcularScoreCliente(c, persistir){
-  if(!c) return 0;
-  var input = {
-    ing: parseFloat(c.ingreso || c.wz_ing || 0),
-    ifam: parseFloat(c.ingreso_familiar || c.wz_ifam || 0),
-    cuotaQ: parseFloat(c.cuotaQ || 0),
-    emp: c.tipo_empleo || c.trabajo_tipo || c.emp || 'informal',
-    ant: c.antiguedad_laboral || c.ant || '3',
-    hist: c.historial_crediticio || c.hist || 'ninguno',
-    deuda: c.deudas_actuales || c.deuda || 'no',
-    dep: parseInt(c.dependientes || c.dep || 0, 10),
-    banco: c.cuenta_bancaria || c.banco || 'activa',
-    viv: c.tipo_vivienda || c.viv || 'familiar',
-    rem: c.recibe_remesas === 'si' || c.recibe_remesas === true || c.rem === 'si',
-    fiador: !!c.fiador || !!c.tieneFiador,
-    tieneTel: !!(c.tel || c.telefono),
-    tieneRef: !!((c.referencias && c.referencias.length) || c.ref1_nombre || c.ref2_nombre),
-    // Datos Cashea
-    cashea_estado: c.cashea_estado || '',
-    cashea_total_compras: c.cashea_total_compras || '',
-    cashea_deuda: parseFloat(c.cashea_deuda || 0)
-  };
-  var result = calcularScoreConCfg(input);
-  var nuevoScore = result && result.total ? result.total : (result || 0);
-  if(persistir && nuevoScore && c.id){
-    c.score_indexa = nuevoScore;
-    c.score_actualizado = new Date().toISOString();
-    if(typeof DB !== 'undefined' && DB.saveCliente) DB.saveCliente(c);
-  }
-  return nuevoScore;
-}
-
-// Recalcula el score de TODOS los clientes (usado al cambiar configuraciÃ³n o bajo demanda)
-function recalcularTodosLosScores(){
-  if(!S.clientes || !S.clientes.length) return 0;
-  var n = 0;
-  S.clientes.forEach(function(c){
-    if(c.eliminado) return;
-    var viejo = c.score_indexa || 0;
-    var nuevo = recalcularScoreCliente(c, true);
-    if(nuevo && nuevo !== viejo) n++;
-  });
-  return n;
-}
-
-// Recalcula todos los scores y refresca la lista visualmente
-function recalcularScoresYRecargar(){
-  if(!confirm('Â¿Recalcular el score de todos los clientes con la configuraciÃ³n actual?\n\nEsto puede tardar unos segundos.')) return;
-  toast('Recalculando scores...','info');
-  setTimeout(function(){
-    var n = recalcularTodosLosScores();
-    toast('âœ“ Recalculados '+n+' cliente'+(n!==1?'s':'')+' con cambios','success');
-    var list = $('clienteList');
-    if(list) list.innerHTML = renderClienteList(($('clienteQ')&&$('clienteQ').value)||'');
-  }, 80);
-}
-
-// Recalcula score al vuelo en la ficha y actualiza la UI
-function recalcularScoreClienteYRefrescar(cliId){
-  var c = S.clientes.find(function(x){return x.id===cliId;});
-  if(!c){ toast('Cliente no encontrado','error'); return; }
-  var viejo = c.score_indexa || 0;
-  var nuevo = recalcularScoreCliente(c, true);
-  if(nuevo === viejo){
-    toast('Score ya estÃ¡ actualizado: '+nuevo,'info');
-  } else {
-    toast('Score actualizado: '+viejo+' â†’ '+nuevo,'success');
-    // Refrescar la ficha
-    closeM();
-    setTimeout(function(){ verCliente(cliId); }, 200);
-  }
-}
-
-function calcularScoreConCfg(input){
-  var ing = parseFloat(input.ing||0);
-  var ifam = parseFloat(input.ifam||0);
-  var cuotaQ = parseFloat(input.cuotaQ||0);
-  var emp = input.emp||'informal';
-  var ant = String(input.ant||'3');
-  var hist = input.hist||'ninguno';
-  var deuda = input.deuda||'no';
-  var dep = parseInt(input.dep||0, 10);
-  var banco = input.banco||'activa';
-  var viv = input.viv||'familiar';
-  var rem = input.rem?'si':'no';
-  var fiador = !!input.fiador;
-  var tieneTel = input.tieneTel!==false;
-  var tieneRef = input.tieneRef!==false;
-
-  var ingEf = Math.max(ing, ifam);
-  var ratio = (cuotaQ>0 && ingEf>0) ? cuotaQ*2/ingEf : 0; // cuota mensual / ingreso
-
-  // f1: historial
-  var f1 = {ninguno:50, bueno:100, mora_leve:35, malo:5}[hist]||50;
-  if(deuda==='menores') f1 = Math.max(0, f1-12);
-  else if(deuda==='graves') f1 = Math.max(0, f1-35);
-  if(banco==='activa') f1 = Math.min(100, f1+10);
-  else if(banco==='no') f1 = Math.max(0, f1-10);
-  f1 = Math.max(0, Math.min(100, f1));
-
-  // f2: capacidad
-  var minB = SCORE_CFG.ingreso.minBase||100;
-  var maxB = SCORE_CFG.ingreso.maxBase||3000;
-  var f2 = 0;
-  if(ingEf>=minB){
-    f2 = Math.min(100, ((ingEf-minB)/(maxB-minB))*100);
-  }
-  var ingBase = {formal:80, publico:70, independiente:60, comerciante:65, delivery:70, remesas:55, informal:30}[emp]||50;
-  f2 = f2 * (ingBase/70);
-  if(dep===1) f2 = Math.max(0, f2-8);
-  else if(dep===2) f2 = Math.max(0, f2-18);
-  else if(dep>=3) f2 = Math.max(0, f2-28);
-  if(viv==='propia') f2 = Math.min(100, f2+10);
-  else if(viv==='alquilada') f2 = Math.max(0, f2-8);
-  if(ratio>0){
-    if(ratio<=SCORE_CFG.ratios.ideal) f2 = Math.min(100, f2+12);
-    else if(ratio<=SCORE_CFG.ratios.aceptable) {}
-    else if(ratio<=SCORE_CFG.ratios.alto) f2 = Math.max(0, f2-18);
-    else if(ratio<=SCORE_CFG.ratios.muyAlto) f2 = Math.max(0, f2-38);
-    else f2 = Math.max(0, f2-60);
-  }
-  f2 = Math.max(0, Math.min(100, f2));
-
-  // f3: estabilidad laboral
-  var empBase = {formal:78, publico:70, independiente:65, comerciante:68, delivery:70, remesas:60, informal:38}[emp]||30;
-  var antBase = {'1':0, '2':10, '3':22, '5':35}[ant]||0;
-  var f3 = Math.min(100, empBase+antBase);
-  if(rem==='si'&&emp!=='remesas') f3 = Math.min(100, f3+8);
-  f3 = Math.max(0, Math.min(100, f3));
-
-  // f4: garantÃ­as
-  var f4 = 25;
-  if(fiador) f4 = Math.min(100, f4+45);
-  if(viv==='propia') f4 = Math.min(100, f4+15);
-  else if(viv==='familiar') f4 = Math.min(100, f4+5);
-  if(banco==='activa') f4 = Math.min(100, f4+10);
-  else if(banco==='no') f4 = Math.max(0, f4-10);
-  f4 = Math.max(0, Math.min(100, f4));
-
-  // f5: confianza
-  var f5 = 50;
-  if(deuda==='no') f5 = Math.min(100, f5+10);
-  else if(deuda==='graves') f5 = Math.max(0, f5-15);
-  if(rem==='si') f5 = Math.min(100, f5+8);
-  f5 = Math.max(0, Math.min(100, f5));
-
-  // Hard rejects
-  var motivosRechazo = [];
-  if(SCORE_CFG.hardReject.ingresoMinimo>0 && ingEf<SCORE_CFG.hardReject.ingresoMinimo)
-    motivosRechazo.push('Ingreso ('+ingEf+') < mÃ­nimo requerido ('+SCORE_CFG.hardReject.ingresoMinimo+')');
-  if(SCORE_CFG.hardReject.ratioCuotaMax>0 && ratio>SCORE_CFG.hardReject.ratioCuotaMax)
-    motivosRechazo.push('Ratio cuota/ingreso '+(Math.round(ratio*100))+'% > mÃ¡ximo '+(Math.round(SCORE_CFG.hardReject.ratioCuotaMax*100))+'%');
-  if(SCORE_CFG.hardReject.historialMaloConDeuda && hist==='malo' && deuda==='graves')
-    motivosRechazo.push('Historial malo + deudas graves');
-  if(SCORE_CFG.hardReject.sinTelefono && !tieneTel) motivosRechazo.push('Sin telÃ©fono de contacto');
-  if(SCORE_CFG.hardReject.sinReferencias && !tieneRef) motivosRechazo.push('Sin referencias');
-
-  // Score
-  var p = SCORE_CFG.pesos;
-  var raw = (f1*p.f1 + f2*p.f2 + f3*p.f3 + f4*p.f4 + f5*p.f5)/100*10;
-  var score = motivosRechazo.length>0 ? 300 : Math.max(300, Math.min(850, Math.round(300+(raw/1000)*550)));
-
-  var decision, decisionColor;
-  if(motivosRechazo.length>0){ decision='RECHAZO AUTOMÃTICO'; decisionColor='var(--red)'; }
-  else if(score>=SCORE_CFG.umbrales.excelente){ decision='APROBACIÃ“N AUTOMÃTICA'; decisionColor='var(--green)'; }
-  else if(score>=SCORE_CFG.umbrales.bueno){ decision='APROBAR'; decisionColor='var(--p1)'; }
-  else if(score>=SCORE_CFG.umbrales.regular){ decision='REVISAR MANUALMENTE'; decisionColor='var(--amber)'; }
-  else { decision='RECHAZAR'; decisionColor='var(--red)'; }
-
-  return {score:score, decision:decision, decisionColor:decisionColor, motivosRechazo:motivosRechazo,
-          f1:Math.round(f1), f2:Math.round(f2), f3:Math.round(f3), f4:Math.round(f4), f5:Math.round(f5),
-          ratio:ratio, ingEf:ingEf};
-}
-
-function scSimular(){
-  var res = calcularScoreConCfg({
-    ing: ($('sim_ing')&&$('sim_ing').value)||0,
-    ifam: ($('sim_ifam')&&$('sim_ifam').value)||0,
-    cuotaQ: ($('sim_cuota')&&$('sim_cuota').value)||0,
-    emp: ($('sim_emp')&&$('sim_emp').value)||'informal',
-    ant: ($('sim_ant')&&$('sim_ant').value)||'3',
-    hist: ($('sim_hist')&&$('sim_hist').value)||'ninguno',
-    deuda: ($('sim_deuda')&&$('sim_deuda').value)||'no',
-    dep: ($('sim_dep')&&$('sim_dep').value)||0,
-    banco: ($('sim_banco')&&$('sim_banco').value)||'activa',
-    viv: ($('sim_viv')&&$('sim_viv').value)||'familiar',
-    rem: $('sim_rem')&&$('sim_rem').checked,
-    fiador: $('sim_fiador')&&$('sim_fiador').checked,
-    tieneTel: !($('sim_tel')&&!$('sim_tel').checked),
-    tieneRef: !($('sim_ref')&&!$('sim_ref').checked)
-  });
-
-  var host = $('sim-resultado');
+function _usersRenderList(){
+  var host = $('users-list');
   if(!host) return;
+  var q = ($('users-search') && $('users-search').value || '').toLowerCase().trim();
+  var rolFilter = ($('users-filter-rol') && $('users-filter-rol').value) || '';
 
-  var html = '';
-  html += '<div style="text-align:center;padding:10px 0 14px;border-bottom:1px solid var(--rim);margin-bottom:14px">'
-    + '<div style="font-size:56px;font-weight:900;letter-spacing:-2px;line-height:1;color:'+res.decisionColor+'">'+res.score+'</div>'
-    + '<div style="font-size:12px;color:var(--ink3);margin-top:4px">Score Indexa / 850</div>'
-    + '<div style="display:inline-block;margin-top:10px;padding:6px 14px;background:'+res.decisionColor+';color:#fff;font-weight:800;font-size:12px;letter-spacing:.3px;border-radius:999px">'+res.decision+'</div>'
-    + '</div>';
-
-  if(res.motivosRechazo.length){
-    html += '<div style="padding:10px 12px;background:var(--reds);border-left:3px solid var(--red);border-radius:8px;margin-bottom:12px">'
-      + '<div style="font-size:11px;font-weight:800;color:var(--red);text-transform:uppercase;margin-bottom:4px"> Rechazo automÃ¡tico por:</div>';
-    res.motivosRechazo.forEach(function(m){
-      html += '<div style="font-size:12px;color:var(--ink);margin-top:3px">â€¢ '+m+'</div>';
-    });
-    html += '</div>';
-  }
-
-  html += '<div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Desglose por factor</div>';
-  SCORE_FACTOR_META.forEach(function(f){
-    var v = res[f.k];
-    var peso = SCORE_CFG.pesos[f.k];
-    var contrib = Math.round(v*peso/100);
-    var col = v>=70?'var(--green)':v>=50?'var(--p1)':v>=30?'var(--amber)':'var(--red)';
-    html += '<div style="padding:8px 0;border-bottom:1px solid var(--rim)">'
-      + '<div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px">'
-      + '<span style="font-weight:700;color:var(--ink)">'+f.nombre+' <span style="color:var(--ink3);font-weight:500">(peso '+peso+'%)</span></span>'
-      + '<span style="font-weight:900;color:'+col+';font-family:var(--fd)">'+v+'/100</span>'
-      + '</div>'
-      + '<div style="height:5px;background:var(--rim);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+v+'%;background:'+col+'"></div></div>'
-      + '<div style="font-size:10px;color:var(--ink3);margin-top:3px">Aporta '+contrib+' pts al score</div>'
-      + '</div>';
+  var list = _usersCache.filter(function(u){
+    if(rolFilter && u.rol!==rolFilter) return false;
+    if(!q) return true;
+    var blob = ((u.nombre||'')+' '+(u.email||'')+' '+(u.rol||'')).toLowerCase();
+    return blob.indexOf(q)>=0;
   });
-  if(res.ratio>0){
-    var r = Math.round(res.ratio*100);
-    var rcol = r<=20?'var(--green)':r<=30?'var(--p1)':r<=40?'var(--amber)':'var(--red)';
-    html += '<div style="margin-top:10px;padding:10px 12px;background:var(--gs);border-radius:9px">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center">'
-      + '<div style="font-size:11px;color:var(--ink2);font-weight:700">Ratio cuota mensual / ingreso</div>'
-      + '<div style="font-size:18px;font-weight:900;color:'+rcol+'">'+r+'%</div>'
-      + '</div></div>';
+
+  if(!list.length){
+    host.innerHTML = '<div style="padding:50px 20px;text-align:center"><div style="font-size:32px;margin-bottom:10px;opacity:.4"></div>'
+      +'<div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:4px">Sin usuarios</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-bottom:14px">'+(q||rolFilter?'No se encontraron usuarios con esos criterios':'Usa "Invitar Usuario" para agregar el primero')+'</div>'
+      +(!q && !rolFilter ? '<button class="btn btn-p btn-sm" onclick="openInviteUser()">＋ Invitar al primero</button>':'')
+      +'</div>';
+    return;
   }
-  host.innerHTML = html;
+
+  // Ordenar: admin primero, luego por último login
+  list.sort(function(a,b){
+    if(a.rol==='Administrador' && b.rol!=='Administrador') return -1;
+    if(b.rol==='Administrador' && a.rol!=='Administrador') return 1;
+    var la = a.lastLogin ? new Date(a.lastLogin).getTime() : 0;
+    var lb = b.lastLogin ? new Date(b.lastLogin).getTime() : 0;
+    if(la !== lb) return lb - la;
+    return (a.nombre||a.email||'').localeCompare(b.nombre||b.email||'');
+  });
+
+  host.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;padding:14px">'
+    + list.map(function(u){
+    var nombre = u.nombre || u.email || '?';
+    var initials = nombre.split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase();
+    var info = ROLES_INFO[u.rol] || {color:'#888', icon:'?'};
+    var esMio = S.currentUser && S.currentUser.uid === u.uid;
+    var mods = (u.permisos||[]).filter(function(p){return p!=='perm_delete';}).length;
+    var lastTxt = 'Nunca';
+    var lastColor = 'var(--ink3)';
+    var isOnline = false;
+    if(u.lastLogin){
+      var mins = Math.floor((Date.now() - new Date(u.lastLogin).getTime())/60000);
+      if(mins < 5){ lastTxt='En línea'; lastColor='var(--green)'; isOnline=true; }
+      else if(mins < 60){ lastTxt='hace '+mins+'m'; lastColor='var(--ink2)'; }
+      else if(mins < 1440){ lastTxt='hace '+Math.floor(mins/60)+'h'; lastColor='var(--ink3)'; }
+      else if(mins < 10080){ lastTxt='hace '+Math.floor(mins/1440)+'d'; lastColor='var(--ink3)'; }
+      else lastTxt = new Date(u.lastLogin).toLocaleDateString('es-VE');
+    }
+
+    return '<div class="card" onclick="openUserPanel(\''+u.uid+'\')" style="cursor:pointer;padding:14px 16px;border-top:3px solid '+info.color+'">'
+      // Avatar + nombre
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+        +'<div style="position:relative;flex-shrink:0">'
+          +'<div style="width:38px;height:38px;border-radius:50%;background:'+info.color+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff">'+initials+'</div>'
+          +(isOnline?'<div style="position:absolute;bottom:1px;right:1px;width:9px;height:9px;border-radius:50%;background:var(--green);border:2px solid var(--surf)"></div>':'')
+        +'</div>'
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="font-weight:800;font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
+            +nombre+(esMio?' <span style="background:var(--gs);color:var(--p1);font-size:8.5px;font-weight:800;padding:1px 5px;border-radius:4px;vertical-align:middle">TÚ</span>':'')
+          +'</div>'
+          +'<div style="font-size:10.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">'+(u.email||'')+'</div>'
+        +'</div>'
+      +'</div>'
+      // Stats fila
+      +'<div style="display:flex;gap:10px;margin-bottom:10px;font-size:11px">'
+        +'<div style="flex:1">'
+          +'<div style="color:var(--ink3);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Rol</div>'
+          +'<div style="font-weight:800;color:'+info.color+'">'+info.icon+' '+(u.rol||'—')+'</div>'
+        +'</div>'
+        +'<div style="flex:1;text-align:right">'
+          +'<div style="color:var(--ink3);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Último acceso</div>'
+          +'<div style="font-weight:700;color:'+lastColor+'">'+lastTxt+'</div>'
+        +'</div>'
+      +'</div>'
+      // Módulos bar
+      +'<div style="display:flex;align-items:center;gap:6px;padding-top:8px;border-top:1px solid var(--rim2)">'
+        +'<div style="flex:1;height:4px;background:var(--rim);border-radius:2px;overflow:hidden">'
+          +'<div style="height:100%;width:'+Math.round(mods/20*100)+'%;background:'+info.color+';border-radius:2px"></div>'
+        +'</div>'
+        +'<span style="font-size:10px;font-weight:700;color:var(--ink3);flex-shrink:0">'+mods+' módulos</span>'
+        +'<span style="font-size:14px;color:var(--ink3);flex-shrink:0">›</span>'
+      +'</div>'
+    +'</div>';
+  }).join('') + '</div>';
 }
 
-// â”€â”€ AnÃ¡lisis del portafolio actual â”€â”€
-function abrirScoreAnalisis(){
-  $('mic').textContent=''; $('mtt').textContent='AnÃ¡lisis del Portafolio'; $('msb').textContent='DistribuciÃ³n de score y mora actual';
+function _usersRenderInvites(snap){
+  var host = $('invites-list');
+  if(!host) return;
+  if(!snap || snap.empty){
+    host.innerHTML = '<div style="padding:50px 20px;text-align:center"><div style="font-size:32px;margin-bottom:10px;opacity:.4">️</div>'
+      +'<div style="font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:4px">Sin invitaciones pendientes</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-bottom:14px">Todas las invitaciones que envíes aparecerán aquí hasta que sean aceptadas</div>'
+      +'<button class="btn btn-p btn-sm" onclick="openInviteUser()">＋ Enviar nueva invitación</button>'
+      +'</div>';
+    return;
+  }
+
+  host.innerHTML = snap.docs.map(function(d){
+    var inv = d.data();
+    var info = ROLES_INFO[inv.rol] || {color:'#888',icon:'?'};
+    var age = inv.createdAt ? Math.floor((Date.now()-new Date(inv.createdAt).getTime())/86400000) : 0;
+    var ageTxt = age===0 ? 'hoy' : age===1 ? 'ayer' : 'hace '+age+' días';
+    var isOld = age >= 7;
+    return '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--rim)">'
+      +'<div style="width:38px;height:38px;border-radius:50%;background:'+info.color+'22;color:'+info.color+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">'+info.icon+'</div>'
+      +'<div style="flex:1;min-width:0">'
+      + '<div style="font-size:13px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+inv.email+'</div>'
+      + '<div style="font-size:11px;color:var(--ink3)">Invitado como <b style="color:'+info.color+'">'+inv.rol+'</b> · '+(inv.permisos||[]).length+' módulos · <span style="color:'+(isOld?'var(--amber)':'var(--ink3)')+'">'+ageTxt+'</span></div>'
+      +'</div>'
+      +'<button class="btn btn-g btn-xs" onclick="copiarLink(\''+d.id+'\')">Copiar link</button>'
+      +'<button class="btn btn-d btn-xs" onclick="revocarInvitacion(\''+d.id+'\')">Revocar</button>'
+      +'</div>';
+  }).join('');
+}
+
+function revocarInvitacion(token){
+  if(!confirm('¿Revocar esta invitación? El link dejará de funcionar.')) return;
+  if(!db) return;
+  db.collection('invitaciones').doc(token).delete()
+    .then(function(){ toast('Invitación revocada','info'); usersReload(); })
+    .catch(function(e){ toast('Error: '+e.message,'error'); });
+}
+
+// ── Panel lateral de detalle del usuario ──
+function openUserPanel(uid){
+  var u = _usersCache.find(function(x){return x.uid===uid;});
+  if(!u){ toast('Usuario no encontrado','error'); return; }
+
+  var info = ROLES_INFO[u.rol] || {color:'#2563EB', icon:'?', desc:'Sin descripción'};
+  var esMio = !!(S.currentUser && S.currentUser.uid === uid);
+  var nombre = String(u.nombre || u.email || 'Sin nombre');
+  var initials = nombre.split(' ').slice(0,2).map(function(w){return (w[0]||'').toUpperCase();}).join('') || '?';
+
+  var panel = document.getElementById('user-side-panel');
+  if(!panel){
+    panel = document.createElement('div');
+    panel.id = 'user-side-panel';
+    panel.className = 'user-panel';
+    document.body.appendChild(panel);
+  }
+  var bd = document.getElementById('user-panel-backdrop');
+  if(!bd){
+    bd = document.createElement('div');
+    bd.id = 'user-panel-backdrop';
+    bd.className = 'user-panel-backdrop';
+    bd.addEventListener('click', closeUserPanel);
+    document.body.appendChild(bd);
+  }
+  while(panel.firstChild) panel.removeChild(panel.firstChild);
+
+  function el(tag, opts){
+    var e = document.createElement(tag);
+    if(!opts) return e;
+    if(opts.cls) e.className = opts.cls;
+    if(opts.text != null) e.textContent = opts.text;
+    if(opts.html != null) e.innerHTML = opts.html;
+    if(opts.style) { for(var k in opts.style) e.style[k] = opts.style[k]; }
+    if(opts.onclick) e.addEventListener('click', opts.onclick);
+    if(opts.title) e.title = opts.title;
+    if(opts.ariaLabel) e.setAttribute('aria-label', opts.ariaLabel);
+    return e;
+  }
+
+  // ─── HERO (claro, sin gradiente oscuro) ───
+  var hero = el('div', { cls:'up-hero' });
+  // Borde de acento superior del color del rol
+  hero.style.borderTop = '3px solid ' + info.color;
+
+  var btnClose = el('button', { cls:'up-close', text:'✕', ariaLabel:'Cerrar', onclick: closeUserPanel });
+  hero.appendChild(btnClose);
+
+  var heroRow = el('div', { cls:'up-hero-row' });
+  var avatar = el('div', { cls:'up-avatar', text:initials });
+  avatar.style.background = info.color;
+  heroRow.appendChild(avatar);
+
+  var heroInfo = el('div', { cls:'up-hero-info' });
+  var nameDiv = el('div', { cls:'up-hero-name' });
+  nameDiv.textContent = nombre;
+  if(esMio){
+    var tag = el('span', { cls:'up-mine-tag', text:'TÚ' });
+    nameDiv.appendChild(document.createTextNode(' '));
+    nameDiv.appendChild(tag);
+  }
+  heroInfo.appendChild(nameDiv);
+  heroInfo.appendChild(el('div', { cls:'up-hero-email', text: u.email || 'sin email' }));
+
+  var roleBadge = el('div', { cls:'up-hero-role' });
+  roleBadge.style.background = info.color + '18';
+  roleBadge.style.color = info.color;
+  roleBadge.appendChild(el('span', { cls:'up-role-icon', text: info.icon }));
+  roleBadge.appendChild(document.createTextNode(' '+(u.rol || 'Sin rol')));
+  heroInfo.appendChild(roleBadge);
+
+  heroRow.appendChild(heroInfo);
+  hero.appendChild(heroRow);
+  panel.appendChild(hero);
+
+  // ─── BODY ───
+  var body = el('div', { cls:'up-body' });
+
+  // Estado y último acceso
+  var estadoTxt = 'Activo', estadoColor = 'var(--green)', estadoIcon = '✓';
+  if(u.suspendido){
+    estadoTxt = 'Suspendido'; estadoColor = 'var(--red)'; estadoIcon = '⊘';
+  } else if(u.demoExpira){
+    var ahora = Date.now();
+    var expira = new Date(u.demoExpira).getTime();
+    if(expira > ahora){
+      var horasRest = Math.floor((expira-ahora)/3600000);
+      var minsRest = Math.floor(((expira-ahora)%3600000)/60000);
+      estadoTxt = 'Demo · '+horasRest+'h '+minsRest+'m'; estadoColor = 'var(--amber)'; estadoIcon = '⏱';
+    } else { estadoTxt = 'Demo expirado'; estadoColor = 'var(--red)'; estadoIcon = '⊘'; }
+  }
+
+  var lastTxt = 'Nunca', lastColor = 'var(--ink3)';
+  if(u.lastLogin){
+    var d = new Date(u.lastLogin);
+    var mins = Math.floor((Date.now()-d.getTime())/60000);
+    if(mins < 5){ lastTxt='En línea ahora'; lastColor='var(--green)'; }
+    else if(mins < 60){ lastTxt='hace '+mins+' min'; lastColor='var(--ink2)'; }
+    else if(mins < 1440){ lastTxt='hace '+Math.floor(mins/60)+'h'; lastColor='var(--ink2)'; }
+    else lastTxt = d.toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'2-digit'});
+  }
+
+  var perms = Array.isArray(u.permisos) ? u.permisos : [];
+  var permCount = perms.filter(function(p){return p!=='perm_delete';}).length;
+
+  var stats = el('div', { cls:'up-stats' });
+  function addStat(label, value, color){
+    var s = el('div', { cls:'up-stat' });
+    s.appendChild(el('div', { cls:'up-stat-l', text:label }));
+    var v = el('div', { cls:'up-stat-v', text:value });
+    if(color) v.style.color = color;
+    s.appendChild(v);
+    stats.appendChild(s);
+  }
+  addStat('Estado', estadoIcon+' '+estadoTxt, estadoColor);
+  addStat('Último acceso', lastTxt, lastColor);
+  addStat('Módulos', permCount+' / '+MODULOS.length, info.color);
+  body.appendChild(stats);
+
+  // Comisiones (si aplica)
+  if(u.comisiones && u.comisiones.activo){
+    var comV = u.comisiones.venta || {tipo:'fijo',valor:5};
+    var comC = u.comisiones.cobranza || {tipo:'fijo',valor:1};
+    var ventaLbl = comV.tipo === 'porc' ? comV.valor+'% del precio' : '$'+comV.valor+' fijos';
+    var cobroLbl = comC.tipo === 'porc' ? comC.valor+'% del pago' : '$'+comC.valor+' fijos';
+    var saldoDebido = 0;
+    try{ if(typeof _comGetSaldo === 'function'){ saldoDebido = _comGetSaldo(u).saldo; } }catch(e){}
+    var secCom = el('div', { cls:'up-section' });
+    var comCard = el('div', { style:{ background:'rgba(0,184,118,.07)', border:'1px solid rgba(0,184,118,.2)', borderRadius:'9px', padding:'10px 12px' } });
+    var comHd = el('div', { style:{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'6px' } });
+    comHd.appendChild(el('div', { text:'COMISIONES ACTIVAS', style:{ fontSize:'9.5px', fontWeight:'800', color:'var(--green)', letterSpacing:'.5px', textTransform:'uppercase' } }));
+    if(saldoDebido > 0.01){
+      comHd.appendChild(el('div', { text:'Debe: $'+saldoDebido.toFixed(2), style:{ fontSize:'12px', fontWeight:'800', color:'var(--green)', fontFamily:'var(--fd)' } }));
+    }
+    comCard.appendChild(comHd);
+    comCard.innerHTML += '<div style="font-size:11px;color:var(--ink2)">Venta: <b>'+ventaLbl+'</b> · Cobro: <b>'+cobroLbl+'</b></div>';
+    var comBtn = el('button', { cls:'btn btn-p btn-xs', text:'Ver comisiones →', style:{ marginTop:'8px', width:'100%' },
+      onclick: function(){ closeUserPanel(); nav('comisiones'); }
+    });
+    comCard.appendChild(comBtn);
+    secCom.appendChild(comCard);
+    body.appendChild(secCom);
+  }
+
+  // ── ACCIONES ──
+  var secActions = el('div', { cls:'up-section' });
+  secActions.appendChild(el('div', { cls:'up-section-title', text:'ACCIONES' }));
+  var actionsCt = el('div', { cls:'up-actions' });
+
+  function addAction(icon, title, desc, onClick){
+    var btn = el('button', { cls:'up-action-btn', onclick: onClick });
+    var ic = el('div', { cls:'up-action-ic' });
+    ic.innerHTML = icon;
+    btn.appendChild(ic);
+    var textWrap = el('div', { cls:'up-action-tx' });
+    textWrap.appendChild(el('div', { cls:'up-action-t', text:title }));
+    textWrap.appendChild(el('div', { cls:'up-action-d', text:desc }));
+    btn.appendChild(textWrap);
+    btn.innerHTML += '<span style="color:#8a92b2;font-size:16px;margin-left:auto;padding-left:8px">›</span>';
+    actionsCt.appendChild(btn);
+  }
+
+  var iconShield = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+  var iconUser   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+  var iconMail   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>';
+  var iconLink   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+  var iconPause  = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e8980a" stroke-width="2.2" stroke-linecap="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
+  var iconPlay   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00b876" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5,3 19,12 5,21"/></svg>';
+
+  addAction(iconShield, 'Editar permisos', 'Cambiar módulos con acceso', function(){ closeUserPanel(); editarUsuario(uid); });
+  addAction(iconUser,   'Cambiar rol', 'Reasignar a otro rol', function(){ closeUserPanel(); cambiarRolUsuario(uid); });
+  if(u.email){
+    addAction(iconMail, 'Email de reset', 'El usuario recibirá un correo', function(){ closeUserPanel(); cambiarPasswordUsuario(uid); });
+  }
+  addAction(iconLink, 'Link de invitación', 'Copiar enlace para reenviar', function(){ closeUserPanel(); copiarInvitacionUsuario(uid); });
+  if(!esMio){
+    var suspIc = u.suspendido ? iconPlay : iconPause;
+    addAction(suspIc,
+              u.suspendido?'Reactivar usuario':'Suspender usuario',
+              u.suspendido?'Permitir acceso de nuevo':'Bloquear sin eliminar',
+              function(){ closeUserPanel(); toggleSuspenderUsuario(uid); });
+  }
+
+  secActions.appendChild(actionsCt);
+  body.appendChild(secActions);
+
+  // ── PERMISOS — chips compactos ──
+  var secPerms = el('div', { cls:'up-section' });
+  var permsTitleRow = el('div', { style:{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'7px' } });
+  permsTitleRow.appendChild(el('div', { cls:'up-section-title', style:{ margin:'0' }, text:'MÓDULOS CON ACCESO' }));
+  permsTitleRow.appendChild(el('div', { text: permCount+' de '+MODULOS.length, style:{ fontSize:'10px', fontWeight:'700', color: info.color } }));
+  secPerms.appendChild(permsTitleRow);
+
+  var chipsWrap = el('div', { cls:'up-perms-grid' });
+  perms.filter(function(p){ return p !== 'perm_delete'; }).forEach(function(pId){
+    var mod = MODULOS.find(function(m){ return m.id === pId; });
+    var lbl = mod ? mod.label : pId;
+    var chip = el('span', { cls:'up-perm-chip has', text: lbl });
+    chip.style.borderColor = info.color + '40';
+    chip.style.background = info.color + '0f';
+    chip.style.color = info.color;
+    chipsWrap.appendChild(chip);
+  });
+  if(!permCount){
+    chipsWrap.appendChild(el('span', { text:'Sin módulos asignados', style:{ fontSize:'11.5px', color:'var(--ink3)', fontStyle:'italic' } }));
+  }
+  secPerms.appendChild(chipsWrap);
+  body.appendChild(secPerms);
+
+  // ── LOG DE ACTIVIDAD ──
+  var secLog = el('div', { cls:'up-section' });
+  secLog.appendChild(el('div', { cls:'up-section-title', text:'ACTIVIDAD RECIENTE' }));
+
+  var nombreLow = nombre.toLowerCase();
+  // Pagos registrados por este usuario
+  var pagosUser = (S.pagos||[]).filter(function(p){
+    return !p.eliminado && (p.cobrador||'').toLowerCase() === nombreLow;
+  }).sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); }).slice(0,5);
+  // Créditos creados por este usuario
+  var credsUser = (S.creds||[]).filter(function(c){
+    return !c.eliminado && (c.creadoPor||'').toLowerCase() === nombreLow;
+  }).sort(function(a,b){ return (b.fecha||b.creadoEn||'').localeCompare(a.fecha||a.creadoEn||''); }).slice(0,3);
+
+  // Combinar y ordenar
+  var logItems = [];
+  pagosUser.forEach(function(p){
+    logItems.push({ tipo:'pago', fecha:p.fecha||'', desc:'Cobro '+p.cred+' — '+p.cli, monto:p.monto, estado:p.estado });
+  });
+  credsUser.forEach(function(c){
+    logItems.push({ tipo:'credito', fecha:c.fecha||c.creadoEn||'', desc:'Crédito '+c.id+' — '+c.cli, monto:c.total, modelo:c.modelo });
+  });
+  logItems.sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); });
+  logItems = logItems.slice(0,7);
+
+  if(!logItems.length){
+    secLog.appendChild(el('div', { text:'Sin actividad registrada para este usuario', style:{ fontSize:'11.5px', color:'var(--ink3)', fontStyle:'italic', padding:'8px 0' } }));
+  } else {
+    var logWrap = el('div', { style:{ background:'var(--surf)', border:'1px solid var(--rim)', borderRadius:'10px', padding:'4px 12px' } });
+    logItems.forEach(function(it){
+      var row = el('div', { cls:'up-log-row' });
+      var icBg = it.tipo==='pago' ? 'var(--greens)' : 'var(--gs)';
+      var icColor = it.tipo==='pago' ? 'var(--green)' : 'var(--p1)';
+      var icTxt = it.tipo==='pago' ? '💵' : '📋';
+      var ic = el('div', { cls:'up-log-ic', text:icTxt });
+      ic.style.background = icBg;
+      row.appendChild(ic);
+      var txt = el('div', { style:{ flex:'1', minWidth:'0' } });
+      txt.appendChild(el('div', { text: it.desc, style:{ fontWeight:'700', fontSize:'11.5px', color:'var(--ink)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' } }));
+      var sub = el('div', { style:{ display:'flex', gap:'8px', marginTop:'1px', fontSize:'10.5px', color:'var(--ink3)' } });
+      sub.appendChild(el('span', { text: it.fecha||'—' }));
+      if(it.tipo==='pago' && it.estado){
+        var sb = el('span', { text: it.estado });
+        sb.style.color = it.estado==='confirmado' ? 'var(--green)' : 'var(--amber)';
+        sub.appendChild(sb);
+      }
+      if(it.modelo) sub.appendChild(el('span', { text: it.modelo }));
+      txt.appendChild(sub);
+      row.appendChild(txt);
+      if(it.monto){
+        var m = el('div', { text:(it.tipo==='pago'?'+':'')+fmt(it.monto), style:{ fontFamily:'var(--fd)', fontWeight:'800', fontSize:'12px', color:it.tipo==='pago'?'var(--green)':'var(--ink3)', flexShrink:'0', paddingLeft:'6px' } });
+        row.appendChild(m);
+      }
+      logWrap.appendChild(row);
+    });
+    secLog.appendChild(logWrap);
+  }
+  body.appendChild(secLog);
+
+  // Descripción del rol (compacta al final)
+  var secRol = el('div', { cls:'up-section' });
+  var rolCard = el('div', { cls:'up-rol-card', style:{ borderLeft:'3px solid '+info.color, background:info.color+'08' } });
+  rolCard.appendChild(el('div', { cls:'up-rol-title', text:'Sobre el rol '+(u.rol||'').toUpperCase(), style:{ color:info.color } }));
+  rolCard.appendChild(el('div', { cls:'up-rol-desc', text:(info.desc || '') }));
+  secRol.appendChild(rolCard);
+  body.appendChild(secRol);
+
+  panel.appendChild(body);
+
+  // ─── FOOTER ───
+  var footer = el('div', { cls:'up-footer' });
+  if(!esMio && canDeleteAction()){
+    var delBtn = el('button', { cls:'btn btn-d btn-sm', text:'Eliminar usuario', style:{ flex:'1' },
+      onclick: function(){ closeUserPanel(); confirmarEliminarUsuario(uid, nombre); }
+    });
+    footer.appendChild(delBtn);
+  }
+  var closeBtn = el('button', { cls:'btn btn-g btn-sm', text:'Cerrar', style:{ flex:'1' }, onclick: closeUserPanel });
+  footer.appendChild(closeBtn);
+  panel.appendChild(footer);
+
+  panel.classList.add('open');
+  bd.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeUserPanel(){
+  var panel = $('user-side-panel');
+  var bd = $('user-panel-backdrop');
+  if(panel) panel.classList.remove('open');
+  if(bd) bd.classList.remove('open');
+  document.body.style.overflow='';
+}
+
+// ── Cambiar rol ──
+function cambiarRolUsuario(uid){
+  var u = _usersCache.find(function(x){return x.uid===uid;});
+  if(!u){ toast('Usuario no encontrado','error'); return; }
+  if(!db){ toast('Requiere Firebase','error'); return; }
+
+  $('mic').textContent=''; $('mtt').textContent='Cambiar Rol'; $('msb').textContent=u.nombre||u.email;
+  $('modal-box').className='modal';
+
+  var rolesHtml = Object.keys(ROLES_INFO).map(function(r){
+    var info = ROLES_INFO[r];
+    var count = (ROL_PERMISOS[r]||[]).filter(function(p){return p!=='perm_delete';}).length;
+    var isCurrent = r === u.rol;
+    return '<label data-cr="'+r+'" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:2px solid '+(isCurrent?info.color:'var(--rim)')+';border-radius:10px;cursor:pointer;background:'+(isCurrent?info.color+'0a':'var(--surf)')+';margin-bottom:6px;transition:all .15s">'
+      +'<input type="radio" name="cr_rol" value="'+r+'" '+(isCurrent?'checked':'')+' style="margin-top:4px;accent-color:'+info.color+';flex-shrink:0">'
+      +'<div style="width:30px;height:30px;border-radius:8px;background:'+info.color+'22;color:'+info.color+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0">'+info.icon+'</div>'
+      +'<div style="flex:1;min-width:0">'
+      + '<div style="font-size:13px;font-weight:800;color:var(--ink)">'+r+' <span style="font-size:9.5px;color:var(--ink3);background:var(--surf2);padding:1px 6px;border-radius:5px;font-weight:700">'+count+' mód.</span>'+(isCurrent?' <span style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800;padding:2px 6px;border-radius:5px">ACTUAL</span>':'')+'</div>'
+      + '<div style="font-size:11px;color:var(--ink3);line-height:1.4;margin-top:2px">'+info.desc+'</div>'
+      +'</div></label>';
+  }).join('');
+
+  $('mbd').innerHTML = '<div style="padding:10px 12px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:8px;margin-bottom:12px;font-size:11.5px;color:var(--ink2);line-height:1.5"> Al cambiar el rol, los permisos se <b>resetean</b> a los del nuevo rol.</div>'
+    + '<div>'+rolesHtml+'</div>';
+
+  S.saveFn = function(){
+    var sel = document.querySelector('input[name="cr_rol"]:checked');
+    if(!sel){ toast('Selecciona un rol','error'); return false; }
+    var nuevoRol = sel.value;
+    if(nuevoRol === u.rol){ toast('Ya tiene ese rol','info'); closeM(); return true; }
+    var nuevosPerms = (ROL_PERMISOS[nuevoRol]||[]).slice();
+
+    db.collection('usuarios').doc(uid).update({
+      rol: nuevoRol,
+      permisos: nuevosPerms
+    }).then(function(){
+      u.rol = nuevoRol;
+      u.permisos = nuevosPerms;
+      toast('Rol cambiado a '+nuevoRol+' ✓','success');
+      closeM();
+      usersReload();
+    }).catch(function(e){
+      toast('Error: '+e.message,'error');
+    });
+    return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Aplicar cambio</button>';
+  $('ov').style.display='flex';
+}
+
+// ── Suspender / reactivar ──
+function toggleSuspenderUsuario(uid){
+  var u = _usersCache.find(function(x){return x.uid===uid;});
+  if(!u){ toast('Usuario no encontrado','error'); return; }
+  if(!db){ toast('Requiere Firebase','error'); return; }
+  var nuevoEstado = !u.suspendido;
+  var accion = nuevoEstado ? 'suspender' : 'reactivar';
+  if(!confirm('¿Seguro que quieres '+accion+' a '+(u.nombre||u.email)+'?')) return;
+
+  db.collection('usuarios').doc(uid).update({
+    suspendido: nuevoEstado,
+    suspendidoEn: nuevoEstado ? new Date().toISOString() : null,
+    suspendidoPor: nuevoEstado ? ((S.currentUser&&S.currentUser.nombre)||'Admin') : null
+  }).then(function(){
+    u.suspendido = nuevoEstado;
+    toast('Usuario '+(nuevoEstado?'suspendido':'reactivado')+' ✓','success');
+    usersReload();
+  }).catch(function(e){
+    toast('Error: '+e.message,'error');
+  });
+}
+
+// ── Cambiar contraseña ──
+function cambiarPasswordUsuario(uid){
+  var u = _usersCache.find(function(x){return x.uid===uid;});
+  if(!u){ toast('Usuario no encontrado','error'); return; }
+
+  $('mic').textContent=''; $('mtt').textContent='Cambiar Contraseña'; $('msb').textContent=u.nombre||u.email;
+  $('modal-box').className='modal';
+  $('mbd').innerHTML = '<div style="padding:10px 12px;background:var(--gs);border-left:3px solid var(--p1);border-radius:8px;margin-bottom:12px;font-size:11.5px;color:var(--ink2);line-height:1.5">'
+    +'Establece una nueva contraseña para este usuario. El sistema le enviará un email con las nuevas credenciales.</div>'
+    +'<div class="fg" style="margin-bottom:10px"><label>Nueva contraseña *</label><input class="fi" id="cp_new" type="password" placeholder="Mín. 6 caracteres" autocomplete="new-password"></div>'
+    +'<div class="fg"><label>Confirmar contraseña *</label><input class="fi" id="cp_confirm" type="password" placeholder="Repetir la contraseña" autocomplete="new-password"></div>'
+    +'<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">'
+    +'<button type="button" class="btn btn-g btn-xs" onclick="_cpGen(8)">Generar 8 caracteres</button>'
+    +'<button type="button" class="btn btn-g btn-xs" onclick="_cpGen(12)">Generar 12 caracteres</button>'
+    +'</div>';
+
+  S.saveFn = function(){
+    var pw = ($('cp_new')&&$('cp_new').value)||'';
+    var pc = ($('cp_confirm')&&$('cp_confirm').value)||'';
+    if(pw.length < 6){ toast('La contraseña debe tener al menos 6 caracteres','error'); return false; }
+    if(pw !== pc){ toast('Las contraseñas no coinciden','error'); return false; }
+    if(!auth){
+      toast('Firebase Auth no esta disponible. No se puede actualizar la contrasena.','error');
+      return false;
+    }
+
+    // En el admin SDK del cliente no se pueden cambiar passwords de otros usuarios directamente.
+    // Lo que hacemos es disparar "password reset email" que Firebase envía al usuario.
+    if(auth.sendPasswordResetEmail && u.email){
+      auth.sendPasswordResetEmail(u.email).then(function(){
+        toast('Email de restablecimiento enviado a '+u.email,'success');
+        closeM();
+      }).catch(function(e){
+        toast('Error: '+e.message,'error');
+      });
+    } else {
+      toast('Proveedor de auth no soporta esta acción. Usa link de invitación.','error');
+    }
+    return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Enviar email de reset</button>';
+  $('ov').style.display='flex';
+}
+
+function _cpGen(len){
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  var s = '';
+  for(var i=0; i<len; i++) s += chars.charAt(Math.floor(Math.random()*chars.length));
+  var newEl = $('cp_new'), cEl = $('cp_confirm');
+  if(newEl){ newEl.value = s; newEl.type = 'text'; }
+  if(cEl){ cEl.value = s; cEl.type = 'text'; }
+  toast('Contraseña generada: '+s+' (cópiala antes de guardar)','info');
+}
+
+// ── Usuario DEMO con expiración ──
+function openCreateDemoUser(){
+  if(!db){ toast('Requiere Firebase activo','error'); return; }
+  $('mic').textContent='⏱'; $('mtt').textContent='Crear Usuario Demo'; $('msb').textContent='Acceso temporal con expiración automática';
+  $('modal-box').className='modal';
+
+  var horasOpts = [1,2,3,4,5,6,7,8,9,10,11,12,24,48,72].map(function(h){
+    var lbl = h<=12 ? h+' hora'+(h>1?'s':'') : (h/24)+' día'+(h>24?'s':'');
+    return '<option value="'+h+'"'+(h===4?' selected':'')+'>'+lbl+'</option>';
+  }).join('');
+
+  var rolesOpts = Object.keys(ROLES_INFO).map(function(r){
+    return '<option value="'+r+'"'+(r==='Vendedor'?' selected':'')+'>'+r+' — '+ROLES_INFO[r].desc.substring(0,50)+'...</option>';
+  }).join('');
+
+  $('mbd').innerHTML = '<div style="padding:12px 14px;background:linear-gradient(135deg,rgba(232,152,10,.1),rgba(232,152,10,.03));border:1px solid rgba(232,152,10,.3);border-radius:10px;margin-bottom:14px">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="font-size:22px">⏱</span><div style="font-size:13px;font-weight:800;color:var(--amber)">Usuario de acceso temporal</div></div>'
+    +'<div style="font-size:11.5px;color:var(--ink2);line-height:1.5">Crea un usuario que <b>expira automáticamente</b> después del tiempo seleccionado. Ideal para mostrar el sistema a prospectos, demostrar funcionalidades, o dar acceso puntual a consultores.</div>'
+    +'</div>'
+
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+    +'<div class="fg"><label>Email *</label><input class="fi" id="du_email" type="email" placeholder="demo@ejemplo.com" autofocus></div>'
+    +'<div class="fg"><label>Nombre</label><input class="fi" id="du_nombre" placeholder="Juan Pérez"></div>'
+    +'</div>'
+
+    +'<div class="fg" style="margin-bottom:10px"><label>Rol que tendrá durante el demo</label>'
+    +'<select class="fs" id="du_rol">'+rolesOpts+'</select></div>'
+
+    +'<div class="fg" style="margin-bottom:14px"><label>Duración del acceso</label>'
+    +'<select class="fs" id="du_horas">'+horasOpts+'</select>'
+    +'<div style="font-size:10.5px;color:var(--ink3);margin-top:4px">Después de este tiempo, el usuario no podrá iniciar sesión</div></div>'
+
+    +'<div style="padding:10px 12px;background:var(--surf2);border-radius:9px;border:1px solid var(--rim)">'
+    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:6px">Vista previa</div>'
+    +'<div id="du-preview" style="font-size:11.5px;color:var(--ink2);line-height:1.6"></div>'
+    +'</div>';
+
+  // Listener para actualizar preview
+  function updatePreview(){
+    var email = ($('du_email')&&$('du_email').value)||'(sin email)';
+    var rol = ($('du_rol')&&$('du_rol').value)||'Vendedor';
+    var horas = parseInt(($('du_horas')&&$('du_horas').value)||'4', 10);
+    var expira = new Date(Date.now() + horas*3600000);
+    var info = ROLES_INFO[rol]||{color:'#888',icon:'?'};
+    var prev = $('du-preview');
+    if(prev){
+      prev.innerHTML = '• El usuario <b>'+email+'</b><br>'
+        +'• Tendrá rol <span style="color:'+info.color+';font-weight:800">'+rol+'</span> ('+(ROL_PERMISOS[rol]||[]).filter(function(p){return p!=='perm_delete';}).length+' módulos)<br>'
+        +'• Podrá iniciar sesión por <b>'+horas+' hora'+(horas!==1?'s':'')+'</b><br>'
+        +'• Expira el <b>'+expira.toLocaleString('es-VE')+'</b><br>'
+        +'• Después de expirar, se bloqueará automáticamente';
+    }
+  }
+  ['du_email','du_rol','du_horas'].forEach(function(id){
+    var el=$(id); if(el) el.addEventListener('input', updatePreview);
+    if(el) el.addEventListener('change', updatePreview);
+  });
+  setTimeout(updatePreview, 50);
+
+  S.saveFn = function(){
+    var email = (($('du_email')&&$('du_email').value)||'').trim();
+    var nombre = (($('du_nombre')&&$('du_nombre').value)||'').trim();
+    if(!email || !email.includes('@')){ toast('Email inválido','error'); return false; }
+    var rol = ($('du_rol')&&$('du_rol').value)||'Vendedor';
+    var horas = parseInt(($('du_horas')&&$('du_horas').value)||'4', 10);
+    var expira = new Date(Date.now() + horas*3600000).toISOString();
+    var permisos = (ROL_PERMISOS[rol]||[]).slice();
+
+    var inviteToken = 'DEMO-'+Date.now()+'-'+_randomToken(16);
+    var inviteLink = _buildInviteLink(inviteToken, email);
+
+    showLoader('Creando acceso demo...','');
+    DB.saveInvitacion(inviteToken, {
+      token: inviteToken,
+      email: email,
+      nombre: nombre || 'Usuario Demo',
+      rol: rol,
+      permisos: permisos,
+      creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
+      creadoEn: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      usado: false,
+      isDemo: true,
+      demoHoras: horas,
+      demoExpira: expira,
+      inviteLink: inviteLink
+    }).then(function(){
+      hideLoader();
+      closeM();
+      if(typeof usersReload==='function') setTimeout(usersReload, 300);
+      setTimeout(function(){ mostrarLinkInvitacion(inviteLink, email); }, 250);
+      toast('Demo creado · Expira en '+horas+'h','success');
+    }).catch(function(e){
+      hideLoader();
+      toast('Error: '+e.message,'error');
+    });
+    return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Crear acceso demo ⏱</button>';
+  $('ov').style.display='flex';
+}
+
+// ══════════════════════════════════════════
+
+function _buildInviteLink(token, email){
+  var base = window.location.href.split('?')[0];
+  var qs = '?invite=' + encodeURIComponent(token);
+  if(email) qs += '&ie=' + encodeURIComponent(email);
+  return base + qs;
+}
+function _randomToken(len){
+  len = len || 32;
+  var chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  var out='';
+  for(var i=0;i<len;i++) out += chars.charAt(Math.floor(Math.random()*chars.length));
+  return out;
+}
+// ══════════════════════════════════════════
+// GESTIÓN DE USUARIOS
+// ══════════════════════════════════════════
+function openInviteUser(){
+  if(!db||!auth){ toast('Requiere Firebase activo para invitar usuarios','error'); return; }
+  $('mic').textContent='USR'; $('mtt').textContent='Invitar Nuevo Usuario'; $('msb').textContent='Elige un rol y envía la invitación';
   $('modal-box').className='modal modal-lg';
 
-  // Recopilar datos
-  var clientes = (S.clientes||[]).filter(function(c){return !c.eliminado;});
-  var bandas = [
-    {lbl:'Bajo (<450)', min:300, max:450, col:'var(--red)'},
-    {lbl:'Regular (450-549)', min:450, max:550, col:'rgba(232,152,10,.7)'},
-    {lbl:'Bueno (550-624)', min:550, max:625, col:'var(--amber)'},
-    {lbl:'Muy bueno (625-749)', min:625, max:750, col:'var(--p1)'},
-    {lbl:'Excelente (â‰¥750)', min:750, max:851, col:'var(--green)'}
-  ];
-  var stats = bandas.map(function(b){
-    var enBanda = clientes.filter(function(c){ var s=c.score_indexa||0; return s>=b.min && s<b.max; });
-    var conCred = enBanda.filter(function(c){ return getCreditosCliente(c).length>0; });
-    var enMora = enBanda.filter(function(c){
-      return getCreditosCliente(c).some(function(cr){ return (cr.mora||0)>0; });
+  function buildCheckboxes(presetPerms){
+    // Agrupar por categoría
+    var grupos = {};
+    MODULOS.forEach(function(m){
+      if(!grupos[m.grupo]) grupos[m.grupo] = [];
+      grupos[m.grupo].push(m);
     });
-    var tuvoMora = enBanda.filter(function(c){
-      return getCreditosCliente(c).some(function(cr){ return cr.tuvoMoraHistorica===true || (cr.mora||0)>0; });
+    var html = '';
+    Object.keys(grupos).forEach(function(g){
+      html += '<div style="margin-bottom:10px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--ink3);padding:0 8px 4px;letter-spacing:.5px">'+g+'</div>';
+      html += grupos[g].map(function(m){
+        var checked = presetPerms ? presetPerms.indexOf(m.id)>=0 : true;
+        return '<label style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 8px;cursor:pointer;border-radius:6px;transition:background .1s" onmouseover="this.style.background=\'var(--surf2)\'" onmouseout="this.style.background=\'\'">'
+          +'<input type="checkbox" value="'+m.id+'" '+(checked?'checked':'')+' style="accent-color:var(--p1);width:14px;height:14px"> '+m.label+'</label>';
+      }).join('');
+      html += '</div>';
     });
-    return {
-      lbl:b.lbl, col:b.col,
-      total:enBanda.length,
-      conCred:conCred.length,
-      enMora:enMora.length,
-      tuvoMora:tuvoMora.length,
-      pctMora: conCred.length>0 ? Math.round(tuvoMora.length/conCred.length*100) : 0
-    };
-  });
-  var totalCli = clientes.length;
-  var maxBanda = Math.max.apply(null, stats.map(function(s){return s.total;}).concat([1]));
-
-  var html = '';
-  // Resumen
-  var totalMora = clientes.filter(function(c){
-    return getCreditosCliente(c).some(function(cr){ return (cr.mora||0)>0; });
-  }).length;
-  var totalConCred = clientes.filter(function(c){ return getCreditosCliente(c).length>0; }).length;
-  var pctMoraGlobal = totalConCred>0 ? Math.round(totalMora/totalConCred*100) : 0;
-
-  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">'
-    + '<div class="cf-kpi"><div class="cf-kpi-v">'+totalCli+'</div><div class="cf-kpi-l">Clientes totales</div></div>'
-    + '<div class="cf-kpi"><div class="cf-kpi-v">'+totalConCred+'</div><div class="cf-kpi-l">Con plan</div></div>'
-    + '<div class="cf-kpi is-r"><div class="cf-kpi-v">'+totalMora+'</div><div class="cf-kpi-l">En mora hoy</div></div>'
-    + '<div class="cf-kpi'+(pctMoraGlobal>15?' is-r':pctMoraGlobal>8?' is-a':' is-g')+'"><div class="cf-kpi-v">'+pctMoraGlobal+'%</div><div class="cf-kpi-l">Tasa de mora</div></div>'
-    + '</div>';
-
-  // DistribuciÃ³n por banda con tasa de mora
-  html += '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px 16px;margin-bottom:12px">'
-    + '<div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">DistribuciÃ³n por banda de score Â· tasa de mora histÃ³rica</div>';
-  stats.forEach(function(s){
-    var wBar = Math.round(s.total/maxBanda*100);
-    var moraCol = s.pctMora>=30?'var(--red)':s.pctMora>=15?'var(--amber)':'var(--green)';
-    html += '<div style="padding:9px 0;border-bottom:1px solid var(--rim)">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;margin-bottom:5px">'
-      + '<div style="font-weight:800;color:var(--ink)">'+s.lbl+'</div>'
-      + '<div style="display:flex;gap:14px;align-items:center">'
-      + '<span style="font-size:11px;color:var(--ink3)">'+s.conCred+' con plan</span>'
-      + '<span style="font-weight:900;color:'+moraCol+';font-family:var(--fd);font-size:13px">'+s.pctMora+'% mora</span>'
-      + '<span style="font-weight:800;color:var(--ink);font-family:var(--fd);min-width:30px;text-align:right">'+s.total+'</span>'
-      + '</div>'
-      + '</div>'
-      + '<div style="height:8px;background:var(--surf2);border-radius:4px;overflow:hidden">'
-      + '<div style="height:100%;width:'+wBar+'%;background:'+s.col+';border-radius:4px"></div>'
-      + '</div></div>';
-  });
-  html += '</div>';
-
-  // Alertas / recomendaciones
-  var recos = [];
-  stats.forEach(function(s, i){
-    if(i<2 && s.pctMora>=25) recos.push({tipo:'warn', txt:'La banda "'+s.lbl+'" tiene '+s.pctMora+'% de mora. Considera <b>subir el umbral de rechazo</b> o endurecer hard-rejects.'});
-    if(i>=3 && s.pctMora>=15) recos.push({tipo:'warn', txt:'La banda "'+s.lbl+'" (supuestamente buena) tiene '+s.pctMora+'% de mora. El modelo puede estar siendo <b>demasiado permisivo</b>.'});
-  });
-  if(pctMoraGlobal>15) recos.push({tipo:'crit', txt:'Tasa global de mora de <b>'+pctMoraGlobal+'%</b> es alta. Revisa los pesos de los factores y los hard-rejects.'});
-  if(pctMoraGlobal<3 && totalConCred>10) recos.push({tipo:'ok', txt:'Mora global de '+pctMoraGlobal+'% muy baja. PodrÃ­as <b>relajar requisitos</b> para captar mÃ¡s clientes sin subir demasiado el riesgo.'});
-
-  // Casos concretos
-  var alexis = clientes.find(function(c){ return /alexis\s+ramos/i.test(c.nombre||''); });
-  var carlos = clientes.find(function(c){ return /carlos\s+l[oÃ³]pez/i.test(c.nombre||''); });
-  if(alexis || carlos){
-    html += '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px 16px;margin-bottom:12px">'
-      + '<div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Casos especÃ­ficos</div>';
-    [alexis, carlos].filter(Boolean).forEach(function(c){
-      var s = c.score_indexa||0;
-      var ing = c.ingreso||0;
-      var col = s>=625?'var(--green)':s>=450?'var(--amber)':'var(--red)';
-      html += '<div style="display:flex;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--rim)">'
-        + '<div style="width:54px;text-align:center"><div style="font-size:22px;font-weight:900;color:'+col+';line-height:1">'+s+'</div><div style="font-size:9px;color:var(--ink3)">/850</div></div>'
-        + '<div style="flex:1"><div style="font-weight:800;font-size:13px">'+c.nombre+'</div>'
-        + '<div style="font-size:11px;color:var(--ink3)">Ingreso: $'+ing+'/mes Â· '+(c.trabajo||'â€”')+' Â· '+(c.ciudad||'â€”')+'</div></div>'
-        + '</div>';
-    });
-    html += '<div style="padding:10px 12px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:8px;margin-top:10px;font-size:11.5px;color:var(--ink2);line-height:1.5">'
-      + '<b>ObservaciÃ³n:</b> si un cliente con $200/mes estÃ¡ arriba de 600, probablemente el peso de "Capacidad de pago" es bajo o el ingreso mÃ­nimo base es muy permisivo. Ve a la pestaÃ±a Ratio y revisa "Ingreso mÃ­nimo base".'
-      + '</div></div>';
+    // Extra: permiso destructivo
+    html += '<div style="border-top:1px dashed var(--rim);padding-top:8px;margin-top:6px"><label style="display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 8px;cursor:pointer;border-radius:6px;color:var(--red)" onmouseover="this.style.background=\'var(--reds)\'" onmouseout="this.style.background=\'\'">'
+      +'<input type="checkbox" value="perm_delete" style="accent-color:var(--red);width:14px;height:14px"> Puede eliminar registros</label></div>';
+    return html;
   }
 
-  if(recos.length){
-    html += '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px 16px">'
-      + '<div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px"> Recomendaciones</div>';
-    recos.forEach(function(r){
-      var bg = r.tipo==='crit'?'var(--reds)':r.tipo==='warn'?'var(--ambers)':'var(--greens)';
-      var bc = r.tipo==='crit'?'var(--red)':r.tipo==='warn'?'var(--amber)':'var(--green)';
-      html += '<div style="padding:10px 12px;background:'+bg+';border-left:3px solid '+bc+';border-radius:8px;margin-bottom:6px;font-size:12px;color:var(--ink2);line-height:1.5">'+r.txt+'</div>';
-    });
-    html += '</div>';
-  }
+  // Tarjetas de roles (selección visual)
+  var rolesHtml = Object.keys(ROLES_INFO).map(function(r){
+    var info = ROLES_INFO[r];
+    var count = (ROL_PERMISOS[r]||[]).filter(function(p){return p!=='perm_delete';}).length;
+    return '<label data-rol="'+r+'" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:2px solid var(--rim);border-radius:10px;cursor:pointer;background:var(--surf);transition:all .15s" onclick="_invSelectRol(\''+r+'\')">'
+      +'<input type="radio" name="invu_rol_pick" value="'+r+'" style="margin-top:4px;accent-color:'+info.color+';flex-shrink:0">'
+      +'<div style="width:32px;height:32px;border-radius:8px;background:'+info.color+'22;color:'+info.color+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0">'+info.icon+'</div>'
+      +'<div style="flex:1;min-width:0">'
+      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px"><span style="font-size:13px;font-weight:800;color:var(--ink)">'+r+'</span><span style="font-size:9.5px;font-weight:700;color:var(--ink3);background:var(--surf2);padding:1px 6px;border-radius:5px">'+count+' mód.</span></div>'
+      + '<div style="font-size:11px;color:var(--ink3);line-height:1.4">'+info.desc+'</div>'
+      +'</div></label>';
+  }).join('');
 
-  $('mbd').innerHTML = html;
-  $('mft').innerHTML='<button class="btn btn-p" onclick="closeM()">Cerrar</button>';
+  $('mbd').innerHTML=''
+    // Sección 1: Datos
+    +'<div style="margin-bottom:16px">'
+    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);margin-bottom:8px">① Datos del usuario</div>'
+    + '<div class="fg" style="margin-bottom:10px"><label>Email *</label><input class="fi" id="invu_email" type="email" placeholder="empleado@pagasi.com" autofocus></div>'
+    + '<div class="fg"><label>Nombre</label><input class="fi" id="invu_nombre" placeholder="Nombre completo"></div>'
+    +'</div>'
+
+    // Sección 2: Rol (tarjetas)
+    +'<div style="margin-bottom:16px">'
+    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);margin-bottom:8px">② Rol del usuario</div>'
+    + '<div id="invu_roles_cards" style="display:grid;grid-template-columns:1fr;gap:6px">'+rolesHtml+'</div>'
+    + '<input type="hidden" id="invu_rol" value="Empleado">'
+    +'</div>'
+
+    // Sección 3: Permisos (personalizables)
+    +'<div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3)">③ Permisos específicos</div>'
+    + '<button type="button" class="btn btn-g btn-xs" onclick="_invTogglePerms()">Personalizar</button>'
+    + '</div>'
+    + '<div id="invu_perms_preview" style="background:var(--surf2);border-radius:10px;padding:10px 14px;font-size:11.5px;color:var(--ink2);line-height:1.5">'
+    + 'Al usuario se le asignarán automáticamente los permisos del rol <b id="invu_perms_role_name" style="color:var(--p1)">Empleado</b>. Toca "Personalizar" para ajustar módulo por módulo.'
+    + '</div>'
+    + '<div id="invu_perms_detail" style="display:none;background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px;margin-top:6px">'
+    + '<div id="inv_mod_list">'+buildCheckboxes(ROL_PERMISOS.Empleado||[])+'</div>'
+    + '</div>'
+    +'</div>';
+
+  // Preseleccionar "Empleado" por defecto
+  setTimeout(function(){
+    var def = document.querySelector('label[data-rol="Empleado"]');
+    if(def) _invSelectRol('Empleado');
+  }, 60);
+
+  S.saveFn=function(){
+    var email=(($('invu_email')&&$('invu_email').value)||'').trim();
+    var nombre=(($('invu_nombre')&&$('invu_nombre').value)||'').trim();
+    if(!email||!email.includes('@')){ toast('Ingresa un email válido','error'); return false; }
+    var rol=($('invu_rol')&&$('invu_rol').value)||'Empleado';
+    var permisos=[];
+    // Si el panel de personalización está abierto, leer checkboxes; sino usar preset del rol
+    var detailOpen = $('invu_perms_detail') && $('invu_perms_detail').style.display !== 'none';
+    if(detailOpen){
+      document.querySelectorAll('#inv_mod_list input[type=checkbox]:checked').forEach(function(cb){ permisos.push(cb.value); });
+    } else {
+      permisos = (ROL_PERMISOS[rol]||[]).slice();
+    }
+
+    var inviteToken = 'INV-'+Date.now()+'-'+_randomToken(18);
+    var inviteLink = _buildInviteLink(inviteToken, email);
+
+    showLoader('Guardando invitación...','');
+    DB.saveInvitacion(inviteToken, {
+      token: inviteToken,
+      email: email,
+      nombre: nombre || email,
+      rol: rol,
+      permisos: permisos,
+      creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
+      creadoEn: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      usado: false,
+      inviteLink: inviteLink
+    }).then(function(){
+      hideLoader();
+      closeM();
+      if(typeof usersReload==='function') setTimeout(usersReload, 300);
+      // Mostrar modal con link inmediatamente
+      setTimeout(function(){ mostrarLinkInvitacion(inviteLink, email); }, 250);
+    }).catch(function(e){
+      hideLoader();
+      toast('Error guardando invitación: '+(e.message||e),'error');
+    });
+    return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Crear invitación →</button>';
   $('ov').style.display='flex';
+}
+
+// Seleccionar rol en el modal de invitar (tarjeta activa)
+function _invSelectRol(rol){
+  var hidden = $('invu_rol');
+  if(hidden) hidden.value = rol;
+  // Marcar radio
+  var r = document.querySelector('input[name="invu_rol_pick"][value="'+rol+'"]');
+  if(r) r.checked = true;
+  // Resaltar tarjeta activa
+  document.querySelectorAll('#invu_roles_cards label').forEach(function(lbl){
+    var isActive = lbl.getAttribute('data-rol') === rol;
+    var info = ROLES_INFO[lbl.getAttribute('data-rol')] || {color:'#888'};
+    lbl.style.borderColor = isActive ? info.color : 'var(--rim)';
+    lbl.style.background = isActive ? info.color+'0a' : 'var(--surf)';
+    lbl.style.boxShadow = isActive ? '0 2px 12px '+info.color+'20' : 'none';
+  });
+  // Actualizar descripción en preview
+  var pRole = $('invu_perms_role_name');
+  if(pRole) pRole.textContent = rol;
+  // Actualizar checkboxes del detail (por si usuario lo abre después)
+  var modList = $('inv_mod_list');
+  if(modList){
+    var preset = (ROL_PERMISOS[rol] || []);
+    modList.querySelectorAll('input[type=checkbox]').forEach(function(cb){
+      cb.checked = preset.indexOf(cb.value) >= 0;
+    });
+  }
+}
+
+// Toggle entre preview de permisos y detalle editable
+function _invTogglePerms(){
+  var preview = $('invu_perms_preview');
+  var detail = $('invu_perms_detail');
+  if(!preview || !detail) return;
+  var isOpen = detail.style.display !== 'none';
+  if(isOpen){
+    detail.style.display = 'none';
+    preview.style.display = '';
+  } else {
+    detail.style.display = '';
+    preview.style.display = 'none';
+  }
+}
+
+function editarUsuario(uid){
+  if(!db){ toast('Requiere Firebase activo','error'); return; }
+  db.collection('usuarios').doc(uid).get().then(function(doc){
+    if(!doc.exists){ toast('Usuario no encontrado','error'); return; }
+    var u=doc.data();
+    $('mic').textContent='Editar'; $('mtt').textContent='Editar Permisos'; $('msb').textContent=u.nombre||u.email;
+    $('modal-box').className='modal';
+    var modCheckboxes=Object.keys(PGL).map(function(key){
+      var checked=(u.permisos||[]).includes(key);
+      return '<label style="display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 0;cursor:pointer">'
+        +'<input type="checkbox" value="'+key+'" '+(checked?'checked':'')+' style="accent-color:var(--p1)"> '+PGL[key]+'</label>';
+    }).join('') + '<label style="display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 0;cursor:pointer"><input type="checkbox" value="perm_delete" '+(((u.permisos||[]).includes('perm_delete'))?'checked':'')+' style="accent-color:var(--p1)"> '+EXTRA_PERMS.perm_delete+'</label>';
+    // Sección Comisiones
+    var comActivo = !!(u.comisiones && u.comisiones.activo);
+    var comV = (u.comisiones && u.comisiones.venta) || {tipo:'fijo',valor:5};
+    var comC = (u.comisiones && u.comisiones.cobranza) || {tipo:'fijo',valor:1};
+    var comSection = ''
+      + '<div style="margin-top:14px;padding:12px;background:var(--gs);border-radius:10px;border:1px solid var(--rim2)">'
+      + '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:700"><input type="checkbox" id="eu_com_activo" '+(comActivo?'checked':'')+' onchange="_euComToggle()" style="accent-color:var(--green);transform:scale(1.15)"> Gana comisiones</label>'
+      + '<div style="font-size:10.5px;color:var(--ink3);margin-top:3px;line-height:1.5">Cuando se active, este usuario aparecerá en el módulo <b>Comisiones</b> y se le calcularán los pagos por sus ventas y cobranzas.</div>'
+      + '<div id="eu_com_box" style="margin-top:12px;display:'+(comActivo?'block':'none')+'">'
+      + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Comisión por venta (al crear crédito)</div>'
+      + '<div style="display:grid;grid-template-columns:auto 1fr;gap:8px;margin-bottom:11px">'
+      + '<select class="fs" id="eu_com_v_tipo" style="min-width:130px"><option value="fijo" '+(comV.tipo==='fijo'?'selected':'')+'>Monto fijo ($)</option><option value="porc" '+(comV.tipo==='porc'?'selected':'')+'>Porcentaje (%)</option></select>'
+      + '<input class="fi" id="eu_com_v_val" type="number" step="0.01" min="0" value="'+(comV.valor||5)+'" placeholder="Valor">'
+      + '</div>'
+      + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Comisión por cobranza (por cada pago)</div>'
+      + '<div style="display:grid;grid-template-columns:auto 1fr;gap:8px">'
+      + '<select class="fs" id="eu_com_c_tipo" style="min-width:130px"><option value="fijo" '+(comC.tipo==='fijo'?'selected':'')+'>Monto fijo ($)</option><option value="porc" '+(comC.tipo==='porc'?'selected':'')+'>Porcentaje (%)</option></select>'
+      + '<input class="fi" id="eu_com_c_val" type="number" step="0.01" min="0" value="'+(comC.valor||1)+'" placeholder="Valor">'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+    // Sección Concesionarios
+    var asignadosUsr = u.concesionarios || [];
+    var concListaActivos = (S.concesionarios||[]).filter(function(cc){return !cc.eliminado;});
+    var concSection;
+    if(concListaActivos.length === 0){
+      concSection = ''
+        + '<div style="margin-top:14px;padding:12px;background:var(--gs);border-radius:10px;border:1px solid var(--rim2)">'
+        + '<div style="font-size:12.5px;font-weight:700">Concesionarios asignados</div>'
+        + '<div style="font-size:10.5px;color:var(--ink3);margin-top:5px;line-height:1.5">Aún no has creado concesionarios. Para asignar al usuario a una sede específica, primero <a href="#" onclick="closeM();nav(\'concesionarios\');return false" style="color:var(--p1)">crea concesionarios</a>. Mientras tanto, este usuario ve todos los datos (vista global).</div>'
+        + '</div>';
+    } else {
+      concSection = ''
+        + '<div style="margin-top:14px;padding:12px;background:var(--gs);border-radius:10px;border:1px solid var(--rim2)">'
+        + '<div style="font-size:12.5px;font-weight:700">Concesionarios asignados</div>'
+        + '<div style="font-size:10.5px;color:var(--ink3);margin-top:3px;line-height:1.5">Marca a qué sedes tiene acceso. Si no marcas ninguna y el rol es Administrador/Gerente, ve todos. Para roles inferiores, sin asignación → ve todos los datos (vista global).</div>'
+        + '<div style="margin-top:10px;display:grid;gap:5px;max-height:180px;overflow-y:auto;padding:4px">'
+        + concListaActivos.map(function(cc){
+            var checked = asignadosUsr.indexOf(cc.id) !== -1;
+            return '<label style="display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 8px;cursor:pointer;background:'+(checked?'rgba(74,107,255,.1)':'var(--surf2)')+';border-radius:6px;border:1px solid '+(checked?'rgba(74,107,255,.3)':'transparent')+'">'
+              + '<input type="checkbox" class="eu-conc-cb" value="'+cc.id+'" '+(checked?'checked':'')+' style="accent-color:var(--p1)">'
+              + '<div style="flex:1"><div style="font-weight:'+(checked?'700':'600')+'">'+cc.nombre+'</div>'
+              + (cc.ciudad ? '<div style="font-size:10px;color:var(--ink3)">'+cc.ciudad+'</div>' : '')
+              + '</div>'
+              + (cc.activo===false ? '<span style="color:var(--red);font-size:9px;font-weight:700">INACTIVO</span>' : '')
+              + '</label>';
+          }).join('')
+        + '</div>'
+        + '<div style="display:flex;gap:6px;margin-top:9px">'
+        + '<button type="button" class="btn btn-g btn-xs" onclick="document.querySelectorAll(\'.eu-conc-cb\').forEach(function(cb){cb.checked=true})">Marcar todos</button>'
+        + '<button type="button" class="btn btn-g btn-xs" onclick="document.querySelectorAll(\'.eu-conc-cb\').forEach(function(cb){cb.checked=false})">Ninguno</button>'
+        + '</div>'
+        + '</div>';
+    }
+    $('mbd').innerHTML=''
+      +'<div style="background:var(--surf2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px">'
+      +'<div style="font-weight:800">'+( u.nombre||u.email)+'</div>'
+      +'<div style="color:var(--ink3)">'+u.email+'</div></div>'
+      +'<div class="fg"><label>Rol</label><select class="fs" id="eu_rol">'
+      +(function(){
+        // Oferta de roles disponibles — incluimos el rol actual aunque sea legacy, para no perderlo por error
+        var roles = ['Administrador','Gerente','Empleado','Contador','Vendedor Concesionario'];
+        if(u.rol && roles.indexOf(u.rol)===-1) roles.push(u.rol); // preservar legacy Cobrador/Vendedor si aplica
+        return roles.map(function(r){
+          var label = r;
+          if(r==='Empleado') label = 'Empleado — dashboard, cobranza y solicitudes';
+          else if(r==='Administrador') label = 'Administrador — acceso total';
+          else if(r==='Gerente') label = 'Gerente — gestión operativa';
+          else if(r==='Contador') label = 'Contador — reportes y contabilidad';
+          else if(r==='Vendedor Concesionario') label = 'Vendedor Concesionario — solo calculadora, clientes y solicitudes';
+          else if(r==='Cobrador'||r==='Vendedor') label = r+' (legacy — migra a Empleado)';
+          return '<option value="'+r+'" '+(u.rol===r?'selected':'')+'>'+label+'</option>';
+        }).join('');
+      })()
+      +'</select></div>'
+      +'<div style="margin-top:12px"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink3);margin-bottom:8px">Módulos con acceso</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;max-height:200px;overflow-y:auto;padding:4px">'+modCheckboxes+'</div></div>'
+      + concSection
+      + comSection;
+    S.saveFn=function(){
+      var rol=($('eu_rol')&&$('eu_rol').value)||u.rol;
+      var permisos=[];
+      // Solo recoger checkboxes de PERMISOS (no el de comisiones ni los de concesionarios)
+      document.querySelectorAll('#mbd input[type=checkbox]').forEach(function(cb){
+        if(cb.id === 'eu_com_activo') return; // saltar el de comisiones
+        if(cb.classList && cb.classList.contains('eu-conc-cb')) return; // saltar concesionarios
+        if(cb.checked) permisos.push(cb.value);
+      });
+      // Recoger concesionarios asignados
+      var concesAsig = [];
+      document.querySelectorAll('.eu-conc-cb:checked').forEach(function(cb){
+        concesAsig.push(cb.value);
+      });
+      // Construir config de comisiones
+      var comActivoNuevo = !!($('eu_com_activo')&&$('eu_com_activo').checked);
+      var comNueva = comActivoNuevo ? {
+        activo: true,
+        venta: {
+          tipo: ($('eu_com_v_tipo')&&$('eu_com_v_tipo').value)||'fijo',
+          valor: parseFloat(($('eu_com_v_val')&&$('eu_com_v_val').value)||5)||0
+        },
+        cobranza: {
+          tipo: ($('eu_com_c_tipo')&&$('eu_com_c_tipo').value)||'fijo',
+          valor: parseFloat(($('eu_com_c_val')&&$('eu_com_c_val').value)||1)||0
+        }
+      } : { activo: false };
+      DB.updateUsuario(uid,{rol:rol,permisos:permisos,comisiones:comNueva,concesionarios:concesAsig});
+      // Mantener cache local sincronizado para que la UI refleje los cambios al instante.
+      try{
+        if(typeof _usersCache !== 'undefined' && Array.isArray(_usersCache)){
+          var cached = _usersCache.find(function(x){ return x.uid === uid; });
+          if(cached){ cached.rol = rol; cached.permisos = permisos; cached.comisiones = comNueva; cached.concesionarios = concesAsig; }
+        }
+      }catch(e){}
+      // Si es el usuario actual, actualizar currentUser y re-render switcher
+      try{
+        if(S.currentUser && S.currentUser.uid === uid){
+          S.currentUser.concesionarios = concesAsig;
+          S.currentUser.rol = rol;
+          if(typeof _renderConcSwitcher === 'function') _renderConcSwitcher();
+        }
+      }catch(e){}
+      closeM(); nav('users'); toast('Permisos actualizados','success'); return true;
+    };
+    $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar cambios</button>';
+    $('ov').style.display='flex';
+  }).catch(function(e){ toast('Error: '+e.message,'error'); });
+}
+
+function confirmarEliminarUsuario(uid,nombre){
+  if(!requireDeletePermission()) return;
+  $('mic').textContent='Del'; $('mtt').textContent='Eliminar Usuario'; $('msb').textContent=nombre;
+  $('modal-box').className='modal';
+  $('mbd').innerHTML='<div style="text-align:center;padding:12px 0">'
+    +'<div style="font-size:38px;margin-bottom:10px"></div>'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:6px">¿Eliminar a <em>'+nombre+'</em>?</div>'
+    +'<div style="font-size:12px;color:var(--ink3)">Esta acción eliminará el perfil del usuario del sistema. No se puede deshacer.</div>'
+    +'</div>';
+  S.saveFn=function(){
+    DB.deleteUsuario(uid);
+    closeM(); nav('users'); toast('Usuario eliminado','info'); return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-d" onclick="saveM()">Sí, eliminar</button>';
+  $('ov').style.display='flex';
+}
+
+function copiarLink(token){
+  var url = (token&&String(token).indexOf('http')===0) ? token : window.location.href.split('?')[0]+'?invite='+token;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(url).then(function(){ toast('Link copiado al portapapeles','success'); });
+  } else {
+    prompt('Copia este link de invitación:',url);
+  }
+}
+function mostrarLinkInvitacion(link, email){
+  $('mic').textContent=''; $('mtt').textContent='Link de invitación'; $('msb').textContent='Envíalo a '+email;
+  $('modal-box').className='modal';
+  $('mbd').innerHTML=''
+    +'<div style="text-align:center;margin-bottom:16px">'
+    +'<div style="font-size:32px;margin-bottom:6px"></div>'
+    +'<div style="font-size:13px;font-weight:800;color:var(--ink1);margin-bottom:4px">Invitación lista para <span style="color:var(--p1)">'+email+'</span></div>'
+    +'<div style="font-size:11.5px;color:var(--ink3)">El usuario abre este link, elige su contraseña y activa su cuenta</div>'
+    +'</div>'
+    +'<div style="background:var(--surf2);border:2px solid var(--p1);border-radius:10px;padding:12px 14px;margin-bottom:14px">'
+    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--p1);margin-bottom:7px"> Link de activación</div>'
+    +'<input id="invite-link-field" type="text" value="'+link+'" readonly onclick="this.select()" style="width:100%;background:var(--bg);border:1px solid var(--rim);border-radius:6px;padding:8px 10px;font-size:11px;font-family:monospace;color:var(--ink1);outline:none;cursor:text;box-sizing:border-box">'
+    +'</div>'
+    +'<button id="inv-copy-btn" class="btn btn-p" style="width:100%;font-size:13.5px;font-weight:800;padding:11px" onclick="(function(){'
+    +'var inp=document.getElementById(\'invite-link-field\');'
+    +'inp.select();'
+    +'var copyDone=function(){'
+    +'var b=document.getElementById(\'inv-copy-btn\');'
+    +'if(b){b.textContent=\'✓ ¡Copiado!\';b.style.background=\'var(--green)\';} '
+    +'setTimeout(function(){if(b){b.textContent=\' Copiar link\';b.style.background=\'\';}},2500);'
+    +'};'
+    +'if(navigator.clipboard&&navigator.clipboard.writeText){'
+    +'navigator.clipboard.writeText(inp.value).then(copyDone).catch(function(){try{document.execCommand(\'copy\');copyDone();}catch(ex){}});'
+    +'} else {try{document.execCommand(\'copy\');copyDone();}catch(ex){toast(\'Selecciona el link y cópialo manualmente\',\'info\');}}'
+    +'})()"> Copiar link</button>';
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()" style="min-width:90px">Cerrar</button>';
+  $('ov').style.display='flex';
+  setTimeout(function(){ var f=$('invite-link-field'); if(f){f.focus();f.select();} }, 200);
+}
+
+function copiarInvitacionUsuario(uid){
+  if(!db){ toast('Requiere Firebase activo','error'); return; }
+  if(!uid){ toast('Usuario no válido','error'); return; }
+  db.collection('usuarios').doc(uid).get().then(function(doc){
+    if(!doc.exists){ toast('Usuario no encontrado','error'); return; }
+    var data = doc.data() || {};
+    if(!data.email){ toast('El usuario no tiene email válido','error'); return; }
+    // Si tiene token activo, reconstruir link y mostrarlo
+    if(data.inviteToken){
+      var link = _buildInviteLink(data.inviteToken);
+      mostrarLinkInvitacion(link, data.email);
+      return;
+    }
+    // Si no hay inviteToken, regenerar una nueva invitación
+    var nuevoToken = 'INV-'+Date.now()+'-'+_randomToken(18);
+    var nuevoLink = _buildInviteLink(nuevoToken, data.email);
+    // Buscar rol y permisos del usuario para guardarlos en la nueva invitación
+    var rol = data.rol || 'Empleado';
+    var permisos = data.permisos || [];
+    var payload = { token: nuevoToken, email: data.email, nombre: data.nombre||data.email,
+      rol: rol, permisos: permisos, creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
+      creadoEn: new Date().toISOString(), usado: false, inviteLink: nuevoLink };
+    DB.saveInvitacion(nuevoToken, payload).then(function(){
+      mostrarLinkInvitacion(nuevoLink, data.email);
+    }).catch(function(e){ toast('Error: '+(e.message||e),'error'); });
+  }).catch(function(e){
+    toast('Error: '+(e.message||e),'error');
+  });
+}
+
+
+function _getInviteToken(){
+  try { return new URLSearchParams(window.location.search).get('invite') || ''; } catch(e) { return ''; }
+}
+function _clearInviteParams(){
+  try {
+    var url = window.location.href.split('?')[0];
+    window.history.replaceState({}, document.title, url);
+  } catch(e) {}
+}
+function _showInviteScreenForDoc(docData){
+  var invSc = $('invite-screen');
+  var loginSc = $('login-screen');
+  if(loginSc) loginSc.style.display = 'none';
+  if(invSc) invSc.style.display = 'flex';
+  S.pendingInvite = docData || null;
+  if($('inv_nombre')) $('inv_nombre').value = docData && docData.nombre && docData.nombre!==docData.email ? docData.nombre : '';
+  if($('inv_pass')) $('inv_pass').value = '';
+  if($('inv_pass2')) $('inv_pass2').value = '';
+  if($('invite-err')) $('invite-err').style.display = 'none';
+  if($('inv-footer')) $('inv-footer').innerHTML = 'Invitación para <b>' + ((docData&&docData.email)||'') + '</b><br>Elige tu nombre y tu clave para activar la cuenta.';
+}
+function _resolverInvitacionPendiente(){
+  if(!auth) return;
+  var token = _getInviteToken();
+  if(!token) return;
+
+  // Extraer email del parámetro &ie= embebido en el link
+  var emailFromUrl = '';
+  try { emailFromUrl = decodeURIComponent(new URLSearchParams(window.location.search).get('ie') || ''); } catch(e){}
+
+  // Si tenemos el email desde el URL, mostrar el formulario INMEDIATAMENTE sin esperar Firestore
+  // (evita el problema de reglas de seguridad para usuarios no autenticados)
+  if(emailFromUrl){
+    var quickData = { token: token, email: emailFromUrl, nombre: '', rol: 'Empleado', permisos: [] };
+    _showInviteScreenForDoc(quickData);
+    // Luego intentar cargar datos completos de Firestore para pre-rellenar nombre/rol si es posible
+    if(db){
+      db.collection('invitaciones').doc(token).get().then(function(doc){
+        if(doc.exists){
+          var d = doc.data()||{};
+          if(d.usado){ return; } // ya usada, pero no forzamos salida (el usuario ya ve el form)
+          d.token = token;
+          _showInviteScreenForDoc(d); // actualizar con datos completos
+        }
+      }).catch(function(){}); // ignorar errores de permisos
+    }
+    return;
+  }
+
+  // Fallback: sin email en URL, intentar Firestore (flujo legacy)
+  if(!db){ if($('login-err')){ $('login-err').textContent='No se puede verificar la invitación sin conexión.'; $('login-err').style.display='block'; } return; }
+  db.collection('invitaciones').doc(token).get().then(function(doc){
+    if(doc.exists){
+      var data = doc.data() || {};
+      if(data.usado){
+        if($('login-err')){ $('login-err').textContent='Esta invitación ya fue utilizada. Inicia sesión con tu cuenta.'; $('login-err').style.display='block'; }
+        _clearInviteParams(); return;
+      }
+      data.token = token;
+      _showInviteScreenForDoc(data);
+      return;
+    }
+    // Flujo legacy: buscar en 'usuarios' por inviteToken
+    db.collection('usuarios').where('inviteToken','==',token).limit(1).get().then(function(snap){
+      if(snap.empty){
+        if($('login-err')){ $('login-err').textContent='El link de invitación no es válido o ya fue usado.'; $('login-err').style.display='block'; }
+        _clearInviteParams(); return;
+      }
+      var d = snap.docs[0]; var data = d.data()||{}; data.uid = d.id; data._legacy = true;
+      if(data.inviteStatus==='aceptada'){
+        if($('login-err')){ $('login-err').textContent='Esta invitación ya fue utilizada. Inicia sesión con tu cuenta.'; $('login-err').style.display='block'; }
+        _clearInviteParams(); return;
+      }
+      _showInviteScreenForDoc(data);
+    }).catch(function(e){
+      if($('login-err')){ $('login-err').textContent='Error al abrir la invitación: '+(e.message||e); $('login-err').style.display='block'; }
+    });
+  }).catch(function(e){
+    // Reglas de Firestore bloquean la lectura - mostrar form vacío igual
+    if(emailFromUrl){
+      _showInviteScreenForDoc({ token: token, email: emailFromUrl, nombre: '', rol: 'Empleado', permisos: [] });
+    } else {
+      if($('login-err')){ $('login-err').textContent='No se pudo verificar la invitación. Por favor intenta de nuevo.'; $('login-err').style.display='block'; }
+    }
+  });
+}
+
+function aceptarInvitacion() {
+  var nombre = (($('inv_nombre') || {}).value || '').trim();
+  var pass = (($('inv_pass') || {}).value || '');
+  var pass2 = (($('inv_pass2') || {}).value || '');
+  var errEl = $('invite-err');
+  if (errEl) errEl.style.display = 'none';
+
+  var pending = S.pendingInvite || null;
+  if (!pending || !pending.email) {
+    if (errEl) { errEl.textContent = ' Esta invitación no es válida o ya expiró'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (!nombre) {
+    if (errEl) { errEl.textContent = ' Ingresa tu nombre completo'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (pass.length < 6) {
+    if (errEl) { errEl.textContent = ' La contraseña debe tener al menos 6 caracteres'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (pass !== pass2) {
+    if (errEl) { errEl.textContent = ' Las contraseñas no coinciden'; errEl.style.display = 'block'; }
+    return;
+  }
+
+  var btn = $('inv-btn');
+  if (btn) btn.disabled = true;
+  showLoader('Activando cuenta...', '');
+
+  var token = pending.token || pending.inviteToken || null;
+  var isLegacy = !!(pending._legacy && pending.inviteTempPass);
+
+  function finalizarActivacion(user) {
+    return user.updateProfile({ displayName: nombre })
+      .then(function(){
+        var updateData = {
+          uid: user.uid,
+          nombre: nombre,
+          email: user.email,
+          rol: pending.rol || 'Empleado',
+          permisos: pending.permisos || [],
+          inviteStatus: 'aceptada',
+          inviteAcceptedAt: new Date().toISOString(),
+          debeActualizar: false
+        };
+        // Limpiar campos temporales del flujo legacy
+        if(pending.inviteTempPass !== undefined){
+          updateData.inviteTempPass = firebase.firestore.FieldValue.delete();
+          updateData.inviteToken = firebase.firestore.FieldValue.delete();
+          updateData.inviteLink = firebase.firestore.FieldValue.delete();
+        }
+        return db.collection('usuarios').doc(user.uid).set(updateData, { merge: true });
+      })
+      .then(function(){
+        if(token){ try{ DB.usarInvitacion(token, user.uid); }catch(_e){} }
+        hideLoader();
+        _clearInviteParams();
+        S.pendingInvite = null;
+        $('invite-screen').style.display = 'none';
+        init();
+      });
+  }
+
+  var p;
+  if (isLegacy) {
+    // Flujo legacy: iniciar sesión con contraseña temporal y actualizarla
+    var doAuth = Promise.resolve();
+    if(auth.currentUser && auth.currentUser.email !== pending.email) doAuth = auth.signOut();
+    p = doAuth
+      .then(function(){
+        if(auth.currentUser && auth.currentUser.email === pending.email) return auth.currentUser;
+        return auth.signInWithEmailAndPassword(pending.email, pending.inviteTempPass).then(function(r){ return r.user; });
+      })
+      .then(function(user){ return user.updatePassword(pass).then(function(){ return user; }); })
+      .then(finalizarActivacion);
+  } else {
+    // Nuevo flujo: crear el usuario directamente con la contraseña elegida
+    var doSignOut = auth.currentUser ? auth.signOut() : Promise.resolve();
+    p = doSignOut
+      .then(function(){ return auth.createUserWithEmailAndPassword(pending.email, pass); })
+      .then(function(r){ return r.user; })
+      .then(finalizarActivacion);
+  }
+
+  p.catch(function(e) {
+    hideLoader();
+    if (btn) btn.disabled = false;
+    var msg = e.message || 'Error al activar la cuenta';
+    if(e.code === 'auth/email-already-in-use') msg = 'Este email ya tiene una cuenta activa. Inicia sesión normalmente.';
+    if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+  });
+}
+
+
+function iniciarListenerSolicitudes(){}
+
+// ── Arranque con Firebase Auth ──────────────────────────────
+if (auth) {
+  auth.onAuthStateChanged(function(user) {
+    var inviteToken = _getInviteToken();
+    if (inviteToken && (!user || (S.pendingInvite && user.email===S.pendingInvite.email))) {
+      _resolverInvitacionPendiente();
+      if (!user) return;
+    }
+    if (user) {
+      $('login-screen').style.display = 'none';
+      var invSc = $('invite-screen');
+      if (invSc && !inviteToken) invSc.style.display = 'none';
+      // Cargar datos del usuario desde Firestore
+      if (db) {
+        db.collection('usuarios').doc(user.uid).get().then(function(doc) {
+          var data = doc.exists ? doc.data() : {};
+          // BUG FIX: si el doc no existe en Firestore (usuario creado antes de la
+          // colección, o que nunca pasó por el flujo de invitación), lo creamos
+          // automáticamente para que aparezca en la lista de Usuarios.
+          if (!doc.exists) {
+            var defaultRol = 'Administrador';
+            var defaultPerms = ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','conta','plan','config','users','perm_delete'];
+            var defaultData = {
+              nombre: user.displayName || (user.email||'').split('@')[0] || 'Usuario',
+              email: user.email,
+              rol: defaultRol,
+              permisos: defaultPerms,
+              creado: new Date().toISOString(),
+              autoCreado: true // marca para saber que se creó aquí, no por invitación
+            };
+            db.collection('usuarios').doc(user.uid).set(defaultData, {merge:true})
+              .then(function(){ console.log('Usuario creado en Firestore:', user.email); })
+              .catch(function(){});
+            data = defaultData;
+          } else {
+            // Si existe pero le faltan campos críticos (nombre, rol, permisos), completarlos
+            var needsUpdate = {};
+            if (!data.email) needsUpdate.email = user.email;
+            if (!data.nombre) needsUpdate.nombre = user.displayName || (user.email||'').split('@')[0] || 'Usuario';
+            if (!data.rol || data.rol === 'admin') needsUpdate.rol = 'Administrador'; // normalizar minúscula legacy
+            if (!Array.isArray(data.permisos) || data.permisos.length === 0) {
+              needsUpdate.permisos = ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','conta','plan','config','users','perm_delete'];
+            }
+            if (Object.keys(needsUpdate).length > 0) {
+              db.collection('usuarios').doc(user.uid).set(needsUpdate, {merge:true}).catch(function(){});
+              Object.assign(data, needsUpdate);
+            }
+          }
+          S.currentUser = {
+            uid: user.uid,
+            email: user.email,
+            nombre: data.nombre || user.displayName || user.email,
+            rol: data.rol || 'Administrador',
+            permisos: data.permisos || ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','conta','plan','config','users','perm_delete'],
+            concesionarios: data.concesionarios || [],
+            comisiones: data.comisiones || null
+          };
+          var sbUn = document.querySelector('.sb-un');
+          if (sbUn) sbUn.textContent = S.currentUser.nombre;
+          var sbAv = document.querySelector('.sb-av');
+          if (sbAv) sbAv.textContent = (S.currentUser.nombre||'A').split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
+          if(typeof updateSidebarFooter === 'function') updateSidebarFooter();
+          // ── Listener en tiempo real sobre el documento del usuario actual ──
+          // Si el admin cambia rol o permisos desde otra sesión, se reflejan al instante.
+          if(typeof _attachCurrentUserListener === 'function') _attachCurrentUserListener(user.uid);
+        }).catch(function(){
+          S.currentUser = { uid: user.uid, email: user.email, nombre: user.email, rol: 'Administrador', permisos: ['perm_delete'] };
+        }).finally(function(){
+          if (!window._appInited) { window._appInited = true; init(); }
+        });
+      } else {
+        S.currentUser = { uid: user.uid, email: user.email, nombre: user.displayName || user.email, rol: 'Administrador', permisos: ['perm_delete'] };
+        if (!window._appInited) { window._appInited = true; init(); }
+      }
+    } else {
+      window._appInited = false;
+      // Desuscribir listener del documento del usuario al cerrar sesión
+      if(typeof _detachCurrentUserListener === 'function') _detachCurrentUserListener();
+      var inviteToken = _getInviteToken();
+      if (inviteToken) {
+        var appRoot = $('app-root');
+        if (appRoot) appRoot.style.display = 'none';
+        _resolverInvitacionPendiente();
+      } else {
+        $('login-screen').style.display = 'flex';
+        var invSc = $('invite-screen');
+        if (invSc) invSc.style.display = 'none';
+        var appRoot = $('app-root');
+        if (appRoot) appRoot.style.display = 'none';
+        var mEl = $('login-mode');
+        if (mEl) mEl.textContent = 'Firebase Auth activo';
+      }
+    }
+  });
 }
