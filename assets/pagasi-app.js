@@ -1452,58 +1452,6 @@ function init() {
 
 // â”€â”€ AUTENTICACIÃ“N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 var _doLoginInProgress = false;
-function _permisosAdminDefault(){
-  return ['dash','centro','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','comisiones','conta','plan','config','concesionarios','scores','users','aprobaciones','perm_delete'];
-}
-function _entrarAppConUsuario(user, errEl){
-  if(!user) return Promise.reject(new Error('Firebase no devolvio usuario autenticado.'));
-  function aplicar(data){
-    data = data || {};
-    S.currentUser = {
-      uid: user.uid,
-      email: user.email,
-      nombre: data.nombre || user.displayName || (user.email||'').split('@')[0] || 'Usuario',
-      rol: data.rol || 'Administrador',
-      permisos: Array.isArray(data.permisos) && data.permisos.length ? data.permisos : _permisosAdminDefault(),
-      concesionarios: data.concesionarios || [],
-      comisiones: data.comisiones || null
-    };
-    var login = $('login-screen');
-    var invite = $('invite-screen');
-    if(login) login.style.display = 'none';
-    if(invite) invite.style.display = 'none';
-    if(typeof updateSidebarFooter === 'function') updateSidebarFooter();
-    if(typeof _attachCurrentUserListener === 'function') _attachCurrentUserListener(user.uid);
-    window._appInited = true;
-    init();
-  }
-  if(!db){
-    aplicar({});
-    return Promise.resolve();
-  }
-  return db.collection('usuarios').doc(user.uid).get().then(function(doc){
-    var data = doc.exists ? (doc.data() || {}) : {};
-    if(!doc.exists){
-      data = {
-        nombre: user.displayName || (user.email||'').split('@')[0] || 'Usuario',
-        email: user.email,
-        rol: 'Administrador',
-        permisos: _permisosAdminDefault(),
-        creado: new Date().toISOString(),
-        autoCreado: true
-      };
-      db.collection('usuarios').doc(user.uid).set(data, {merge:true}).catch(function(){});
-    }
-    aplicar(data);
-  }).catch(function(e){
-    console.warn('No se pudo cargar usuario, entrando con permisos base:', e && e.message);
-    aplicar({});
-  });
-}
-window._entrarAppConUsuario = _entrarAppConUsuario;
-if (typeof window.iniciarListenerSolicitudes !== 'function') {
-  window.iniciarListenerSolicitudes = function(){};
-}
 async function doLogin() {
   // Guard: prevent concurrent/loop calls
   if (_doLoginInProgress) return;
@@ -1546,11 +1494,7 @@ async function doLogin() {
   }
   showLoader('Iniciando sesiÃ³n...', '');
   auth.signInWithEmailAndPassword(email, pass)
-    .then(function(cred) {
-      hideLoader();
-      _doLoginInProgress = false;
-      return _entrarAppConUsuario((cred && cred.user) || (auth && auth.currentUser), errEl);
-    })
+    .then(function() { hideLoader(); _doLoginInProgress = false; })
     .catch(function(e) {
       hideLoader();
       _doLoginInProgress = false;
