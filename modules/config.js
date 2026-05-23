@@ -270,14 +270,444 @@ service cloud.firestore {
             <div class="ct" style="color:var(--red)">Auditoría de Datos</div>
             <div class="cs">Detecta pagos huérfanos (cuyo crédito fue sobreescrito o eliminado)</div>
           </div>
-          <button class="btn btn-d btn-sm" onclick="auditarPagosHuerfanos()">🔍 Analizar ahora</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-d btn-sm" onclick="auditarPagosHuerfanos()">🔍 Pagos huérfanos</button>
+            <button class="btn btn-d btn-sm" onclick="auditarCompleto()">🔬 Auditoría completa</button>
+          </div>
         </div>
         <div id="audit-resultado" style="margin-top:12px"></div>
+        <div id="audit-completo-resultado" style="margin-top:12px"></div>
       </div>
     </div>
   </div>
 
   </div>`;};
+
+
+// ══════════════════════════════════════════════════════
+// AUDITORÍA COMPLETA
+// ══════════════════════════════════════════════════════
+function auditCompleta(){
+  var div = $('audit-resultado');
+  if(!div) return;
+  div.innerHTML = '<div style="color:var(--ink3);font-size:12px;padding:10px 0">Analizando datos...</div>';
+
+  var pagos    = (S.pagos    ||[]).filter(function(p){ return !p.eliminado; });
+  var creds    = (S.creds    ||[]).filter(function(c){ return !c.eliminado; });
+  var clientes = (S.clientes ||[]).filter(function(c){ return !c.eliminado; });
+  var motos    = (S.motos    ||[]).filter(function(m){ return !m.eliminado; });
+
+  // Lookup maps
+  var credMap    = {}; creds.forEach(function(c){ credMap[c.id]=c; });
+  var clienteMap = {}; clientes.forEach(function(c){ clienteMap[String(c.id)]=c; });
+  var motoMap    = {}; motos.forEach(function(m){ motoMap[String(m.id)]=m; });
+
+  var issues = [];
+  function addIssue(categoria, severidad, entidad, id, descripcion, accion, accionFn){
+    issues.push({categoria:categoria, severidad:severidad, entidad:entidad, id:id, descripcion:descripcion, accion:accion, accionFn:accionFn});
+  }
+
+  // ── 1. PAGOS SIN CLIENTE ASOCIADO ──────────────────
+  pagos.forEach(function(p){
+    if(!p.cli || p.cli.trim()===''){
+      addIssue('Pagos','alta','Pago',p.id,'Sin nombre de cliente registrado (campo cli vacío)','Ver pago',null);
+    }
+  });
+
+  // ── 2. PAGOS HUÉRFANOS (crédito no existe o cliente distinto) ──
+  pagos.forEach(function(p){
+    if(!p.cred) return;
+    var cred = credMap[p.cred];
+    if(!cred){
+      addIssue('Pagos','alta','Pago',p.id,
+        'Crédito <strong>'+p.cred+'</strong> no existe · '+fmt(p.monto)+' · '+(p.cli||'?')+' · '+p.fecha,
+        'Eliminar',function(){ _auditEliminarPagoDirecto(p.id); });
+    } else if(p.cli && cred.cli && p.cli !== cred.cli){
+      addIssue('Pagos','alta','Pago',p.id,
+        'Cliente del pago <strong>'+p.cli+'</strong> ≠ cliente del crédito <strong>'+cred.cli+'</strong> ('+p.cred+')',
+        'Eliminar',function(){ _auditEliminarPagoDirecto(p.id); });
+    }
+  });
+
+  // ── 3. PAGOS DUPLICADOS ─────────────────────────────
+  var pagosSeen = {};
+  pagos.forEach(function(p){
+    var key = (p.cred||'')+'|'+(p.fecha||'')+'|'+(p.monto||0)+'|'+(p.metodo||'');
+    if(!pagosSeen[key]) pagosSeen[key]=[];
+    pagosSeen[key].push(p);
+  });
+  Object.keys(pagosSeen).forEach(function(k){
+    var group = pagosSeen[k];
+    if(group.length > 1){
+      group.forEach(function(p, i){
+        if(i===0) return; // keep first
+        addIssue('Pagos','media','Pago',p.id,
+          'Posible duplicado de '+group[0].id+' · mismo crédito/fecha/monto/método · '+fmt(p.monto),
+          'Eliminar',function(){ _auditEliminarPagoDirecto(p.id); });
+      });
+    }
+  });
+
+  // ── 4. CRÉDITOS SIN CLIENTE ─────────────────────────
+  creds.forEach(function(c){
+    var tieneCliente = c.clienteId
+      ? !!clienteMap[String(c.clienteId)]
+      : clientes.some(function(x){ return x.nombre===c.cli; });
+    if(!tieneCliente){
+      addIssue('Créditos','media','Crédito',c.id,
+        'No se encontró cliente asociado · cli: <strong>'+(c.cli||'vacío')+'</strong> · clienteId: '+(c.clienteId||'—'),
+        null,null);
+    }
+  });
+
+  // ── 5. CLIENTES SIN CÉDULA ──────────────────────────
+  clientes.forEach(function(c){
+    if(!c.cedula || c.cedula.trim()===''){
+      addIssue('Clientes','baja','Cliente',c.nombre||('ID '+c.id),
+        'Sin cédula registrada',null,null);
+    }
+  });
+
+  // ── 6. CÉDULAS DUPLICADAS ───────────────────────────
+  var cedulaMap = {};
+  clientes.forEach(function(c){
+    if(!c.cedula || c.cedula.trim()==='') return;
+    var norm = c.cedula.replace(/[\s.\-]/g,'').toLowerCase().replace(/^[ve]/,'');
+    if(!cedulaMap[norm]) cedulaMap[norm]=[];
+    cedulaMap[norm].push(c);
+  });
+  Object.keys(cedulaMap).forEach(function(k){
+    if(cedulaMap[k].length>1){
+      cedulaMap[k].forEach(function(c){
+        addIssue('Clientes','alta','Cliente',c.nombre||('ID '+c.id),
+          'Cédula <strong>'+c.cedula+'</strong> aparece en '+cedulaMap[k].length+' clientes: '+cedulaMap[k].map(function(x){return x.nombre;}).join(', '),
+          null,null);
+      });
+    }
+  });
+
+  // ── 7. MOTOS FINANCIADAS SIN CRÉDITO ACTIVO ─────────
+  motos.filter(function(m){ return m.estado==='financiada'; }).forEach(function(m){
+    var credActivo = creds.find(function(c){
+      return !c.eliminado && String(c.motoId)===String(m.id) && (c.estado==='activo'||c.estado==='mora');
+    });
+    if(!credActivo){
+      addIssue('Motos','media','Moto',m.modelo+' (ID '+m.id+')',
+        'Estado: financiada pero sin crédito activo vinculado (motoId='+m.id+')',
+        null,null);
+    }
+  });
+
+  // ── 8. SALDO PENDIENTE INCONSISTENTE ────────────────
+  creds.filter(function(c){ return c.estado==='activo'; }).forEach(function(c){
+    var pagadoReal = getCreditoPagosConfirmados(c);
+    var total = parseFloat(c.total)||0;
+    if(total <= 0) return;
+    // pagadoReal should not exceed total
+    if(pagadoReal > total + 0.01){
+      addIssue('Créditos','alta','Crédito',c.id,
+        'Pagos confirmados <strong>'+fmt(pagadoReal)+'</strong> superan el total del crédito <strong>'+fmt(total)+'</strong> · exceso: '+fmt(pagadoReal-total),
+        null,null);
+    }
+    // c.pagado (counter) vs real cuotas
+    var cuotaBase = parseFloat(c.cuotaQ||c.cuota)||0;
+    var pagadoCounter = parseInt(c.pagado,10)||0;
+    if(cuotaBase>0){
+      var cuotasReales = Math.floor((pagadoReal+0.000001)/cuotaBase);
+      if(Math.abs(cuotasReales - pagadoCounter) > 1){
+        addIssue('Créditos','media','Crédito',c.id,
+          'Contador de cuotas (<strong>'+pagadoCounter+'</strong>) no coincide con pagos registrados (<strong>'+cuotasReales+' cuotas</strong> según montos)',
+          null,null);
+      }
+    }
+  });
+
+  // ── RENDER ──────────────────────────────────────────
+  window._auditIssues = issues;
+
+  if(issues.length===0){
+    div.innerHTML='<div style="background:var(--greens);border-radius:8px;padding:14px;color:var(--green);font-weight:700;font-size:13px;text-align:center">✓ Auditoría completa — Sin discrepancias encontradas</div>';
+    return;
+  }
+
+  var cats = {};
+  issues.forEach(function(i){ if(!cats[i.categoria]) cats[i.categoria]=[]; cats[i.categoria].push(i); });
+
+  var sevColor = {alta:'var(--red)', media:'var(--amber)', baja:'var(--ink3)'};
+  var sevBg    = {alta:'var(--reds)', media:'var(--ambers)', baja:'var(--gs)'};
+
+  var html = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">'
+    +'<div style="font-weight:800;font-size:13px;color:var(--red)">⚠ '+issues.length+' discrepancia(s)</div>';
+  ['alta','media','baja'].forEach(function(s){
+    var n = issues.filter(function(i){return i.severidad===s;}).length;
+    if(n) html += '<span style="background:'+sevBg[s]+';color:'+sevColor[s]+';font-size:10px;font-weight:700;padding:3px 9px;border-radius:12px">'+n+' '+s+'</span>';
+  });
+  html += '</div>';
+
+  Object.keys(cats).forEach(function(cat){
+    var items = cats[cat];
+    html += '<div style="margin-bottom:16px">'
+      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--ink3);margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid var(--rim)">'+cat+' · '+items.length+' problema(s)</div>'
+      +'<div style="display:flex;flex-direction:column;gap:6px">';
+
+    items.forEach(function(issue, idx){
+      var globalIdx = issues.indexOf(issue);
+      html += '<div style="background:var(--surf2);border:1px solid var(--rim);border-left:3px solid '+sevColor[issue.severidad]+';border-radius:8px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px">'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">'
+        +'<span style="background:'+sevBg[issue.severidad]+';color:'+sevColor[issue.severidad]+';font-size:8px;font-weight:800;padding:2px 6px;border-radius:8px;text-transform:uppercase">'+issue.severidad+'</span>'
+        +'<span style="font-size:11px;font-weight:700;color:var(--ink);font-family:var(--fm)">'+issue.entidad+': '+issue.id+'</span>'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--ink2)">'+issue.descripcion+'</div>'
+        +'</div>';
+      if(issue.accion && issue.accionFn){
+        html += '<button class="btn btn-d btn-sm" style="font-size:10px;flex-shrink:0" onclick="_auditAccion('+globalIdx+')">'+issue.accion+'</button>';
+      }
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+
+  html += '<div style="margin-top:6px;font-size:10px;color:var(--ink3)">Revisá cada caso antes de tomar acción. Las correcciones son permanentes.</div>';
+  div.innerHTML = html;
+}
+
+function _auditAccion(idx){
+  var issue = (window._auditIssues||[])[idx];
+  if(issue && issue.accionFn) issue.accionFn();
+}
+
+function _auditEliminarPagoDirecto(pagoId){
+  var p = (S.pagos||[]).find(function(x){ return x.id===pagoId; });
+  if(!p) return;
+  if(!confirm('¿Eliminar el pago '+pagoId+' de '+fmt(p.monto)+' ('+( p.cli||'?')+')?\n\nEsta acción es permanente.')) return;
+  var pi = (S.pagos||[]).findIndex(function(x){ return x.id===pagoId; });
+  if(pi>=0){
+    S.pagos[pi].eliminado=true;
+    S.pagos[pi].eliminadoRazon='Eliminado desde auditoría completa';
+    S.pagos[pi].eliminadoEn=new Date().toISOString();
+    DB.savePago(S.pagos[pi]);
+  }
+  toast('Pago '+pagoId+' eliminado','success');
+  auditCompleta();
+}
+
+
+// ══════════════════════════════════════════════════════
+// AUDITORÍA COMPLETA
+// ══════════════════════════════════════════════════════
+function auditarCompleto(){
+  var div = $('audit-completo-resultado');
+  if(!div) return;
+  div.innerHTML = '<div style="color:var(--ink3);font-size:12px;padding:10px 0">Analizando datos...</div>';
+
+  var pagos    = (S.pagos    || []).filter(function(p){ return !p.eliminado; });
+  var creds    = (S.creds    || []).filter(function(c){ return !c.eliminado; });
+  var clientes = (S.clientes || []).filter(function(c){ return !c.eliminado; });
+  var motos    = (S.motos    || []).filter(function(m){ return !m.eliminado; });
+
+  // Lookup maps
+  var credMap = {};
+  creds.forEach(function(c){ credMap[c.id] = c; });
+  var cliById = {};
+  clientes.forEach(function(c){ cliById[String(c.id)] = c; });
+  var motoById = {};
+  motos.forEach(function(m){ motoById[String(m.id)] = m; });
+
+  var issues = [];
+
+  // ── 1. Pagos sin cliente asociado ──
+  pagos.forEach(function(p){
+    if(!p.cli || p.cli.trim() === ''){
+      issues.push({ cat:'Pagos', tipo:'Pago sin cliente', sev:'error',
+        desc: p.id + ' · ' + fmt(p.monto) + ' · ' + (p.fecha||'?') + ' · cred: ' + (p.cred||'?'),
+        id: p.id, col:'pagos' });
+    }
+  });
+
+  // ── 2. Pagos huérfanos (cred no existe o es de otro cliente) ──
+  pagos.forEach(function(p){
+    if(!p.cred) return;
+    var cred = credMap[p.cred];
+    if(!cred){
+      issues.push({ cat:'Pagos', tipo:'Crédito inexistente', sev:'error',
+        desc: p.id + ' · ' + (p.cli||'?') + ' · ' + fmt(p.monto) + ' apunta a ' + p.cred + ' (no existe)',
+        id: p.id, col:'pagos' });
+    } else if(p.cli && cred.cli && p.cli !== cred.cli){
+      issues.push({ cat:'Pagos', tipo:'Cliente no coincide con crédito', sev:'error',
+        desc: p.id + ' · pago de "' + p.cli + '" apunta a ' + p.cred + ' que es de "' + cred.cli + '"',
+        id: p.id, col:'pagos' });
+    }
+  });
+
+  // ── 3. Pagos duplicados (mismo cred + mismo monto + misma fecha + no inicial) ──
+  var pagoKey = {};
+  pagos.filter(function(p){ return p.estado==='confirmado' && !p.esInicial && p.tipoOperacion!=='inicial_credito'; })
+    .forEach(function(p){
+      var k = (p.cred||'') + '|' + (p.fecha||'') + '|' + (p.monto||0);
+      if(!pagoKey[k]) pagoKey[k] = [];
+      pagoKey[k].push(p);
+    });
+  Object.values(pagoKey).forEach(function(grupo){
+    if(grupo.length > 1){
+      issues.push({ cat:'Pagos', tipo:'Posible pago duplicado', sev:'warn',
+        desc: grupo.map(function(p){ return p.id; }).join(', ') + ' · ' + fmt(grupo[0].monto) + ' · ' + (grupo[0].fecha||'?') + ' · ' + (grupo[0].cred||'?'),
+        id: grupo[0].id, col:'pagos' });
+    }
+  });
+
+  // ── 4. Créditos sin cliente registrado ──
+  creds.forEach(function(c){
+    if(!c.clienteId && !c.cli){
+      issues.push({ cat:'Créditos', tipo:'Sin cliente asociado', sev:'error',
+        desc: c.id + ' · ' + (c.modelo||'?') + ' · estado: ' + (c.estado||'?'),
+        id: c.id, col:'creds' });
+    } else if(c.clienteId && !cliById[String(c.clienteId)]){
+      issues.push({ cat:'Créditos', tipo:'Cliente ID no existe', sev:'warn',
+        desc: c.id + ' · clienteId=' + c.clienteId + ' (' + (c.cli||'?') + ') no está en la lista de clientes',
+        id: c.id, col:'creds' });
+    }
+  });
+
+  // ── 5. Clientes sin cédula ──
+  clientes.forEach(function(c){
+    if(!c.cedula || c.cedula.trim() === ''){
+      issues.push({ cat:'Clientes', tipo:'Sin cédula', sev:'warn',
+        desc: 'CLI-' + c.id + ' · ' + (c.nombre||'?') + ' · ' + (c.ciudad||'?'),
+        id: c.id, col:'clientes' });
+    }
+  });
+
+  // ── 6. Cédulas duplicadas entre clientes ──
+  var cedulaMap = {};
+  clientes.forEach(function(c){
+    if(!c.cedula || c.cedula.trim() === '') return;
+    var norm = c.cedula.replace(/\s/g,'').toLowerCase();
+    if(!cedulaMap[norm]) cedulaMap[norm] = [];
+    cedulaMap[norm].push(c);
+  });
+  Object.entries(cedulaMap).forEach(function(kv){
+    var norm = kv[0], grupo = kv[1];
+    if(grupo.length > 1){
+      issues.push({ cat:'Clientes', tipo:'Cédula duplicada', sev:'error',
+        desc: grupo.map(function(c){ return (c.nombre||'?') + ' (CLI-'+c.id+')'; }).join(' / ') + ' · CI: ' + norm,
+        id: grupo[0].id, col:'clientes' });
+    }
+  });
+
+  // ── 7. Motos financiadas sin crédito activo ──
+  motos.filter(function(m){ return m.estado === 'financiada'; }).forEach(function(m){
+    var credActivo = creds.find(function(c){
+      return (String(c.motoId) === String(m.id)) && (c.estado === 'activo' || c.estado === 'pendiente_revision');
+    });
+    if(!credActivo){
+      issues.push({ cat:'Motos', tipo:'Financiada sin crédito activo', sev:'warn',
+        desc: 'MOT-' + m.id + ' · ' + (m.modelo||'?') + ' · cliente: ' + (m.cliente||'?'),
+        id: m.id, col:'motos' });
+    }
+  });
+
+  // ── 8. Créditos activos sin moto asociada ──
+  creds.filter(function(c){ return c.estado === 'activo'; }).forEach(function(c){
+    if(c.motoId && !motoById[String(c.motoId)]){
+      issues.push({ cat:'Créditos', tipo:'Moto ID no existe', sev:'warn',
+        desc: c.id + ' · ' + (c.cli||'?') + ' · motoId=' + c.motoId + ' no está en inventario',
+        id: c.id, col:'creds' });
+    }
+  });
+
+  // ── 9. Saldo no cuadra (pagado > total del crédito) ──
+  creds.filter(function(c){ return c.estado === 'activo'; }).forEach(function(c){
+    var cobrado = getCreditoPagosConfirmados(c);
+    var total = parseFloat(c.total) || 0;
+    if(total > 0 && cobrado > total * 1.05){ // 5% tolerancia por redondeo
+      issues.push({ cat:'Créditos', tipo:'Cobrado excede el total', sev:'warn',
+        desc: c.id + ' · ' + (c.cli||'?') + ' · cobrado ' + fmt(cobrado) + ' > total ' + fmt(total),
+        id: c.id, col:'creds' });
+    }
+  });
+
+  // ── 10. Créditos activos cuyo cliente tiene el estado "inactivo/eliminado" ──
+  creds.filter(function(c){ return c.estado === 'activo'; }).forEach(function(c){
+    if(!c.clienteId) return;
+    var cli = cliById[String(c.clienteId)];
+    if(cli && cli.eliminado){
+      issues.push({ cat:'Créditos', tipo:'Cliente eliminado tiene crédito activo', sev:'error',
+        desc: c.id + ' · ' + (c.cli||'?') + ' · el cliente está marcado como eliminado',
+        id: c.id, col:'creds' });
+    }
+  });
+
+  // ══ RENDER ══
+  if(issues.length === 0){
+    div.innerHTML = '<div style="background:var(--greens);border-radius:10px;padding:14px 16px;color:var(--green);font-weight:700;font-size:13px">✓ Auditoría completa sin discrepancias.</div>';
+    return;
+  }
+
+  // Group by category
+  var cats = {};
+  issues.forEach(function(i){
+    if(!cats[i.cat]) cats[i.cat] = [];
+    cats[i.cat].push(i);
+  });
+
+  var sevColor = { error: 'var(--red)', warn: 'var(--amber)' };
+  var sevBg    = { error: 'var(--reds)',  warn: 'var(--ambers)' };
+  var sevLabel = { error: 'ERROR', warn: 'AVISO' };
+
+  var html = '<div style="background:var(--reds);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
+    + '<div style="color:var(--red);font-weight:700;font-size:13px">⚠ ' + issues.length + ' discrepancia(s) encontrada(s)</div>'
+    + '<div style="display:flex;gap:10px;font-size:11px">'
+    + '<span style="color:var(--red);font-weight:700">' + issues.filter(function(i){return i.sev==='error';}).length + ' errores</span>'
+    + '<span style="color:var(--amber);font-weight:700">' + issues.filter(function(i){return i.sev==='warn';}).length + ' avisos</span>'
+    + '</div></div>';
+
+  Object.keys(cats).forEach(function(cat){
+    var list = cats[cat];
+    html += '<div style="margin-bottom:14px">'
+      + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--p1);margin-bottom:7px;padding-bottom:5px;border-bottom:2px solid var(--p1)">'
+      + cat + ' <span style="font-weight:600;color:var(--ink3)">(' + list.length + ')</span></div>'
+      + '<div style="display:flex;flex-direction:column;gap:5px">';
+
+    list.forEach(function(issue){
+      html += '<div style="background:var(--surf2);border-left:3px solid ' + sevColor[issue.sev] + ';border-radius:0 8px 8px 0;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px">'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">'
+        + '<span style="background:' + sevBg[issue.sev] + ';color:' + sevColor[issue.sev] + ';font-size:8px;font-weight:800;padding:2px 6px;border-radius:10px;flex-shrink:0">' + sevLabel[issue.sev] + '</span>'
+        + '<span style="font-size:11.5px;font-weight:700;color:var(--ink)">' + issue.tipo + '</span>'
+        + '</div>'
+        + '<div style="font-size:10.5px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + issue.desc + '</div>'
+        + '</div>'
+        + '</div>';
+    });
+
+    html += '</div></div>';
+  });
+
+  html += '<button class="btn btn-g btn-sm" style="margin-top:4px" onclick="auditExportarTxt()">↓ Exportar lista</button>';
+  div.innerHTML = html;
+  window._auditIssues = issues;
+}
+
+function auditExportarTxt(){
+  var issues = window._auditIssues || [];
+  if(!issues.length){ toast('Sin discrepancias que exportar','info'); return; }
+  var lines = ['AUDITORÍA COMPLETA PAGASI — ' + new Date().toLocaleString('es-VE'), ''];
+  var cats = {};
+  issues.forEach(function(i){ if(!cats[i.cat]) cats[i.cat]=[]; cats[i.cat].push(i); });
+  Object.keys(cats).forEach(function(cat){
+    lines.push('═══ ' + cat.toUpperCase() + ' (' + cats[cat].length + ') ═══');
+    cats[cat].forEach(function(i){
+      lines.push('[' + i.sev.toUpperCase() + '] ' + i.tipo + ': ' + i.desc);
+    });
+    lines.push('');
+  });
+  var blob = new Blob([lines.join('\n')], {type:'text/plain;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'auditoria-pagasi-' + hoyLocalISO() + '.txt';
+  a.click();
+}
 
 // ══════════════════════════════════════════════════════
 // AUDITORÍA: pagos huérfanos
