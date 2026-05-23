@@ -415,219 +415,10 @@ tbody tr:last-child td{border-bottom:none}
 /* ═══════════════════════════════════════
    MOBILE — Teléfonos (max 768px)
 ═══════════════════════════════════════ */
-@media(max-width:820px){
-  /* Layout principal */
-  .app { flex-direction: column; overflow: visible; }
 
-  /* Sidebar — oculto por defecto, overlay al abrir */
-  .sb {
-    position: fixed; top: 0; left: 0; bottom: 0;
-    width: 260px; min-width: 260px; z-index: 1000;
-    transform: translateX(-100%);
-    transition: transform .25s ease;
-    box-shadow: 4px 0 32px rgba(0,0,0,0.6);
-  }
-  .sb.open { transform: translateX(0); }
-
-  /* Overlay oscuro cuando el menú está abierto */
-  .sb-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.55); z-index: 999;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .sb-overlay.open { display: block; }
-
-  /* Mostrar todos los textos del sidebar en mobile */
-  .sb-un, .sb-ur, .sb-lbl, .si span:not(.sic), .si-bx { display: initial; }
-  .si { justify-content: flex-start; padding: 12px 14px; min-height: 44px; }
-  .sb-usr { justify-content: flex-start; }
-  .sb-logo img { height: 30px; filter:brightness(0) saturate(100%) invert(27%) sepia(94%) saturate(1652%) hue-rotate(213deg) brightness(97%); }
-
-  /* Top bar — mostrar botón de menú */
-  .topbar {
-    display: flex; align-items: center;
-    gap: 10px; padding: 0 14px;
-    height: 52px; min-height: 52px;
-    background: var(--surf);
-    border-bottom: 1px solid var(--rim);
-    position: sticky; top: 0; z-index: 100;
-    box-shadow: 0 1px 8px rgba(37,99,235,0.06);
-  }
-  .mob-menu-btn {
-    display: flex; align-items: center; justify-content: center;
-    width: 44px; height: 44px; border-radius: 8px;
-    background: var(--surf2); border: 1px solid var(--rim);
-    cursor: pointer; font-size: 18px; color: var(--ink);
-    flex-shrink: 0; touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-  }
-  #pgT { font-size: 14px; font-weight: 800; flex: 1; }
-
-  /* Contenido — full width */
-  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  #cnt { flex: 1; padding: 10px 10px 80px; }
-
-  /* Página */
-  .page { padding: 0; gap: 10px; }
-  .card { padding: 13px 13px; border-radius: 12px; margin-bottom: 10px; }
-  .ch { flex-wrap: wrap; gap: 7px; }
-  .ct { font-size: 14px; }
-
-  /* Grids de stats — 2 columnas */
-  .sg { grid-template-columns: 1fr 1fr !important; gap: 8px; }
-  .stat { padding: 11px 10px; }
-  .st-v { font-size: 20px !important; }
-  .st-l { font-size: 9px; }
-
-  /* Grids de 2 columnas → 1 columna */
-  div[style*="grid-template-columns:1fr 1fr"],
-  div[style*="grid-template-columns: 1fr 1fr"],
-  .config-grid { grid-template-columns: 1fr !important; }
-
-  /* Formularios — siempre 1 columna */
-  .fgr { flex-direction: column; gap: 8px; }
-  .fgr.c3 { flex-direction: column; }
-  .fg { min-width: 0; width: 100%; }
-  .fi, .fs, .fta { font-size: 14px; padding: 10px 12px; }
-  .fta { min-height: 80px; }
-
-  /* Tablas — colapso a cards en mobile */
-  .tw { overflow-x: visible; }
-  table { min-width: 0 !important; width: 100%; }
-
-  /* Ocultar thead — los labels vienen de data-label */
-  .tw thead { display: none; }
-
-  /* Cada fila → card */
-  .tw tbody tr {
-    display: flex;
-    flex-direction: column;
-    background: var(--surf);
-    border: 1px solid var(--rim);
-    border-radius: 12px;
-    margin-bottom: 10px;
-    padding: 10px 12px;
-    gap: 6px;
-  }
-
-  /* Cada celda → fila label:valor */
-  .tw tbody td {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 0;
-    border-bottom: 1px solid var(--rim2);
-    font-size: 12px;
-    min-width: 0;
-  }
-  .tw tbody td:last-child { border-bottom: none; }
-
-  /* Label a la izquierda desde data-label */
-  .tw tbody td::before {
-    content: attr(data-label);
-    font-size: 9.5px;
-    font-weight: 800;
-    color: var(--ink3);
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    flex-shrink: 0;
-    min-width: 70px;
-  }
-
-  /* Celda sin label (botones de acción) → full width */
-  .tw tbody td[data-label=""] ,
-  .tw tbody td:not([data-label]) {
-    justify-content: flex-end;
-    border-bottom: none;
-    padding-top: 6px;
-  }
-  .tw tbody td[data-label=""]::before,
-  .tw tbody td:not([data-label])::before { display: none; }
-
-  /* Truncar nombres largos */
-  .tw tbody td .tdm,
-  .tw tbody td div { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tw tbody td .tds { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-  /* Tablas internas (mini-tablas en modales) — scroll */
-  .modal .tw, .m-bd .tw { overflow-x: auto; }
-  .modal .tw thead, .m-bd .tw thead { display: table-header-group; }
-  .modal .tw tbody tr, .m-bd .tw tbody tr { display: table-row; background: none; border: none; border-radius: 0; margin: 0; padding: 0; }
-  .modal .tw tbody td, .m-bd .tw tbody td { display: table-cell; border-bottom: none; }
-  .modal .tw tbody td::before, .m-bd .tw tbody td::before { display: none; }
-  .modal table, .m-bd table { min-width: 480px !important; }
-
-  /* Dashboard — charts en 1 columna */
-  #cnt div[style*="grid-template-columns:1fr 1fr"][style*="gap:14px"] { grid-template-columns: 1fr !important; }
-  #cnt div[style*="grid-template-columns:1fr 1fr 1fr"][style*="gap:14px"] { grid-template-columns: 1fr 1fr !important; }
-
-  /* Kanban — 1 columna en mobile */
-  #wt-kanban { grid-template-columns: 1fr !important; }
-
-  /* Client modal tabs — scroll horizontal */
-  .cf-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; padding-bottom: 2px; }
-  .cf-tab { flex-shrink: 0; }
-
-  /* Cards de comisiones — full width */
-  #com-grid { grid-template-columns: 1fr !important; }
-
-  /* pageBanner — compacto */
-  .pb-actions { flex-wrap: wrap; gap: 6px; }
-  .pb-actions .btn { font-size: 11px; padding: 6px 10px; }
-
-  /* Modales — full width */
-  .modal, .modal-lg { width: calc(100vw - 20px) !important; max-width: none !important; margin: 0; border-radius: 16px !important; }
-  .m-hd { padding: 14px 16px; }
-  .m-bd { padding: 14px 16px; }
-
-  /* Score y actividad en cliente — cards stacked */
-  .cf-grid-3 { grid-template-columns: 1fr !important; }
-  .cf-grid-2 { grid-template-columns: 1fr !important; }
-  .cf-kpis { grid-template-columns: 1fr 1fr !important; }
-
-  /* Listas */
-  .lst { max-height: none; }
-  .li { padding: 9px 11px; }
-
-  /* Botones más grandes para touch */
-  .btn { padding: 8px 14px; font-size: 12px; min-height: 36px; }
-  .btn-sm { padding: 7px 12px; font-size: 11px; }
-  .btn-xs { padding: 5px 10px; font-size: 10px; }
-
-  /* Módulos checklist en invitar */
-  #modulos-grid label { font-size: 11px; padding: 4px 7px; }
-
-  /* Badges más pequeños */
-  .bdg { font-size: 9px; padding: 2px 7px; }
-
-  /* Login card */
-  .login-card { padding: 28px 20px 24px; margin: 16px; max-width: none; }
-  .login-wrap { padding: 0; }
-  .invite-screen .login-card { max-width: none; margin: 16px; }
-
-  /* Toast — full width en mobile */
-  .toast-wrap { left: 10px; right: 10px; bottom: 16px; }
-  .toast { max-width: none; }
-
-  /* Dashboard quick links */
-  .ql-grid { grid-template-columns: 1fr 1fr 1fr !important; }
-
-  /* Contratos — selector full width */
-  #sel-cred, #sel-ciudad { width: 100%; }
-}
 
 /* Mostrar .mob-menu-btn solo en mobile */
-.mob-menu-btn { display: none; }
 /* Overlay oculto globalmente por defecto */
-.sb-overlay { display: none; }
-@media(max-width:820px){ .mob-menu-btn { display: flex; } }
-@media(max-width:820px){
-  .sidebar { transform: translateX(-100%); transition: transform 0.25s ease; position:fixed; z-index:999; height:100vh; top:0; left:0; }
-  .sidebar.mob-open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.18); }
-  .sb-overlay { position:fixed; inset:0; z-index:998; background:rgba(0,0,0,0.4); display:none; }
-}
-
 /* Reset button styles for .si used as nav items */
 button.si {
   -webkit-appearance: none; appearance: none;
@@ -638,9 +429,7 @@ button.si {
   align-items: center; gap: 9px;
   border-radius: var(--r8); cursor: pointer;
 }
-@media(max-width:820px){
-  button.si { padding: 12px 14px; min-height: 44px; }
-}
+
 
 /* ── TOPBAR ─────────────────────────────────────── */
 .topbar {
@@ -1484,102 +1273,7 @@ tbody tr:hover td {
 /* ══════════════════════════════════════════════════
    MOBILE — COMPREHENSIVE RESPONSIVE OVERHAUL
    ══════════════════════════════════════════════════ */
-@media (max-width: 820px) {
 
-  /* ── Page container ── */
-  .page {
-    padding: 12px 14px 100px;
-  }
-
-  /* ── Dashboard KPI cards: 2 columns ── */
-  .sg {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 9px !important;
-  }
-  .sg .stat {
-    padding: 13px 13px 11px;
-  }
-  .st-v { font-size: 20px !important; }
-
-  /* ── Dashboard grid rows: stack to single column ── */
-  div[style*="grid-template-columns:2fr 1fr"],
-  div[style*="grid-template-columns:1fr 1fr"],
-  div[style*="grid-template-columns:1fr 1.5fr 1.5fr"],
-  div[style*="grid-template-columns:repeat(4,1fr)"],
-  div[style*="grid-template-columns:repeat(3,1fr)"] {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* ── Hero strip ── */
-  .hero {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 14px 16px;
-    min-height: auto;
-  }
-  .hero-tt { font-size: 18px !important; }
-  .hero-sb { font-size: 11px; }
-
-  /* ── Cards ── */
-  .card { padding: 14px 14px; }
-
-  /* ── Tables: horizontal scroll ── */
-  .tw { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .tw table { min-width: 580px; }
-
-  /* ── Bar chart height ── */
-  #dash-chart { height: 140px !important; }
-
-  /* ── List items ── */
-  .li { padding: 9px 0; }
-
-  /* ── Topbar mobile: add search + actions ── */
-  #mobile-topbar {
-    padding: 0 12px;
-    gap: 8px;
-  }
-  #mob-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-left: auto;
-  }
-
-  /* ── Mobile bottom action bar ── */
-  #mob-bottom-bar {
-    display: flex !important;
-  }
-
-  /* ── Buttons: larger tap targets ── */
-  .btn { min-height: 38px; }
-  .btn-sm { min-height: 34px; font-size: 12px; }
-  .btn-xs { min-height: 30px; }
-
-  /* ── Form grids: single column ── */
-  .fgr { grid-template-columns: 1fr !important; }
-  .fgr.c1 { grid-template-columns: 1fr !important; }
-  .fgr.c3 { grid-template-columns: 1fr 1fr !important; }
-
-  /* ── Amortization table on mobile ── */
-  .ah, .ar { font-size: 10px !important; }
-
-  /* ── Search bar pill on mobile ── */
-  .srch input { width: 100% !important; }
-
-  /* ── KPI dash cards: strip quick-access to 2 cols ── */
-  .dash-kpi { min-height: 120px; }
-
-  /* ── Donut chart: center on mobile ── */
-  #dash-chart-donut { justify-content: center; }
-
-  /* ── Sidebar nav items bigger ── */
-  .si { min-height: 48px !important; padding: 12px 16px !important; }
-  .sic { width: 24px !important; font-size: 10px !important; }
-
-  /* ── Progress bars ── */
-  .prog { height: 6px !important; }
-}
 
 /* ── Mobile bottom bar (fixed) ── */
 #mob-bottom-bar {
@@ -1867,260 +1561,7 @@ tbody tr:hover td {
 /* ══════════════ MOBILE OVERHAUL · optimización completa ═════════════ */
 /* ═══════════════════════════════════════════════════════════════════════ */
 
-@media (max-width: 820px) {
 
-  /* Base: padding general reducido, tipografía legible */
-  body, html { overflow-x: hidden; }
-  .page, .content, main { padding: 12px !important; padding-top: 10px !important; }
-
-  /* Títulos de página más compactos */
-  .page > div:first-child > div:first-child > div:first-child { font-size: 18px !important; line-height: 1.15 !important; }
-
-  /* Grids de KPIs: 2 columnas fijas en móvil */
-  .sg, .cf-kpis, .stats-grid,
-  div[style*="grid-template-columns:repeat(auto-fit,minmax(135px"],
-  div[style*="grid-template-columns:repeat(auto-fit,minmax(155px"],
-  div[style*="grid-template-columns:repeat(auto-fit,minmax(160px"],
-  div[style*="grid-template-columns:repeat(auto-fit,minmax(130px"] {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-  }
-
-  .stat { padding: 10px 11px !important; }
-  .st-v { font-size: 16px !important; }
-  .st-l { font-size: 10px !important; }
-  .st-ic { width: 28px !important; height: 28px !important; font-size: 13px !important; }
-
-  .cf-kpi-v { font-size: 16px !important; }
-  .cf-kpi-l { font-size: 9.5px !important; }
-  .cf-kpi-s { font-size: 9.5px !important; }
-
-  /* Grids de 2 y 3 columnas → 1 columna en móvil */
-  .cf-grid-2, .cf-grid-3,
-  div[style*="grid-template-columns:1fr 1fr 1fr"],
-  div[style*="grid-template-columns:1fr 1fr"],
-  div[style*="grid-template-columns:1fr 1.3fr"],
-  div[style*="grid-template-columns:1.3fr 1fr"],
-  div[style*="grid-template-columns:repeat(3,1fr)"],
-  div[style*="grid-template-columns:repeat(4,1fr)"] {
-    grid-template-columns: 1fr !important;
-    gap: 10px !important;
-  }
-
-  /* fgr c1 / c2 / c3 (form grids del sistema) */
-  .fgr, .fgr.c1, .fgr.c2, .fgr.c3 { grid-template-columns: 1fr !important; gap: 8px !important; }
-
-  /* Cards: padding reducido */
-  .card { padding: 12px !important; border-radius: 12px !important; margin-bottom: 10px !important; }
-  .ch { flex-wrap: wrap; gap: 8px; }
-  .ct { font-size: 13px !important; }
-  .cs { font-size: 10.5px !important; }
-
-  /* ── TABLAS → convertir a cards en móvil ── */
-  .tw { overflow-x: visible !important; }
-  .tw table, .tw thead, .tw tbody, .tw tr, .tw td, .tw th { display: block; width: 100% !important; }
-  .tw thead { display: none; }
-  .tw tr {
-    background: var(--surf);
-    border: 1px solid var(--rim);
-    border-radius: 10px;
-    padding: 12px;
-    margin-bottom: 8px;
-    display: flex !important;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .tw td {
-    padding: 4px 0 !important;
-    border: none !important;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 6px;
-    font-size: 12px;
-  }
-  .tw td:empty { display: none; }
-  .tw td .tdm { font-size: 12.5px; font-weight: 700; }
-  .tw td .tds { font-size: 10.5px; color: var(--ink3); }
-
-  /* La primera celda (cliente con avatar) a ancho completo como header de la card */
-  .tw tr td:first-child {
-    border-bottom: 1px solid var(--rim) !important;
-    padding-bottom: 8px !important;
-    margin-bottom: 4px !important;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  /* Última celda con botones: alineada a la derecha */
-  .tw tr td:last-child {
-    border-top: 1px solid var(--rim) !important;
-    padding-top: 8px !important;
-    margin-top: 4px !important;
-    justify-content: flex-end !important;
-  }
-
-  /* Botones en tabla-móvil */
-  .btn-xs { padding: 6px 10px !important; font-size: 11px !important; min-height: 32px; }
-  .btn-sm { padding: 7px 11px !important; font-size: 11.5px !important; min-height: 36px; }
-  .btn { padding: 9px 14px !important; font-size: 12.5px !important; min-height: 40px; }
-
-  /* Inputs touch-friendly */
-  .fi, .fs, .fta, input[type="text"], input[type="number"], input[type="tel"], input[type="email"], input[type="date"], input[type="password"], select, textarea {
-    font-size: 15px !important; /* Evita el zoom automático de iOS (<16px lo dispara) */
-    padding: 11px 12px !important;
-    min-height: 42px;
-  }
-  .fta { min-height: 80px; }
-  label.fsec, label { font-size: 11.5px !important; }
-
-  /* ── Modales a pantalla completa ── */
-  .modal, .modal.modal-lg, .modal-lg {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: 100vh !important;
-    height: 100dvh !important;
-    max-height: 100vh !important;
-    max-height: 100dvh !important;
-    min-height: 100vh !important;
-    min-height: 100dvh !important;
-    margin: 0 !important;
-    border-radius: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    position: relative !important;
-    top: auto !important;
-    bottom: auto !important;
-    left: auto !important;
-    right: auto !important;
-  }
-  #ov, .ov {
-    padding: 0 !important;
-    align-items: stretch !important;
-    justify-content: stretch !important;
-  }
-  /* HEADER sticky arriba */
-  #mbd .m-hd, .m-hd {
-    flex-shrink: 0 !important;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-  }
-  /* BODY scroll, ocupa todo el espacio disponible */
-  #mbd, .m-bd, .modal-body {
-    flex: 1 1 auto !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    max-height: none !important;
-    min-height: 0 !important;
-    padding: 14px !important;
-    -webkit-overflow-scrolling: touch !important;
-    padding-bottom: 20px !important;
-  }
-  /* FOOTER anclado al fondo de la pantalla */
-  #mft, .m-ft, .modal-footer {
-    flex-shrink: 0 !important;
-    padding: 10px 14px !important;
-    flex-wrap: wrap !important;
-    gap: 6px !important;
-    border-top: 1px solid var(--rim) !important;
-    background: var(--surf) !important;
-    position: sticky !important;
-    bottom: 0 !important;
-    z-index: 3 !important;
-    /* Respeta el notch/home indicator del iPhone */
-    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-  #mft button, .m-ft button, .modal-footer button {
-    flex: 1 1 calc(50% - 3px) !important;
-    min-width: 120px !important;
-    min-height: 44px !important;
-  }
-
-  /* ── Ficha de cliente: hero, tabs, panels ── */
-  .cf-hero { padding: 14px !important; border-radius: 12px !important; }
-  .cf-hero-row { flex-wrap: wrap; gap: 10px; }
-  .cf-avatar { width: 52px !important; height: 52px !important; font-size: 18px !important; }
-  .cf-hero-name { font-size: 17px !important; }
-  .cf-hero-sub { font-size: 11px !important; }
-  .cf-score {
-    border-left: none !important;
-    border-top: 1px solid rgba(255,255,255,.25);
-    width: 100%;
-    flex-direction: row !important;
-    gap: 10px;
-    padding: 10px 0 0 !important;
-    justify-content: center;
-    align-items: baseline !important;
-  }
-  .cf-score-v { font-size: 24px !important; }
-  .cf-score-l { font-size: 9px !important; }
-
-  .cf-tabs { gap: 2px !important; padding: 3px !important; }
-  .cf-tab { padding: 7px 10px !important; font-size: 11px !important; }
-  .cf-tab-count { font-size: 9px !important; padding: 1px 5px !important; }
-
-  .cf-section { padding: 12px !important; border-radius: 10px !important; }
-  .cf-field-l { font-size: 9.5px !important; }
-  .cf-field-v { font-size: 12.5px !important; }
-  .cf-chart-wrap { height: 180px !important; }
-  .cf-chart-wrap.is-sm { height: 130px !important; }
-
-  /* ── Dashboard: acciones rápidas y widgets ── */
-  .qa-grid, .qa { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
-  .qa { padding: 12px 10px !important; }
-  .qa-ic { width: 36px !important; height: 36px !important; font-size: 16px !important; }
-  .qa-t { font-size: 12px !important; }
-
-  /* ── Listados (lst) ── */
-  .lst { max-height: none !important; }
-  .li { padding: 10px 11px !important; flex-wrap: wrap; gap: 8px; }
-  .li-ic { width: 32px !important; height: 32px !important; font-size: 13px !important; flex-shrink: 0; }
-
-  /* ── Módulo de Notificaciones ── */
-  .nx-tpl-grid { grid-template-columns: repeat(2, 1fr) !important; }
-  .nx-seg-grid { grid-template-columns: 1fr 1fr !important; }
-  .nx-tpl-card { padding: 10px !important; }
-  .nx-tpl-name { font-size: 11.5px !important; }
-  .nx-tpl-desc { font-size: 10px !important; }
-  .nx-cat-tab { font-size: 11px !important; padding: 6px 10px !important; }
-  .nx-seg-lbl { font-size: 11.5px !important; }
-  .nx-seg-hint { font-size: 9.5px !important; }
-  .nx-send-bar { flex-direction: column; align-items: stretch !important; }
-  .nx-send-bar .nx-send-count { text-align: center; }
-  .nx-send-btn { width: 100%; justify-content: center; padding: 12px !important; font-size: 14px !important; }
-
-  /* ── Login en móvil ── */
-  .login-card { padding: 24px 20px !important; border-radius: 14px !important; margin: 12px !important; max-width: calc(100% - 24px) !important; }
-
-  /* ── Topbar más compacto ── */
-  .topbar { height: 52px !important; padding: 0 12px !important; gap: 6px !important; }
-  .tb-ttl { font-size: 14px !important; }
-
-  /* ── Chips/badges que no se encimen ── */
-  .bdg { font-size: 10px !important; padding: 2px 7px !important; }
-
-  /* ── Botones de acciones en headers de card ── */
-  .ch > div:last-child, .ch .actions { display: flex; gap: 5px; flex-wrap: wrap; }
-
-  /* ── Score config: sliders más anchos ── */
-  #sc-pesos-grid { grid-template-columns: 1fr !important; }
-  .cf-tabs[id*="sc-"] { overflow-x: auto; }
-
-  /* ── Autocomplete cliente: lista más alta ── */
-  .nx-ac-list { max-height: 60vh !important; }
-
-  /* Reducir esfuerzo visual en secciones secundarias */
-  .notif-tipo-groups, .notif-tipo-group-btns { gap: 4px !important; }
-  .notif-tipo-btn { font-size: 11px !important; padding: 7px 10px !important; }
-
-  /* Modal body: mejor espaciado */
-  #mbd > div, #mbd > section { margin-bottom: 10px; }
-
-  /* Scroll horizontal forzado solo para tabs que lo necesiten */
-  .cf-tabs, .nx-cat-tabs { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-}
 
 /* Pantallas muy pequeñas (iPhone SE, etc.) */
 @media (max-width: 380px) {
@@ -2146,228 +1587,7 @@ tbody tr:hover td {
 /* ═══════ MOBILE PULIDO v2 · Dashboard + Solicitud + Ficha Cliente ══════ */
 /* ═══════════════════════════════════════════════════════════════════════ */
 
-@media (max-width: 820px) {
 
-  /* ═══════ DASHBOARD ═══════ */
-
-  /* KPI hero grid: 2 columnas para números principales */
-  .plan-stats { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
-  .plan-stats > div { padding: 10px 8px !important; }
-
-  /* Acciones rápidas (Nueva solicitud, Ver créditos, etc.) más visibles */
-  .qa-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
-  .qa {
-    padding: 14px 10px !important;
-    border-radius: 12px !important;
-    min-height: 76px;
-    flex-direction: column !important;
-    justify-content: center !important;
-    text-align: center !important;
-    gap: 6px !important;
-  }
-  .qa-ic { width: 38px !important; height: 38px !important; font-size: 17px !important; margin: 0 auto; }
-  .qa-t { font-size: 11.5px !important; line-height: 1.2; font-weight: 800; }
-  .qa-d { font-size: 9.5px !important; display: block; color: var(--ink3); line-height: 1.2; }
-
-  /* Tablas de actividad: scroll horizontal en lugar de colapsar (los datos se ven mejor así) */
-  .ah { display: none !important; } /* Ocultar headers de tabla decorativas */
-  .ar {
-    grid-template-columns: 1fr !important;
-    background: var(--surf);
-    border: 1px solid var(--rim);
-    border-radius: 10px;
-    padding: 12px !important;
-    margin-bottom: 8px;
-    gap: 4px !important;
-    font-size: 12px !important;
-  }
-  .ar > div { font-size: 12px !important; padding: 2px 0; }
-
-  /* Widget del dashboard: mora buckets */
-  div[style*="grid-template-columns:repeat(4,1fr);gap:8px"] { grid-template-columns: repeat(2, 1fr) !important; }
-
-  /* Pie charts más pequeños */
-  .dash-pie { max-width: 140px !important; margin: 0 auto !important; }
-
-  /* Cartera/Utilidad: números grandes legibles */
-  .card [style*="font-size:28px"], .card [style*="font-size:32px"], .card [style*="font-size:36px"] { font-size: 22px !important; }
-  .card [style*="font-size:24px"] { font-size: 19px !important; }
-
-  /* ═══════ SOLICITUD (wizard) ═══════ */
-
-  /* Header del wizard (pill de score + cuota) */
-  [data-wz-header] {
-    flex-wrap: wrap;
-    justify-content: center !important;
-    gap: 6px !important;
-  }
-  [data-wz-header] > div { padding: 5px 12px !important; }
-
-  /* Pasos del stepper */
-  .wz-stepper { gap: 2px !important; padding: 0 4px; }
-  .wz-step { font-size: 10px !important; padding: 4px 6px !important; }
-  .wz-step-label { display: none !important; } /* solo números en móvil */
-  .wz-step.is-active .wz-step-label { display: inline !important; font-size: 10px !important; }
-
-  /* Todos los grids del wizard de 2 cols → 1 col */
-  #wz-overlay div[style*="grid-template-columns:1fr 1fr"],
-  #wz-overlay div[style*="grid-template-columns:1fr 1.2fr"],
-  #wz-overlay div[style*="grid-template-columns:1.2fr 1fr"],
-  #wz-overlay div[style*="grid-template-columns:2fr 1fr"],
-  #wz-overlay div[style*="grid-template-columns:1fr 2fr"] {
-    grid-template-columns: 1fr !important;
-    gap: 9px !important;
-  }
-
-  /* Chips (historial, deudas, dependientes) */
-  .wz-chip-group, [id$="_g"] {
-    flex-wrap: wrap !important;
-    gap: 5px !important;
-  }
-  .wz-chip, [id$="_g"] > label, [id$="_g"] > button {
-    flex: 1 1 calc(50% - 3px) !important;
-    min-width: 0;
-    font-size: 11.5px !important;
-    padding: 9px 6px !important;
-    text-align: center;
-  }
-
-  /* Radios visuales (cashea, fiador): más grandes en móvil */
-  label[style*="background:var(--surf2);border:1.5px solid var(--rim)"][style*="cursor:pointer"] {
-    padding: 10px 12px !important;
-    font-size: 12px !important;
-  }
-
-  /* Sección Cashea con deuda activa: más legible */
-  #wz_cashea_det { padding: 10px !important; border-radius: 10px !important; }
-  #wz_cashea_deuda_det { padding: 8px !important; background: rgba(232,152,10,.08); border-radius: 8px; margin-top: 6px; }
-
-  /* Referencias personales y fiador: card interna */
-  div[style*="background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:12px;margin-bottom:10px"] {
-    padding: 10px !important;
-    border-radius: 10px !important;
-  }
-
-  /* Botones del wizard (Anterior / Siguiente) */
-  #wz-overlay [data-wz-footer] {
-    padding: 10px !important;
-    gap: 6px !important;
-    border-top: 1px solid var(--rim);
-    background: var(--surf);
-    position: sticky !important;
-    bottom: 0;
-  }
-  #wz-overlay [data-wz-footer] button { flex: 1; min-height: 44px; font-size: 13px !important; }
-
-  /* Docs en wizard: compactar */
-  #wz-overlay label[style*="background:var(--surf2)"][style*="border-radius:10px"][style*="border:1.5px"] {
-    padding: 10px 11px !important;
-  }
-
-  /* Pie/score pill simulador */
-  #sim-resultado { padding: 12px !important; }
-
-  /* ═══════ FICHA DE CLIENTE ═══════ */
-
-  /* Hero más compacto pero con mejor jerarquía */
-  .cf-hero {
-    padding: 14px 14px 18px !important;
-    background-size: cover !important;
-  }
-  .cf-avatar {
-    width: 54px !important;
-    height: 54px !important;
-    font-size: 18px !important;
-    border-width: 2px !important;
-  }
-  .cf-hero-info { flex: 1; min-width: 0; }
-  .cf-hero-name { font-size: 16px !important; line-height: 1.2 !important; margin-bottom: 2px !important; }
-  .cf-hero-sub { font-size: 11px !important; opacity: .9; }
-  .cf-hero-row { gap: 12px !important; align-items: center !important; flex-wrap: nowrap !important; }
-
-  /* Score badge en hero: a la derecha del avatar, compacto */
-  .cf-score {
-    border: none !important;
-    border-left: 1px solid rgba(255,255,255,.3) !important;
-    border-top: none !important;
-    padding: 0 0 0 12px !important;
-    width: auto !important;
-    flex-direction: column !important;
-    gap: 0 !important;
-    flex-shrink: 0;
-  }
-  .cf-score-v { font-size: 22px !important; line-height: 1 !important; }
-  .cf-score-l { font-size: 9px !important; }
-
-  /* Quick actions (WhatsApp, Call, Email) full width */
-  .cf-quick-actions { margin-top: 14px !important; gap: 6px !important; }
-  .cf-quick-actions > * { flex: 1; font-size: 11.5px !important; padding: 9px 6px !important; }
-
-  /* KPIs de la ficha: 2x2 grid */
-  .cf-kpis { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; margin-bottom: 12px !important; }
-  .cf-kpi { padding: 12px 10px !important; }
-  .cf-kpi-v { font-size: 17px !important; }
-  .cf-kpi-l { font-size: 9.5px !important; line-height: 1.2 !important; }
-
-  /* Tabs: scrollables horizontal, sin que se rompa el diseño */
-  .cf-tabs {
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding: 4px !important;
-    gap: 3px !important;
-    margin-bottom: 10px !important;
-  }
-  .cf-tabs::-webkit-scrollbar { display: none; }
-  .cf-tab {
-    flex-shrink: 0 !important;
-    padding: 8px 12px !important;
-    font-size: 11.5px !important;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-  .cf-tab.is-active { font-weight: 800; }
-
-  /* Secciones dentro de panels */
-  .cf-panel { padding: 0 !important; }
-  .cf-section {
-    padding: 12px !important;
-    border-radius: 10px !important;
-    margin-bottom: 10px !important;
-  }
-  .cf-section-h { margin-bottom: 10px !important; }
-  .cf-section-t { font-size: 12.5px !important; }
-
-  /* Campos en grids de la ficha: 2 cols cuando hay espacio, 1 col cuando son largos */
-  .cf-grid-2 { grid-template-columns: 1fr !important; gap: 8px !important; }
-  .cf-grid-3 { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
-  .cf-grid-3 > .cf-field[data-long] { grid-column: 1 / -1; }
-
-  .cf-field-l { font-size: 9.5px !important; margin-bottom: 1px !important; }
-  .cf-field-v { font-size: 12.5px !important; line-height: 1.3 !important; word-break: break-word; }
-
-  /* Charts en la ficha */
-  .cf-chart-wrap { height: 180px !important; padding: 10px !important; }
-  .cf-chart-wrap canvas { max-height: 160px !important; }
-  .cf-chart-row { grid-template-columns: 1fr !important; gap: 10px !important; }
-
-  /* Timeline de eventos */
-  .cf-timeline-item { padding: 8px 10px !important; font-size: 11.5px !important; }
-  .cf-timeline-dot { width: 8px !important; height: 8px !important; }
-  .cf-timeline-date { font-size: 9.5px !important; }
-
-  /* Cards de referencia */
-  .cf-ref-card { padding: 10px !important; }
-  .cf-ref-name { font-size: 13px !important; }
-  .cf-ref-rel { font-size: 10px !important; }
-
-  /* Panel de documentos en ficha: barra de progreso visible */
-  .cf-panel[data-tab="docs"] .cf-section > div:first-of-type {
-    padding: 10px 12px !important;
-  }
-}
 
 /* Pantallas <= 380px (iPhone SE y similares) — apretar más */
 @media (max-width: 380px) {
@@ -2404,224 +1624,13 @@ tbody tr:hover td {
 #mob-bottom-bar { display: none !important; }
 .mob-bottom-bar, .mbb { display: none !important; }
 
-@media (max-width: 820px) {
 
-  /* ══ OVERFLOW HORIZONTAL — fix definitivo ══ */
-  html, body {
-    overflow-x: hidden !important;
-    max-width: 100vw !important;
-    width: 100% !important;
-  }
-  #app-root, .app, .content, #cnt, .page, main {
-    overflow-x: hidden !important;
-    max-width: 100vw !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-  .card, .tw, .cf-section, .cf-hero, .ch, .lst {
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    overflow-x: hidden !important;
-  }
-  .content, #cnt { padding: 10px !important; }
-  .page { padding: 10px 0 !important; margin: 0 !important; max-width: 100% !important; }
-  .page > div, .page > * {
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* ══ Toolbar de páginas (Clientes/Créditos/etc) ══ */
-  /* Forzar que la barra superior con Buscar + CSV + Nuevo wrap y no se corte */
-  .page > div[style*="display:flex"][style*="gap"],
-  .page > div > div[style*="display:flex"][style*="justify-content:space-between"] {
-    flex-wrap: wrap !important;
-    gap: 6px !important;
-  }
-  .page input[type="text"][placeholder*="Buscar"],
-  .page input[type="search"],
-  .page .srch input {
-    width: 100% !important;
-    flex: 1 1 100% !important;
-    min-width: 0 !important;
-  }
-  /* Grupos de botones: ocupan el ancho juntos */
-  .page button.btn { flex: 0 1 auto; }
-  div[style*="display:flex;gap"][style*="flex-wrap"] {
-    flex-wrap: wrap !important;
-    width: 100% !important;
-  }
-
-  /* ══ TABLA → cards contenidas sin desborde ══ */
-  .tw { width: 100% !important; margin: 0 !important; padding: 0 !important; }
-  .tw table { margin: 0 !important; }
-  .tw tr {
-    background: var(--surf) !important;
-    border: 1px solid var(--rim) !important;
-    border-radius: 12px !important;
-    padding: 12px !important;
-    margin-bottom: 8px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 6px !important;
-    box-sizing: border-box !important;
-    max-width: 100% !important;
-    width: 100% !important;
-  }
-  .tw td {
-    padding: 2px 0 !important;
-    border: none !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    flex-wrap: wrap !important;
-    gap: 6px !important;
-    overflow-wrap: break-word;
-    word-break: break-word;
-    font-size: 12px !important;
-  }
-  /* Primera celda = header de la card */
-  .tw tr td:first-child {
-    border-bottom: 1px solid var(--rim) !important;
-    padding-bottom: 8px !important;
-    margin-bottom: 2px !important;
-    font-size: 13px !important;
-    font-weight: 800 !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-  }
-  /* Última celda (botones) */
-  .tw tr td:last-child {
-    border-top: 1px solid var(--rim) !important;
-    padding-top: 8px !important;
-    margin-top: 4px !important;
-    justify-content: flex-end !important;
-    gap: 4px !important;
-  }
-  .tw tr td:last-child .btn { flex: 0 0 auto !important; }
-
-  /* ══ HAMBURGUESA bien visible y funcional ══ */
-  .mob-menu-btn {
-    display: flex !important;
-    background: var(--surf) !important;
-    border: 1px solid var(--rim) !important;
-    border-radius: 10px !important;
-    width: 40px !important;
-    height: 40px !important;
-    font-size: 20px !important;
-    cursor: pointer !important;
-    align-items: center !important;
-    justify-content: center !important;
-    color: var(--ink) !important;
-    flex-shrink: 0;
-    padding: 0 !important;
-  }
-  .mob-menu-btn:active { background: var(--surf2) !important; transform: scale(.95); }
-
-  /* Sidebar abierto (responde tanto a .open como a .mob-open) */
-  .sb.mob-open, .sb.open {
-    transform: translateX(0) !important;
-    box-shadow: 4px 0 32px rgba(0,0,0,.45) !important;
-  }
-  .sb-overlay {
-    position: fixed !important;
-    inset: 0 !important;
-    background: rgba(0,0,0,.55) !important;
-    z-index: 998 !important;
-    -webkit-tap-highlight-color: transparent !important;
-  }
-  .sb-overlay.open { display: block !important; }
-  .sb { z-index: 1000 !important; }
-
-  /* Sin padding inferior (ya no hay bottom bar) */
-  body, .app, #app-root { padding-bottom: 0 !important; }
-}
 
 /* ═══════════════════════════════════════════════════════════════════════ */
 /* ════════════════ MOBILE v4 · REFINAMIENTOS ════════════════════════ */
 /* ═══════════════════════════════════════════════════════════════════════ */
 
-@media (max-width: 820px) {
 
-  /* ══ MODAL con altura dinámica (iOS Safari) ══ */
-  /* 100vh en iOS incluye la barra de URL que aparece/desaparece, causando que el footer quede tapado.
-     100dvh = altura REAL disponible. Con fallback a 100vh si no soporta dvh. */
-  .modal, .modal.modal-lg, .modal-lg {
-    height: 100vh !important;
-    height: 100dvh !important;
-    max-height: 100vh !important;
-    max-height: 100dvh !important;
-    min-height: 100vh !important;
-    min-height: 100dvh !important;
-  }
-  #ov, .ov {
-    height: 100vh !important;
-    height: 100dvh !important;
-  }
-
-  /* Footer del modal: sticky real + respeta safe-area */
-  #mft, .m-ft, .modal-footer {
-    position: sticky !important;
-    bottom: 0 !important;
-    z-index: 10 !important;
-    background: var(--surf) !important;
-    border-top: 1px solid var(--rim) !important;
-    padding: 10px 14px !important;
-    padding-bottom: calc(14px + env(safe-area-inset-bottom, 12px)) !important;
-    flex-shrink: 0 !important;
-    margin-top: auto !important;
-  }
-  /* El body del modal debe tener padding-bottom para que el contenido no quede tapado */
-  #mbd, .m-bd, .modal-body {
-    padding-bottom: 24px !important;
-  }
-
-  /* ══ Cards de clientes: cerradas correctamente, sin espacios raros ══ */
-  .tw tr {
-    overflow: hidden !important;
-  }
-  /* Celda de acciones (última) — visible y compacta, sin espacio fantasma */
-  .tw tr td:last-child {
-    min-height: 38px;
-    padding: 8px 0 0 !important;
-  }
-  .tw tr td:last-child .btn {
-    padding: 7px 12px !important;
-    font-size: 11.5px !important;
-    min-height: 34px !important;
-  }
-
-  /* ══ Chips de filtro: estado activo MUY visible ══ */
-  .page > div > button.btn.btn-p,
-  .page button.btn-p {
-    background: var(--p1) !important;
-    color: #fff !important;
-    border-color: var(--p1) !important;
-    box-shadow: 0 2px 8px rgba(37,99,235,.25);
-    font-weight: 800 !important;
-  }
-  .page > div > button.btn.btn-g,
-  .page button.btn-g {
-    background: var(--surf) !important;
-    color: var(--ink2) !important;
-    border: 1px solid var(--rim) !important;
-    font-weight: 600 !important;
-  }
-  /* Al tocar (tap) — feedback inmediato */
-  .page button.btn:active {
-    transform: scale(.96);
-    transition: transform .08s ease;
-  }
-
-  /* Botones del filtro: más grandes, legibles, fáciles de tocar */
-  .page > div[style*="flex-wrap:wrap"] > button.btn-sm {
-    padding: 9px 14px !important;
-    font-size: 12px !important;
-    min-height: 36px !important;
-    border-radius: 20px !important;
-  }
-}
 
 /* ═══════════════════════════════════════════════════════════════════════ */
 /* ══════════ PÁGINA USUARIOS · estilos profesionales ════════════════ */
@@ -2950,31 +1959,270 @@ tbody tr:hover td {
 }
 
 /* Mobile: panel full-width */
-@media (max-width: 820px) {
-  .user-panel {
-    width: 100%;
-    max-width: 100%;
-    border-left: none;
-  }
-  .up-hero { padding: 16px 14px 14px; }
-  .up-body { padding: 12px 12px; }
-  .up-stats { grid-template-columns: 1fr 1fr; }
-  .us-tab {
-    font-size: 11.5px !important;
-    padding: 9px 10px !important;
-    min-width: auto !important;
-  }
-  .us-tab > span:first-child { display: none; }
-  .us-meta { min-width: auto !important; font-size: 10px !important; }
-  .us-row { padding: 10px 12px !important; gap: 9px !important; }
-  .us-row > div:nth-child(3) {
-    font-size: 10px !important;
-    padding: 3px 7px !important;
-  }
-}
+
 
 @media (max-width: 380px) {
   .us-tab { font-size: 10.5px !important; padding: 8px 6px !important; }
   .us-row .us-meta { display: none !important; }
   .up-stats { grid-template-columns: 1fr; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGASI MOBILE — Reescritura completa responsive
+   Cubre TODOS los grids inline y clases del app
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Mostrar botón menú solo en mobile ── */
+.mob-menu-btn { display: none; }
+.sb-overlay   { display: none; }
+
+@media (max-width: 820px) {
+
+  /* ══ LAYOUT BASE ══ */
+  .app { flex-direction: column; overflow: visible; }
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  #cnt { flex: 1; padding: 10px 10px 90px; }
+  .page { padding: 0; gap: 10px; }
+
+  /* ══ SIDEBAR ══ */
+  .sb {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 270px; min-width: 270px; z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    box-shadow: 4px 0 32px rgba(0,0,0,.5);
+    overflow-y: auto;
+  }
+  .sb.open { transform: translateX(0); }
+  .sb-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.55); z-index: 999;
+  }
+  .sb-overlay.open { display: block; }
+  .mob-menu-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: 10px;
+    background: var(--surf2); border: 1px solid var(--rim);
+    cursor: pointer; font-size: 18px; color: var(--ink);
+    flex-shrink: 0; touch-action: manipulation;
+  }
+  .sb-un, .sb-ur, .sb-lbl, .si span:not(.sic), .si-bx { display: initial; }
+  .si { justify-content: flex-start; padding: 12px 16px; min-height: 48px !important; }
+  .sic { width: 24px !important; font-size: 10px !important; }
+  .sb-usr { justify-content: flex-start; }
+  button.si { padding: 12px 16px; min-height: 48px; }
+  .sidebar { transform: translateX(-100%); transition: transform .25s ease; position:fixed; z-index:999; height:100vh; top:0; left:0; }
+  .sidebar.mob-open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,.18); }
+
+  /* ══ TOPBAR ══ */
+  .topbar {
+    display: flex; align-items: center;
+    gap: 10px; padding: 0 14px;
+    height: 54px; min-height: 54px;
+    background: var(--surf);
+    border-bottom: 1px solid var(--rim);
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 1px 8px rgba(37,99,235,.06);
+  }
+  #pgT { font-size: 15px; font-weight: 800; flex: 1; }
+  #mob-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  #mob-bottom-bar { display: flex !important; }
+
+  /* ══ CARDS ══ */
+  .card { padding: 14px 13px; border-radius: 13px; margin-bottom: 10px; }
+  .ch { flex-wrap: wrap; gap: 7px; }
+  .ct { font-size: 14px; }
+  .lst { max-height: none; }
+  .li { padding: 10px 12px; }
+
+  /* ══ PAGE BANNER ══ */
+  .pb-actions { flex-wrap: wrap; gap: 6px; }
+  .pb-actions .btn { font-size: 11px; padding: 7px 11px; }
+
+  /* ══ BOTONES ══ */
+  .btn     { padding: 9px 14px; font-size: 12px; min-height: 40px; }
+  .btn-sm  { padding: 7px 12px; font-size: 11px; min-height: 36px; }
+  .btn-xs  { padding: 5px 9px;  font-size: 10px; min-height: 30px; }
+
+  /* ══ FORMULARIOS ══ */
+  .fgr            { flex-direction: column; gap: 8px; }
+  .fgr.c3         { flex-direction: column; }
+  .fg             { min-width: 0; width: 100%; }
+  .fi, .fs, .fta  { font-size: 15px; padding: 11px 13px; }
+  .fta            { min-height: 90px; }
+  .srch input     { width: 100% !important; }
+
+  /* ══ STATS / KPIs ══ */
+  .sg  { grid-template-columns: 1fr 1fr !important; gap: 9px !important; }
+  .stat { padding: 12px 11px; }
+  .st-v { font-size: 20px !important; }
+  .st-l { font-size: 9px; }
+  .dash-kpi { min-height: 115px; }
+
+  /* ══ OVERRIDE UNIVERSAL DE GRIDS INLINE ══
+     Captura TODOS los patrones usados en los módulos JS.
+     La clave es !important para vencer el style="" inline. */
+
+  /* Grids de 1 col (no cambiar) */
+  #cnt div[style*="grid-template-columns:1fr;"],
+  #cnt div[style*="grid-template-columns: 1fr;"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Grids de 2 columnas → 1 columna */
+  #cnt div[style*="grid-template-columns:1fr 1fr"],
+  #cnt div[style*="grid-template-columns: 1fr 1fr"],
+  #cnt div[style*="grid-template-columns:1.5fr 1.5fr"],
+  #cnt div[style*="grid-template-columns:1.3fr 1fr"],
+  #cnt div[style*="grid-template-columns:1.4fr 1fr"],
+  #cnt div[style*="grid-template-columns:1.5fr 1fr"],
+  #cnt div[style*="grid-template-columns:1.7fr 1fr"],
+  #cnt div[style*="grid-template-columns:2fr 1fr"],
+  #cnt div[style*="grid-template-columns:1fr 2fr"],
+  #cnt div[style*="grid-template-columns:1fr 1.3fr"],
+  #cnt div[style*="grid-template-columns:1fr 1.4fr"],
+  #cnt div[style*="grid-template-columns:1fr 272px"],
+  #cnt div[style*="grid-template-columns:1fr 60px"],
+  #cnt div[style*="grid-template-columns:1fr auto"],
+  #cnt div[style*="grid-template-columns:auto 1fr"],
+  #cnt div[style*="grid-template-columns:1fr 1fr auto"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Grids de 3 columnas → 1 columna */
+  #cnt div[style*="grid-template-columns:1fr 1fr 1fr"],
+  #cnt div[style*="grid-template-columns: 1fr 1fr 1fr"],
+  #cnt div[style*="grid-template-columns:1fr 1fr 1.2fr"],
+  #cnt div[style*="grid-template-columns:1.2fr 1fr 1fr"],
+  #cnt div[style*="grid-template-columns:1.3fr 1fr 1fr"],
+  #cnt div[style*="grid-template-columns:repeat(3,1fr)"],
+  #cnt div[style*="grid-template-columns:1fr 2fr"],
+  #cnt div[style*="grid-template-columns:1fr auto auto"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Grids de 4 columnas → 2 columnas */
+  #cnt div[style*="grid-template-columns:repeat(4,1fr)"],
+  #cnt div[style*="grid-template-columns:repeat(4, 1fr)"],
+  #cnt div[style*="grid-template-columns:repeat(4,auto)"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Grids de 5 columnas → 1 columna */
+  #cnt div[style*="grid-template-columns:repeat(5,1fr)"],
+  #cnt div[style*="grid-template-columns:repeat(5, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Grids de 6 columnas → 2 columnas */
+  #cnt div[style*="grid-template-columns:repeat(6,1fr)"],
+  #cnt div[style*="grid-template-columns:repeat(6, 1fr)"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* auto-fill/auto-fit minmax → 1 columna en mobile pequeño */
+  #cnt div[style*="minmax(240px"],
+  #cnt div[style*="minmax(260px"],
+  #cnt div[style*="minmax(280px"],
+  #cnt div[style*="minmax(360px"] {
+    grid-template-columns: 1fr !important;
+  }
+  #cnt div[style*="minmax(130px"],
+  #cnt div[style*="minmax(135px"],
+  #cnt div[style*="minmax(140px"],
+  #cnt div[style*="minmax(160px"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Grids de la fila de dashboard con gap específico */
+  #cnt div[style*="gap:14px"],
+  #cnt div[style*="gap: 14px"],
+  #cnt div[style*="gap:12px"],
+  #cnt div[style*="gap:10px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Excepción: grids pequeños que SÍ deben quedar en 2 columnas */
+  #cnt div[style*="grid-template-columns:repeat(2,1fr)"],
+  #cnt .cf-kpis {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* ══ CLASES DE MÓDULOS ══ */
+  .config-grid, .cf-grid-2, .cf-grid-3,
+  .detail-grid, .fgr.c3, .fgr.c2 {
+    grid-template-columns: 1fr !important;
+  }
+  .cf-kpis    { grid-template-columns: 1fr 1fr !important; }
+  .plan-stats { grid-template-columns: 1fr 1fr !important; }
+  .ql-grid    { grid-template-columns: 1fr 1fr !important; }
+  #wt-kanban  { grid-template-columns: 1fr !important; }
+  #com-grid   { grid-template-columns: 1fr !important; }
+
+  /* ══ TABLAS ══ */
+  .tw { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tw table { min-width: 560px; }
+  /* Tablas en modales → scroll horizontal, no colapsar */
+  .modal .tw, .m-bd .tw { overflow-x: auto; }
+  .modal .tw thead, .m-bd .tw thead { display: table-header-group; }
+  .modal .tw tbody tr, .m-bd .tw tbody tr { display: table-row; background: none; border: none; border-radius: 0; margin: 0; padding: 0; }
+  .modal .tw tbody td, .m-bd .tw tbody td { display: table-cell; border-bottom: none; }
+  .modal .tw tbody td::before, .m-bd .tw tbody td::before { display: none; }
+  .modal table, .m-bd table { min-width: 480px !important; }
+
+  /* ══ AMORTIZACIÓN ══ */
+  .ah, .ar { font-size: 10px !important; overflow-x: auto; }
+
+  /* ══ TABS DE CLIENTE ══ */
+  .cf-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; padding-bottom: 2px; }
+  .cf-tab  { flex-shrink: 0; }
+
+  /* ══ MODALES ══ */
+  .modal, .modal-lg {
+    width: calc(100vw - 16px) !important;
+    max-width: none !important;
+    margin: 0;
+    border-radius: 18px !important;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .m-hd { padding: 14px 16px; }
+  .m-bd { padding: 14px 16px; }
+
+  /* ══ LOGIN ══ */
+  .login-card { padding: 28px 20px 24px; margin: 16px; max-width: none; }
+  .login-wrap { padding: 0; }
+  .invite-screen .login-card { max-width: none; margin: 16px; }
+
+  /* ══ TOAST ══ */
+  .toasts, .toast-wrap { left: 10px; right: 10px; bottom: 70px; }
+  .toast { max-width: none; }
+
+  /* ══ CONTRATOS ══ */
+  #sel-cred, #sel-ciudad { width: 100%; }
+
+  /* ══ BADGES / MISC ══ */
+  .bdg { font-size: 9px; padding: 2px 7px; }
+  #modulos-grid label { font-size: 11px; padding: 4px 7px; }
+  .prog { height: 6px !important; }
+
+  /* ══ USER PANEL ══ */
+  .user-panel { width: calc(100vw - 20px); right: 10px; }
+
+  /* ══ CHARTS ══ */
+  #dash-chart { height: 140px !important; }
+  #dash-cred-chart, #dash-egr-chart { height: 130px !important; }
+
+  /* ══ GRIDS DE SCORE / SEGMENTOS ══ */
+  .nx-tpl-grid  { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .nx-seg-grid  { grid-template-columns: 1fr 1fr !important; }
+  .qa-grid, .qa { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  #sc-pesos-grid { grid-template-columns: 1fr !important; }
+  .plan-stats    { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .cf-kpis       { grid-template-columns: 1fr 1fr !important; }
+
+  /* ══ BOTTOM BAR NAV ══ */
+  .mbb-btn { min-height: 44px; font-size: 9px; }
+
+}
+
