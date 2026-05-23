@@ -579,6 +579,14 @@ function _concEjecutarMasivo(){
         c.concesionarioId = sedeId;
         if(DB && DB.saveCred) DB.saveCred(c);
         total++;
+        // Cascadear a los pagos de este crédito sin sede
+        (S.pagos||[]).forEach(function(p){
+          if(!p.eliminado && !p.concesionarioId && p.cred === c.id){
+            p.concesionarioId = sedeId;
+            if(DB && DB.savePago) DB.savePago(p);
+            total++;
+          }
+        });
       }
     });
   }
@@ -712,7 +720,7 @@ function _concAsignSetQ(v){
 }
 
 function _concAsignarUno(tipo, id, sedeId){
-  if(!sedeId) return; // dejar como está
+  if(!sedeId) return;
   var coll, saveFn;
   if(tipo==='motos'){ coll=S.motos; saveFn=DB.saveMoto; }
   else if(tipo==='creds'){ coll=S.creds; saveFn=DB.saveCred; }
@@ -723,8 +731,20 @@ function _concAsignarUno(tipo, id, sedeId){
   if(!it){ toast('Registro no encontrado','error'); return; }
   it.concesionarioId = sedeId;
   if(saveFn) saveFn(it);
-  toast('Asignado','success');
-  // Re-render lista para que desaparezca
+  // Si es crédito, cascadear a sus pagos sin sede
+  if(tipo==='creds'){
+    var nPagos = 0;
+    (S.pagos||[]).forEach(function(p){
+      if(!p.eliminado && !p.concesionarioId && p.cred === it.id){
+        p.concesionarioId = sedeId;
+        if(DB && DB.savePago) DB.savePago(p);
+        nPagos++;
+      }
+    });
+    toast('Crédito asignado' + (nPagos > 0 ? ' + '+nPagos+' pago(s)' : ''), 'success');
+  } else {
+    toast('Asignado','success');
+  }
   _concRenderAsignarIndividual();
 }
 
