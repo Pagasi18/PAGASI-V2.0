@@ -71,17 +71,45 @@ function getCreditoSaldoPendiente(c){
 // y CRED-003, y luego eliminas el 002, el siguiente será CRED-004 (no 003).
 // ════════════════════════════════════════════════════════════════════
 function nextCredId(){
+  // Lee S.creds local como fallback offline
   var max = 0;
   var all = (S && Array.isArray(S.creds)) ? S.creds : [];
   all.forEach(function(c){
     if(!c || !c.id) return;
     var m = String(c.id).match(/CRED-(\d+)/);
-    if(m){
-      var n = parseInt(m[1], 10);
-      if(!isNaN(n) && n > max) max = n;
-    }
+    if(m){ var n = parseInt(m[1], 10); if(!isNaN(n) && n > max) max = n; }
   });
   return 'CRED-' + String(max + 1).padStart(3, '0');
+}
+function nextCredIdAsync(){
+  // Consulta Firestore en tiempo real para evitar colisión de IDs entre vendedores
+  if(!db) return Promise.resolve(nextCredId());
+  return db.collection('creditos').get().then(function(snap){
+    var max = 0;
+    snap.forEach(function(d){
+      var id = d.id || (d.data && d.data().id) || '';
+      var m = String(id).match(/CRED-(\d+)/);
+      if(m){ var n = parseInt(m[1], 10); if(!isNaN(n) && n > max) max = n; }
+    });
+    return 'CRED-' + String(max + 1).padStart(3, '0');
+  }).catch(function(){ return nextCredId(); });
+}
+
+function nextClienteIdAsync(){
+  if(!db) return Promise.resolve((S&&S.clientes&&S.clientes.length)?Math.max.apply(null,S.clientes.map(function(x){return parseInt(x.id,10)||0;}))+1:1);
+  return db.collection('clientes').get().then(function(snap){
+    var max = 0;
+    snap.forEach(function(d){ var n=parseInt((d.data&&d.data().id)||d.id,10); if(!isNaN(n)&&n>max) max=n; });
+    return max + 1;
+  }).catch(function(){ return (S&&S.clientes&&S.clientes.length)?Math.max.apply(null,S.clientes.map(function(x){return parseInt(x.id,10)||0;}))+1:1; });
+}
+function nextMotoIdAsync(){
+  if(!db) return Promise.resolve((S&&S.motos&&S.motos.length)?Math.max.apply(null,S.motos.map(function(x){return parseInt(x.id,10)||0;}))+1:1);
+  return db.collection('motos').get().then(function(snap){
+    var max = 0;
+    snap.forEach(function(d){ var n=parseInt((d.data&&d.data().id)||d.id,10); if(!isNaN(n)&&n>max) max=n; });
+    return max + 1;
+  }).catch(function(){ return (S&&S.motos&&S.motos.length)?Math.max.apply(null,S.motos.map(function(x){return parseInt(x.id,10)||0;}))+1:1; });
 }
 
 function esMovimientoInicialCredito(m){
@@ -269,8 +297,7 @@ function startRealtime(){
 
 function fechaLocalISO(value){
   var d = value ? new Date(value) : new Date();
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  return d.toISOString().split('T')[0];
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 function hoyLocalISO(){ return fechaLocalISO(); }
 
