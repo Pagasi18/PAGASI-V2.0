@@ -1571,7 +1571,8 @@ function _wzGuardar(){
   var r = WZ.precio>0 ? getWzPlanConfig() : {mode:'global',precioBaseReal:0,ini:0,fin:0,total:0,cuotaQ:0,totalPagado:0,cuotaM:0,plazo:PLAN.plazo,totalCuotas:PLAN.plazo*2,factor:PLAN.factor,inicialPct:PLAN.inicial,tasaMensual:PLAN.tasaMensual,apy:PLAN.apy,sourcePlan:{plazo:PLAN.plazo, factor:PLAN.factor, inicial:PLAN.inicial, tasaMensual:PLAN.tasaMensual, apy:PLAN.apy}};
 
   // Crear cliente
-  var cliId = S.clientes.length ? Math.max.apply(null,S.clientes.map(function(x){return x.id||0;}))+1 : 1;
+  nextClienteIdAsync().then(function(_nextCliId){
+  var cliId = _nextCliId;
   // Verificar si ya existe por selector o por cÃ©dula
   var existing = null;
   if(WZ.clienteSel){
@@ -1793,7 +1794,7 @@ function _wzGuardar(){
   }
 
   // Crear crÃ©dito â€” ID monotÃ³nico (no se recicla aunque haya eliminaciones)
-  var credId = nextCredId();
+  nextCredIdAsync().then(function(credId){
   var _finNew = _wzCredPlanFields(r, null);
   var newCred = {
     id: credId,
@@ -1992,6 +1993,8 @@ function _wzGuardar(){
   _wzClose();
   nav('creditos');
   toast(' Solicitud creada Â· '+credId+' Â· Inicial '+fmt(r.ini)+' â†’ '+iniMetodo,'success');
+  }); // end nextCredIdAsync
+  }); // end nextClienteIdAsync
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•

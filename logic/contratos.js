@@ -17,6 +17,9 @@ function _docCtx(){
   var cli = S.clientes.find(function(x){return x.nombre===c.cli;}) || S.clientes.find(function(x){return String(x.id)===String(c.clienteId);}) || {};
   var moto = S.motos.find(function(m){return String(m.id)===String(c.motoId);}) || {};
   var hoy = new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
+  var fechaContrato = c.fecha
+    ? new Date(c.fecha+'T12:00:00').toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'})
+    : hoy;
   var V = function(x){ return (x!=null && String(x).trim()!=='') ? String(x).trim() : ''; };
   var Vm = function(n){ return (n!=null && !isNaN(parseFloat(n))) ? '$ '+parseFloat(n).toFixed(2) : ''; };
   var mModelo = c.modelo || moto.modelo || '';
@@ -135,7 +138,7 @@ function _renderContratoArrendamiento(){
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div>${logoSrc?`<img src="${logoSrc}" style="height:46px;object-fit:contain">`:`<div style="font-size:22px;font-weight:900;color:${purple}">${empresaUp}</div>`}</div>
-      <div style="font-size:11px;color:#555;text-align:right"><strong>NÂ° de Contrato:</strong> ${c.id||'________'}<br><span style="color:#888">${hoy}</span></div>
+      <div style="font-size:11px;color:#555;text-align:right"><strong>NÂ° de Contrato:</strong> ${c.id||'________'}<br><span style="color:#888">${fechaContrato}</span></div>
     </div>
 
     <!-- TÃ­tulo -->
@@ -210,7 +213,7 @@ function _renderContratoArrendamiento(){
 
     <!-- SEXTA -->
     <h3 style="${clausH}">SEXTA: ENTREGA Y RIESGO</h3>
-    <p style="${p}">LA VENDEDORA entrega la motocicleta a EL COMPRADOR en fecha ${blank(hoy,20)}. Desde el momento de la entrega material, EL COMPRADOR asume la guarda, custodia, uso, mantenimiento, riesgo de pÃ©rdida, robo, hurto, daÃ±o, accidente, multas, infracciones, sanciones y cualquier otra responsabilidad relacionada con la motocicleta.</p>
+    <p style="${p}">LA VENDEDORA entrega la motocicleta a EL COMPRADOR en fecha ${blank(fechaContrato,20)}. Desde el momento de la entrega material, EL COMPRADOR asume la guarda, custodia, uso, mantenimiento, riesgo de pÃ©rdida, robo, hurto, daÃ±o, accidente, multas, infracciones, sanciones y cualquier otra responsabilidad relacionada con la motocicleta.</p>
 
     <!-- SÃ‰PTIMA -->
     <h3 style="${clausH}">SÃ‰PTIMA: USO, CONSERVACIÃ“N Y PROHIBICIONES</h3>
@@ -368,7 +371,7 @@ function _renderPagare(){
     <!-- Datos superiores -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:14px 0 10px;font-size:11.5px">
       <div><strong style="color:${purple}">Ciudad / Estado:</strong> ${emp.ciudad||'Caracas'}</div>
-      <div><strong style="color:${purple}">Fecha de emisiÃ³n:</strong> ${hoy}</div>
+      <div><strong style="color:${purple}">Fecha de emisiÃ³n:</strong> ${fechaContrato}</div>
       <div><strong style="color:${purple}">Contrato asociado:</strong> ${c.id||'â€”'}</div>
     </div>
     <div style="border-bottom:1px solid #ccc;margin-bottom:6px"></div>

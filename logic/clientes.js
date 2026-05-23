@@ -1694,8 +1694,9 @@ function _cliGuardar(){
   var cedNorm=(WZ.ci||'').replace(/\s/g,'').toLowerCase();
   var dup=(S.clientes||[]).find(function(x){ return !x.eliminado && x.cedula && x.cedula.replace(/\s/g,'').toLowerCase()===cedNorm && String(x.id)!==String(edId||''); });
   if(dup){ toast(' Ya existe un cliente con esa cédula: '+dup.nombre,'error'); return; }
+  nextClienteIdAsync().then(function(_nextCliId){
   var obj={
-    id: edId || ((S.clientes&&S.clientes.length)?Math.max.apply(null,S.clientes.map(function(x){return parseInt(x.id,10)||0;}))+1:1),
+    id: edId || _nextCliId,
     nombre: WZ.nom||'',
     cedula: WZ.ci||'',
     rif: WZ.rif||'',
@@ -1773,6 +1774,7 @@ function _cliGuardar(){
   _wzClose();
   nav('clientes');
   toast(idx>=0?'Cliente actualizado':'Cliente registrado','success');
+  }); // end nextClienteIdAsync
 }
 
 function openAddCliente(id=null){
