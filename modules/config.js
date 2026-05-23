@@ -262,8 +262,116 @@ service cloud.firestore {
         </div>
       </div>
 
+
+      <!-- Auditoría de Datos -->
+      <div class="card" style="border-top:3px solid var(--red)">
+        <div class="ch">
+          <div>
+            <div class="ct" style="color:var(--red)">Auditoría de Datos</div>
+            <div class="cs">Detecta pagos huérfanos (cuyo crédito fue sobreescrito o eliminado)</div>
+          </div>
+          <button class="btn btn-d btn-sm" onclick="auditarPagosHuerfanos()">🔍 Analizar ahora</button>
+        </div>
+        <div id="audit-resultado" style="margin-top:12px"></div>
+      </div>
     </div>
   </div>
 
   </div>`;};
+
+// ══════════════════════════════════════════════════════
+// AUDITORÍA: pagos huérfanos
+// ══════════════════════════════════════════════════════
+function auditarPagosHuerfanos(){
+  var div = $('audit-resultado');
+  if(!div) return;
+  div.innerHTML = '<div style="color:var(--ink3);font-size:12px;padding:10px 0">Analizando...</div>';
+
+  var pagos  = (S.pagos  || []).filter(function(p){ return !p.eliminado; });
+  var creds  = (S.creds  || []).filter(function(c){ return !c.eliminado; });
+  var clientes = (S.clientes || []);
+
+  // Build lookup: credId -> credito
+  var credMap = {};
+  creds.forEach(function(c){ credMap[c.id] = c; });
+
+  // Find orphans: pago.cred does not exist in credMap,
+  // OR the cred exists but belongs to a different client name
+  var huerfanos = [];
+  pagos.forEach(function(p){
+    if(!p.cred) return;
+    var cred = credMap[p.cred];
+    if(!cred){
+      // Cred doesn't exist at all
+      huerfanos.push({ pago: p, tipo: 'cred_inexistente', cred: null });
+    } else if(p.cli && cred.cli && p.cli !== cred.cli){
+      // Cred exists but belongs to a different client
+      huerfanos.push({ pago: p, tipo: 'cliente_distinto', cred: cred });
+    }
+  });
+
+  if(huerfanos.length === 0){
+    div.innerHTML = '<div style="background:var(--greens);border-radius:8px;padding:12px 14px;color:var(--green);font-weight:600;font-size:13px">✓ Sin pagos huérfanos. Todos los pagos están correctamente vinculados.</div>';
+    return;
+  }
+
+  var html = '<div style="background:var(--reds);border-radius:8px;padding:10px 14px;color:var(--red);font-weight:700;font-size:12px;margin-bottom:12px">'
+    + '⚠ Se encontraron ' + huerfanos.length + ' pago(s) con problemas</div>';
+
+  html += '<div style="display:flex;flex-direction:column;gap:8px">';
+  huerfanos.forEach(function(h, idx){
+    var p = h.pago;
+    var credInfo = h.cred
+      ? ('Crédito ' + h.cred.id + ' pertenece a <strong>' + h.cred.cli + '</strong>')
+      : ('Crédito <strong>' + p.cred + '</strong> no existe');
+    var tipoLabel = h.tipo === 'cred_inexistente'
+      ? '<span style="background:var(--reds);color:var(--red);font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px">CRÉDITO ELIMINADO</span>'
+      : '<span style="background:var(--ambers);color:var(--amber);font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px">CLIENTE DISTINTO</span>';
+
+    html += '<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:9px;padding:10px 13px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'
+      + '<div style="flex:1">'
+      + '<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">'
+      + tipoLabel
+      + '<span style="font-size:11px;font-weight:700;color:var(--ink);font-family:var(--fm)">' + p.id + '</span>'
+      + '</div>'
+      + '<div style="font-size:12px;font-weight:600;color:var(--ink)">' + (p.cli||'—') + '</div>'
+      + '<div style="font-size:10.5px;color:var(--ink3);margin-top:2px">'
+      + p.fecha + ' · ' + (p.metodo||'—') + ' · <strong style="color:var(--green)">' + fmt(p.monto) + '</strong>'
+      + '</div>'
+      + '<div style="font-size:10px;color:var(--ink3);margin-top:3px">Referencia al crédito: <strong>' + p.cred + '</strong> · ' + credInfo + '</div>'
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">'
+      + '<button class="btn btn-d btn-sm" style="font-size:10px" onclick="auditEliminarPago(\'' + p.id + '\',' + idx + ')">Eliminar pago</button>'
+      + '</div>'
+      + '</div>'
+      + '</div>';
+  });
+  html += '</div>';
+  html += '<div style="margin-top:10px;font-size:10.5px;color:var(--ink3)">Revisá cada caso antes de eliminar. Si el cobro fue real, primero registrá el pago correctamente en el crédito correspondiente.</div>';
+
+  div.innerHTML = html;
+  // Store for reference
+  window._auditHuerfanos = huerfanos;
+}
+
+function auditEliminarPago(pagoId, idx){
+  var h = (window._auditHuerfanos||[])[idx];
+  if(!h) return;
+  var p = h.pago;
+  var confirmMsg = '¿Eliminar el pago ' + p.id + ' de ' + fmt(p.monto) + ' ('+ (p.cli||'?') +') vinculado a ' + p.cred + '?\n\nSolo eliminalo si confirmás que ese cobro es incorrecto o ya fue registrado correctamente en otro crédito.';
+  if(!confirm(confirmMsg)) return;
+
+  // Mark as eliminated in local state
+  var pi = (S.pagos||[]).findIndex(function(x){ return x.id === pagoId; });
+  if(pi >= 0){
+    S.pagos[pi].eliminado = true;
+    S.pagos[pi].eliminadoRazon = 'Pago huérfano — eliminado desde auditoría';
+    S.pagos[pi].eliminadoEn = new Date().toISOString();
+    DB.savePago(S.pagos[pi]);
+  }
+  toast('Pago ' + pagoId + ' eliminado', 'success');
+  // Re-run audit to refresh list
+  auditarPagosHuerfanos();
+}
 
