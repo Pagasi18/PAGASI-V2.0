@@ -5,7 +5,7 @@ var COMISIONES_DEFAULT = {
   cobranza: { tipo: 'fijo', valor: 1 }       // $1 por cobranza
 };
 
-// Lee la configuraciÃ³n de comisiones de un usuario, retornando defaults si estÃ¡ activado pero sin config
+// Lee la configuración de comisiones de un usuario, retornando defaults si está activado pero sin config
 function _comGetConfig(u){
   if(!u || !u.comisiones || !u.comisiones.activo) return null;
   var c = u.comisiones;
@@ -30,7 +30,7 @@ function _comGetUsuariosActivos(){
   });
 }
 
-// â”€â”€ CÃ¡lculo de comisiones generadas por un usuario â”€â”€
+// ── Cálculo de comisiones generadas por un usuario ──
 // Retorna { porVenta, porCobranza, ventas:[...], cobranzas:[...] }
 function _comCalcGenerado(u){
   var cfg = _comGetConfig(u);
@@ -38,11 +38,11 @@ function _comCalcGenerado(u){
   var nombre = (u.nombre || u.email || '').trim();
   if(!nombre) return { porVenta:0, porCobranza:0, ventas:[], cobranzas:[] };
   var nombreLow = nombre.toLowerCase();
-  // Por venta: crÃ©ditos creados por este usuario
+  // Por venta: créditos creados por este usuario
   var ventas = [];
   (S.creds || []).forEach(function(c){
     if(c.eliminado) return;
-    if(c.estado === 'cancelado') return; // crÃ©ditos cancelados no pagan comisiÃ³n
+    if(c.estado === 'cancelado') return; // créditos cancelados no pagan comisión
     var creador = (c.creadoPor || '').trim().toLowerCase();
     if(creador !== nombreLow) return;
     var precio = parseFloat(c.precioFinanciado || c.precio || 0) || 0;
@@ -120,7 +120,7 @@ function _comDesglosePorSede(u){
   return Object.values(out).sort(function(a,b){ return b.total - a.total; });
 }
 
-// Devuelve los pagos de comisiones que ya se le hicieron a un usuario (egresos categorÃ­a 'comisiones')
+// Devuelve los pagos de comisiones que ya se le hicieron a un usuario (egresos categoría 'comisiones')
 function _comGetPagosRealizados(u){
   var nombre = (u.nombre || u.email || '').trim().toLowerCase();
   if(!nombre) return [];
@@ -150,7 +150,7 @@ function _comGetSaldo(u){
   };
 }
 
-// EstadÃ­sticas de perÃ­odo: semana actual, mes actual
+// Estadísticas de período: semana actual, mes actual
 function _comStatsRango(u){
   var gen = _comCalcGenerado(u);
   var hoy = new Date();
@@ -199,9 +199,9 @@ function _comisionesRender(){
   todasGeneradas.sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||''); });
 
   var html = '<div class="page">'
-    + pageBanner('Vendedores y cobradores Â· Pago de comisiones','Comisiones',
-        '<b>'+usuarios.length+'</b> usuarios Â· Por pagar: <b style="color:var(--green)">'+fmt(totalDebe)+'</b> Â· Pagado: <b>'+fmt(totalPagado)+'</b>',
-        [{label:'â†“ Exportar CSV', onclick:'_comExportarCSV()'},{label:'â†» Actualizar', onclick:'nav(&quot;comisiones&quot;)'}]);
+    + pageBanner('Vendedores y cobradores · Pago de comisiones','Comisiones',
+        '<b>'+usuarios.length+'</b> usuarios · Por pagar: <b style="color:var(--green)">'+fmt(totalDebe)+'</b> · Pagado: <b>'+fmt(totalPagado)+'</b>',
+        [{label:'↓ Exportar CSV', onclick:'_comExportarCSV()'},{label:'â†» Actualizar', onclick:'nav(&quot;comisiones&quot;)'}]);
 
   // KPIs
   html += '<div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:16px">'
@@ -219,7 +219,7 @@ function _comisionesRender(){
       }).join('')
     + '</div>';
 
-  // â”€â”€ Tab: Vendedores â”€â”€
+  // ── Tab: Vendedores ──
   if(tab === 'vendedores'){
     html += '<div style="margin-bottom:14px"><div class="srch"><span class="srch-i">â—†</span><input type="text" id="com-search" placeholder="Buscar vendedor..." oninput="_comFiltrar()"></div></div>';
     if(!usuarios.length){
@@ -230,10 +230,10 @@ function _comisionesRender(){
       html += '</div>';
     }
 
-  // â”€â”€ Tab: Comisiones Generadas â”€â”€
+  // ── Tab: Comisiones Generadas ──
   } else if(tab === 'generadas'){
     if(!todasGeneradas.length){
-      html += '<div class="empty"><div class="e-ic">â—ˆ</div><div class="e-tt">Sin comisiones generadas</div><div style="font-size:12px;color:var(--ink3);margin-top:4px">Las comisiones aparecerÃ¡n aquÃ­ cuando se registren ventas y cobranzas.</div></div>';
+      html += '<div class="empty"><div class="e-ic">â—ˆ</div><div class="e-tt">Sin comisiones generadas</div><div style="font-size:12px;color:var(--ink3);margin-top:4px">Las comisiones aparecerán aquí cuando se registren ventas y cobranzas.</div></div>';
     } else {
       // Filtro por usuario
       var usuariosUnicos = [];
@@ -259,7 +259,7 @@ function _comisionesRender(){
         + '</div>'
         + '<div class="card" style="padding:0;overflow:hidden">'
         + '<div class="ch" style="padding:13px 16px;border-bottom:1px solid var(--rim2)">'
-        + '<div><div class="ct">Comisiones generadas</div><div class="cs">'+genFiltradas.length+' transacciÃ³n'+(genFiltradas.length!==1?'es':'')+' Â· todas las sedes</div></div>'
+        + '<div><div class="ct">Comisiones generadas</div><div class="cs">'+genFiltradas.length+' transacción'+(genFiltradas.length!==1?'es':'')+' · todas las sedes</div></div>'
         + '</div>'
         + '<div style="overflow-x:auto"><table class="tbl"><thead><tr>'
         + '<th style="width:36px"></th>'
@@ -268,7 +268,7 @@ function _comisionesRender(){
         + '<th>Cliente</th>'
         + '<th>Detalle</th>'
         + '<th style="text-align:right">Base</th>'
-        + '<th style="text-align:right">ComisiÃ³n</th>'
+        + '<th style="text-align:right">Comisión</th>'
         + '</tr></thead><tbody>'
         + genFiltradas.map(function(g){
             var esVenta = g.tipo === 'venta';
@@ -278,13 +278,13 @@ function _comisionesRender(){
             var inics = g.usuario.split(' ').slice(0,2).map(function(w){return (w[0]||'').toUpperCase();}).join('');
             return '<tr>'
               +'<td><div style="width:32px;height:32px;border-radius:9px;background:'+iconBg+';display:flex;align-items:center;justify-content:center;font-size:14px">'+iconLbl+'</div></td>'
-              +'<td style="font-size:11.5px;color:var(--ink3);white-space:nowrap">'+(g.fecha||'â€”')+'</td>'
+              +'<td style="font-size:11.5px;color:var(--ink3);white-space:nowrap">'+(g.fecha||'—')+'</td>'
               +'<td><div style="display:flex;align-items:center;gap:7px">'
                 +'<div style="width:26px;height:26px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:900;color:#fff;flex-shrink:0">'+inics+'</div>'
                 +'<span style="font-weight:700;font-size:12.5px">'+g.usuario+'</span>'
               +'</div></td>'
-              +'<td style="font-size:12px;color:var(--ink2)">'+(g.cliente||'â€”')+'</td>'
-              +'<td style="font-size:11.5px;color:var(--ink3)">'+(g.detalle||'â€”')+'<br><span style="font-size:10px;background:'+iconBg+';color:'+iconColor+';border-radius:10px;padding:1px 7px;font-weight:700">'+(esVenta?'Venta':'Cobranza')+'</span></td>'
+              +'<td style="font-size:12px;color:var(--ink2)">'+(g.cliente||'—')+'</td>'
+              +'<td style="font-size:11.5px;color:var(--ink3)">'+(g.detalle||'—')+'<br><span style="font-size:10px;background:'+iconBg+';color:'+iconColor+';border-radius:10px;padding:1px 7px;font-weight:700">'+(esVenta?'Venta':'Cobranza')+'</span></td>'
               +'<td style="text-align:right;font-size:12px;color:var(--ink3);font-family:var(--fd)">'+fmt(g.base)+'</td>'
               +'<td style="text-align:right;font-family:var(--fd);font-weight:900;font-size:14px;color:var(--green)">+'+fmt(g.comision)+'</td>'
               +'</tr>';
@@ -292,10 +292,10 @@ function _comisionesRender(){
         + '</tbody></table></div></div>';
     }
 
-  // â”€â”€ Tab: Historial de pagos â”€â”€
+  // ── Tab: Historial de pagos ──
   } else {
     if(!historial.length){
-      html += '<div class="empty"><div class="e-ic">â—ˆ</div><div class="e-tt">Sin pagos de comisiones registrados</div><div style="font-size:12px;color:var(--ink3);margin-top:4px">Los pagos aparecerÃ¡n aquÃ­ cuando uses el botÃ³n "$ Pagar" en cada tarjeta.</div></div>';
+      html += '<div class="empty"><div class="e-ic">â—ˆ</div><div class="e-tt">Sin pagos de comisiones registrados</div><div style="font-size:12px;color:var(--ink3);margin-top:4px">Los pagos aparecerán aquí cuando uses el botón "$ Pagar" en cada tarjeta.</div></div>';
     } else {
       // Mini KPIs del historial
       var totalHistorial = historial.reduce(function(a,e){return a+(parseFloat(e.monto)||0);},0);
@@ -304,14 +304,14 @@ function _comisionesRender(){
       var totalMes = pagosMes.reduce(function(a,e){return a+(parseFloat(e.monto)||0);},0);
 
       html += '<div class="sg" style="grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
-        + '<div class="stat" style="border-top:3px solid var(--amber)"><div class="st-v" style="font-size:20px;color:var(--amber)">'+fmt(totalHistorial)+'</div><div class="st-l">Total pagado histÃ³rico</div></div>'
+        + '<div class="stat" style="border-top:3px solid var(--amber)"><div class="st-v" style="font-size:20px;color:var(--amber)">'+fmt(totalHistorial)+'</div><div class="st-l">Total pagado histórico</div></div>'
         + '<div class="stat" style="border-top:3px solid var(--p1)"><div class="st-v" style="font-size:20px;color:var(--p1)">'+fmt(totalMes)+'</div><div class="st-l">Pagado este mes</div></div>'
         + '<div class="stat" style="border-top:3px solid var(--ink3)"><div class="st-v" style="font-size:20px">'+historial.length+'</div><div class="st-l">Pagos realizados</div></div>'
         + '</div>'
         + '<div class="card" style="padding:0;overflow:hidden">'
         + '<div class="ch" style="padding:13px 16px;border-bottom:1px solid var(--rim2)">'
         + '<div><div class="ct">Historial de pagos</div><div class="cs">'+historial.length+' pago'+(historial.length!==1?'s':'')+' realizados</div></div>'
-        + '<button class="btn btn-g btn-sm" onclick="_comExportarCSV()">â†“ Exportar CSV</button>'
+        + '<button class="btn btn-g btn-sm" onclick="_comExportarCSV()">↓ Exportar CSV</button>'
         + '</div>'
         + '<div style="overflow-x:auto"><table class="tbl"><thead><tr>'
         + '<th style="width:36px"></th>'
@@ -328,15 +328,15 @@ function _comisionesRender(){
             var u=(_usersCache||[]).find(function(x){return (x.nombre||x.email||'').toLowerCase()===(e.usuarioComisionNombre||'').toLowerCase();});
             return '<tr>'
               +'<td><div style="width:32px;height:32px;border-radius:9px;background:var(--ambers);display:flex;align-items:center;justify-content:center;font-size:14px">ðŸ’³</div></td>'
-              +'<td style="font-size:11.5px;color:var(--ink3);white-space:nowrap;font-family:var(--fd)">'+(e.fecha||'â€”')+'</td>'
+              +'<td style="font-size:11.5px;color:var(--ink3);white-space:nowrap;font-family:var(--fd)">'+(e.fecha||'—')+'</td>'
               +'<td><div style="display:flex;align-items:center;gap:7px">'
                 +'<div style="width:26px;height:26px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:900;color:#fff;flex-shrink:0">'+inics+'</div>'
-                +'<span style="font-weight:700;font-size:12.5px">'+(e.usuarioComisionNombre||'â€”')+'</span>'
+                +'<span style="font-weight:700;font-size:12.5px">'+(e.usuarioComisionNombre||'—')+'</span>'
               +'</div></td>'
               +'<td style="text-align:right;font-family:var(--fd);font-weight:900;font-size:15px;color:var(--amber)">'+fmt(parseFloat(e.monto)||0)+'</td>'
-              +'<td style="font-size:11.5px;color:var(--ink2)">'+(e.forma||e.cuenta||'â€”')+'</td>'
-              +'<td style="font-size:11px;color:var(--ink3)">'+(e.creadoPor||'â€”')+'</td>'
-              +'<td style="font-size:11px;color:var(--ink3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(e.notas||'â€”')+'</td>'
+              +'<td style="font-size:11.5px;color:var(--ink2)">'+(e.forma||e.cuenta||'—')+'</td>'
+              +'<td style="font-size:11px;color:var(--ink3)">'+(e.creadoPor||'—')+'</td>'
+              +'<td style="font-size:11px;color:var(--ink3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(e.notas||'—')+'</td>'
               +'<td><button class="btn btn-d btn-xs" onclick="_comAbrirEliminarPago('+e.id+',&quot;'+(u&&u.uid||'')+'&quot;)">Ã—</button></td>'
               +'</tr>';
           }).join('')
@@ -354,7 +354,7 @@ function _comExportarCSV(){
   var row=function(arr){return arr.map(esc).join(',')+'\n';};
   var rows=[];
   // Resumen
-  rows.push(row(['Vendedor','Email','Generado','Por venta','Por cobranza','Pagado','Saldo pendiente','NÂº ventas','NÂº cobranzas']));
+  rows.push(row(['Vendedor','Email','Generado','Por venta','Por cobranza','Pagado','Saldo pendiente','Nº ventas','Nº cobranzas']));
   usuarios.forEach(function(u){
     var s=_comGetSaldo(u);
     rows.push(row([u.nombre||u.email||'',u.email||'',s.generado.toFixed(2),s.porVenta.toFixed(2),s.porCobranza.toFixed(2),s.pagado.toFixed(2),s.saldo.toFixed(2),s.nVentas,s.nCobranzas]));
@@ -369,7 +369,7 @@ function _comExportarCSV(){
   rows.push(row([]));
   // Detalle ventas
   rows.push(row(['=== DETALLE DE VENTAS ===']));
-  rows.push(row(['Vendedor','CrÃ©dito','Cliente','Modelo','Fecha','Precio','ComisiÃ³n']));
+  rows.push(row(['Vendedor','Crédito','Cliente','Modelo','Fecha','Precio','Comisión']));
   usuarios.forEach(function(u){
     var gen=_comCalcGenerado(u);
     gen.ventas.forEach(function(v){ rows.push(row([u.nombre||u.email||'',v.credId,v.cliente,v.modelo,v.fecha,(v.precio||0).toFixed(2),(v.comision||0).toFixed(2)])); });
@@ -382,7 +382,7 @@ function _comExportarCSV(){
   URL.revokeObjectURL(url);
   toast('CSV descargado','success');
 }
-// Tarjeta individual de usuario â€” compacta, igual estilo que cards de cuentas
+// Tarjeta individual de usuario — compacta, igual estilo que cards de cuentas
 function _comTarjetaHtml(u){
   var cfg = _comGetConfig(u);
   if(!cfg) return '';
@@ -408,7 +408,7 @@ function _comTarjetaHtml(u){
           var pctSede = s.generado > 0 ? Math.round((d.total/s.generado)*100) : 0;
           return '<div style="display:flex;align-items:center;gap:8px">'
             + '<div style="font-size:11px;font-weight:700;color:var(--ink2);min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.nombre+'</div>'
-            + '<div style="font-size:10px;color:var(--ink3);flex-shrink:0">'+d.nVentas+'V Â· '+d.nCobranzas+'C</div>'
+            + '<div style="font-size:10px;color:var(--ink3);flex-shrink:0">'+d.nVentas+'V · '+d.nCobranzas+'C</div>'
             + '<div style="font-family:var(--fd);font-weight:800;font-size:11.5px;color:var(--ink1);flex-shrink:0;min-width:52px;text-align:right">$'+d.total.toFixed(2)+'</div>'
           + '</div>'
           + '<div style="height:3px;background:var(--rim);border-radius:2px;overflow:hidden;margin-top:2px">'
@@ -432,7 +432,7 @@ function _comTarjetaHtml(u){
       + '</div>'
     + '</div>'
 
-    // Total por pagar â€” protagonista
+    // Total por pagar — protagonista
     + '<div style="background:'+(s.saldo>0?'rgba(0,184,118,0.08)':'var(--gs)')+';border:1px solid '+(s.saldo>0?'rgba(0,184,118,0.25)':'var(--rim)')+';border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">'
       + '<div>'
         + '<div style="font-size:9px;color:var(--ink3);font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Total por pagar</div>'
@@ -445,7 +445,7 @@ function _comTarjetaHtml(u){
       + '</div>'
     + '</div>'
 
-    // Stats rÃ¡pidas
+    // Stats rápidas
     + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">'
       + '<div style="background:var(--surf2);border-radius:8px;padding:7px 9px;text-align:center">'
         + '<div style="font-size:9px;color:var(--ink3);font-weight:700;text-transform:uppercase;letter-spacing:.3px">Ventas</div>'
@@ -467,7 +467,7 @@ function _comTarjetaHtml(u){
     + '</div>'
     + '<div style="font-size:10px;color:var(--ink3);text-align:right;margin-bottom:8px">'+pctPagado+'% pagado</div>'
 
-    // Desglose por sede (si hay mÃ¡s de una)
+    // Desglose por sede (si hay más de una)
     + desgloseHtml
 
     // Botones
@@ -486,7 +486,7 @@ function _comFiltrar(){
   });
 }
 
-// â•â•â•â•â•â•â•â• MODAL: PAGAR COMISIÃ“N â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â• MODAL: PAGAR COMISIÓN â•â•â•â•â•â•â•â•
 function _comAbrirPagar(uid){
   var u = (_usersCache||[]).find(function(x){return x.uid===uid;});
   if(!u){ toast('Usuario no encontrado','error'); return; }
@@ -495,7 +495,7 @@ function _comAbrirPagar(uid){
   var cuentas = (typeof _cuentasBanc !== 'undefined' && _cuentasBanc) ? _cuentasBanc : [];
   if(!cuentas.length){ toast('No hay cuentas bancarias configuradas','error'); return; }
   $('mic').textContent='COM';
-  $('mtt').textContent='Pagar ComisiÃ³n';
+  $('mtt').textContent='Pagar Comisión';
   $('msb').textContent=u.nombre || u.email;
   $('modal-box').className='modal';
   // Lista de cuentas con saldos
@@ -516,7 +516,7 @@ function _comAbrirPagar(uid){
     + '<div class="fgr c1" style="gap:10px">'
     + '<div class="fg"><label>Monto a pagar <span style="color:var(--red)">*</span></label>'
     + '<input class="fi" type="number" step="0.01" min="0.01" max="'+s.saldo+'" id="comp_monto" value="'+s.saldo.toFixed(2)+'" oninput="_comValidarPago()">'
-    + '<div style="font-size:10.5px;color:var(--ink3);margin-top:3px">Puedes pagar parcial o total. MÃ¡ximo: $'+s.saldo.toFixed(2)+'</div></div>'
+    + '<div style="font-size:10.5px;color:var(--ink3);margin-top:3px">Puedes pagar parcial o total. Máximo: $'+s.saldo.toFixed(2)+'</div></div>'
     + '<div class="fg"><label>Cuenta de origen <span style="color:var(--red)">*</span></label>'
     + '<select class="fs" id="comp_cuenta" onchange="_comValidarPago()">'+cuentasOpts+'</select>'
     + '<div id="comp_saldo_warn" style="font-size:10.5px;margin-top:3px;color:var(--ink3)"></div></div>'
@@ -526,12 +526,12 @@ function _comAbrirPagar(uid){
     + '<textarea class="fi" id="comp_notas" rows="2" placeholder="Ej: Pago de comisiones primera quincena"></textarea></div>'
     + '</div>';
   $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    + '<button class="btn btn-p" id="comp_btn_save" onclick="_comGuardarPago(\''+uid+'\')">Pagar comisiÃ³n</button>';
+    + '<button class="btn btn-p" id="comp_btn_save" onclick="_comGuardarPago(\''+uid+'\')">Pagar comisión</button>';
   $('ov').style.display='flex';
   setTimeout(_comValidarPago, 50);
 }
 
-// ValidaciÃ³n en vivo del modal de pago
+// Validación en vivo del modal de pago
 function _comValidarPago(){
   var monto = parseFloat(($('comp_monto')&&$('comp_monto').value)||0)||0;
   var sel = $('comp_cuenta');
@@ -541,12 +541,12 @@ function _comValidarPago(){
   var opt = sel.options[sel.selectedIndex];
   var saldoCta = parseFloat(opt && opt.getAttribute('data-saldo') || 0)||0;
   if(monto <= 0){
-    if(warn){ warn.textContent='Ingresa un monto vÃ¡lido'; warn.style.color='var(--red)'; }
+    if(warn){ warn.textContent='Ingresa un monto válido'; warn.style.color='var(--red)'; }
     btn.disabled = true; btn.style.opacity='.5';
     return;
   }
   if(monto > saldoCta){
-    if(warn){ warn.innerHTML='âš  Saldo insuficiente Â· Cuenta tiene <b>$'+saldoCta.toFixed(2)+'</b>'; warn.style.color='var(--red)'; }
+    if(warn){ warn.innerHTML='âš  Saldo insuficiente · Cuenta tiene <b>$'+saldoCta.toFixed(2)+'</b>'; warn.style.color='var(--red)'; }
     btn.disabled = true; btn.style.opacity='.5';
     return;
   }
@@ -554,7 +554,7 @@ function _comValidarPago(){
   btn.disabled = false; btn.style.opacity='1';
 }
 
-// Guardar pago de comisiÃ³n
+// Guardar pago de comisión
 function _comGuardarPago(uid){
   var u = (_usersCache||[]).find(function(x){return x.uid===uid;});
   if(!u){ toast('Usuario no encontrado','error'); return; }
@@ -562,7 +562,7 @@ function _comGuardarPago(uid){
   var cuenta = ($('comp_cuenta')&&$('comp_cuenta').value)||'';
   var fecha = ($('comp_fecha')&&$('comp_fecha').value)||hoyLocalISO();
   var notas = ($('comp_notas')&&$('comp_notas').value)||'';
-  if(monto <= 0){ toast('Monto invÃ¡lido','error'); return; }
+  if(monto <= 0){ toast('Monto inválido','error'); return; }
   if(!cuenta){ toast('Selecciona una cuenta','error'); return; }
   // Validar saldo
   var saldoCta = (typeof saldoCuenta === 'function') ? saldoCuenta(cuenta) : 0;
@@ -576,7 +576,7 @@ function _comGuardarPago(uid){
   var newEgId = (S.egresos&&S.egresos.length)
     ? Math.max.apply(null, S.egresos.map(function(x){return parseInt(x.id)||0;}))+1
     : 1;
-  var concepto = 'Pago de comisiÃ³n Â· '+(u.nombre||u.email);
+  var concepto = 'Pago de comisión · '+(u.nombre||u.email);
   var newEg = {
     id: newEgId,
     concepto: concepto,
@@ -599,7 +599,7 @@ function _comGuardarPago(uid){
     id: 'MOV-COM-'+uid+'-'+Date.now(),
     tipo: 'retiro',
     tipoOperacion: 'comision',
-    concepto: 'Egreso Â· ' + concepto,
+    concepto: 'Egreso · ' + concepto,
     monto: monto,
     cuentaOrigen: cuenta,
     cuentaDestino: null,
@@ -615,7 +615,7 @@ function _comGuardarPago(uid){
   if(S.movimientos) S.movimientos.push(mov);
   if(DB && DB.saveMovimiento) DB.saveMovimiento(mov);
   closeM();
-  toast('ComisiÃ³n pagada Â· $'+monto.toFixed(2),'success');
+  toast('Comisión pagada · $'+monto.toFixed(2),'success');
   if(S.page === 'comisiones') nav('comisiones');
 }
 
@@ -626,10 +626,10 @@ function _comAbrirDetalle(uid){
   var s = _comGetSaldo(u);
   var pagosRealizados = _comGetPagosRealizados(u);
   $('mic').textContent='DET';
-  $('mtt').textContent='Detalle Â· '+(u.nombre||u.email);
+  $('mtt').textContent='Detalle · '+(u.nombre||u.email);
   $('msb').textContent='Comisiones generadas y pagos';
   $('modal-box').className='modal modal-lg';
-  // PestaÃ±as internas: ventas / cobranzas / pagos
+  // Pestañas internas: ventas / cobranzas / pagos
   var tabActual = window._comDetalleTab || 'ventas';
   var tabBtn = function(id, label, count){
     var act = tabActual === id;
@@ -642,7 +642,7 @@ function _comAbrirDetalle(uid){
     contenido = s.ventas.length === 0
       ? '<div style="padding:40px;text-align:center;color:var(--ink3);font-size:12.5px">Sin ventas registradas</div>'
       : '<div class="tw" style="overflow-x:auto"><table style="font-size:11.5px;min-width:600px">'
-        + '<thead><tr style="background:var(--gs)"><th style="padding:8px;text-align:left">Fecha</th><th style="padding:8px;text-align:left">CrÃ©dito</th><th style="padding:8px;text-align:left">Cliente</th><th style="padding:8px;text-align:left">Modelo</th><th style="padding:8px;text-align:right">Precio</th><th style="padding:8px;text-align:right">ComisiÃ³n</th></tr></thead>'
+        + '<thead><tr style="background:var(--gs)"><th style="padding:8px;text-align:left">Fecha</th><th style="padding:8px;text-align:left">Crédito</th><th style="padding:8px;text-align:left">Cliente</th><th style="padding:8px;text-align:left">Modelo</th><th style="padding:8px;text-align:right">Precio</th><th style="padding:8px;text-align:right">Comisión</th></tr></thead>'
         + '<tbody>' + s.ventas.map(function(v){
           return '<tr style="border-bottom:1px solid var(--rim2)">'
             + '<td style="padding:6px 8px">'+(v.fecha||'').slice(0,10)+'</td>'
@@ -657,7 +657,7 @@ function _comAbrirDetalle(uid){
     contenido = s.cobranzas.length === 0
       ? '<div style="padding:40px;text-align:center;color:var(--ink3);font-size:12.5px">Sin cobranzas registradas</div>'
       : '<div class="tw" style="overflow-x:auto"><table style="font-size:11.5px;min-width:600px">'
-        + '<thead><tr style="background:var(--gs)"><th style="padding:8px;text-align:left">Fecha</th><th style="padding:8px;text-align:left">Pago</th><th style="padding:8px;text-align:left">Cliente</th><th style="padding:8px;text-align:right">Monto pagado</th><th style="padding:8px;text-align:right">ComisiÃ³n</th></tr></thead>'
+        + '<thead><tr style="background:var(--gs)"><th style="padding:8px;text-align:left">Fecha</th><th style="padding:8px;text-align:left">Pago</th><th style="padding:8px;text-align:left">Cliente</th><th style="padding:8px;text-align:right">Monto pagado</th><th style="padding:8px;text-align:right">Comisión</th></tr></thead>'
         + '<tbody>' + s.cobranzas.map(function(c){
           return '<tr style="border-bottom:1px solid var(--rim2)">'
             + '<td style="padding:6px 8px">'+(c.fecha||'').slice(0,10)+'</td>'
@@ -669,16 +669,16 @@ function _comAbrirDetalle(uid){
         }).join('') + '</tbody></table></div>';
   } else { // pagos
     contenido = pagosRealizados.length === 0
-      ? '<div style="padding:40px;text-align:center;color:var(--ink3);font-size:12.5px">AÃºn no se le ha pagado ninguna comisiÃ³n</div>'
+      ? '<div style="padding:40px;text-align:center;color:var(--ink3);font-size:12.5px">Aún no se le ha pagado ninguna comisión</div>'
       : '<div class="tw" style="overflow-x:auto"><table style="font-size:11.5px;min-width:700px">'
-        + '<thead><tr style="background:var(--gs)"><th style="padding:8px;text-align:left">Fecha</th><th style="padding:8px;text-align:left">Cuenta</th><th style="padding:8px;text-align:right">Monto</th><th style="padding:8px;text-align:left">Notas</th><th style="padding:8px;text-align:left">Pagado por</th><th style="padding:8px;text-align:center">AcciÃ³n</th></tr></thead>'
+        + '<thead><tr style="background:var(--gs)"><th style="padding:8px;text-align:left">Fecha</th><th style="padding:8px;text-align:left">Cuenta</th><th style="padding:8px;text-align:right">Monto</th><th style="padding:8px;text-align:left">Notas</th><th style="padding:8px;text-align:left">Pagado por</th><th style="padding:8px;text-align:center">Acción</th></tr></thead>'
         + '<tbody>' + pagosRealizados.map(function(e){
           return '<tr style="border-bottom:1px solid var(--rim2)">'
             + '<td style="padding:6px 8px">'+(e.fecha||'').slice(0,10)+'</td>'
-            + '<td style="padding:6px 8px">'+(e.forma||'â€”')+'</td>'
+            + '<td style="padding:6px 8px">'+(e.forma||'—')+'</td>'
             + '<td style="padding:6px 8px;text-align:right;font-family:var(--fd);color:var(--p1);font-weight:700">$'+(parseFloat(e.monto)||0).toFixed(2)+'</td>'
-            + '<td style="padding:6px 8px;color:var(--ink3);font-size:10.5px">'+(e.notas||'â€”')+'</td>'
-            + '<td style="padding:6px 8px;color:var(--ink3);font-size:10.5px">'+(e.creadoPor||'â€”')+'</td>'
+            + '<td style="padding:6px 8px;color:var(--ink3);font-size:10.5px">'+(e.notas||'—')+'</td>'
+            + '<td style="padding:6px 8px;color:var(--ink3);font-size:10.5px">'+(e.creadoPor||'—')+'</td>'
             + '<td style="padding:6px 8px;text-align:center"><button class="btn btn-d btn-xs" onclick="_comAbrirEliminarPago('+e.id+',\''+uid+'\')">Eliminar</button></td>'
             + '</tr>';
         }).join('') + '</tbody></table></div>';
@@ -691,7 +691,7 @@ function _comAbrirDetalle(uid){
     + '<div style="background:var(--gs);padding:10px;border-radius:8px"><div style="font-size:9px;font-weight:800;color:var(--ink3);text-transform:uppercase">Por pagar</div><div style="font-family:var(--fd);font-weight:800;font-size:14px;color:var(--green);margin-top:2px">$'+s.saldo.toFixed(2)+'</div></div>'
     + '<div style="background:var(--gs);padding:10px;border-radius:8px"><div style="font-size:9px;font-weight:800;color:var(--ink3);text-transform:uppercase">Operaciones</div><div style="font-family:var(--fd);font-weight:800;font-size:14px;margin-top:2px">'+(s.nVentas+s.nCobranzas)+'</div></div>'
     + '</div>'
-    // Desglose por sede (OpciÃ³n C â€” siempre visible si hay sedes)
+    // Desglose por sede (Opción C — siempre visible si hay sedes)
     + (function(){
         var desglose = _comDesglosePorSede(u);
         if(!desglose.length) return '';
@@ -707,9 +707,9 @@ function _comAbrirDetalle(uid){
                 + '<div style="font-weight:800;font-size:12px;color:var(--ink1);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.nombre+'</div>'
                 + '<div style="font-family:var(--fd);font-size:18px;font-weight:900;color:var(--p1);line-height:1;margin-bottom:6px">$'+d.total.toFixed(2)+'</div>'
                 + '<div style="display:flex;gap:8px;margin-bottom:7px">'
-                  + '<span style="font-size:10px;color:var(--ink3)">ðŸ· <b>'+d.nVentas+'</b> venta'+(d.nVentas===1?'':'s')+' Â· $'+d.porVenta.toFixed(2)+'</span>'
+                  + '<span style="font-size:10px;color:var(--ink3)">ðŸ· <b>'+d.nVentas+'</b> venta'+(d.nVentas===1?'':'s')+' · $'+d.porVenta.toFixed(2)+'</span>'
                 + '</div>'
-                + '<div style="font-size:10px;color:var(--ink3);margin-bottom:7px">ðŸ’µ <b>'+d.nCobranzas+'</b> cobro'+(d.nCobranzas===1?'':'s')+' Â· $'+d.porCobranza.toFixed(2)+'</div>'
+                + '<div style="font-size:10px;color:var(--ink3);margin-bottom:7px">ðŸ’µ <b>'+d.nCobranzas+'</b> cobro'+(d.nCobranzas===1?'':'s')+' · $'+d.porCobranza.toFixed(2)+'</div>'
                 + '<div style="height:3px;background:var(--rim);border-radius:2px;overflow:hidden">'
                   + '<div style="height:100%;width:'+pctSede+'%;background:var(--grad);border-radius:2px"></div>'
                 + '</div>'
@@ -738,31 +738,31 @@ function _comDetalleSetTab(tab, uid){
   _comAbrirDetalle(uid);
 }
 
-// â•â•â•â•â•â•â•â• MODAL: ELIMINAR PAGO DE COMISIÃ“N â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â• MODAL: ELIMINAR PAGO DE COMISIÓN â•â•â•â•â•â•â•â•
 function _comAbrirEliminarPago(egId, uid){
   var eg = (S.egresos||[]).find(function(x){return x.id === egId || x.id === Number(egId);});
   if(!eg){ toast('Egreso no encontrado','error'); return; }
   $('mic').textContent='DEL';
-  $('mtt').textContent='Eliminar Pago de ComisiÃ³n';
+  $('mtt').textContent='Eliminar Pago de Comisión';
   $('msb').textContent='$'+(parseFloat(eg.monto)||0).toFixed(2);
   $('modal-box').className='modal';
   $('mbd').innerHTML = ''
     + '<div style="background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.25);border-radius:9px;padding:11px 13px;margin-bottom:14px;font-size:12px;line-height:1.55">'
-    + '<strong style="color:var(--red)">âš  AtenciÃ³n:</strong> EstÃ¡s a punto de eliminar el pago de comisiÃ³n de <b>'+(eg.usuarioComisionNombre||'usuario')+'</b> '
+    + '<strong style="color:var(--red)">âš  Atención:</strong> Estás a punto de eliminar el pago de comisión de <b>'+(eg.usuarioComisionNombre||'usuario')+'</b> '
     + 'realizado el <b>'+eg.fecha+'</b> desde la cuenta <b>'+eg.forma+'</b> por <b>$'+(parseFloat(eg.monto)||0).toFixed(2)+'</b>.'
     + '</div>'
-    + '<div class="fg"><label>RazÃ³n <span style="color:var(--red)">*</span></label>'
+    + '<div class="fg"><label>Razón <span style="color:var(--red)">*</span></label>'
     + '<textarea class="fi" id="cdel_razon" rows="2" placeholder="Ej: Error en el monto, pago duplicado, etc."></textarea></div>'
     + '<div style="margin-top:14px">'
-    + '<div style="font-size:11px;font-weight:800;color:var(--ink2);margin-bottom:8px">Â¿QuÃ© hacer con el dinero?</div>'
+    + '<div style="font-size:11px;font-weight:800;color:var(--ink2);margin-bottom:8px">¿Qué hacer con el dinero?</div>'
     + '<label style="display:flex;align-items:flex-start;gap:9px;padding:11px;border:2px solid var(--green);border-radius:10px;cursor:pointer;background:rgba(0,184,118,.05);margin-bottom:7px">'
     + '<input type="radio" name="cdel_dev" value="si" checked style="margin-top:3px;accent-color:var(--green);flex-shrink:0">'
     + '<div><div style="font-size:13px;font-weight:700;color:var(--green)">Devolver el dinero a la cuenta</div>'
-    + '<div style="font-size:11px;color:var(--ink3);margin-top:2px;line-height:1.5">Se hace reverso del retiro y la deuda con el vendedor se vuelve a cargar (volverÃ¡ a aparecer "se le debe").</div></div>'
+    + '<div style="font-size:11px;color:var(--ink3);margin-top:2px;line-height:1.5">Se hace reverso del retiro y la deuda con el vendedor se vuelve a cargar (volverá a aparecer "se le debe").</div></div>'
     + '</label>'
     + '<label style="display:flex;align-items:flex-start;gap:9px;padding:11px;border:2px solid var(--rim);border-radius:10px;cursor:pointer">'
     + '<input type="radio" name="cdel_dev" value="no" style="margin-top:3px;accent-color:var(--ink2);flex-shrink:0">'
-    + '<div><div style="font-size:13px;font-weight:700;color:var(--ink1)">No devolver â€” solo eliminar el registro</div>'
+    + '<div><div style="font-size:13px;font-weight:700;color:var(--ink1)">No devolver — solo eliminar el registro</div>'
     + '<div style="font-size:11px;color:var(--ink3);margin-top:2px;line-height:1.5">El egreso queda contabilizado pero sin asociarse al usuario. La deuda sigue saldada (no le debes al vendedor).</div></div>'
     + '</label>'
     + '</div>';
@@ -775,7 +775,7 @@ function _comConfirmarEliminarPago(egId, uid){
   var idx = (S.egresos||[]).findIndex(function(x){return x.id === egId || x.id === Number(egId);});
   if(idx < 0){ toast('Egreso no encontrado','error'); return; }
   var razon = ($('cdel_razon')&&$('cdel_razon').value||'').trim();
-  if(!razon){ toast('Indica la razÃ³n de eliminaciÃ³n','error'); return; }
+  if(!razon){ toast('Indica la razón de eliminación','error'); return; }
   var devolver = (document.querySelector('input[name="cdel_dev"]:checked')||{}).value === 'si';
   var eg = S.egresos[idx];
   var quien = (S.currentUser&&S.currentUser.nombre)||'Admin';
@@ -788,11 +788,11 @@ function _comConfirmarEliminarPago(egId, uid){
   eg.devolvioDinero = devolver;
   if(!devolver){
     // Si no se devuelve el dinero, "desasociar" del usuario para que no afecte su saldo
-    // pero conservamos el egreso (el dinero ya saliÃ³ de la caja)
+    // pero conservamos el egreso (el dinero ya salió de la caja)
     eg.usuarioComisionDesasociado = true;
     eg.usuarioComisionUid = '';
     eg.usuarioComisionNombre = '';
-    // Cambiar categorÃ­a para que no aparezca como comisiÃ³n activa
+    // Cambiar categoría para que no aparezca como comisión activa
     eg.categoria = 'comisiones_anulada';
   }
   if(DB && DB.saveEgreso) DB.saveEgreso(eg);
@@ -807,17 +807,17 @@ function _comConfirmarEliminarPago(egId, uid){
     mov.eliminadoRazon = razon;
     if(DB && DB.saveMovimiento) DB.saveMovimiento(mov);
     if(devolver){
-      // Crear movimiento de reverso (depÃ³sito a la cuenta original)
+      // Crear movimiento de reverso (depósito a la cuenta original)
       var rev = {
         id: 'MOV-COMREV-'+egId+'-'+Date.now(),
         tipo: 'deposito',
         tipoOperacion: 'comision_reverso',
-        concepto: 'Reverso Â· ' + (mov.concepto||''),
+        concepto: 'Reverso · ' + (mov.concepto||''),
         monto: parseFloat(eg.monto)||0,
         cuentaOrigen: null,
         cuentaDestino: mov.cuentaOrigen,
         fecha: hoyLocalISO(),
-        referencia: 'Reverso por eliminaciÃ³n Â· ' + razon,
+        referencia: 'Reverso por eliminación · ' + razon,
         realizadoPor: quien,
         tasaBs: window._tasaBsGlobal||1,
         hora: new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
@@ -833,8 +833,8 @@ function _comConfirmarEliminarPago(egId, uid){
   if(S.page === 'comisiones') nav('comisiones');
 }
 
-// â•â•â•â•â•â•â•â• INTEGRACIÃ“N CON PERFIL DE USUARIO â•â•â•â•â•â•â•â•
-// Esta funciÃ³n se llama desde el modal "Editar Permisos" para guardar la config de comisiones
+// â•â•â•â•â•â•â•â• INTEGRACIÓN CON PERFIL DE USUARIO â•â•â•â•â•â•â•â•
+// Esta función se llama desde el modal "Editar Permisos" para guardar la config de comisiones
 function _comGuardarConfigUsuario(uid, config){
   if(!DB || !DB.updateUsuario) return;
   DB.updateUsuario(uid, { comisiones: config });
@@ -858,14 +858,14 @@ function _euComToggle(){
 
 
 // â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
-// â•‘  MÃ“DULO CONCESIONARIOS                                    â•‘
+// â•‘  MÓDULO CONCESIONARIOS                                    â•‘
 // â•‘  - CRUD de sedes/puntos de venta                          â•‘
-// â•‘  - AsignaciÃ³n de usuarios a mÃºltiples concesionarios      â•‘
+// â•‘  - Asignación de usuarios a múltiples concesionarios      â•‘
 // â•‘  - Switcher en header para alternar concesionario activo  â•‘
-// â•‘  ENTREGA 2: Filtros automÃ¡ticos + asignaciÃ³n histÃ³rica.   â•‘
-// â•‘  Modo Concesionario y Bandeja Aprobaciones â†’ Entrega 3.   â•‘
+// â•‘  ENTREGA 2: Filtros automáticos + asignación histórica.   â•‘
+// â•‘  Modo Concesionario y Bandeja Aprobaciones → Entrega 3.   â•‘
 // â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-// â”€â”€ Helpers â”€â”€
+// ── Helpers ──
 
-// Devuelve un concesionario por id (Ã³ null)
+// Devuelve un concesionario por id (ó null)

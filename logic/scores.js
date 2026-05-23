@@ -1,13 +1,13 @@
 // Logica de Scores: politica de riesgo, simulador, recalculo y analisis.
 // Extraido de assets/pagasi-app.js sin cambiar formulas, pesos ni umbrales.
 
-// SCORE: mÃ³dulo de polÃ­tica de riesgo
+// SCORE: módulo de política de riesgo
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 var SCORE_FACTOR_META = [
   {k:'f1', nombre:'Historial crediticio', desc:'Comportamiento previo, mora, deudas, bancos'},
   {k:'f2', nombre:'Capacidad de pago', desc:'Ingresos, dependientes, ratio cuota/ingreso'},
-  {k:'f3', nombre:'Estabilidad laboral', desc:'Tipo de empleo, antigÃ¼edad, uso de la moto'},
-  {k:'f4', nombre:'GarantÃ­as', desc:'Fiador, vivienda propia, banco activo'},
+  {k:'f3', nombre:'Estabilidad laboral', desc:'Tipo de empleo, antigüedad, uso de la moto'},
+  {k:'f4', nombre:'Garantías', desc:'Fiador, vivienda propia, banco activo'},
   {k:'f5', nombre:'Origen y confianza', desc:'Referido, deudas, remesas'}
 ];
 
@@ -115,16 +115,16 @@ function guardarScoreCfg(){
   try{ localStorage.setItem('pagasi_config_score', JSON.stringify(SCORE_CFG)); }catch(_e){}
   if(typeof db!=='undefined' && db){
     db.collection('config').doc('score').set(SCORE_CFG)
-      .then(function(){ toast('PolÃ­tica de riesgo guardada âœ“','success'); })
+      .then(function(){ toast('Política de riesgo guardada ✓','success'); })
       .catch(function(e){ toast('Error: '+e.message,'error'); });
   } else {
-    toast('PolÃ­tica guardada (local) âœ“','success');
+    toast('Política guardada (local) ✓','success');
   }
 }
 
-// â”€â”€ Simulador interactivo â”€â”€
+// ── Simulador interactivo ──
 function abrirScoreSimulador(){
-  $('mic').textContent=''; $('mtt').textContent='Simulador de Score'; $('msb').textContent='Prueba distintos escenarios con la polÃ­tica actual';
+  $('mic').textContent=''; $('mtt').textContent='Simulador de Score'; $('msb').textContent='Prueba distintos escenarios con la política actual';
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML = ''
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
@@ -134,10 +134,10 @@ function abrirScoreSimulador(){
     + '<div class="fg"><label>Ingreso familiar (USD)</label><input class="fi" id="sim_ifam" type="number" value="0" oninput="scSimular()"></div>'
     + '<div class="fg"><label>Cuota quincenal (USD)</label><input class="fi" id="sim_cuota" type="number" value="100" oninput="scSimular()"></div>'
     + '<div class="fg"><label>Tipo de empleo</label><select class="fs" id="sim_emp" onchange="scSimular()">'
-    + '<option value="formal">Formal</option><option value="publico">PÃºblico</option><option value="independiente">Independiente</option>'
+    + '<option value="formal">Formal</option><option value="publico">Público</option><option value="independiente">Independiente</option>'
     + '<option value="comerciante">Comerciante</option><option value="delivery">Delivery</option><option value="remesas">Remesas</option>'
     + '<option value="informal" selected>Informal</option></select></div>'
-    + '<div class="fg"><label>AntigÃ¼edad (aÃ±os)</label><select class="fs" id="sim_ant" onchange="scSimular()"><option value="1">&lt;1</option><option value="2">1-2</option><option value="3" selected>2-3</option><option value="5">3+</option></select></div>'
+    + '<div class="fg"><label>Antigüedad (años)</label><select class="fs" id="sim_ant" onchange="scSimular()"><option value="1">&lt;1</option><option value="2">1-2</option><option value="3" selected>2-3</option><option value="5">3+</option></select></div>'
     + '<div class="fg"><label>Historial crediticio</label><select class="fs" id="sim_hist" onchange="scSimular()"><option value="bueno">Bueno</option><option value="ninguno" selected>Ninguno</option><option value="mora_leve">Mora leve pasada</option><option value="malo">Malo</option></select></div>'
     + '<div class="fg"><label>Deudas actuales</label><select class="fs" id="sim_deuda" onchange="scSimular()"><option value="no" selected>No</option><option value="menores">Menores</option><option value="graves">Graves</option></select></div>'
     + '<div class="fg"><label>Dependientes</label><select class="fs" id="sim_dep" onchange="scSimular()"><option value="0" selected>0</option><option value="1">1</option><option value="2">2</option><option value="3">3+</option></select></div>'
@@ -145,7 +145,7 @@ function abrirScoreSimulador(){
     + '<div class="fg"><label>Vivienda</label><select class="fs" id="sim_viv" onchange="scSimular()"><option value="propia">Propia</option><option value="familiar" selected>Familiar</option><option value="alquilada">Alquilada</option></select></div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
     + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="sim_fiador" onchange="scSimular()" style="accent-color:var(--p1)">Tiene fiador</label>'
-    + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="sim_tel" onchange="scSimular()" checked style="accent-color:var(--p1)">Tiene telÃ©fono</label>'
+    + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="sim_tel" onchange="scSimular()" checked style="accent-color:var(--p1)">Tiene teléfono</label>'
     + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="sim_ref" onchange="scSimular()" checked style="accent-color:var(--p1)">Tiene referencia</label>'
     + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px"><input type="checkbox" id="sim_rem" onchange="scSimular()" style="accent-color:var(--p1)">Recibe remesas</label>'
     + '</div>'
@@ -185,8 +185,8 @@ function scSimPreset(p){
   scSimular();
 }
 
-// Motor de cÃ¡lculo reutilizable (usa SCORE_CFG actual)
-// Recalcula el score de un cliente a partir de sus datos actuales y la configuraciÃ³n SCORE_CFG vigente
+// Motor de cálculo reutilizable (usa SCORE_CFG actual)
+// Recalcula el score de un cliente a partir de sus datos actuales y la configuración SCORE_CFG vigente
 function recalcularScoreCliente(c, persistir){
   if(!c) return 0;
   var input = {
@@ -219,7 +219,7 @@ function recalcularScoreCliente(c, persistir){
   return nuevoScore;
 }
 
-// Recalcula el score de TODOS los clientes (usado al cambiar configuraciÃ³n o bajo demanda)
+// Recalcula el score de TODOS los clientes (usado al cambiar configuración o bajo demanda)
 function recalcularTodosLosScores(){
   if(!S.clientes || !S.clientes.length) return 0;
   var n = 0;
@@ -234,11 +234,11 @@ function recalcularTodosLosScores(){
 
 // Recalcula todos los scores y refresca la lista visualmente
 function recalcularScoresYRecargar(){
-  if(!confirm('Â¿Recalcular el score de todos los clientes con la configuraciÃ³n actual?\n\nEsto puede tardar unos segundos.')) return;
+  if(!confirm('¿Recalcular el score de todos los clientes con la configuración actual?\n\nEsto puede tardar unos segundos.')) return;
   toast('Recalculando scores...','info');
   setTimeout(function(){
     var n = recalcularTodosLosScores();
-    toast('âœ“ Recalculados '+n+' cliente'+(n!==1?'s':'')+' con cambios','success');
+    toast('✓ Recalculados '+n+' cliente'+(n!==1?'s':'')+' con cambios','success');
     var list = $('clienteList');
     if(list) list.innerHTML = renderClienteList(($('clienteQ')&&$('clienteQ').value)||'');
   }, 80);
@@ -251,9 +251,9 @@ function recalcularScoreClienteYRefrescar(cliId){
   var viejo = c.score_indexa || 0;
   var nuevo = recalcularScoreCliente(c, true);
   if(nuevo === viejo){
-    toast('Score ya estÃ¡ actualizado: '+nuevo,'info');
+    toast('Score ya está actualizado: '+nuevo,'info');
   } else {
-    toast('Score actualizado: '+viejo+' â†’ '+nuevo,'success');
+    toast('Score actualizado: '+viejo+' → '+nuevo,'success');
     // Refrescar la ficha
     closeM();
     setTimeout(function(){ verCliente(cliId); }, 200);
@@ -317,7 +317,7 @@ function calcularScoreConCfg(input){
   if(rem==='si'&&emp!=='remesas') f3 = Math.min(100, f3+8);
   f3 = Math.max(0, Math.min(100, f3));
 
-  // f4: garantÃ­as
+  // f4: garantías
   var f4 = 25;
   if(fiador) f4 = Math.min(100, f4+45);
   if(viv==='propia') f4 = Math.min(100, f4+15);
@@ -336,12 +336,12 @@ function calcularScoreConCfg(input){
   // Hard rejects
   var motivosRechazo = [];
   if(SCORE_CFG.hardReject.ingresoMinimo>0 && ingEf<SCORE_CFG.hardReject.ingresoMinimo)
-    motivosRechazo.push('Ingreso ('+ingEf+') < mÃ­nimo requerido ('+SCORE_CFG.hardReject.ingresoMinimo+')');
+    motivosRechazo.push('Ingreso ('+ingEf+') < mínimo requerido ('+SCORE_CFG.hardReject.ingresoMinimo+')');
   if(SCORE_CFG.hardReject.ratioCuotaMax>0 && ratio>SCORE_CFG.hardReject.ratioCuotaMax)
-    motivosRechazo.push('Ratio cuota/ingreso '+(Math.round(ratio*100))+'% > mÃ¡ximo '+(Math.round(SCORE_CFG.hardReject.ratioCuotaMax*100))+'%');
+    motivosRechazo.push('Ratio cuota/ingreso '+(Math.round(ratio*100))+'% > máximo '+(Math.round(SCORE_CFG.hardReject.ratioCuotaMax*100))+'%');
   if(SCORE_CFG.hardReject.historialMaloConDeuda && hist==='malo' && deuda==='graves')
     motivosRechazo.push('Historial malo + deudas graves');
-  if(SCORE_CFG.hardReject.sinTelefono && !tieneTel) motivosRechazo.push('Sin telÃ©fono de contacto');
+  if(SCORE_CFG.hardReject.sinTelefono && !tieneTel) motivosRechazo.push('Sin teléfono de contacto');
   if(SCORE_CFG.hardReject.sinReferencias && !tieneRef) motivosRechazo.push('Sin referencias');
 
   // Score
@@ -350,8 +350,8 @@ function calcularScoreConCfg(input){
   var score = motivosRechazo.length>0 ? 300 : Math.max(300, Math.min(850, Math.round(300+(raw/1000)*550)));
 
   var decision, decisionColor;
-  if(motivosRechazo.length>0){ decision='RECHAZO AUTOMÃTICO'; decisionColor='var(--red)'; }
-  else if(score>=SCORE_CFG.umbrales.excelente){ decision='APROBACIÃ“N AUTOMÃTICA'; decisionColor='var(--green)'; }
+  if(motivosRechazo.length>0){ decision='RECHAZO AUTOMÁTICO'; decisionColor='var(--red)'; }
+  else if(score>=SCORE_CFG.umbrales.excelente){ decision='APROBACIÓN AUTOMÁTICA'; decisionColor='var(--green)'; }
   else if(score>=SCORE_CFG.umbrales.bueno){ decision='APROBAR'; decisionColor='var(--p1)'; }
   else if(score>=SCORE_CFG.umbrales.regular){ decision='REVISAR MANUALMENTE'; decisionColor='var(--amber)'; }
   else { decision='RECHAZAR'; decisionColor='var(--red)'; }
@@ -391,9 +391,9 @@ function scSimular(){
 
   if(res.motivosRechazo.length){
     html += '<div style="padding:10px 12px;background:var(--reds);border-left:3px solid var(--red);border-radius:8px;margin-bottom:12px">'
-      + '<div style="font-size:11px;font-weight:800;color:var(--red);text-transform:uppercase;margin-bottom:4px"> Rechazo automÃ¡tico por:</div>';
+      + '<div style="font-size:11px;font-weight:800;color:var(--red);text-transform:uppercase;margin-bottom:4px"> Rechazo automático por:</div>';
     res.motivosRechazo.forEach(function(m){
-      html += '<div style="font-size:12px;color:var(--ink);margin-top:3px">â€¢ '+m+'</div>';
+      html += '<div style="font-size:12px;color:var(--ink);margin-top:3px">• '+m+'</div>';
     });
     html += '</div>';
   }
@@ -425,9 +425,9 @@ function scSimular(){
   host.innerHTML = html;
 }
 
-// â”€â”€ AnÃ¡lisis del portafolio actual â”€â”€
+// ── Análisis del portafolio actual ──
 function abrirScoreAnalisis(){
-  $('mic').textContent=''; $('mtt').textContent='AnÃ¡lisis del Portafolio'; $('msb').textContent='DistribuciÃ³n de score y mora actual';
+  $('mic').textContent=''; $('mtt').textContent='Análisis del Portafolio'; $('msb').textContent='Distribución de score y mora actual';
   $('modal-box').className='modal modal-lg';
 
   // Recopilar datos
@@ -475,9 +475,9 @@ function abrirScoreAnalisis(){
     + '<div class="cf-kpi'+(pctMoraGlobal>15?' is-r':pctMoraGlobal>8?' is-a':' is-g')+'"><div class="cf-kpi-v">'+pctMoraGlobal+'%</div><div class="cf-kpi-l">Tasa de mora</div></div>'
     + '</div>';
 
-  // DistribuciÃ³n por banda con tasa de mora
+  // Distribución por banda con tasa de mora
   html += '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px 16px;margin-bottom:12px">'
-    + '<div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">DistribuciÃ³n por banda de score Â· tasa de mora histÃ³rica</div>';
+    + '<div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Distribución por banda de score · tasa de mora histórica</div>';
   stats.forEach(function(s){
     var wBar = Math.round(s.total/maxBanda*100);
     var moraCol = s.pctMora>=30?'var(--red)':s.pctMora>=15?'var(--amber)':'var(--green)';
@@ -503,14 +503,14 @@ function abrirScoreAnalisis(){
     if(i>=3 && s.pctMora>=15) recos.push({tipo:'warn', txt:'La banda "'+s.lbl+'" (supuestamente buena) tiene '+s.pctMora+'% de mora. El modelo puede estar siendo <b>demasiado permisivo</b>.'});
   });
   if(pctMoraGlobal>15) recos.push({tipo:'crit', txt:'Tasa global de mora de <b>'+pctMoraGlobal+'%</b> es alta. Revisa los pesos de los factores y los hard-rejects.'});
-  if(pctMoraGlobal<3 && totalConCred>10) recos.push({tipo:'ok', txt:'Mora global de '+pctMoraGlobal+'% muy baja. PodrÃ­as <b>relajar requisitos</b> para captar mÃ¡s clientes sin subir demasiado el riesgo.'});
+  if(pctMoraGlobal<3 && totalConCred>10) recos.push({tipo:'ok', txt:'Mora global de '+pctMoraGlobal+'% muy baja. Podrías <b>relajar requisitos</b> para captar más clientes sin subir demasiado el riesgo.'});
 
   // Casos concretos
   var alexis = clientes.find(function(c){ return /alexis\s+ramos/i.test(c.nombre||''); });
-  var carlos = clientes.find(function(c){ return /carlos\s+l[oÃ³]pez/i.test(c.nombre||''); });
+  var carlos = clientes.find(function(c){ return /carlos\s+l[oó]pez/i.test(c.nombre||''); });
   if(alexis || carlos){
     html += '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px 16px;margin-bottom:12px">'
-      + '<div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Casos especÃ­ficos</div>';
+      + '<div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">Casos específicos</div>';
     [alexis, carlos].filter(Boolean).forEach(function(c){
       var s = c.score_indexa||0;
       var ing = c.ingreso||0;
@@ -518,11 +518,11 @@ function abrirScoreAnalisis(){
       html += '<div style="display:flex;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--rim)">'
         + '<div style="width:54px;text-align:center"><div style="font-size:22px;font-weight:900;color:'+col+';line-height:1">'+s+'</div><div style="font-size:9px;color:var(--ink3)">/850</div></div>'
         + '<div style="flex:1"><div style="font-weight:800;font-size:13px">'+c.nombre+'</div>'
-        + '<div style="font-size:11px;color:var(--ink3)">Ingreso: $'+ing+'/mes Â· '+(c.trabajo||'â€”')+' Â· '+(c.ciudad||'â€”')+'</div></div>'
+        + '<div style="font-size:11px;color:var(--ink3)">Ingreso: $'+ing+'/mes · '+(c.trabajo||'—')+' · '+(c.ciudad||'—')+'</div></div>'
         + '</div>';
     });
     html += '<div style="padding:10px 12px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:8px;margin-top:10px;font-size:11.5px;color:var(--ink2);line-height:1.5">'
-      + '<b>ObservaciÃ³n:</b> si un cliente con $200/mes estÃ¡ arriba de 600, probablemente el peso de "Capacidad de pago" es bajo o el ingreso mÃ­nimo base es muy permisivo. Ve a la pestaÃ±a Ratio y revisa "Ingreso mÃ­nimo base".'
+      + '<b>Observación:</b> si un cliente con $200/mes está arriba de 600, probablemente el peso de "Capacidad de pago" es bajo o el ingreso mínimo base es muy permisivo. Ve a la pestaña Ratio y revisa "Ingreso mínimo base".'
       + '</div></div>';
   }
 
