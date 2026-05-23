@@ -21,6 +21,12 @@ PG.dash = function(){
   const cuotasCobradas = _SPAGOS.filter(p=>!p.eliminado&&p.estado==='confirmado'&&!p.esInicial&&p.tipoOperacion!=='inicial_credito').reduce((a,p)=>a+p.monto,0);
   const inicialesCobradas = _SPAGOS.filter(p=>!p.eliminado&&p.estado==='confirmado'&&(p.esInicial||p.tipoOperacion==='inicial_credito')).reduce((a,p)=>a+p.monto,0);
   const ingMes = inicialesCobradas + cuotasCobradas; // Dashboard: ingresos confirmados sin duplicar la inicial
+  // ── Cobrado SOLO del mes actual ──
+  const _primerDiaMesDash = hoyLocalISO().slice(0,7)+'-01';
+  const _pagosMesDash = _SPAGOS.filter(p=>!p.eliminado&&p.estado==='confirmado'&&(p.fecha||'')>=_primerDiaMesDash);
+  const cuotasCobradasMes = _pagosMesDash.filter(p=>!p.esInicial&&p.tipoOperacion!=='inicial_credito').reduce((a,p)=>a+p.monto,0);
+  const inicialesCobradasMes = _pagosMesDash.filter(p=>p.esInicial||p.tipoOperacion==='inicial_credito').reduce((a,p)=>a+p.monto,0);
+  const ingMesReal = cuotasCobradasMes + inicialesCobradasMes;
   const egMes = _SEGR.filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
   const utilidad = ingMes - egMes;
   const pendPagos = _SPAGOS.filter(p=>p.estado==='pendiente').length;
@@ -132,7 +138,7 @@ PG.dash = function(){
   )}
 
   <!-- ROW 1: 4 KPI CARDS -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px">
 
     <div class="card dash-kpi" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer;border-left:3px solid var(--p1)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
@@ -149,18 +155,27 @@ PG.dash = function(){
 
     <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer;border-left:3px solid var(--green)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);font-family:var(--fm)">Cobrado (mes)</span>
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);font-family:var(--fm)">Cobrado (Mes)</span>
+        <span style="font-size:9px;background:var(--greens);color:var(--green);padding:2px 7px;border-radius:20px;font-weight:700">${new Date().toLocaleDateString('es-VE',{month:'short'}).replace('.','')}</span>
+      </div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:22px;letter-spacing:-1px;color:var(--green);margin-bottom:4px">${fmt(ingMesReal)}</div>
+      <div style="font-size:11px;color:var(--ink3)">Cobrado este mes</div>
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Cuotas recibidas</span><span style="color:var(--green);font-weight:700">${fmt(cuotasCobradasMes)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Iniciales recibidas</span><span style="color:var(--p1);font-weight:700">${fmt(inicialesCobradasMes)}</span></div>
+      </div>
+    </div>
+
+    <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer;border-left:3px solid var(--green)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);font-family:var(--fm)">Cobrado (Total)</span>
         ${pendPagos>0?`<span style="font-size:9px;background:rgba(232,152,10,0.12);color:var(--amber);padding:2px 7px;border-radius:20px;font-weight:700">${pendPagos} pend.</span>`:'<span style="font-size:9px;background:var(--greens);color:var(--green);padding:2px 7px;border-radius:20px;font-weight:700">Al día</span>'}
       </div>
       <div style="font-family:var(--fd);font-weight:900;font-size:22px;letter-spacing:-1px;color:var(--green);margin-bottom:4px">${fmt(ingMes)}</div>
-      <div style="font-size:11px;color:var(--ink3)">Pagos confirmados</div>
-      <div style="margin-top:10px">
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink3);margin-bottom:4px">
-          <span>Recaudación</span><span style="font-weight:700;color:var(--green)">${pctCobro}%</span>
-        </div>
-        <div style="background:var(--rim);border-radius:4px;height:5px;overflow:hidden">
-          <div style="height:100%;width:${pctCobro}%;background:linear-gradient(90deg,var(--green),#2dd4a0);border-radius:4px;transition:width .8s"></div>
-        </div>
+      <div style="font-size:11px;color:var(--ink3)">Histórico total</div>
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Cuotas recibidas</span><span style="color:var(--green);font-weight:700">${fmt(cuotasCobradas)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Iniciales recibidas</span><span style="color:var(--p1);font-weight:700">${fmt(inicialesCobradas)}</span></div>
       </div>
     </div>
 
