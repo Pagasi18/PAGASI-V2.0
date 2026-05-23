@@ -525,26 +525,6 @@ function auditarCompleto(){
     }
   });
 
-  // ── Helper: normalizar nombre para comparación flexible ──
-  function normNombre(s){
-    if(!s) return '';
-    return s.toLowerCase()
-      .normalize('NFD').replace(/[̀-ͯ]/g,'') // quitar acentos
-      .replace(/\s+/g,' ').trim();
-  }
-  function nombresCoinciden(a, b){
-    if(!a || !b) return false;
-    var na = normNombre(a), nb = normNombre(b);
-    if(na === nb) return true;
-    // Coincidencia parcial: uno contiene al otro (nombre incompleto en el pago)
-    if(na.split(' ').length >= 2 && nb.indexOf(na) !== -1) return true;
-    if(nb.split(' ').length >= 2 && na.indexOf(nb) !== -1) return true;
-    // Palabras en común: al menos 2 palabras iguales
-    var wa = na.split(' '), wb = nb.split(' ');
-    var comunes = wa.filter(function(w){ return w.length > 2 && wb.indexOf(w) !== -1; });
-    return comunes.length >= 2;
-  }
-
   // ── 2. Pagos huérfanos (cred no existe o es de otro cliente) ──
   pagos.forEach(function(p){
     if(!p.cred) return;
@@ -553,7 +533,7 @@ function auditarCompleto(){
       issues.push({ cat:'Pagos', tipo:'Crédito inexistente', sev:'error',
         desc: p.id + ' · ' + (p.cli||'?') + ' · ' + fmt(p.monto) + ' apunta a ' + p.cred + ' (no existe)',
         id: p.id, col:'pagos' });
-    } else if(p.cli && cred.cli && !nombresCoinciden(p.cli, cred.cli)){
+    } else if(p.cli && cred.cli && p.cli !== cred.cli){
       issues.push({ cat:'Pagos', tipo:'Cliente no coincide con crédito', sev:'error',
         desc: p.id + ' · pago de "' + p.cli + '" apunta a ' + p.cred + ' que es de "' + cred.cli + '"',
         id: p.id, col:'pagos' });
@@ -618,10 +598,7 @@ function auditarCompleto(){
   // ── 7. Motos financiadas sin crédito activo ──
   motos.filter(function(m){ return m.estado === 'financiada'; }).forEach(function(m){
     var credActivo = creds.find(function(c){
-      // Match por motoId O por nombre de cliente (por si el vínculo motoId quedó null)
-      var porId   = c.motoId && String(c.motoId) === String(m.id);
-      var porNombre = m.cliente && c.cli && nombresCoinciden(m.cliente, c.cli);
-      return (porId || porNombre) && (c.estado === 'activo' || c.estado === 'pendiente_revision');
+      return (String(c.motoId) === String(m.id)) && (c.estado === 'activo' || c.estado === 'pendiente_revision');
     });
     if(!credActivo){
       issues.push({ cat:'Motos', tipo:'Financiada sin crédito activo', sev:'warn',
