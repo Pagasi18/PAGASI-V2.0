@@ -1,23 +1,53 @@
 // Pagasi logic: backups
 function exportarBackupJSON(){
-  var backup={
-    version:1,
-    fechaExport:new Date().toISOString(),
-    clientes:S.clientes,
-    creds:S.creds,
-    pagos:S.pagos,
-    egresos:S.egresos,
-    movimientos:S.movimientos,
-    motos:S.motos
-  };
-  var json=JSON.stringify(backup,null,2);
-  var blob=new Blob([json],{type:'application/json'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');
-  var fname='backup-pagasi-'+hoyLocalISO()+'.json';
-  a.href=url;a.download=fname;a.click();
-  URL.revokeObjectURL(url);
-  toast('Backup exportado: '+fname,'success');
+  // Recolectar config docs desde Firebase antes de exportar
+  var configKeys = ['plan','catalogo','planes','empresa','tasa','cobradores','score','rolesPermisos'];
+  var configPromises = db
+    ? configKeys.map(function(k){ return db.collection('config').doc(k).get().then(function(d){ return {key:k, data:d.exists?d.data():null}; }).catch(function(){ return {key:k,data:null}; }); })
+    : configKeys.map(function(k){ return Promise.resolve({key:k,data:null}); });
+  var usuariosPromise = db
+    ? db.collection('usuarios').get().then(function(s){ return s.docs.map(function(d){ return Object.assign({uid:d.id},d.data()); }); }).catch(function(){ return []; })
+    : Promise.resolve([]);
+  var tareasPromise = db
+    ? db.collection('tareas').get().then(function(s){ return s.docs.map(function(d){ return Object.assign({id:d.id},d.data()); }); }).catch(function(){ return []; })
+    : Promise.resolve(S.tareas||[]);
+
+  toast('Preparando backup completo...','info');
+  Promise.all([usuariosPromise, tareasPromise].concat(configPromises)).then(function(results){
+    var usuarios = results[0];
+    var tareas   = results[1];
+    var configData = {};
+    results.slice(2).forEach(function(r){ if(r.data) configData[r.key] = r.data; });
+
+    var backup={
+      version:2,
+      fechaExport:new Date().toISOString(),
+      // Colecciones principales
+      clientes:     S.clientes     || [],
+      creds:        S.creds        || [],
+      pagos:        S.pagos        || [],
+      egresos:      S.egresos      || [],
+      movimientos:  S.movimientos  || [],
+      motos:        S.motos        || [],
+      concesionarios: S.concesionarios || [],
+      cuentasPendientes: S.cuentasPendientes || [],
+      facturas:     S.facturas     || [],
+      tareas:       tareas,
+      usuarios:     usuarios,
+      // Configuración
+      config:       configData
+    };
+    var json=JSON.stringify(backup,null,2);
+    var blob=new Blob([json],{type:'application/json'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    var fname='backup-pagasi-completo-'+hoyLocalISO()+'.json';
+    a.href=url;a.download=fname;a.click();
+    URL.revokeObjectURL(url);
+    toast('Backup completo exportado: '+fname,'success');
+  }).catch(function(err){
+    toast('Error al exportar: '+(err&&err.message||err),'error');
+  });
 }
 
 function importarBackupJSON(input){
@@ -30,17 +60,28 @@ function importarBackupJSON(input){
       if(!data.version||!data.clientes){
         toast('Archivo inválido — no parece un backup de Pagasi','error');return;
       }
-      if(!confirm(' Esto reemplazará TODOS los datos actuales con el backup.\n\nClientes: '+data.clientes.length+
-        '\nCréditos: '+data.creds.length+'\nPagos: '+data.pagos.length+
-        '\n\n¿Continuar?')){input.value='';return;}
+      var resumen = ' Esto reemplazará TODOS los datos actuales con el backup.\n\n'
+        + 'Clientes: '+(data.clientes||[]).length+'\n'
+        + 'Créditos: '+(data.creds||[]).length+'\n'
+        + 'Pagos: '+(data.pagos||[]).length+'\n'
+        + 'Motos: '+(data.motos||[]).length+'\n'
+        + 'Concesionarios: '+(data.concesionarios||[]).length+'\n'
+        + 'Tareas: '+(data.tareas||[]).length+'\n'
+        + (data.config ? 'Config: '+Object.keys(data.config).join(', ')+'\n' : '')
+        + '\n¿Continuar?';
+      if(!confirm(resumen)){input.value='';return;}
 
       // Aplicar en memoria
-      S.clientes = data.clientes || [];
-      S.creds = data.creds || [];
-      S.pagos = data.pagos || [];
-      S.egresos = data.egresos || [];
-      S.movimientos = data.movimientos || [];
-      S.motos = data.motos || [];
+      S.clientes          = data.clientes          || [];
+      S.creds             = data.creds             || [];
+      S.pagos             = data.pagos             || [];
+      S.egresos           = data.egresos           || [];
+      S.movimientos       = data.movimientos       || [];
+      S.motos             = data.motos             || [];
+      S.concesionarios    = data.concesionarios    || [];
+      S.cuentasPendientes = data.cuentasPendientes || [];
+      S.facturas          = data.facturas          || [];
+      S.tareas            = data.tareas            || [];
 
       // Guardar en Firebase si está conectado
       if(db){
@@ -52,8 +93,25 @@ function importarBackupJSON(input){
         S.egresos.forEach(function(o){ops.push(DB.saveEgreso(o)||Promise.resolve());});
         S.movimientos.forEach(function(o){ops.push(DB.saveMovimiento(o)||Promise.resolve());});
         S.motos.forEach(function(o){ops.push(DB.saveMoto(o)||Promise.resolve());});
+        S.concesionarios.forEach(function(o){ops.push(DB.saveConcesionario&&DB.saveConcesionario(o)||Promise.resolve());});
+        S.cuentasPendientes.forEach(function(o){ops.push(DB.saveCuentaPendiente&&DB.saveCuentaPendiente(o)||Promise.resolve());});
+        S.facturas.forEach(function(o){ops.push(DB.saveFactura&&DB.saveFactura(o)||Promise.resolve());});
+        S.tareas.forEach(function(o){ops.push(DB.saveTarea&&DB.saveTarea(o)||Promise.resolve());});
+        // Restaurar config docs
+        if(data.config && db){
+          Object.keys(data.config).forEach(function(k){
+            if(data.config[k]) ops.push(db.collection('config').doc(k).set(data.config[k],{merge:true}));
+          });
+        }
+        // Restaurar usuarios (no sobreescribe auth, solo datos de perfil)
+        if(data.usuarios && data.usuarios.length && db){
+          data.usuarios.forEach(function(u){
+            if(u.uid) ops.push(db.collection('usuarios').doc(u.uid).set(u,{merge:true}));
+          });
+        }
         Promise.all(ops.filter(Boolean)).then(function(){
-          hideLoader();nav(S.page);toast('✓ Backup restaurado ('+S.clientes.length+' clientes, '+S.creds.length+' créditos)','success');
+          hideLoader();nav(S.page);
+          toast('✓ Backup restaurado — '+S.clientes.length+' clientes, '+S.creds.length+' créditos, '+S.concesionarios.length+' concesionarios','success');
         }).catch(function(err){hideLoader();toast('Error parcial al guardar: '+err.message,'error');});
       } else {
         nav(S.page);toast('✓ Backup cargado en memoria (sin Firebase)','success');
