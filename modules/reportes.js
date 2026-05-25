@@ -169,7 +169,8 @@ PG.reportes = function(){
     {k:'proyecciones', lbl:'Proyecciones', sub:'Flujo futuro · 12 meses'},
     {k:'egresos', lbl:'Egresos', sub:'Gastos · categorías'},
     {k:'exportar', lbl:'Exportar', sub:'Reportes · CSV · Backup'},
-    {k:'libroseniat', lbl:'Libro SENIAT', sub:'Ventas · IVA · IGTF'}
+    {k:'libroseniat', lbl:'Libro SENIAT', sub:'Ventas · IVA · IGTF'},
+    {k:'contador', lbl:'📋 Contador', sub:'Reporte semanal · Tributario'}
   ];
 
   return`<div class="page">
@@ -773,6 +774,522 @@ PG.reportes = function(){
 
   ${tab==='libroseniat' ? _renderLibroSeniat() : ''}
 
+  ${tab==='contador' ? _renderTabContador({
+    pagosConf, credsActivos, credsMora, credsComp,
+    totalIngresos, totalEgresos, utilidad,
+    _SCREDS, _SPAGOS, _SEGR, _SMOTOS,
+    serie, mActual
+  }) : ''}
+
   </div>`;
 };
 
+
+// ══════════════════════════════════════════════════════════════
+// TAB: CONTADOR — Reporte Semanal para el Contador
+// ══════════════════════════════════════════════════════════════
+function _renderTabContador(ctx){
+  var pagosConf   = ctx.pagosConf   || [];
+  var credsActivos= ctx.credsActivos|| [];
+  var credsMora   = ctx.credsMora   || [];
+  var _SCREDS     = ctx._SCREDS     || [];
+  var _SPAGOS     = ctx._SPAGOS     || [];
+  var _SEGR       = ctx._SEGR       || [];
+  var _SMOTOS     = ctx._SMOTOS     || [];
+  var serie       = ctx.serie       || [];
+  var mActual     = ctx.mActual     || {ingresos:0, egresos:0};
+
+  var tasaBCV = window._tasaBsGlobal || 1;
+  var emp = (typeof getEmpresa === 'function') ? getEmpresa() : {};
+
+  // ── Fecha semana actual (lunes–viernes) ──
+  var hoy = new Date();
+  var diaSem = hoy.getDay() || 7; // lunes=1 … dom=7
+  var lunes = new Date(hoy); lunes.setDate(hoy.getDate() - diaSem + 1);
+  var viernes = new Date(lunes); viernes.setDate(lunes.getDate() + 4);
+  var toISO = function(d){ return d.toISOString().slice(0,10); };
+  var lunesISO   = toISO(lunes);
+  var viernesISO = toISO(viernes);
+
+  // ── Filtrar pagos de la semana ──
+  var pagosSemana = pagosConf.filter(function(p){
+    return p.fecha && p.fecha >= lunesISO && p.fecha <= viernesISO;
+  });
+
+  // ── Filtrar egresos de la semana ──
+  var egresosSemana = (_SEGR||[]).filter(function(e){
+    return !e.eliminado && e.fecha && e.fecha >= lunesISO && e.fecha <= viernesISO;
+  });
+
+  // ── Totales cobros ──
+  var totalCobrosUSD = pagosSemana.reduce(function(a,p){ return a+(p.monto||0); }, 0);
+  var totalCobrosBs  = totalCobrosUSD * tasaBCV;
+  var totalIVABs     = totalCobrosBs * 0.16;
+
+  // ── Contratos nuevos semana ──
+  var contratosNuevos = _SCREDS.filter(function(c){
+    return !c.eliminado && c.fecha && c.fecha >= lunesISO && c.fecha <= viernesISO;
+  });
+  var totalInicialesSemana = contratosNuevos.reduce(function(a,c){ return a+(parseFloat(c.ini)||0); }, 0);
+
+  // ── Totales egresos semana ──
+  var totalEgresosSemanaUSD = egresosSemana.reduce(function(a,e){ return a+(e.monto||0); }, 0);
+  var totalEgresosSemBs     = totalEgresosSemanaUSD * tasaBCV;
+
+  // ── Mora ──
+  var credsMoraList = (_SCREDS||[]).filter(function(c){ return !c.eliminado && c.mora>0 && c.estado==='activo'; });
+  var totalCarteraVencida = credsMoraList.reduce(function(a,c){
+    var cuotaV = parseFloat(c.cuotaQ||c.cuota||0);
+    var cuotasVenc = Math.max(0, Math.floor(c.mora/15));
+    return a + cuotaV * cuotasVenc;
+  }, 0);
+
+  // ── Alertas legales ──
+  var alertas = [];
+  credsMoraList.forEach(function(c){
+    var nivel, accion, tipo;
+    if(c.mora > 30){
+      nivel='CRÍTICO'; tipo='JUDICIAL';
+      accion='Acción judicial — Art. 599 CPC (secuestro del bien)';
+    } else if(c.mora > 14){
+      nivel='PENDIENTE'; tipo='COBRANZA';
+      accion='Carta formal de mora + propuesta reestructuración';
+    } else {
+      nivel='EN GESTIÓN'; tipo='COBRANZA';
+      accion='Contacto WhatsApp + referencias personales';
+    }
+    alertas.push({contrato: (c.id||'—')+' / '+c.cli, alerta: c.mora+'d de mora · Cuota: '+fmt(c.cuotaQ||c.cuota||0), tipo:tipo, plazo: c.mora>30?'Inmediato':c.mora>14?'3 días hábiles':'7 días', estado:nivel, responsable: c.mora>30?'Bufete':'Administrador'});
+  });
+  // Facturas pendientes
+  var sinFactura = pagosSemana.filter(function(p){ return !(S.facturas||[]).find(function(f){ return f.pagoId===p.id && !f.anulada; }); });
+  if(sinFactura.length){
+    alertas.push({contrato:'SENIAT / Facturación', alerta: sinFactura.length+' pago(s) sin factura fiscal emitida esta semana', tipo:'TRIBUTARIO', plazo:'Antes declaración IVA', estado:'URGENTE', responsable:'Contador'});
+  }
+  // Contratos sin notaría (campo flag hipotético)
+  contratosNuevos.forEach(function(c){
+    if(!c.notariaOk){
+      alertas.push({contrato:(c.id||'—')+' / '+c.cli, alerta:'Contrato nuevo — autenticar ante Notaría Pública (imperativo legal)', tipo:'LEGAL', plazo:'7 días hábiles', estado:'PENDIENTE', responsable:'Administrador'});
+    }
+  });
+  // Seguros vencidos/por vencer
+  (_SMOTOS||[]).filter(function(m){ return !m.eliminado && m.seguroVence; }).forEach(function(m){
+    var diff = (new Date(m.seguroVence) - hoy) / (1000*60*60*24);
+    if(diff < 30){
+      alertas.push({contrato:'Moto '+m.placa+' / '+m.modelo, alerta:'Seguro RC vence '+m.seguroVence+' — renovar antes de vencimiento', tipo:'SEGURO', plazo:m.seguroVence, estado: diff<0?'CRÍTICO':'AVISAR', responsable:'Cliente/Administrador'});
+    }
+  });
+
+  // ── Helper styles ──
+  var th = 'padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#aab;white-space:nowrap;';
+  var td0 = 'padding:8px 12px;font-size:12px;border-bottom:1px solid var(--rim2);';
+  var tdm = td0+'font-family:var(--fd);';
+  var tdR = tdm+'text-align:right;';
+  var trH = 'background:var(--ink);';
+  var chip2 = function(txt, col){ return '<span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;background:var(--'+col+'s);color:var(--'+col+')">'+txt+'</span>'; };
+  var secHdr = function(n, t, s){ return '<div style="display:flex;align-items:center;gap:10px;margin:18px 0 10px"><span style="background:#e8ecff;color:var(--p1);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;font-family:var(--fd)">'+n+'</span><div><div style="font-size:13px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.4px">'+t+'</div>'+(s?'<div style="font-size:10.5px;color:var(--ink3)">'+s+'</div>':'')+'</div></div>'; };
+
+  // ── Semana label ──
+  var semLabel = lunes.toLocaleDateString('es-VE',{day:'2-digit',month:'long'}) + ' al ' + viernes.toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
+
+  // ────────────────────────────────────────────────────────────
+  // HTML DEL TAB
+  // ────────────────────────────────────────────────────────────
+  var html = '';
+
+  // ── Aviso legal ──
+  html += '<div style="background:#fff8e7;border:1px solid #e8c842;border-left:4px solid #c9a400;border-radius:8px;padding:12px 16px;font-size:11.5px;color:#7a5c00;line-height:1.6;margin-bottom:16px">'
+    + '<strong>⚠ Recordatorio tributario:</strong> IVA 16% sobre cada canon → declaración mensual SENIAT (primeros 15 días del mes siguiente) · '
+    + 'ISLR sobre ingresos por arrendamiento → declaración anual 31/03 · '
+    + 'Cobros en USD declarar al BCV equivalente en Bs. del día del cobro · Factura fiscal obligatoria por cada cuota.'
+    + '</div>';
+
+  // ── Encabezado del reporte ──
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:16px 20px;background:var(--ink);border-radius:12px;margin-bottom:16px;gap:16px">'
+    + '<div>'
+    + '<div style="font-size:18px;font-weight:900;color:#fff;letter-spacing:-.3px">Reporte Semanal · Contador</div>'
+    + '<div style="font-size:12px;color:#aab;margin-top:4px">'+semLabel+'</div>'
+    + '<div style="font-size:11px;color:#888;margin-top:2px">'+(emp.nombre||'PAGASI')+' · RIF '+(emp.rif||'—')+'</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button class="btn btn-g btn-sm" onclick="_contadorExportarCSV()">⬇ CSV Cobros</button>'
+    + '<button class="btn btn-p btn-sm" onclick="_contadorImprimir()">🖨 Imprimir / PDF</button>'
+    + '</div>'
+    + '</div>';
+
+  // ── 01 KPIs ──
+  html += secHdr('01','Resumen Financiero de la Semana','Cifras reales de Firebase');
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:4px">';
+  var kpis = [
+    {lbl:'Cobros Recibidos', val:fmt(totalCobrosUSD), sub:pagosSemana.length+' pagos confirmados', color:'p1'},
+    {lbl:'Contratos Nuevos', val:contratosNuevos.length, sub:fmt(totalInicialesSemana)+' en iniciales', color:'green'},
+    {lbl:'Cartera en Mora', val:credsMoraList.length, sub:fmt(totalCarteraVencida)+' vencido', color:'red'},
+    {lbl:'IVA a Declarar (16%)', val:'Bs. '+Math.round(totalIVABs).toLocaleString('es-VE'), sub:'Tasa BCV: '+tasaBCV.toLocaleString('es-VE'), color:'amber'},
+  ];
+  kpis.forEach(function(k){
+    html += '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden">'
+      + '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--'+k.color+')"></div>'
+      + '<div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px">'+k.lbl+'</div>'
+      + '<div style="font-family:var(--fd);font-size:20px;font-weight:900;color:var(--'+k.color+')">'+k.val+'</div>'
+      + '<div style="font-size:11px;color:var(--ink3);margin-top:3px">'+k.sub+'</div>'
+      + '</div>';
+  });
+  html += '</div>';
+
+  // ── 02 LIBRO DE COBROS ──
+  html += secHdr('02','Libro de Cobros — Ingresos de la Semana','Para declaración IVA · Art. 7.1 LIVA');
+  html += '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;overflow:hidden;margin-bottom:4px">'
+    + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+    + '<thead><tr style="'+trH+'">'
+    + '<th style="'+th+'">#</th>'
+    + '<th style="'+th+'">Fecha</th>'
+    + '<th style="'+th+'">N° Recibo</th>'
+    + '<th style="'+th+'">Cliente</th>'
+    + '<th style="'+th+'">CI / RIF</th>'
+    + '<th style="'+th+'">Contrato</th>'
+    + '<th style="'+th+'">Concepto</th>'
+    + '<th style="'+th+';text-align:right">USD</th>'
+    + '<th style="'+th+';text-align:right">Tasa BCV</th>'
+    + '<th style="'+th+';text-align:right">Bs.</th>'
+    + '<th style="'+th+';text-align:right">IVA 16% (Bs)</th>'
+    + '<th style="'+th+'">Medio Pago</th>'
+    + '<th style="'+th+'">Factura</th>'
+    + '</tr></thead><tbody>';
+
+  var totUSD=0, totBs=0, totIva2=0;
+  if(pagosSemana.length === 0){
+    html += '<tr><td colspan="13" style="text-align:center;padding:24px;color:var(--ink3);font-size:12px">Sin cobros registrados esta semana</td></tr>';
+  } else {
+    pagosSemana.sort(function(a,b){ return (a.fecha||'').localeCompare(b.fecha||''); }).forEach(function(p, idx){
+      var bs  = (p.monto||0) * tasaBCV;
+      var iva = bs * 0.16;
+      totUSD += (p.monto||0); totBs += bs; totIva2 += iva;
+      var cli = (S.clientes||[]).find(function(x){ return x.nombre===p.cli || String(x.id)===String(p.clienteId); }) || {};
+      var ci  = cli.cedula || cli.rif || '—';
+      var cred = (S.creds||[]).find(function(c){ return String(c.id)===String(p.credId||p.cred); }) || {};
+      var esFac = (S.facturas||[]).find(function(f){ return f.pagoId===p.id && !f.anulada; });
+      var facBadge = esFac ? chip2('✓ Emitida','green') : chip2('PENDIENTE','red');
+      var esIni = p.esInicial || p.tipoOperacion==='inicial_credito';
+      html += '<tr style="border-bottom:1px solid var(--rim2)">'
+        + '<td style="'+td0+'font-family:var(--fd);color:var(--ink3)">'+(idx+1)+'</td>'
+        + '<td style="'+tdm+'">'+(p.fecha||'—')+'</td>'
+        + '<td style="'+tdm+';font-size:10.5px">'+(p.id||'—')+'</td>'
+        + '<td style="'+td0+'font-weight:700">'+(p.cli||'—')+'</td>'
+        + '<td style="'+tdm+';font-size:10.5px">'+ci+'</td>'
+        + '<td style="'+tdm+';font-size:10.5px">'+(cred.id||p.credId||'—')+'</td>'
+        + '<td style="'+td0+'">'+(esIni?'Inicial':'Cuota '+(p.numCuota||'—'))+'</td>'
+        + '<td style="'+tdR+'font-weight:700">'+fmt(p.monto||0)+'</td>'
+        + '<td style="'+tdR+'color:var(--ink3)">'+tasaBCV.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'
+        + '<td style="'+tdR+'">'+'Bs. '+Math.round(bs).toLocaleString('es-VE')+'</td>'
+        + '<td style="'+tdR+';color:var(--amber)">'+'Bs. '+Math.round(iva).toLocaleString('es-VE')+'</td>'
+        + '<td style="'+td0+'">'+(p.metodo||p.medio||'—')+'</td>'
+        + '<td style="'+td0+'">'+facBadge+'</td>'
+        + '</tr>';
+    });
+  }
+  // tfoot
+  html += '</tbody><tfoot><tr style="background:var(--ink)">'
+    + '<td colspan="7" style="padding:10px 12px;color:#fff;font-weight:700;font-size:12px">TOTAL SEMANA</td>'
+    + '<td style="padding:10px 12px;text-align:right;color:#fff;font-weight:900;font-family:var(--fd)">'+fmt(totUSD)+'</td>'
+    + '<td style="padding:10px 12px;text-align:right;color:#aab">—</td>'
+    + '<td style="padding:10px 12px;text-align:right;color:#fff;font-weight:700">Bs. '+Math.round(totBs).toLocaleString('es-VE')+'</td>'
+    + '<td style="padding:10px 12px;text-align:right;color:var(--amber);font-weight:700">Bs. '+Math.round(totIva2).toLocaleString('es-VE')+'</td>'
+    + '<td colspan="2"></td>'
+    + '</tr></tfoot>'
+    + '</table></div></div>';
+
+  // ── 03 CÁLCULO TRIBUTARIO SENIAT ──
+  html += secHdr('03','Cálculo Tributario SENIAT','IVA débito · ISLR estimado · Tasa BCV: '+tasaBCV.toLocaleString('es-VE'));
+  var islrIngMes = mActual.ingresos || 0;
+  var islrEgMes  = mActual.egresos  || 0;
+  var islrUtil   = islrIngMes - islrEgMes;
+  var islrAnual  = Math.max(0, islrUtil * 12);
+  var islrProv   = islrAnual * 0.34;
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">';
+  // IVA box
+  html += '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;padding:16px 18px">'
+    + '<div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--rim2)">IVA (Alícuota 16%) — Semana</div>'
+    + _contRow('Base imponible (Bs.)', 'Bs. '+Math.round(totBs).toLocaleString('es-VE'), 'ink2')
+    + _contRow('IVA débito fiscal (16%)', 'Bs. '+Math.round(totIva2).toLocaleString('es-VE'), 'p1')
+    + _contRow('IVA crédito fiscal', 'Bs. 0 (registrar compras con IVA)', 'ink3')
+    + '<div style="margin-top:10px;background:var(--ink);color:#fff;border-radius:7px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">'
+    + '<span style="font-size:12px;font-weight:700">IVA NETO A PAGAR (semana)</span>'
+    + '<span style="font-family:var(--fd);font-size:15px;font-weight:900">Bs. '+Math.round(totIva2).toLocaleString('es-VE')+'</span>'
+    + '</div>'
+    + '<div style="font-size:10px;color:var(--ink3);margin-top:8px">Presentar en primeros 15 días del mes siguiente · Formulario Form-30</div>'
+    + '</div>';
+  // ISLR box
+  html += '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;padding:16px 18px">'
+    + '<div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--rim2)">ISLR — Proyección Mes Actual</div>'
+    + _contRow('Ingresos mes actual', fmt(islrIngMes), 'p1')
+    + _contRow('Egresos mes actual', fmt(islrEgMes), 'red')
+    + _contRow('Utilidad neta estimada mes', fmt(islrUtil), islrUtil>=0?'green':'red')
+    + _contRow('Tasa ISLR estimada', '34% (confirmar con contador)', 'ink3')
+    + '<div style="margin-top:10px;background:var(--ink);color:#fff;border-radius:7px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">'
+    + '<span style="font-size:12px;font-weight:700">Provisión ISLR anual estimada</span>'
+    + '<span style="font-family:var(--fd);font-size:15px;font-weight:900">'+fmt(islrProv)+'</span>'
+    + '</div>'
+    + '<div style="font-size:10px;color:var(--ink3);margin-top:8px">Declaración anual hasta 31 de marzo · Confirmar tasa y deducciones con el contador</div>'
+    + '</div>';
+  html += '</div>';
+
+  // ── 04 MORA ──
+  html += secHdr('04','Cartera Morosa — Al Cierre de Semana','Alerta legal: +30 días → Art. 599 CPC — acción judicial');
+  html += '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;overflow:hidden;margin-bottom:4px">'
+    + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+    + '<thead><tr style="'+trH+'">'
+    + '<th style="'+th+'">Cliente</th><th style="'+th+'">CI</th><th style="'+th+'">Contrato</th>'
+    + '<th style="'+th+'">Motocicleta</th><th style="'+th+';text-align:right">Canon</th>'
+    + '<th style="'+th+';text-align:right">Días Mora</th><th style="'+th+';text-align:right">Saldo Vencido</th>'
+    + '<th style="'+th+';text-align:right">Interés 2.5%</th><th style="'+th+'">Nivel</th><th style="'+th+'">Acción</th>'
+    + '</tr></thead><tbody>';
+
+  var totMora=0, totInt=0;
+  if(credsMoraList.length===0){
+    html += '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--green);font-weight:700">✓ Sin créditos en mora</td></tr>';
+  } else {
+    credsMoraList.sort(function(a,b){ return (b.mora||0)-(a.mora||0); }).forEach(function(c){
+      var cli = (S.clientes||[]).find(function(x){ return x.nombre===c.cli; }) || {};
+      var cuotaV = parseFloat(c.cuotaQ||c.cuota||0);
+      var cuotasVenc = Math.max(0, Math.floor(c.mora/15));
+      var saldo = cuotaV * cuotasVenc;
+      var interes = saldo * 0.025;
+      totMora += saldo; totInt += interes;
+      var nivel, nivelColor, nivelBg, accion;
+      if(c.mora>30){ nivel='Crítico +30d'; nivelColor='var(--red)'; nivelBg='var(--reds)'; accion='⚖ Acción judicial inmediata'; }
+      else if(c.mora>14){ nivel='Alto 16–30d'; nivelColor='var(--amber)'; nivelBg='var(--ambers)'; accion='📄 Carta formal + reestructuración'; }
+      else { nivel='Moderado'; nivelColor='#9a6b00'; nivelBg='#fef9e7'; accion='📱 Contacto WA + referencias'; }
+      html += '<tr style="border-bottom:1px solid var(--rim2)">'
+        + '<td style="'+td0+'font-weight:700">'+c.cli+'</td>'
+        + '<td style="'+tdm+';font-size:10.5px">'+(cli.cedula||'—')+'</td>'
+        + '<td style="'+tdm+';font-size:10.5px">'+(c.id||'—')+'</td>'
+        + '<td style="'+td0+'">'+(c.modelo||'—')+'</td>'
+        + '<td style="'+tdR+'">'+fmt(cuotaV)+'</td>'
+        + '<td style="'+tdR+'font-weight:900;color:'+nivelColor+'">'+c.mora+'</td>'
+        + '<td style="'+tdR+'font-weight:700">'+fmt(saldo)+'</td>'
+        + '<td style="'+tdR+'color:var(--amber)">'+fmt(interes)+'</td>'
+        + '<td style="'+td0+'"><span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;background:'+nivelBg+';color:'+nivelColor+'">'+nivel+'</span></td>'
+        + '<td style="'+td0+';font-size:11px">'+accion+'</td>'
+        + '</tr>';
+    });
+  }
+  html += '</tbody><tfoot><tr style="background:var(--ink)">'
+    + '<td colspan="6" style="padding:10px 12px;color:#fff;font-weight:700">TOTAL CARTERA VENCIDA</td>'
+    + '<td style="padding:10px 12px;text-align:right;color:#fff;font-weight:900;font-family:var(--fd)">'+fmt(totMora)+'</td>'
+    + '<td style="padding:10px 12px;text-align:right;color:var(--amber);font-weight:700">'+fmt(totInt)+'</td>'
+    + '<td colspan="2"></td>'
+    + '</tr></tfoot></table></div></div>';
+
+  // ── 05 CONTRATOS NUEVOS ──
+  html += secHdr('05','Contratos Nuevos — Aperturados en la Semana','');
+  html += '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;overflow:hidden;margin-bottom:4px">'
+    + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+    + '<thead><tr style="'+trH+'">'
+    + '<th style="'+th+'">Fecha</th><th style="'+th+'">N° Contrato</th><th style="'+th+'">Cliente</th>'
+    + '<th style="'+th+'">Motocicleta</th><th style="'+th+'">VIN / Serial</th>'
+    + '<th style="'+th+';text-align:right">Precio Moto</th><th style="'+th+';text-align:right">Inicial Cobrada</th>'
+    + '<th style="'+th+';text-align:right">Saldo a Financiar</th><th style="'+th+'">Plazo</th><th style="'+th+'">Notaría</th>'
+    + '</tr></thead><tbody>';
+
+  if(contratosNuevos.length === 0){
+    html += '<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--ink3);font-size:12px">Sin contratos nuevos esta semana</td></tr>';
+  } else {
+    contratosNuevos.forEach(function(c){
+      var not = c.notariaOk ? chip2('✓ Autenticado','green') : chip2('PENDIENTE','red');
+      html += '<tr style="border-bottom:1px solid var(--rim2)">'
+        + '<td style="'+tdm+'">'+(c.fecha||'—')+'</td>'
+        + '<td style="'+tdm+';font-weight:700">'+(c.id||'—')+'</td>'
+        + '<td style="'+td0+'font-weight:700">'+c.cli+'</td>'
+        + '<td style="'+td0+'">'+(c.modelo||'—')+'</td>'
+        + '<td style="'+tdm+';font-size:10.5px">'+(c.vin||c.serialChasis||'—')+'</td>'
+        + '<td style="'+tdR+'">'+fmt(c.precioBaseReal||c.precio||0)+'</td>'
+        + '<td style="'+tdR+'font-weight:700">'+fmt(c.ini||0)+'</td>'
+        + '<td style="'+tdR+'">'+fmt(c.fin||0)+'</td>'
+        + '<td style="'+td0+'">'+(c.plazo||'—')+' meses</td>'
+        + '<td style="'+td0+'">'+not+'</td>'
+        + '</tr>';
+    });
+  }
+  html += '</tbody></table></div></div>';
+
+  // ── 06 INVENTARIO MOTOS ──
+  html += secHdr('06','Estado del Inventario de Motocicletas','');
+  var motosAll = (_SMOTOS||[]).filter(function(m){ return !m.eliminado; });
+  html += '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;overflow:hidden;margin-bottom:4px">'
+    + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+    + '<thead><tr style="'+trH+'">'
+    + '<th style="'+th+'">VIN / Serial</th><th style="'+th+'">Marca / Modelo</th>'
+    + '<th style="'+th+'">Año</th><th style="'+th+'">Placa</th>'
+    + '<th style="'+th+';text-align:right">Costo Adq.</th><th style="'+th+'">Estado</th>'
+    + '<th style="'+th+'">Contrato</th><th style="'+th+'">Cliente</th><th style="'+th+'">Seguro Vence</th>'
+    + '</tr></thead><tbody>';
+
+  if(motosAll.length === 0){
+    html += '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--ink3)">Sin motos registradas</td></tr>';
+  } else {
+    motosAll.forEach(function(m){
+      var estadoColor = m.estado==='disponible'?'green':m.estado==='financiada'?'p1':m.estado==='recuperada'||m.estado==='recuperado'?'amber':'ink3';
+      var cred = (S.creds||[]).find(function(c){ return String(c.motoId)===String(m.id) && c.estado==='activo'; });
+      var segVence = m.seguroVence || '—';
+      var segColor = 'var(--ink3)';
+      if(m.seguroVence){
+        var diff2 = (new Date(m.seguroVence) - hoy) / (1000*60*60*24);
+        if(diff2 < 0) segColor='var(--red)';
+        else if(diff2 < 30) segColor='var(--amber)';
+        else segColor='var(--green)';
+      }
+      html += '<tr style="border-bottom:1px solid var(--rim2)">'
+        + '<td style="'+tdm+';font-size:10.5px">'+(m.vin||m.serialChasis||'—')+'</td>'
+        + '<td style="'+td0+'font-weight:700">'+(m.marca||'')+(m.modelo?' '+m.modelo:'')+'</td>'
+        + '<td style="'+tdm+'">'+(m.anio||'—')+'</td>'
+        + '<td style="'+tdm+'">'+(m.placa||'—')+'</td>'
+        + '<td style="'+tdR+'">'+fmt(m.precio||m.costo||0)+'</td>'
+        + '<td style="'+td0+'"><span class="bdg b-'+estadoColor+'">'+((m.estado||'—').toUpperCase())+'</span></td>'
+        + '<td style="'+tdm+';font-size:10.5px">'+(cred?cred.id:'—')+'</td>'
+        + '<td style="'+td0+'">'+(cred?cred.cli:'—')+'</td>'
+        + '<td style="'+tdm+';color:'+segColor+'">'+segVence+'</td>'
+        + '</tr>';
+    });
+  }
+  html += '</tbody></table></div></div>';
+
+  // ── 07 EGRESOS SEMANA ──
+  html += secHdr('07','Egresos / Gastos de la Semana','Deducibles ISLR');
+  html += '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;overflow:hidden;margin-bottom:4px">'
+    + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+    + '<thead><tr style="'+trH+'">'
+    + '<th style="'+th+'">Fecha</th><th style="'+th+'">Descripción</th><th style="'+th+'">Categoría</th>'
+    + '<th style="'+th+';text-align:right">Monto USD</th><th style="'+th+';text-align:right">Monto Bs.</th>'
+    + '<th style="'+th+'">Comprobante</th>'
+    + '</tr></thead><tbody>';
+
+  var totEgUSD=0, totEgBs=0;
+  if(egresosSemana.length===0){
+    html += '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink3)">Sin egresos registrados esta semana</td></tr>';
+  } else {
+    egresosSemana.sort(function(a,b){ return (a.fecha||'').localeCompare(b.fecha||''); }).forEach(function(e){
+      var bs2 = (e.monto||0) * tasaBCV;
+      totEgUSD += (e.monto||0); totEgBs += bs2;
+      html += '<tr style="border-bottom:1px solid var(--rim2)">'
+        + '<td style="'+tdm+'">'+(e.fecha||'—')+'</td>'
+        + '<td style="'+td0+'font-weight:600">'+(e.concepto||e.descripcion||'—')+'</td>'
+        + '<td style="'+td0+'"><span style="background:var(--surf2);color:var(--ink3);padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700">'+(e.categoria||e.tipo||'Otros')+'</span></td>'
+        + '<td style="'+tdR+'font-weight:700">'+fmt(e.monto||0)+'</td>'
+        + '<td style="'+tdR+'">'+'Bs. '+Math.round(bs2).toLocaleString('es-VE')+'</td>'
+        + '<td style="'+tdm+';font-size:10.5px">'+(e.referencia||e.comprobante||'—')+'</td>'
+        + '</tr>';
+    });
+  }
+  html += '</tbody><tfoot><tr style="background:var(--ink)">'
+    + '<td colspan="3" style="padding:10px 12px;color:#fff;font-weight:700">TOTAL EGRESOS</td>'
+    + '<td style="padding:10px 12px;text-align:right;color:#fff;font-weight:900;font-family:var(--fd)">'+fmt(totEgUSD)+'</td>'
+    + '<td style="padding:10px 12px;text-align:right;color:#fff;font-weight:700">'+'Bs. '+Math.round(totEgBs).toLocaleString('es-VE')+'</td>'
+    + '<td></td>'
+    + '</tr></tfoot></table></div></div>';
+
+  // ── 08 ALERTAS LEGALES ──
+  html += secHdr('08','Alertas Legales y Documentación Pendiente','Revisar antes de cerrar la semana');
+  html += '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;overflow:hidden;margin-bottom:4px">'
+    + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+    + '<thead><tr style="'+trH+'">'
+    + '<th style="'+th+'">Cliente / Contrato</th><th style="'+th+'">Alerta</th>'
+    + '<th style="'+th+'">Tipo</th><th style="'+th+'">Plazo Legal</th>'
+    + '<th style="'+th+'">Estado</th><th style="'+th+'">Responsable</th>'
+    + '</tr></thead><tbody>';
+
+  if(alertas.length===0){
+    html += '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--green);font-weight:700">✓ Sin alertas pendientes esta semana</td></tr>';
+  } else {
+    alertas.forEach(function(a){
+      var sc = (a.estado==='CRÍTICO'||a.estado==='URGENTE')?'var(--reds);color:var(--red)':a.estado==='PENDIENTE'?'var(--ambers);color:var(--amber)':'var(--surf2);color:var(--ink3)';
+      var tc = a.tipo==='JUDICIAL'?'var(--reds);color:var(--red)':a.tipo==='TRIBUTARIO'?'var(--ambers);color:var(--amber)':a.tipo==='LEGAL'?'#e8ecff;color:var(--p1)':'var(--surf2);color:var(--ink3)';
+      html += '<tr style="border-bottom:1px solid var(--rim2)">'
+        + '<td style="'+td0+'font-weight:700">'+a.contrato+'</td>'
+        + '<td style="'+td0+';font-size:11px">'+a.alerta+'</td>'
+        + '<td style="'+td0+'"><span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;background:'+tc+'">'+a.tipo+'</span></td>'
+        + '<td style="'+tdm+'">'+(a.plazo||'—')+'</td>'
+        + '<td style="'+td0+'"><span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;background:'+sc+'">'+a.estado+'</span></td>'
+        + '<td style="'+td0+'">'+a.responsable+'</td>'
+        + '</tr>';
+    });
+  }
+  html += '</tbody></table></div></div>';
+
+  // ── 09 RESUMEN EJECUTIVO + FIRMA ──
+  html += secHdr('09','Resumen Ejecutivo y Firma','');
+  var criticos = alertas.filter(function(a){ return a.estado==='CRÍTICO'||a.estado==='URGENTE'; }).length;
+  html += '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;padding:16px 20px;margin-bottom:16px;font-size:12px;line-height:1.85;color:var(--ink2)">'
+    + 'Semana del <strong>'+semLabel+'</strong>:<br><br>'
+    + 'Durante la semana se recaudaron <strong>'+fmt(totalCobrosUSD)+'</strong> ('+pagosSemana.length+' cobros), '
+    + 'equivalentes a <strong>Bs. '+Math.round(totalCobrosBs).toLocaleString('es-VE')+'</strong> al tipo de cambio BCV de '+tasaBCV.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})+' Bs./USD. '
+    + 'El IVA débito fiscal generado es de <strong>Bs. '+Math.round(totalIVABs).toLocaleString('es-VE')+'</strong>, a incluir en la declaración mensual ante SENIAT. '
+    + 'Los egresos de la semana ascendieron a <strong>'+fmt(totalEgresosSemanaUSD)+'</strong>.<br><br>'
+    + 'Se abrieron <strong>'+contratosNuevos.length+'</strong> contrato(s) nuevo(s) con iniciales de <strong>'+fmt(totalInicialesSemana)+'</strong>. '
+    + 'La cartera morosa registra <strong>'+credsMoraList.length+'</strong> cliente(s) con saldo vencido estimado de <strong>'+fmt(totMora)+'</strong>; '
+    + 'de estos, <strong>'+credsMoraList.filter(function(c){ return c.mora>30; }).length+'</strong> supera los 30 días y requiere intervención legal urgente.<br><br>'
+    + (criticos>0?'<strong style="color:var(--red)">Acción inmediata requerida: '+criticos+' alerta(s) crítica(s)/urgente(s) pendiente(s) de resolución. Ver Sección 08.</strong>':'<span style="color:var(--green)">✓ Sin alertas críticas esta semana.</span>')
+    + '</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">';
+  html += '<div style="border-top:1px solid var(--ink2);padding-top:10px;font-size:11px;color:var(--ink3);text-align:center;line-height:1.9">'
+    + '<strong style="color:var(--ink2);font-size:12px">Preparado por</strong><br>'
+    + 'Responsable Administrativo<br>'
+    + (emp.nombre||'PAGASI')+'<br>'
+    + 'Nombre: _________________________<br>Firma: _________________________'
+    + '</div>';
+  html += '<div style="border-top:1px solid var(--ink2);padding-top:10px;font-size:11px;color:var(--ink3);text-align:center;line-height:1.9">'
+    + '<strong style="color:var(--ink2);font-size:12px">Revisado por</strong><br>'
+    + 'Contador / Asesor Tributario<br>'
+    + 'Nombre: _________________________<br>Inprecontador N°: _________________________'
+    + '</div>';
+  html += '</div>';
+
+  return html;
+}
+
+// Helper row para cajas SENIAT
+function _contRow(lbl, val, col){
+  return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed var(--rim2);font-size:12px">'
+    + '<span style="color:var(--ink2)">'+lbl+'</span>'
+    + '<span style="font-family:var(--fd);font-weight:700;color:var(--'+col+')">'+val+'</span>'
+    + '</div>';
+}
+
+// Imprimir tab contador
+function _contadorImprimir(){
+  var emp = (typeof getEmpresa==='function') ? getEmpresa() : {};
+  var estilos = 'body{font-family:Arial,sans-serif;padding:24px;color:#111;font-size:11.5px}'
+    + 'table{width:100%;border-collapse:collapse}th,td{padding:6px 10px;border-bottom:1px solid #eee;vertical-align:top}'
+    + 'th{background:#0a0f1e;color:#dde;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px}'
+    + '@media print{button{display:none!important}}';
+  // Capturar el HTML renderizado del tab
+  var wrap = document.querySelector('[data-tab-contador]') || document.getElementById('main-content');
+  var contenido = wrap ? wrap.innerHTML : '<p>Error: no se encontró el contenido del reporte.</p>';
+  var w = window.open('','_blank','width=1000,height=800');
+  w.document.write('<html><head><title>Reporte Contador · '+(emp.nombre||'PAGASI')+'</title><style>'+estilos+'</style></head><body>'+contenido+'<br><button onclick="window.print()" style="background:#1a2eff;color:#fff;border:none;padding:9px 22px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:16px">🖨 Imprimir / PDF</button><script>setTimeout(function(){window.print();},500);<\/script></body></html>');
+  w.document.close();
+}
+window._contadorImprimir = _contadorImprimir;
+
+// Exportar CSV cobros de la semana
+function _contadorExportarCSV(){
+  var tasaBCV = window._tasaBsGlobal || 1;
+  var hoy = new Date();
+  var diaSem = hoy.getDay() || 7;
+  var lunes = new Date(hoy); lunes.setDate(hoy.getDate()-diaSem+1);
+  var viernes = new Date(lunes); viernes.setDate(lunes.getDate()+4);
+  var toISO = function(d){ return d.toISOString().slice(0,10); };
+  var pagos = (S.pagos||[]).filter(function(p){
+    return !p.eliminado && p.estado==='confirmado' && p.fecha && p.fecha>=toISO(lunes) && p.fecha<=toISO(viernes);
+  });
+  var rows = [['Fecha','N_Recibo','Cliente','Contrato','Concepto','USD','Tasa_BCV','Bs','IVA_16_Bs','Medio_Pago']];
+  pagos.forEach(function(p){
+    var bs = (p.monto||0)*tasaBCV;
+    var iva = bs*0.16;
+    var esIni = p.esInicial||p.tipoOperacion==='inicial_credito';
+    rows.push([p.fecha||'',p.id||'',p.cli||'',p.credId||p.cred||'',esIni?'Inicial':'Cuota',(p.monto||0).toFixed(2),tasaBCV.toFixed(2),bs.toFixed(2),iva.toFixed(2),p.metodo||p.medio||'']);
+  });
+  var csv = rows.map(function(r){ return r.map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+  var a = document.createElement('a'); a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='PAGASI_Cobros_Semana_'+toISO(lunes)+'_'+toISO(viernes)+'.csv';
+  a.click();
+}
+window._contadorExportarCSV = _contadorExportarCSV;
