@@ -884,45 +884,55 @@ function _contGenerarCuerpo(){
   var emp = (typeof getEmpresa === 'function') ? getEmpresa() : {};
   var fIni = _contFechaIni;
   var fFin = _contFechaFin;
+  var IVA  = 0.16;
+  var IGTF = 0.03; // 3% para SPE que cobran en divisas
 
-  // ── Helpers ──
+  // Detectar si es SPE (usa config del Libro SENIAT si existe)
+  var esSPE = (typeof _libroSeniatCfg !== 'undefined') ? (_libroSeniatCfg.esSPE || false) : false;
+
+  // ── Helpers de estilo ──
   var th  = 'padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#aab;white-space:nowrap;text-align:left';
   var thR = 'padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#aab;white-space:nowrap;text-align:right';
   var td0 = 'padding:8px 12px;font-size:12px;border-bottom:1px solid var(--rim2)';
   var tdM = td0+';font-family:var(--fd)';
   var tdR = tdM+';text-align:right';
   var trH = 'background:var(--ink)';
-  var card = 'background:var(--surf);border:1px solid var(--rim2);border-radius:10px;overflow:hidden;margin-bottom:4px';
+  var card= 'background:var(--surf);border:1px solid var(--rim2);border-radius:10px;overflow:hidden;margin-bottom:4px';
 
-  var chip2 = function(txt, col, bg){
-    return '<span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;background:'+(bg||'var(--'+col+'s)')+';color:var(--'+col+')">' + txt + '</span>';
+  var chip2 = function(txt,col,bg){
+    return '<span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;background:'+(bg||'var(--'+col+'s)')+';color:var(--'+col+')">'+txt+'</span>';
   };
-  var secHdr = function(n, t, s){
+  var secHdr = function(n,t,s){
     return '<div style="display:flex;align-items:center;gap:10px;margin:18px 0 10px">'
-      + '<span style="background:#e8ecff;color:var(--p1);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;font-family:var(--fd)">'+n+'</span>'
-      + '<div>'
-      + '<div style="font-size:13px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.4px">'+t+'</div>'
-      + (s ? '<div style="font-size:10.5px;color:var(--ink3)">'+s+'</div>' : '')
-      + '</div></div>';
+      +'<span style="background:#e8ecff;color:var(--p1);font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px;font-family:var(--fd)">'+n+'</span>'
+      +'<div><div style="font-size:13px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.4px">'+t+'</div>'
+      +(s?'<div style="font-size:10.5px;color:var(--ink3)">'+s+'</div>':'')+'</div></div>';
   };
-  var tfootRow = function(cols, valores){
-    // cols = array de {span, val, right}
-    return '<tfoot><tr style="background:var(--ink)">' + cols.map(function(c){
-      return '<td colspan="'+(c.span||1)+'" style="padding:10px 12px;color:#fff;font-weight:'+(c.right?'900':'700')+';font-family:'+(c.right?'var(--fd)':'var(--f)')+';text-align:'+(c.right?'right':'left')+'">'+c.val+'</td>';
-    }).join('') + '</tr></tfoot>';
+  var fmtBs = function(n){ return 'Bs. '+Math.round(n||0).toLocaleString('es-VE'); };
+  var fmtBCV = tasaBCV.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  // ── Normalizar fecha a YYYY-MM-DD para comparación segura ──
+  var toISO = function(d){
+    if(!d) return '';
+    if(typeof d === 'string') return d.slice(0,10);
+    if(d && d.toDate) return d.toDate().toISOString().slice(0,10); // Firestore Timestamp
+    return new Date(d).toISOString().slice(0,10);
   };
 
-  // ── Datos filtrados por período ──
+  // ── Filtrar datos por período ──
   var pagosSemana = (S.pagos||[]).filter(function(p){
-    return !p.eliminado && p.estado==='confirmado' && p.fecha >= fIni && p.fecha <= fFin;
-  }).sort(function(a,b){ return (a.fecha||'').localeCompare(b.fecha||''); });
+    var f = toISO(p.fecha);
+    return !p.eliminado && p.estado==='confirmado' && f >= fIni && f <= fFin;
+  }).sort(function(a,b){ return toISO(a.fecha).localeCompare(toISO(b.fecha)); });
 
   var egresosSemana = (S.egresos||[]).filter(function(e){
-    return !e.eliminado && e.fecha && e.fecha >= fIni && e.fecha <= fFin;
-  }).sort(function(a,b){ return (a.fecha||'').localeCompare(b.fecha||''); });
+    var f = toISO(e.fecha);
+    return !e.eliminado && f >= fIni && f <= fFin;
+  }).sort(function(a,b){ return toISO(a.fecha).localeCompare(toISO(b.fecha)); });
 
   var contratosNuevos = (S.creds||[]).filter(function(c){
-    return !c.eliminado && c.fecha && c.fecha >= fIni && c.fecha <= fFin;
+    var f = toISO(c.fecha);
+    return !c.eliminado && f >= fIni && f <= fFin;
   });
 
   var credsMoraList = (S.creds||[]).filter(function(c){
@@ -931,398 +941,408 @@ function _contGenerarCuerpo(){
 
   var motosAll = (S.motos||[]).filter(function(m){ return !m.eliminado; });
 
-  // ── CÁLCULO IVA CORRECTO según LIVA Venezuela ──
-  // Arrendamiento con opción a compra = venta a plazos
-  // Hecho imponible: cada cuota pagada. Base = monto total cuota.
-  // La inicial también es base imponible (parte del precio de venta).
-  // IVA INCLUIDO en el precio pactado en USD (lo más común en VE para contratos en divisas).
-  // Si el precio NO incluye IVA, se agrega encima — confirmar con contador.
-  // Por defecto calculamos: el monto cobrado YA INCLUYE IVA → base = monto/1.16, IVA = monto - base.
-  var IVA_RATE = 0.16;
+  // ── Detectar método de pago en divisas (para IGTF) ──
+  var esMetodoDivisa = function(p){
+    var m = (p.metodo||p.medio||'').toLowerCase();
+    var cuentas = S.cuentas||[];
+    var cuenta = cuentas.find(function(c){ return c.nombre && m.includes(c.nombre.toLowerCase()); });
+    if(cuenta) return (cuenta.moneda||'').toLowerCase().includes('usd') || (cuenta.moneda||'').toLowerCase().includes('$');
+    return /zelle|usdt|cripto|divisa|dólar|dollar|usd|\$/.test(m);
+  };
 
-  var totCobrosUSD = 0, totBaseIVA_USD = 0, totIVA_USD = 0;
-  var totCobrosBs = 0, totBaseIVA_Bs = 0, totIVA_Bs = 0;
+  // ══════════════════════════════════════════════
+  // CÁLCULO IVA + IGTF POR PAGO
+  // IVA: solo cuotas (no inicial — compensada por crédito fiscal de compra moto)
+  // IGTF 3%: si eres SPE y el pago es en divisas — sobre monto bruto
+  // ══════════════════════════════════════════════
+  var totCobrosUSD=0, totBaseIVA=0, totIVA=0, totIGTF=0, totInicialesUSD=0;
 
-  var filasLibro = pagosSemana.map(function(p, idx){
-    var monto = p.monto || 0;
-    // Base imponible: si precio incluye IVA → base = monto / 1.16
-    // Si precio NO incluye IVA → base = monto, IVA = monto * 0.16
-    // Usamos la configuración del Libro SENIAT si existe
-    var ivaActivo = (typeof _libroSeniatCfg !== 'undefined') ? _libroSeniatCfg.ivaActivo : true;
-    var base_usd = ivaActivo ? monto / (1 + IVA_RATE) : monto;
-    var iva_usd  = ivaActivo ? monto - base_usd : 0;
-    var bs = monto * tasaBCV;
-    var base_bs = base_usd * tasaBCV;
-    var iva_bs  = iva_usd * tasaBCV;
+  var filasLibro = pagosSemana.map(function(p,idx){
+    var monto  = parseFloat(p.monto||0);
+    var esIni  = p.esInicial || p.tipoOperacion==='inicial_credito';
+    var divisa = esMetodoDivisa(p);
 
-    totCobrosUSD  += monto;
-    totBaseIVA_USD+= base_usd;
-    totIVA_USD    += iva_usd;
-    totCobrosBs   += bs;
-    totBaseIVA_Bs += base_bs;
-    totIVA_Bs     += iva_bs;
+    // IVA: cuotas sí, iniciales no (crédito fiscal de compra compensa)
+    var base_iva = esIni ? 0 : monto/(1+IVA);
+    var iva      = esIni ? 0 : monto - base_iva;
 
-    var cli = (S.clientes||[]).find(function(x){ return x.nombre===p.cli || String(x.id)===String(p.clienteId); }) || {};
-    var ci  = cli.cedula || cli.rif || '—';
-    var cred = (S.creds||[]).find(function(c){ return String(c.id)===String(p.credId||p.cred); }) || {};
-    var esFac = (S.facturas||[]).find(function(f){ return f.pagoId===p.id && !f.anulada; });
-    var esIni = p.esInicial || p.tipoOperacion==='inicial_credito';
-    var concepto = esIni ? 'Cuota inicial (venta a plazos)' : 'Cuota '+(p.numCuota||idx+1)+' — arrendamiento c/opción compra';
+    // IGTF: 3% sobre el monto bruto si SPE + cobro en divisas
+    var igtf = (esSPE && divisa) ? monto * IGTF : 0;
 
-    return '<tr style="border-bottom:1px solid var(--rim2)">'
-      + '<td style="'+td0+';font-family:var(--fd);color:var(--ink3)">'+(idx+1)+'</td>'
-      + '<td style="'+tdM+'">'+(p.fecha||'—')+'</td>'
-      + '<td style="'+tdM+';font-size:10.5px">'+(p.id||'—')+'</td>'
-      + '<td style="'+td0+';font-weight:700">'+(p.cli||'—')+'</td>'
-      + '<td style="'+tdM+';font-size:10.5px">'+ci+'</td>'
-      + '<td style="'+tdM+';font-size:10.5px">'+(cred.id||p.credId||'—')+'</td>'
-      + '<td style="'+td0+';font-size:11px">'+concepto+'</td>'
-      + '<td style="'+tdR+';font-weight:700">'+fmt(monto)+'</td>'
-      + '<td style="'+tdR+'">'+fmt(base_usd)+'</td>'
-      + '<td style="'+tdR+';color:var(--amber)">'+fmt(iva_usd)+'</td>'
-      + '<td style="'+tdR+'">'+tasaBCV.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'
-      + '<td style="'+tdR+'">Bs. '+Math.round(base_bs).toLocaleString('es-VE')+'</td>'
-      + '<td style="'+tdR+';color:var(--amber)">Bs. '+Math.round(iva_bs).toLocaleString('es-VE')+'</td>'
-      + '<td style="'+td0+'">'+(p.metodo||p.medio||'—')+'</td>'
-      + '<td style="'+td0+'">'+(esFac ? chip2('✓ Emitida','green') : chip2('PENDIENTE','red'))+'</td>'
-      + '</tr>';
+    totCobrosUSD += monto;
+    totBaseIVA   += base_iva;
+    totIVA       += iva;
+    totIGTF      += igtf;
+    if(esIni) totInicialesUSD += monto;
+
+    var cli  = (S.clientes||[]).find(function(x){ return x.nombre===p.cli||String(x.id)===String(p.clienteId); })||{};
+    var cred = (S.creds||[]).find(function(c){ return String(c.id)===String(p.credId||p.cred); })||{};
+    var fac  = (S.facturas||[]).find(function(f){ return f.pagoId===p.id&&!f.anulada; });
+    var ci   = cli.cedula||cli.rif||'—';
+    var conc = esIni ? 'Inicial — crédito fiscal compra moto compensa IVA' : 'Cuota '+(p.numCuota||idx+1);
+
+    var ivaCell  = esIni ? chip2('Crédito fiscal','green') : fmt(iva);
+    var igtfCell = igtf>0 ? '<span style="color:var(--amber);font-weight:700">'+fmt(igtf)+'</span>' : (esSPE?'<span style="color:var(--ink3);font-size:10px">No divisa</span>':'—');
+    var facBadge = fac ? chip2('✓ Emitida','green') : chip2('PENDIENTE','red');
+
+    return '<tr style="border-bottom:1px solid var(--rim2)'+(esIni?';background:rgba(6,176,106,0.04)':'')+'">'
+      +'<td style="'+td0+';font-family:var(--fd);color:var(--ink3)">'+(idx+1)+'</td>'
+      +'<td style="'+tdM+'">'+toISO(p.fecha)+'</td>'
+      +'<td style="'+tdM+';font-size:10.5px">'+(p.id||'—')+'</td>'
+      +'<td style="'+td0+';font-weight:700">'+(p.cli||'—')+'</td>'
+      +'<td style="'+tdM+';font-size:10.5px">'+ci+'</td>'
+      +'<td style="'+tdM+';font-size:10.5px">'+(cred.id||p.credId||'—')+'</td>'
+      +'<td style="'+td0+';font-size:11px">'+conc+'</td>'
+      +'<td style="'+tdR+';font-weight:700">'+fmt(monto)+'</td>'
+      +'<td style="'+tdR+'">'+(esIni?'—':fmt(base_iva))+'</td>'
+      +'<td style="'+tdR+'">'+ivaCell+'</td>'
+      +'<td style="'+tdR+'">'+igtfCell+'</td>'
+      +'<td style="'+tdR+'">'+fmtBCV+'</td>'
+      +'<td style="'+tdR+'">'+(esIni?'—':fmtBs(base_iva*tasaBCV))+'</td>'
+      +'<td style="'+tdR+'">'+(esIni?'—':fmtBs(iva*tasaBCV))+'</td>'
+      +'<td style="'+tdR+'">'+(igtf>0?fmtBs(igtf*tasaBCV):'—')+'</td>'
+      +'<td style="'+td0+'">'+(p.metodo||p.medio||'—')+'</td>'
+      +'<td style="'+td0+'">'+facBadge+'</td>'
+      +'</tr>';
   }).join('');
 
-  // ── Totales cobros ──
+  // ── Totales derivados ──
+  var totalEgresosSem      = egresosSemana.reduce(function(a,e){ return a+(e.monto||0); },0);
   var totalInicialesSemana = contratosNuevos.reduce(function(a,c){ return a+(parseFloat(c.ini)||0); },0);
-  var totalEgresosSem = egresosSemana.reduce(function(a,e){ return a+(e.monto||0); },0);
-  var credsMoraTotal = credsMoraList.reduce(function(a,c){
-    var cuotaV = parseFloat(c.cuotaQ||c.cuota||0);
-    var cVenc = Math.max(0, Math.floor(c.mora/15));
-    return a + cuotaV * cVenc;
+  var credsMoraTotal       = credsMoraList.reduce(function(a,c){
+    return a+(parseFloat(c.cuotaQ||c.cuota||0)*Math.max(0,Math.floor(c.mora/15)));
   },0);
+  var ivaCredMotosPeriodo  = contratosNuevos.reduce(function(a,c){
+    var p=parseFloat(c.precioBaseReal||c.precio||0); return a+(p-p/1.16);
+  },0);
+  var ivaNetoUSD = Math.max(0, totIVA - ivaCredMotosPeriodo);
 
   var html = '';
 
   // ════ 01 KPIs ════
-  html += secHdr('01','Resumen Financiero del Período','Datos reales de Firebase · IVA calculado por cuota (Art. 13 LIVA)');
-  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:4px">';
+  html += secHdr('01','Resumen Financiero del Período','Datos reales · IVA solo cuotas · IGTF si SPE');
+  html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:4px">';
   [
-    {lbl:'Cobros Recibidos (bruto)', val:fmt(totCobrosUSD), sub:pagosSemana.length+' pagos · Base: '+fmt(totBaseIVA_USD), col:'p1'},
-    {lbl:'IVA Débito Fiscal (16%)', val:fmt(totIVA_USD), sub:'Bs. '+Math.round(totIVA_Bs).toLocaleString('es-VE')+' al BCV', col:'amber'},
-    {lbl:'Contratos Nuevos', val:contratosNuevos.length, sub:'Iniciales: '+fmt(totalInicialesSemana), col:'green'},
-    {lbl:'Cartera Morosa', val:credsMoraList.length, sub:fmt(credsMoraTotal)+' saldo vencido', col:'red'},
+    {lbl:'Cobros Brutos',         val:fmt(totCobrosUSD),   sub:pagosSemana.length+' pagos confirmados',              col:'p1'},
+    {lbl:'IVA Débito (cuotas)',   val:fmt(totIVA),         sub:fmtBs(totIVA*tasaBCV),                               col:'amber'},
+    {lbl:'IGTF 3% '+(esSPE?'(SPE)':'(no SPE)'), val:fmt(totIGTF), sub:esSPE?fmtBs(totIGTF*tasaBCV):'Config. en Libro SENIAT', col:esSPE?'amber':'ink3'},
+    {lbl:'Contratos Nuevos',      val:contratosNuevos.length, sub:'Iniciales: '+fmt(totalInicialesSemana),           col:'green'},
+    {lbl:'Cartera Morosa',        val:credsMoraList.length,   sub:fmt(credsMoraTotal)+' saldo vencido',              col:'red'},
   ].forEach(function(k){
     html += '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;padding:14px 16px;position:relative;overflow:hidden">'
-      + '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--'+k.col+')"></div>'
-      + '<div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px">'+k.lbl+'</div>'
-      + '<div style="font-family:var(--fd);font-size:20px;font-weight:900;color:var(--'+k.col+')">'+k.val+'</div>'
-      + '<div style="font-size:11px;color:var(--ink3);margin-top:3px">'+k.sub+'</div>'
-      + '</div>';
+      +'<div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--'+k.col+')"></div>'
+      +'<div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px">'+k.lbl+'</div>'
+      +'<div style="font-family:var(--fd);font-size:20px;font-weight:900;color:var(--'+k.col+')">'+k.val+'</div>'
+      +'<div style="font-size:11px;color:var(--ink3);margin-top:3px">'+k.sub+'</div>'
+      +'</div>';
   });
   html += '</div>';
 
   // ════ 02 LIBRO DE COBROS ════
-  html += secHdr('02','Libro de Cobros — Ingresos del Período','Hecho imponible: cada cuota · Base imponible: monto total cuota / 1.16 (LIVA Art.20)');
-  html += '<div style="'+card+'"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
-    + '<thead><tr style="'+trH+'">'
-    + '<th style="'+th+'">#</th><th style="'+th+'">Fecha</th><th style="'+th+'">Recibo</th>'
-    + '<th style="'+th+'">Cliente</th><th style="'+th+'">CI/RIF</th><th style="'+th+'">Contrato</th>'
-    + '<th style="'+th+'">Concepto</th>'
-    + '<th style="'+thR+'">Cobrado USD</th><th style="'+thR+'">Base IVA USD</th><th style="'+thR+'">IVA 16% USD</th>'
-    + '<th style="'+thR+'">Tasa BCV</th><th style="'+thR+'">Base IVA Bs.</th><th style="'+thR+'">IVA Bs.</th>'
-    + '<th style="'+th+'">Método</th><th style="'+th+'">Factura</th>'
-    + '</tr></thead><tbody>'
-    + (pagosSemana.length ? filasLibro : '<tr><td colspan="15" style="text-align:center;padding:24px;color:var(--ink3)">Sin cobros en el período seleccionado</td></tr>')
-    + '</tbody>'
-    + '<tfoot><tr style="'+trH+'">'
-    + '<td colspan="7" style="padding:10px 12px;color:#fff;font-weight:700">TOTAL PERÍODO</td>'
-    + '<td style="padding:10px 12px;text-align:right;color:#fff;font-weight:900;font-family:var(--fd)">'+fmt(totCobrosUSD)+'</td>'
-    + '<td style="padding:10px 12px;text-align:right;color:#dde;font-family:var(--fd)">'+fmt(totBaseIVA_USD)+'</td>'
-    + '<td style="padding:10px 12px;text-align:right;color:var(--amber);font-weight:900;font-family:var(--fd)">'+fmt(totIVA_USD)+'</td>'
-    + '<td style="padding:10px 12px;text-align:right;color:#aab">—</td>'
-    + '<td style="padding:10px 12px;text-align:right;color:#dde;font-family:var(--fd)">Bs. '+Math.round(totBaseIVA_Bs).toLocaleString('es-VE')+'</td>'
-    + '<td style="padding:10px 12px;text-align:right;color:var(--amber);font-weight:900;font-family:var(--fd)">Bs. '+Math.round(totIVA_Bs).toLocaleString('es-VE')+'</td>'
-    + '<td colspan="2"></td>'
-    + '</tr></tfoot>'
-    + '</table></div></div>';
+  html += secHdr('02','Libro de Cobros — Ingresos del Período','IVA: cuotas / 1.16 · Inicial: crédito fiscal compensa · IGTF: 3% cobros en divisas si SPE');
+  html += '<div style="'+card+'"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">'
+    +'<thead><tr style="'+trH+'">'
+    +'<th style="'+th+'">#</th><th style="'+th+'">Fecha</th><th style="'+th+'">Recibo</th>'
+    +'<th style="'+th+'">Cliente</th><th style="'+th+'">CI/RIF</th><th style="'+th+'">Contrato</th>'
+    +'<th style="'+th+'">Concepto</th>'
+    +'<th style="'+thR+'">USD Cobrado</th><th style="'+thR+'">Base IVA USD</th><th style="'+thR+'">IVA 16%</th>'
+    +'<th style="'+thR+'">IGTF 3%</th>'
+    +'<th style="'+thR+'">Tasa BCV</th><th style="'+thR+'">Base IVA Bs.</th><th style="'+thR+'">IVA Bs.</th><th style="'+thR+'">IGTF Bs.</th>'
+    +'<th style="'+th+'">Método</th><th style="'+th+'">Factura</th>'
+    +'</tr></thead><tbody>'
+    +(pagosSemana.length ? filasLibro : '<tr><td colspan="17" style="text-align:center;padding:24px;color:var(--ink3)">Sin cobros en el período seleccionado</td></tr>')
+    +'</tbody>'
+    +'<tfoot><tr style="'+trH+'">'
+    +'<td colspan="7" style="padding:10px 12px;color:#fff;font-weight:700">TOTAL PERÍODO</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:#fff;font-weight:900;font-family:var(--fd)">'+fmt(totCobrosUSD)+'</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:#dde;font-family:var(--fd)">'+fmt(totBaseIVA)+'</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:var(--amber);font-weight:900;font-family:var(--fd)">'+fmt(totIVA)+'</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:var(--amber);font-weight:900;font-family:var(--fd)">'+(totIGTF>0?fmt(totIGTF):(esSPE?'$0.00':'N/A'))+'</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:#aab">—</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:#dde;font-family:var(--fd)">'+fmtBs(totBaseIVA*tasaBCV)+'</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:var(--amber);font-weight:900;font-family:var(--fd)">'+fmtBs(totIVA*tasaBCV)+'</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:var(--amber);font-weight:900;font-family:var(--fd)">'+(totIGTF>0?fmtBs(totIGTF*tasaBCV):'—')+'</td>'
+    +'<td colspan="2"></td>'
+    +'</tr></tfoot>'
+    +'</table></div></div>';
 
   // ════ 03 TRIBUTARIO SENIAT ════
-  html += secHdr('03','Cálculo Tributario SENIAT','IVA débito fiscal · Crédito fiscal (moto) · ISLR estimado');
-
-  // IVA de las motos compradas como crédito fiscal
-  var ivaCredFiscalNota = 'El IVA que pagaste al comprar cada moto al concesionario es tu <strong>crédito fiscal</strong>. '
-    + 'Regístralo aquí para deducirlo del débito. Necesitas la factura del concesionario.';
-
+  html += secHdr('03','Cálculo Tributario SENIAT','IVA · IGTF · Crédito fiscal · ISLR');
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px">';
 
-  // BOX IVA
+  // BOX IVA + IGTF
   html += '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;padding:16px 18px">'
-    + '<div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--rim2)">IVA — Período seleccionado</div>'
-    + _contRow('Base imponible (USD)', fmt(totBaseIVA_USD), 'ink2')
-    + _contRow('Base imponible (Bs.)', 'Bs. '+Math.round(totBaseIVA_Bs).toLocaleString('es-VE'), 'ink2')
-    + _contRow('(+) IVA débito fiscal 16%', fmt(totIVA_USD), 'amber')
-    + _contRow('(+) IVA débito Bs.', 'Bs. '+Math.round(totIVA_Bs).toLocaleString('es-VE'), 'amber')
-    + _contRow('(−) Crédito fiscal (motos compradas)', 'Ver facturas concesionario', 'green')
-    + '<div style="margin-top:10px;background:var(--ink);color:#fff;border-radius:7px;padding:10px 14px">'
-    + '<div style="font-size:10px;color:#aab;margin-bottom:4px">IVA NETO A PAGAR (débito − crédito)</div>'
-    + '<div style="font-family:var(--fd);font-size:16px;font-weight:900">'+fmt(totIVA_USD)+' USD</div>'
-    + '<div style="font-size:11px;color:var(--amber)">Bs. '+Math.round(totIVA_Bs).toLocaleString('es-VE')+' — menos crédito fiscal de motos</div>'
-    + '</div>'
-    + '<div style="font-size:10px;color:var(--ink3);margin-top:8px;line-height:1.6">'+ivaCredFiscalNota+'</div>'
-    + '<div style="font-size:10px;color:var(--ink3);margin-top:4px">Declaración mensual · primeros 15 días del mes siguiente · Form-30 SENIAT</div>'
-    + '</div>';
+    +'<div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--rim2)">IVA + IGTF — Período</div>'
+    +_contRow('Cobros brutos período',                fmt(totCobrosUSD),            'ink2')
+    +_contRow('Iniciales cobradas (sin IVA neto)',    fmt(totInicialesUSD),         'green')
+    +_contRow('Base imponible IVA (cuotas)',          fmt(totBaseIVA),              'ink2')
+    +_contRow('(+) IVA débito fiscal 16%',           fmt(totIVA),                  'amber')
+    +_contRow('(−) Crédito fiscal motos (estimado)', fmt(ivaCredMotosPeriodo),     'green')
+    +'<div style="margin-top:10px;background:var(--ink);color:#fff;border-radius:7px;padding:10px 14px;margin-bottom:10px">'
+    +'<div style="font-size:10px;color:#aab;margin-bottom:3px">IVA NETO A PAGAR (estimado)</div>'
+    +'<div style="font-family:var(--fd);font-size:16px;font-weight:900">'+fmt(ivaNetoUSD)+'</div>'
+    +'<div style="font-size:10.5px;color:#aab">'+fmtBs(ivaNetoUSD*tasaBCV)+' · Usar facturas reales del concesionario</div>'
+    +'</div>'
+    +(esSPE
+      ? _contRow('(+) IGTF 3% cobros en divisas', fmt(totIGTF), 'amber')
+        +'<div style="margin-top:8px;background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.3);border-radius:6px;padding:9px 12px;font-size:10.5px;color:var(--ink2);line-height:1.6">'
+        +'⚠ <strong>IGTF (3%):</strong> Como Sujeto Pasivo Especial debes percibir el IGTF en cada cobro en divisas y enterarlo al SENIAT quincenalmente. Declarar en forma F-99035.'
+        +'</div>'
+      : '<div style="margin-top:8px;background:var(--surf2);border-radius:6px;padding:9px 12px;font-size:10.5px;color:var(--ink3);line-height:1.6">'
+        +'ℹ <strong>IGTF:</strong> Solo aplica si eres Sujeto Pasivo Especial (SPE). Actívalo en <em>Finanzas → Libro SENIAT → Configuración fiscal</em> si el SENIAT te calificó como SPE.'
+        +'</div>')
+    +'<div style="font-size:10px;color:var(--ink3);margin-top:8px">Declaración IVA: primeros 15 días del mes siguiente · Form-30 SENIAT</div>'
+    +'</div>';
 
   // BOX ISLR
-  var ingMesAct = (typeof S !== 'undefined' && S.pagos) ? (S.pagos||[]).filter(function(p){
-    var hoy = new Date(); var y=hoy.getFullYear(), m=hoy.getMonth();
-    return !p.eliminado && p.estado==='confirmado' && p.fecha && new Date(p.fecha).getFullYear()===y && new Date(p.fecha).getMonth()===m;
-  }).reduce(function(a,p){ return a+(p.monto||0); },0) : 0;
+  var ingMesAct = (S.pagos||[]).filter(function(p){
+    var f=toISO(p.fecha); var hoy=new Date(); var y=hoy.getFullYear(),m=hoy.getMonth();
+    return !p.eliminado&&p.estado==='confirmado'&&f&&new Date(f).getFullYear()===y&&new Date(f).getMonth()===m;
+  }).reduce(function(a,p){ return a+(p.monto||0); },0);
   var egMesAct = (S.egresos||[]).filter(function(e){
-    var hoy = new Date(); var y=hoy.getFullYear(), m=hoy.getMonth();
-    return !e.eliminado && e.fecha && new Date(e.fecha).getFullYear()===y && new Date(e.fecha).getMonth()===m;
+    var f=toISO(e.fecha); var hoy=new Date(); var y=hoy.getFullYear(),m=hoy.getMonth();
+    return !e.eliminado&&f&&new Date(f).getFullYear()===y&&new Date(f).getMonth()===m;
   }).reduce(function(a,e){ return a+(e.monto||0); },0);
   var utilMes = ingMesAct - egMesAct;
-  var provISLR = Math.max(0, utilMes * 12 * 0.34);
+  var provISLR = Math.max(0, utilMes*12*0.34);
 
   html += '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;padding:16px 18px">'
-    + '<div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--rim2)">ISLR — Proyección mes actual</div>'
-    + _contRow('Ingresos mes en curso', fmt(ingMesAct), 'p1')
-    + _contRow('Egresos mes en curso', fmt(egMesAct), 'red')
-    + _contRow('Utilidad neta estimada mes', fmt(utilMes), utilMes>=0?'green':'red')
-    + _contRow('Anualizado (×12)', fmt(utilMes*12), 'ink2')
-    + _contRow('Tasa ISLR estimada', '34% (tarifa societaria)', 'ink3')
-    + '<div style="margin-top:10px;background:var(--ink);color:#fff;border-radius:7px;padding:10px 14px">'
-    + '<div style="font-size:10px;color:#aab;margin-bottom:4px">PROVISIÓN ISLR anual estimada</div>'
-    + '<div style="font-family:var(--fd);font-size:16px;font-weight:900">'+fmt(provISLR)+'</div>'
-    + '</div>'
-    + '<div style="font-size:10px;color:var(--ink3);margin-top:8px">Declaración anual hasta 31 de marzo · Confirmar deducciones con contador · Depreciación motos es deducible</div>'
-    + '</div>';
+    +'<div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--rim2)">ISLR — Proyección mes actual</div>'
+    +_contRow('Ingresos mes en curso',         fmt(ingMesAct),   'p1')
+    +_contRow('Egresos mes en curso',          fmt(egMesAct),    'red')
+    +_contRow('Utilidad neta estimada mes',    fmt(utilMes),     utilMes>=0?'green':'red')
+    +_contRow('Anualizado (×12)',              fmt(utilMes*12),  'ink2')
+    +_contRow('Tasa ISLR societaria',          '34%',            'ink3')
+    +'<div style="margin-top:10px;background:var(--ink);color:#fff;border-radius:7px;padding:10px 14px">'
+    +'<div style="font-size:10px;color:#aab;margin-bottom:3px">PROVISIÓN ISLR anual estimada</div>'
+    +'<div style="font-family:var(--fd);font-size:16px;font-weight:900">'+fmt(provISLR)+'</div>'
+    +'</div>'
+    +'<div style="font-size:10px;color:var(--ink3);margin-top:8px;line-height:1.55">Declaración anual hasta 31/03 · Deducciones: depreciación motos + honorarios bufete + seguros + gastos operativos</div>'
+    +'</div>';
   html += '</div>';
 
   // ════ 04 MORA ════
-  html += secHdr('04','Cartera Morosa — Estado Actual','Alerta: +30 días → Art. 599 CPC — acción judicial de secuestro');
+  html += secHdr('04','Cartera Morosa — Estado Actual','Alerta: +30 días → Art. 599 CPC — secuestro del bien');
   html += '<div style="'+card+'"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
-    + '<thead><tr style="'+trH+'">'
-    + '<th style="'+th+'">Cliente</th><th style="'+th+'">CI</th><th style="'+th+'">Contrato</th>'
-    + '<th style="'+th+'">Moto</th><th style="'+thR+'">Canon Q</th>'
-    + '<th style="'+thR+'">Días Mora</th><th style="'+thR+'">Cuotas Venc.</th>'
-    + '<th style="'+thR+'">Saldo Vencido</th><th style="'+thR+'">Interés 2.5%</th>'
-    + '<th style="'+th+'">Nivel</th><th style="'+th+'">Acción requerida</th>'
-    + '</tr></thead><tbody>';
+    +'<thead><tr style="'+trH+'">'
+    +'<th style="'+th+'">Cliente</th><th style="'+th+'">CI</th><th style="'+th+'">Contrato</th>'
+    +'<th style="'+th+'">Moto</th><th style="'+thR+'">Canon Q</th>'
+    +'<th style="'+thR+'">Días Mora</th><th style="'+thR+'">Cuotas Venc.</th>'
+    +'<th style="'+thR+'">Saldo Vencido</th><th style="'+thR+'">Interés 2.5%</th>'
+    +'<th style="'+th+'">Nivel</th><th style="'+th+'">Acción requerida</th>'
+    +'</tr></thead><tbody>';
 
   var totMoraUSD=0, totIntUSD=0;
-  if(credsMoraList.length===0){
-    html += '<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--green);font-weight:700;font-size:13px">✓ Sin créditos en mora</td></tr>';
+  if(!credsMoraList.length){
+    html += '<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--green);font-weight:700">✓ Sin créditos en mora</td></tr>';
   } else {
     credsMoraList.forEach(function(c){
-      var cli = (S.clientes||[]).find(function(x){ return x.nombre===c.cli; }) || {};
-      var cuotaV = parseFloat(c.cuotaQ||c.cuota||0);
-      var cVenc = Math.max(0, Math.floor(c.mora/15));
-      var saldo = cuotaV * cVenc;
-      var interes = saldo * 0.025;
-      totMoraUSD += saldo; totIntUSD += interes;
-      var nivel, nc, nb, accion;
-      if(c.mora>30){ nivel='Crítico +30d'; nc='red';   nb='var(--reds)';   accion='⚖ Acción judicial — contactar bufete hoy'; }
-      else if(c.mora>14){ nivel='Alto 16-30d'; nc='amber'; nb='var(--ambers)'; accion='📄 Carta formal de mora + reestructuración'; }
-      else { nivel='Moderado 1-14d'; nc='ink3'; nb='var(--surf2)'; accion='📱 WhatsApp + llamada referencias'; }
-      html += '<tr style="border-bottom:1px solid var(--rim2)">'
-        + '<td style="'+td0+';font-weight:700">'+c.cli+'</td>'
-        + '<td style="'+tdM+';font-size:10.5px">'+(cli.cedula||'—')+'</td>'
-        + '<td style="'+tdM+';font-size:10.5px">'+(c.id||'—')+'</td>'
-        + '<td style="'+td0+'">'+(c.modelo||'—')+'</td>'
-        + '<td style="'+tdR+'">'+fmt(cuotaV)+'</td>'
-        + '<td style="'+tdR+';font-weight:900;color:var(--'+nc+')">'+c.mora+'</td>'
-        + '<td style="'+tdR+'">'+cVenc+'</td>'
-        + '<td style="'+tdR+';font-weight:700">'+fmt(saldo)+'</td>'
-        + '<td style="'+tdR+';color:var(--amber)">'+fmt(interes)+'</td>'
-        + '<td style="'+td0+'"><span style="background:'+nb+';color:var(--'+nc+');padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700">'+nivel+'</span></td>'
-        + '<td style="'+td0+';font-size:11px">'+accion+'</td>'
-        + '</tr>';
+      var cli=(S.clientes||[]).find(function(x){ return x.nombre===c.cli; })||{};
+      var cuotaV=parseFloat(c.cuotaQ||c.cuota||0);
+      var cVenc=Math.max(0,Math.floor(c.mora/15));
+      var saldo=cuotaV*cVenc, int=saldo*0.025;
+      totMoraUSD+=saldo; totIntUSD+=int;
+      var nivel,nc,nb,accion;
+      if(c.mora>30){nivel='Crítico +30d';nc='red';nb='var(--reds)';accion='⚖ Acción judicial — contactar bufete hoy';}
+      else if(c.mora>14){nivel='Alto 16-30d';nc='amber';nb='var(--ambers)';accion='📄 Carta formal de mora + reestructuración';}
+      else{nivel='Moderado 1-14d';nc='ink3';nb='var(--surf2)';accion='📱 WhatsApp + llamada referencias';}
+      html+='<tr style="border-bottom:1px solid var(--rim2)">'
+        +'<td style="'+td0+';font-weight:700">'+c.cli+'</td>'
+        +'<td style="'+tdM+';font-size:10.5px">'+(cli.cedula||'—')+'</td>'
+        +'<td style="'+tdM+';font-size:10.5px">'+(c.id||'—')+'</td>'
+        +'<td style="'+td0+'">'+(c.modelo||'—')+'</td>'
+        +'<td style="'+tdR+'">'+fmt(cuotaV)+'</td>'
+        +'<td style="'+tdR+';font-weight:900;color:var(--'+nc+')">'+c.mora+'</td>'
+        +'<td style="'+tdR+'">'+cVenc+'</td>'
+        +'<td style="'+tdR+';font-weight:700">'+fmt(saldo)+'</td>'
+        +'<td style="'+tdR+';color:var(--amber)">'+fmt(int)+'</td>'
+        +'<td style="'+td0+'"><span style="background:'+nb+';color:var(--'+nc+');padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700">'+nivel+'</span></td>'
+        +'<td style="'+td0+';font-size:11px">'+accion+'</td>'
+        +'</tr>';
     });
   }
-  html += '</tbody><tfoot><tr style="'+trH+'">'
-    + '<td colspan="7" style="padding:10px 12px;color:#fff;font-weight:700">TOTAL CARTERA VENCIDA</td>'
-    + '<td style="padding:10px 12px;text-align:right;color:#fff;font-weight:900;font-family:var(--fd)">'+fmt(totMoraUSD)+'</td>'
-    + '<td style="padding:10px 12px;text-align:right;color:var(--amber);font-weight:700">'+fmt(totIntUSD)+'</td>'
-    + '<td colspan="2"></td>'
-    + '</tr></tfoot></table></div></div>';
+  html+='</tbody><tfoot><tr style="'+trH+'">'
+    +'<td colspan="7" style="padding:10px 12px;color:#fff;font-weight:700">TOTAL CARTERA VENCIDA</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:#fff;font-weight:900;font-family:var(--fd)">'+fmt(totMoraUSD)+'</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:var(--amber);font-weight:700">'+fmt(totIntUSD)+'</td>'
+    +'<td colspan="2"></td>'
+    +'</tr></tfoot></table></div></div>';
 
   // ════ 05 CONTRATOS NUEVOS ════
-  html += secHdr('05','Contratos Nuevos — Aperturados en el Período','');
+  html += secHdr('05','Contratos Nuevos — Aperturados en el Período','IVA moto pagado al concesionario = crédito fiscal tuyo');
   html += '<div style="'+card+'"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
-    + '<thead><tr style="'+trH+'">'
-    + '<th style="'+th+'">Fecha</th><th style="'+th+'">N° Contrato</th><th style="'+th+'">Cliente</th>'
-    + '<th style="'+th+'">Moto</th><th style="'+th+'">VIN</th>'
-    + '<th style="'+thR+'">Precio Moto</th><th style="'+thR+'">Inicial Cobrada</th>'
-    + '<th style="'+thR+'">IVA Inicial (USD)</th><th style="'+thR+'">Saldo Financiar</th>'
-    + '<th style="'+th+'">Plazo</th><th style="'+th+'">Notaría</th>'
-    + '</tr></thead><tbody>';
+    +'<thead><tr style="'+trH+'">'
+    +'<th style="'+th+'">Fecha</th><th style="'+th+'">N° Contrato</th><th style="'+th+'">Cliente</th>'
+    +'<th style="'+th+'">Moto</th><th style="'+th+'">VIN</th>'
+    +'<th style="'+thR+'">Precio Moto</th><th style="'+thR+'">Crédito Fiscal (IVA moto)</th>'
+    +'<th style="'+thR+'">Inicial Cobrada</th><th style="'+thR+'">Saldo Financiar</th>'
+    +'<th style="'+th+'">Plazo</th><th style="'+th+'">Notaría</th>'
+    +'</tr></thead><tbody>';
 
-  var totIni=0, totIvaIni=0, totFin=0;
-  if(contratosNuevos.length===0){
-    html += '<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--ink3)">Sin contratos nuevos en el período</td></tr>';
+  var totIni=0,totCredFiscal=0,totFin2=0;
+  if(!contratosNuevos.length){
+    html+='<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--ink3)">Sin contratos nuevos en el período</td></tr>';
   } else {
     contratosNuevos.forEach(function(c){
-      var ini = parseFloat(c.ini||0);
-      // IVA de la inicial: la inicial es parte del precio de venta → IVA incluido
-      var ivaIni = ini - ini/1.16;
-      totIni += ini; totIvaIni += ivaIni; totFin += parseFloat(c.fin||0);
-      var not = c.notariaOk ? chip2('✓ Autenticado','green') : chip2('PENDIENTE','red');
-      html += '<tr style="border-bottom:1px solid var(--rim2)">'
-        + '<td style="'+tdM+'">'+(c.fecha||'—')+'</td>'
-        + '<td style="'+tdM+';font-weight:700">'+(c.id||'—')+'</td>'
-        + '<td style="'+td0+';font-weight:700">'+c.cli+'</td>'
-        + '<td style="'+td0+'">'+(c.modelo||'—')+'</td>'
-        + '<td style="'+tdM+';font-size:10px">'+(c.vin||c.serialChasis||'—')+'</td>'
-        + '<td style="'+tdR+'">'+fmt(c.precioBaseReal||c.precio||0)+'</td>'
-        + '<td style="'+tdR+';font-weight:700">'+fmt(ini)+'</td>'
-        + '<td style="'+tdR+';color:var(--amber)">'+fmt(ivaIni)+'</td>'
-        + '<td style="'+tdR+'">'+fmt(c.fin||0)+'</td>'
-        + '<td style="'+td0+'">'+(c.plazo||'—')+' m</td>'
-        + '<td style="'+td0+'">'+not+'</td>'
-        + '</tr>';
+      var ini=parseFloat(c.ini||0);
+      var precio=parseFloat(c.precioBaseReal||c.precio||0);
+      var credFisc=precio-precio/1.16;
+      totIni+=ini; totCredFiscal+=credFisc; totFin2+=parseFloat(c.fin||0);
+      var not=c.notariaOk?chip2('✓ Autenticado','green'):chip2('PENDIENTE','red');
+      html+='<tr style="border-bottom:1px solid var(--rim2)">'
+        +'<td style="'+tdM+'">'+toISO(c.fecha)+'</td>'
+        +'<td style="'+tdM+';font-weight:700">'+(c.id||'—')+'</td>'
+        +'<td style="'+td0+';font-weight:700">'+c.cli+'</td>'
+        +'<td style="'+td0+'">'+(c.modelo||'—')+'</td>'
+        +'<td style="'+tdM+';font-size:10px">'+(c.vin||c.serialChasis||'—')+'</td>'
+        +'<td style="'+tdR+'">'+fmt(precio)+'</td>'
+        +'<td style="'+tdR+';color:var(--green);font-weight:700">'+fmt(credFisc)+'</td>'
+        +'<td style="'+tdR+';font-weight:700">'+fmt(ini)+'</td>'
+        +'<td style="'+tdR+'">'+fmt(c.fin||0)+'</td>'
+        +'<td style="'+td0+'">'+(c.plazo||'—')+' m</td>'
+        +'<td style="'+td0+'">'+not+'</td>'
+        +'</tr>';
     });
   }
-  html += '</tbody><tfoot><tr style="'+trH+'">'
-    + '<td colspan="6" style="padding:10px 12px;color:#fff;font-weight:700">TOTALES</td>'
-    + '<td style="padding:10px 12px;text-align:right;color:#fff;font-weight:900;font-family:var(--fd)">'+fmt(totIni)+'</td>'
-    + '<td style="padding:10px 12px;text-align:right;color:var(--amber);font-weight:900;font-family:var(--fd)">'+fmt(totIvaIni)+'</td>'
-    + '<td style="padding:10px 12px;text-align:right;color:#dde;font-family:var(--fd)">'+fmt(totFin)+'</td>'
-    + '<td colspan="2"></td>'
-    + '</tr></tfoot></table></div></div>';
+  html+='</tbody><tfoot><tr style="'+trH+'">'
+    +'<td colspan="5" style="padding:10px 12px;color:#fff;font-weight:700">TOTALES</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:#dde;font-family:var(--fd)">—</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:var(--green);font-weight:900;font-family:var(--fd)">'+fmt(totCredFiscal)+' crédito</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:#fff;font-weight:900;font-family:var(--fd)">'+fmt(totIni)+'</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:#dde;font-family:var(--fd)">'+fmt(totFin2)+'</td>'
+    +'<td colspan="2"></td>'
+    +'</tr></tfoot></table></div></div>';
 
   // ════ 06 INVENTARIO MOTOS ════
-  html += secHdr('06','Inventario de Motocicletas','Estado · valor en libros · seguros');
+  html += secHdr('06','Inventario de Motocicletas','Estado · seguros · contrato activo');
   html += '<div style="'+card+'"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
-    + '<thead><tr style="'+trH+'">'
-    + '<th style="'+th+'">VIN / Serial</th><th style="'+th+'">Marca / Modelo</th>'
-    + '<th style="'+th+'">Año</th><th style="'+th+'">Placa</th>'
-    + '<th style="'+thR+'">Costo Adq.</th><th style="'+th+'">Estado</th>'
-    + '<th style="'+th+'">Contrato</th><th style="'+th+'">Cliente</th><th style="'+th+'">Seguro Vence</th>'
-    + '</tr></thead><tbody>';
+    +'<thead><tr style="'+trH+'">'
+    +'<th style="'+th+'">VIN / Serial</th><th style="'+th+'">Marca / Modelo</th>'
+    +'<th style="'+th+'">Año</th><th style="'+th+'">Placa</th>'
+    +'<th style="'+thR+'">Costo Adq.</th><th style="'+th+'">Estado</th>'
+    +'<th style="'+th+'">Contrato</th><th style="'+th+'">Cliente</th><th style="'+th+'">Seguro Vence</th>'
+    +'</tr></thead><tbody>';
 
-  var hoyStr = new Date().toISOString().slice(0,10);
-  if(motosAll.length===0){
-    html += '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--ink3)">Sin motos registradas</td></tr>';
+  var hoyStr=new Date().toISOString().slice(0,10);
+  var en30=new Date(new Date().getTime()+30*86400000).toISOString().slice(0,10);
+  if(!motosAll.length){
+    html+='<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--ink3)">Sin motos registradas</td></tr>';
   } else {
     motosAll.forEach(function(m){
-      var ec = m.estado==='disponible'?'green':m.estado==='financiada'?'p1':(m.estado==='recuperada'||m.estado==='recuperado')?'amber':'ink3';
-      var cred = (S.creds||[]).find(function(c){ return String(c.motoId)===String(m.id) && c.estado==='activo'; });
-      var segCol = 'var(--ink3)';
-      if(m.seguroVence){ segCol = m.seguroVence < hoyStr ? 'var(--red)' : m.seguroVence <= (new Date(new Date().getTime()+30*86400000).toISOString().slice(0,10)) ? 'var(--amber)' : 'var(--green)'; }
-      html += '<tr style="border-bottom:1px solid var(--rim2)">'
-        + '<td style="'+tdM+';font-size:10px">'+(m.vin||m.serialChasis||'—')+'</td>'
-        + '<td style="'+td0+';font-weight:700">'+(m.marca||'')+' '+(m.modelo||'')+'</td>'
-        + '<td style="'+tdM+'">'+(m.anio||'—')+'</td>'
-        + '<td style="'+tdM+'">'+(m.placa||'—')+'</td>'
-        + '<td style="'+tdR+'">'+fmt(m.precio||m.costo||0)+'</td>'
-        + '<td style="'+td0+'"><span class="bdg b-'+ec+'">'+((m.estado||'—').toUpperCase())+'</span></td>'
-        + '<td style="'+tdM+';font-size:10.5px">'+(cred?cred.id:'—')+'</td>'
-        + '<td style="'+td0+'">'+(cred?cred.cli:'—')+'</td>'
-        + '<td style="'+tdM+';color:'+segCol+'">'+(m.seguroVence||'—')+'</td>'
-        + '</tr>';
+      var ec=m.estado==='disponible'?'green':m.estado==='financiada'?'p1':(m.estado==='recuperada'||m.estado==='recuperado')?'amber':'ink3';
+      var cred=(S.creds||[]).find(function(c){ return String(c.motoId)===String(m.id)&&c.estado==='activo'; });
+      var sv=m.seguroVence||'—';
+      var scol=sv==='—'?'var(--ink3)':sv<hoyStr?'var(--red)':sv<=en30?'var(--amber)':'var(--green)';
+      html+='<tr style="border-bottom:1px solid var(--rim2)">'
+        +'<td style="'+tdM+';font-size:10px">'+(m.vin||m.serialChasis||'—')+'</td>'
+        +'<td style="'+td0+';font-weight:700">'+(m.marca||'')+' '+(m.modelo||'')+'</td>'
+        +'<td style="'+tdM+'">'+(m.anio||'—')+'</td>'
+        +'<td style="'+tdM+'">'+(m.placa||'—')+'</td>'
+        +'<td style="'+tdR+'">'+fmt(m.precio||m.costo||0)+'</td>'
+        +'<td style="'+td0+'"><span class="bdg b-'+ec+'">'+((m.estado||'—').toUpperCase())+'</span></td>'
+        +'<td style="'+tdM+';font-size:10.5px">'+(cred?cred.id:'—')+'</td>'
+        +'<td style="'+td0+'">'+(cred?cred.cli:'—')+'</td>'
+        +'<td style="'+tdM+';color:'+scol+'">'+sv+'</td>'
+        +'</tr>';
     });
   }
-  html += '</tbody></table></div></div>';
+  html+='</tbody></table></div></div>';
 
   // ════ 07 EGRESOS ════
-  html += secHdr('07','Egresos / Gastos del Período','Deducibles ISLR · registrar comprobante');
+  html += secHdr('07','Egresos / Gastos del Período','Todos deducibles ISLR con comprobante');
   html += '<div style="'+card+'"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
-    + '<thead><tr style="'+trH+'">'
-    + '<th style="'+th+'">Fecha</th><th style="'+th+'">Descripción</th><th style="'+th+'">Categoría</th>'
-    + '<th style="'+thR+'">Monto USD</th><th style="'+thR+'">Monto Bs.</th><th style="'+th+'">Referencia</th>'
-    + '</tr></thead><tbody>';
+    +'<thead><tr style="'+trH+'">'
+    +'<th style="'+th+'">Fecha</th><th style="'+th+'">Descripción</th><th style="'+th+'">Categoría</th>'
+    +'<th style="'+thR+'">Monto USD</th><th style="'+thR+'">Monto Bs.</th><th style="'+th+'">Referencia</th>'
+    +'</tr></thead><tbody>';
 
-  var totEgUSD=0, totEgBs=0;
-  if(egresosSemana.length===0){
-    html += '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink3)">Sin egresos en el período seleccionado</td></tr>';
+  var totEgUSD=0,totEgBs=0;
+  if(!egresosSemana.length){
+    html+='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink3)">Sin egresos en el período</td></tr>';
   } else {
     egresosSemana.forEach(function(e){
       var bs2=(e.monto||0)*tasaBCV; totEgUSD+=(e.monto||0); totEgBs+=bs2;
-      html += '<tr style="border-bottom:1px solid var(--rim2)">'
-        + '<td style="'+tdM+'">'+(e.fecha||'—')+'</td>'
-        + '<td style="'+td0+';font-weight:600">'+(e.concepto||e.descripcion||'—')+'</td>'
-        + '<td style="'+td0+'"><span style="background:var(--surf2);color:var(--ink3);padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700">'+(e.categoria||e.tipo||'Otros')+'</span></td>'
-        + '<td style="'+tdR+';font-weight:700">'+fmt(e.monto||0)+'</td>'
-        + '<td style="'+tdR+'">Bs. '+Math.round(bs2).toLocaleString('es-VE')+'</td>'
-        + '<td style="'+tdM+';font-size:10.5px">'+(e.referencia||e.comprobante||'—')+'</td>'
-        + '</tr>';
+      html+='<tr style="border-bottom:1px solid var(--rim2)">'
+        +'<td style="'+tdM+'">'+toISO(e.fecha)+'</td>'
+        +'<td style="'+td0+';font-weight:600">'+(e.concepto||e.descripcion||'—')+'</td>'
+        +'<td style="'+td0+'"><span style="background:var(--surf2);color:var(--ink3);padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700">'+(e.categoria||e.tipo||'Otros')+'</span></td>'
+        +'<td style="'+tdR+';font-weight:700">'+fmt(e.monto||0)+'</td>'
+        +'<td style="'+tdR+'">'+fmtBs(bs2)+'</td>'
+        +'<td style="'+tdM+';font-size:10.5px">'+(e.referencia||e.comprobante||'—')+'</td>'
+        +'</tr>';
     });
   }
-  html += '</tbody><tfoot><tr style="'+trH+'">'
-    + '<td colspan="3" style="padding:10px 12px;color:#fff;font-weight:700">TOTAL EGRESOS</td>'
-    + '<td style="padding:10px 12px;text-align:right;color:#fff;font-weight:900;font-family:var(--fd)">'+fmt(totEgUSD)+'</td>'
-    + '<td style="padding:10px 12px;text-align:right;color:#dde;font-family:var(--fd)">Bs. '+Math.round(totEgBs).toLocaleString('es-VE')+'</td>'
-    + '<td></td>'
-    + '</tr></tfoot></table></div></div>';
+  html+='</tbody><tfoot><tr style="'+trH+'">'
+    +'<td colspan="3" style="padding:10px 12px;color:#fff;font-weight:700">TOTAL EGRESOS</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:#fff;font-weight:900;font-family:var(--fd)">'+fmt(totEgUSD)+'</td>'
+    +'<td style="padding:10px 12px;text-align:right;color:#dde;font-family:var(--fd)">'+fmtBs(totEgBs)+'</td>'
+    +'<td></td>'
+    +'</tr></tfoot></table></div></div>';
 
   // ════ 08 ALERTAS LEGALES ════
-  var alertas = [];
+  var alertas=[];
   credsMoraList.forEach(function(c){
-    var nivel, tipo, accion, plazo;
-    if(c.mora>30){ nivel='CRÍTICO'; tipo='JUDICIAL'; accion='Art. 599 CPC — solicitar secuestro del bien al bufete'; plazo='Inmediato'; }
-    else if(c.mora>14){ nivel='PENDIENTE'; tipo='COBRANZA'; accion='Emitir carta formal de mora + propuesta de reestructuración'; plazo='3 días hábiles'; }
-    else { nivel='EN GESTIÓN'; tipo='COBRANZA'; accion='Contacto WhatsApp + verificar referencias personales'; plazo:'7 días'; }
-    alertas.push({contrato:(c.id||'—')+' / '+c.cli, alerta:c.mora+'d mora · Saldo: '+fmt(parseFloat(c.cuotaQ||c.cuota||0)*Math.floor(c.mora/15)), tipo, plazo, estado:nivel, responsable:c.mora>30?'Bufete':'Administrador'});
+    var cuotaV=parseFloat(c.cuotaQ||c.cuota||0), cVenc=Math.max(0,Math.floor(c.mora/15));
+    var niv,tip,acc,pla;
+    if(c.mora>30){niv='CRÍTICO';tip='JUDICIAL';acc='Art. 599 CPC — solicitar secuestro del bien al bufete';pla='Inmediato';}
+    else if(c.mora>14){niv='PENDIENTE';tip='COBRANZA';acc='Emitir carta formal de mora + propuesta reestructuración';pla='3 días hábiles';}
+    else{niv='EN GESTIÓN';tip='COBRANZA';acc='Contacto WhatsApp + verificar referencias';pla='7 días';}
+    alertas.push({ct:(c.id||'—')+' / '+c.cli, al:c.mora+'d mora · Saldo vencido: '+fmt(cuotaV*cVenc), tip, pla, est:niv, res:c.mora>30?'Bufete':'Administrador'});
   });
-  var sinFac = pagosSemana.filter(function(p){ return !(S.facturas||[]).find(function(f){ return f.pagoId===p.id&&!f.anulada; }); });
-  if(sinFac.length) alertas.push({contrato:'SENIAT / Facturación', alerta:sinFac.length+' cobro(s) sin factura fiscal emitida — obligatorio por LIVA', tipo:'TRIBUTARIO', plazo:'Antes declaración IVA', estado:'URGENTE', responsable:'Contador'});
-  contratosNuevos.forEach(function(c){ if(!c.notariaOk) alertas.push({contrato:(c.id||'—')+' / '+c.cli, alerta:'Autenticar contrato ante Notaría Pública (sin esto no hay ejecutividad directa Art.599 CPC)', tipo:'LEGAL', plazo:'7 días hábiles', estado:'PENDIENTE', responsable:'Administrador'}); });
+  var sinFac=pagosSemana.filter(function(p){ return !(S.facturas||[]).find(function(f){ return f.pagoId===p.id&&!f.anulada; }); });
+  if(sinFac.length) alertas.push({ct:'SENIAT',al:sinFac.length+' cobro(s) sin factura fiscal emitida',tip:'TRIBUTARIO',pla:'Antes declaración IVA',est:'URGENTE',res:'Contador'});
+  contratosNuevos.forEach(function(c){ if(!c.notariaOk) alertas.push({ct:(c.id||'—')+' / '+c.cli,al:'Autenticar ante Notaría Pública (Art. 599 CPC requiere documento autenticado)',tip:'LEGAL',pla:'7 días hábiles',est:'PENDIENTE',res:'Administrador'}); });
   motosAll.forEach(function(m){
     if(m.seguroVence){
       var diff3=(new Date(m.seguroVence)-new Date())/86400000;
-      if(diff3<30) alertas.push({contrato:'Moto '+(m.placa||m.vin), alerta:'Seguro RC vence '+m.seguroVence+(diff3<0?' — VENCIDO':' — '+Math.round(diff3)+'d restantes'), tipo:'SEGURO', plazo:m.seguroVence, estado:diff3<0?'CRÍTICO':'AVISAR', responsable:'Administrador'});
+      if(diff3<30) alertas.push({ct:'Moto '+(m.placa||m.vin),al:'Seguro RC vence '+m.seguroVence+(diff3<0?' — VENCIDO':' — '+Math.round(diff3)+'d'),tip:'SEGURO',pla:m.seguroVence,est:diff3<0?'CRÍTICO':'AVISAR',res:'Administrador'});
     }
   });
 
-  html += secHdr('08','Alertas Legales y Documentación Pendiente','Revisar antes de cerrar el período');
+  html += secHdr('08','Alertas Legales y Documentación Pendiente','');
   html += '<div style="'+card+'"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'
-    + '<thead><tr style="'+trH+'">'
-    + '<th style="'+th+'">Cliente / Contrato</th><th style="'+th+'">Alerta</th>'
-    + '<th style="'+th+'">Tipo</th><th style="'+th+'">Plazo</th><th style="'+th+'">Estado</th><th style="'+th+'">Responsable</th>'
-    + '</tr></thead><tbody>';
-
-  if(alertas.length===0){
-    html += '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--green);font-weight:700">✓ Sin alertas pendientes en este período</td></tr>';
+    +'<thead><tr style="'+trH+'">'
+    +'<th style="'+th+'">Cliente / Contrato</th><th style="'+th+'">Alerta</th>'
+    +'<th style="'+th+'">Tipo</th><th style="'+th+'">Plazo</th><th style="'+th+'">Estado</th><th style="'+th+'">Responsable</th>'
+    +'</tr></thead><tbody>';
+  if(!alertas.length){
+    html+='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--green);font-weight:700">✓ Sin alertas pendientes</td></tr>';
   } else {
     alertas.forEach(function(a){
-      var sc = (a.estado==='CRÍTICO'||a.estado==='URGENTE')?'var(--reds);color:var(--red)':a.estado==='PENDIENTE'?'var(--ambers);color:var(--amber)':'var(--surf2);color:var(--ink3)';
-      var tc = a.tipo==='JUDICIAL'?'var(--reds);color:var(--red)':a.tipo==='TRIBUTARIO'?'var(--ambers);color:var(--amber)':a.tipo==='LEGAL'?'#e8ecff;color:var(--p1)':'var(--surf2);color:var(--ink3)';
-      html += '<tr style="border-bottom:1px solid var(--rim2)">'
-        + '<td style="'+td0+';font-weight:700">'+a.contrato+'</td>'
-        + '<td style="'+td0+';font-size:11px">'+a.alerta+'</td>'
-        + '<td style="'+td0+'"><span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;background:'+tc+'">'+a.tipo+'</span></td>'
-        + '<td style="'+tdM+'">'+(a.plazo||'—')+'</td>'
-        + '<td style="'+td0+'"><span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;background:'+sc+'">'+a.estado+'</span></td>'
-        + '<td style="'+td0+'">'+a.responsable+'</td>'
-        + '</tr>';
+      var sc=(a.est==='CRÍTICO'||a.est==='URGENTE')?'var(--reds);color:var(--red)':a.est==='PENDIENTE'?'var(--ambers);color:var(--amber)':'var(--surf2);color:var(--ink3)';
+      var tc=a.tip==='JUDICIAL'?'var(--reds);color:var(--red)':a.tip==='TRIBUTARIO'?'var(--ambers);color:var(--amber)':a.tip==='LEGAL'?'#e8ecff;color:var(--p1)':'var(--surf2);color:var(--ink3)';
+      html+='<tr style="border-bottom:1px solid var(--rim2)">'
+        +'<td style="'+td0+';font-weight:700">'+a.ct+'</td>'
+        +'<td style="'+td0+';font-size:11px">'+a.al+'</td>'
+        +'<td style="'+td0+'"><span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;background:'+tc+'">'+a.tip+'</span></td>'
+        +'<td style="'+tdM+'">'+(a.pla||'—')+'</td>'
+        +'<td style="'+td0+'"><span style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;background:'+sc+'">'+a.est+'</span></td>'
+        +'<td style="'+td0+'">'+a.res+'</td>'
+        +'</tr>';
     });
   }
-  html += '</tbody></table></div></div>';
+  html+='</tbody></table></div></div>';
 
-  // ════ 09 RESUMEN EJECUTIVO + FIRMA ════
+  // ════ 09 RESUMEN EJECUTIVO ════
   html += secHdr('09','Resumen Ejecutivo y Firma','');
-  var criticos = alertas.filter(function(a){ return a.estado==='CRÍTICO'||a.estado==='URGENTE'; }).length;
-  var semLabel2 = fIni && fFin ? (new Date(fIni+'T12:00:00').toLocaleDateString('es-VE',{day:'2-digit',month:'long'})+' al '+new Date(fFin+'T12:00:00').toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'})) : '—';
-  html += '<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;padding:16px 20px;margin-bottom:16px;font-size:12px;line-height:1.85;color:var(--ink2)">'
-    + 'Período del <strong>'+semLabel2+'</strong>:<br><br>'
-    + 'Se recaudaron <strong>'+fmt(totCobrosUSD)+'</strong> brutos ('+pagosSemana.length+' cobros). '
-    + 'Base imponible IVA: <strong>'+fmt(totBaseIVA_USD)+'</strong> · '
-    + 'IVA débito fiscal: <strong>'+fmt(totIVA_USD)+'</strong> (Bs. '+Math.round(totIVA_Bs).toLocaleString('es-VE')+'). '
-    + 'Tasa BCV aplicada: <strong>'+tasaBCV.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})+' Bs./$</strong>.<br><br>'
-    + 'Contratos nuevos: <strong>'+contratosNuevos.length+'</strong> · Iniciales cobradas: <strong>'+fmt(totalInicialesSemana)+'</strong>. '
-    + 'Egresos del período: <strong>'+fmt(totalEgresosSem)+'</strong>. '
-    + 'Cartera morosa: <strong>'+credsMoraList.length+'</strong> cliente(s) · saldo vencido: <strong>'+fmt(totMoraUSD)+'</strong>.<br><br>'
-    + (criticos>0?'<strong style="color:var(--red)">⚠ '+criticos+' alerta(s) crítica(s)/urgente(s) requieren acción inmediata. Ver Sección 08.</strong>':'<span style="color:var(--green)">✓ Sin alertas críticas en este período.</span>')
-    + '</div>';
-
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">'
-    + '<div style="border-top:1px solid var(--ink2);padding-top:10px;font-size:11px;color:var(--ink3);text-align:center;line-height:1.9">'
-    + '<strong style="color:var(--ink2);font-size:12px">Preparado por</strong><br>'
-    + 'Responsable Administrativo · '+(emp.nombre||'PAGASI')+'<br>'
-    + 'Nombre: _________________________<br>Firma: _________________________'
-    + '</div>'
-    + '<div style="border-top:1px solid var(--ink2);padding-top:10px;font-size:11px;color:var(--ink3);text-align:center;line-height:1.9">'
-    + '<strong style="color:var(--ink2);font-size:12px">Revisado por</strong><br>'
-    + 'Contador / Asesor Tributario<br>'
-    + 'Nombre: _________________________<br>Inprecontador N°: _________________________'
-    + '</div></div>';
+  var criticos=alertas.filter(function(a){ return a.est==='CRÍTICO'||a.est==='URGENTE'; }).length;
+  var semLbl2=fIni&&fFin?(new Date(fIni+'T12:00:00').toLocaleDateString('es-VE',{day:'2-digit',month:'long'})+' al '+new Date(fFin+'T12:00:00').toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'})):'—';
+  html+='<div style="background:var(--surf);border:1px solid var(--rim2);border-radius:10px;padding:16px 20px;margin-bottom:16px;font-size:12px;line-height:1.85;color:var(--ink2)">'
+    +'Período <strong>'+semLbl2+'</strong> · '
+    +'Cobros: <strong>'+fmt(totCobrosUSD)+'</strong> ('+pagosSemana.length+' pagos) · '
+    +'IVA débito: <strong>'+fmt(totIVA)+'</strong> · '
+    +(esSPE?'IGTF: <strong>'+fmt(totIGTF)+'</strong> · ':'')
+    +'IVA neto estimado: <strong>'+fmt(ivaNetoUSD)+'</strong> · '
+    +'Tasa BCV: <strong>'+fmtBCV+'</strong><br>'
+    +'Contratos nuevos: <strong>'+contratosNuevos.length+'</strong> · Iniciales: <strong>'+fmt(totalInicialesSemana)+'</strong> · '
+    +'Egresos: <strong>'+fmt(totEgUSD)+'</strong> · '
+    +'Mora: <strong>'+credsMoraList.length+'</strong> cliente(s) · <strong>'+fmt(totMoraUSD)+'</strong> vencido<br>'
+    +(criticos>0?'<strong style="color:var(--red)">⚠ '+criticos+' alerta(s) crítica(s) requieren acción inmediata.</strong>':'<span style="color:var(--green)">✓ Sin alertas críticas este período.</span>')
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">'
+    +'<div style="border-top:1px solid var(--ink2);padding-top:10px;font-size:11px;color:var(--ink3);text-align:center;line-height:1.9"><strong style="color:var(--ink2);font-size:12px">Preparado por</strong><br>Responsable Administrativo<br>Nombre: _________________________<br>Firma: _________________________</div>'
+    +'<div style="border-top:1px solid var(--ink2);padding-top:10px;font-size:11px;color:var(--ink3);text-align:center;line-height:1.9"><strong style="color:var(--ink2);font-size:12px">Revisado por</strong><br>Contador / Asesor Tributario<br>Nombre: _________________________<br>Inprecontador N°: _________________________</div>'
+    +'</div>';
 
   return html;
 }
