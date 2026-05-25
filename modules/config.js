@@ -162,13 +162,17 @@ PG.config = function(){
         </div>
 
         <div class="card">
-          <div class="ch"><div><div class="ct">Tasa de Cambio Bs./$</div><div class="cs">Usada en cobros y historial</div></div></div>
-          <div style="display:flex;gap:8px;align-items:flex-end;margin-top:6px">
-            <div class="fg" style="flex:1"><label>Tasa actual (Bs. por $1)</label><input class="fi" id="cfg_tasa_bs" type="number" step="0.01" min="1" placeholder="Ej: 478.58" value="${window._tasaBsGlobal||1}"></div>
-            <button class="btn btn-p btn-sm" style="margin-bottom:1px;flex-shrink:0" onclick="guardarTasaBs()">Guardar</button>
+          <div class="ch"><div><div class="ct">Tasa de Cambio Bs./$</div><div class="cs">Actualización automática diaria · ve.dolarapi.com · BCV oficial</div></div>
+            <button class="btn btn-g btn-sm" onclick="bcvForzarActualizacion()">↻ Actualizar ahora</button>
           </div>
-          <div style="font-size:11px;color:var(--ink3);margin-top:8px;padding:9px 11px;background:var(--surf2);border-radius:8px">
-            Actualiza esta tasa diariamente o cuando el tipo de cambio varíe significativamente para que los reportes en bolívares sean precisos.
+          <div id="bcv-auto-badge" style="margin:10px 0">${(typeof _bcvBadgeHTML==='function')?_bcvBadgeHTML():''}</div>
+          <div style="border-top:1px solid var(--rim2);padding-top:10px;margin-top:4px">
+            <div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Ajuste manual (solo si es necesario)</div>
+            <div style="display:flex;gap:8px;align-items:flex-end">
+              <div class="fg" style="flex:1"><label>Tasa manual (Bs. por $1)</label><input class="fi" id="cfg_tasa_bs" type="number" step="0.01" min="1" placeholder="Ej: 480.25" value="${window._tasaBsGlobal||1}"></div>
+              <button class="btn btn-p btn-sm" style="margin-bottom:1px;flex-shrink:0" onclick="guardarTasaBs()">Guardar manual</button>
+            </div>
+            <div style="font-size:10.5px;color:var(--ink3);margin-top:6px;line-height:1.5">La tasa se actualiza sola cada día al abrir la app. Usa el ajuste manual solo si la tasa automática falla.</div>
           </div>
         </div>
 
