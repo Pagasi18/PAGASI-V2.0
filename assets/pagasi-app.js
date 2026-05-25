@@ -1613,6 +1613,8 @@ function init() {
     updateBadge();
     startRealtime();
     iniciarListenerSolicitudes();
+    // BCV Auto — actualizar tasa diariamente si es necesario
+    if(typeof bcvAutoInit === 'function') setTimeout(bcvAutoInit, 1500);
     var isMob = window.innerWidth <= 820;
     var mobBar = $('mobile-topbar');
     var deskBar = $('desktop-topbar');
