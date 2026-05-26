@@ -18,7 +18,7 @@
 
 
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Nunito+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/pagasi.css?v=20260520-fix1">
+<link rel="stylesheet" href="assets/pagasi.css?v=20260526-clean">
 <script charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
@@ -94,33 +94,33 @@
   <div class="sb-nav">
     <div class="sb-grp">
       <div class="sb-lbl">Principal</div>
-      <button type="button" class="si" data-nav="dash" onclick="nav('dash')"><span class="sic nav-ic">DB</span><span>Dashboard</span></button>
-      <button type="button" class="si" data-nav="centro" onclick="nav('centro')"><span class="sic nav-ic">WK</span><span>Centro de trabajo</span><span class="si-bx" id="sb-badge-wt"></span></button>
+      <button type="button" class="si" data-nav="dash" onclick="nav('dash')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></span><span>Dashboard</span></button>
+      <button type="button" class="si" data-nav="centro" onclick="nav('centro')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg></span><span>Centro de trabajo</span><span class="si-bx" id="sb-badge-wt"></span></button>
     </div>
     <div class="sb-grp">
       <div class="sb-lbl">Gestión</div>
-      <button type="button" class="si" data-nav="clientes" onclick="nav('clientes')"><span class="sic nav-ic">CLI</span><span>Clientes</span></button>
-      <button type="button" class="si" data-nav="motos" onclick="nav('motos')"><span class="sic nav-ic">MOT</span><span>Motocicletas</span></button>
-      <button type="button" class="si" data-nav="creditos" onclick="nav('creditos')"><span class="sic nav-ic">CRE</span><span>Créditos</span></button>
-      <button type="button" class="si" data-nav="pagos" onclick="nav('pagos')"><span class="sic nav-ic">PAG</span><span>Pagos</span></button>
+      <button type="button" class="si" data-nav="clientes" onclick="nav('clientes')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/><path d="M16 3.5a3 3 0 0 1 0 6"/><path d="M21 20v-1a5 5 0 0 0-3-4.5"/></svg></span><span>Clientes</span></button>
+      <button type="button" class="si" data-nav="motos" onclick="nav('motos')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="17" r="3"/><circle cx="19" cy="17" r="3"/><path d="M5 17h3l3-5h6l2 5"/><path d="M14 12l-2-4h-3"/><path d="M16 8h3"/></svg></span><span>Motocicletas</span></button>
+      <button type="button" class="si" data-nav="creditos" onclick="nav('creditos')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h3"/></svg></span><span>Créditos</span></button>
+      <button type="button" class="si" data-nav="pagos" onclick="nav('pagos')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/></svg></span><span>Pagos</span></button>
     </div>
     <div class="sb-grp">
       <div class="sb-lbl">Operaciones</div>
-      <button type="button" class="si" data-nav="cobranza" onclick="nav('cobranza')"><span class="sic nav-ic">COB</span><span>Cobranza</span><span class="si-bx" id="sb-badge-cob"></span></button>
-      <button type="button" class="si" data-nav="contratos" onclick="nav('contratos')"><span class="sic nav-ic">CTR</span><span>Contratos</span></button>
-      <button type="button" class="si" data-nav="notif" onclick="nav('notif')"><span class="sic nav-ic">NOT</span><span>Notificaciones</span></button>
+      <button type="button" class="si" data-nav="cobranza" onclick="nav('cobranza')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L20 13l1 4v3a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg></span><span>Cobranza</span><span class="si-bx" id="sb-badge-cob"></span></button>
+      <button type="button" class="si" data-nav="contratos" onclick="nav('contratos')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg></span><span>Contratos</span></button>
+      <button type="button" class="si" data-nav="notif" onclick="nav('notif')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M10.5 21a2 2 0 0 0 3 0"/></svg></span><span>Notificaciones</span></button>
     </div>
     <div class="sb-grp">
       <div class="sb-lbl">Análisis</div>
-      <button type="button" class="si" data-nav="reportes" onclick="nav('reportes')"><span class="sic nav-ic">FIN</span><span>Finanzas</span></button>
-      <button type="button" class="si" data-nav="cuentas" onclick="nav('cuentas')"><span class="sic nav-ic">CTA</span><span>Cuentas</span></button>
+      <button type="button" class="si" data-nav="reportes" onclick="nav('reportes')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16l3-4 3 2 4-6"/></svg></span><span>Finanzas</span></button>
+      <button type="button" class="si" data-nav="cuentas" onclick="nav('cuentas')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a9 3 0 0 0 18 0a9 3 0 0 0-18 0"/><path d="M3 7v5a9 3 0 0 0 18 0V7"/><path d="M3 12v5a9 3 0 0 0 18 0v-5"/></svg></span><span>Cuentas</span></button>
     </div>
     <div class="sb-grp">
       <div class="sb-lbl">Sistema</div>
-      <button type="button" class="si" data-nav="plan" onclick="nav('plan')"><span class="sic nav-ic">PLN</span><span>Plan &amp; Precios</span></button>
-      <button type="button" class="si" data-nav="config" onclick="nav('config')"><span class="sic nav-ic">CFG</span><span>Configuración</span></button>
-      <button type="button" class="si" data-nav="scores" onclick="nav('scores')"><span class="sic nav-ic">SCR</span><span>Scores</span></button>
-      <button type="button" class="si" data-nav="users" onclick="nav('users')"><span class="sic nav-ic">USR</span><span>Usuarios</span></button>
+      <button type="button" class="si" data-nav="plan" onclick="nav('plan')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><span>Plan &amp; Precios</span></button>
+      <button type="button" class="si" data-nav="config" onclick="nav('config')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>Configuración</span></button>
+      <button type="button" class="si" data-nav="scores" onclick="nav('scores')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg></span><span>Scores</span></button>
+      <button type="button" class="si" data-nav="users" onclick="nav('users')"><span class="sic nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></span><span>Usuarios</span></button>
     </div>
   </div>
   <div class="sb-foot">
