@@ -64,21 +64,37 @@ PG.pagos = function(){
   if(_pHasta) filtered = filtered.filter(function(p){ return (p.fecha||'') <= _pHasta; });
 
   // Cuotas próximas (mismo criterio que dashboard) — créditos activos con cuota próxima o vencida
-  const proximasCuotas = _concFiltrar(S.creds||[]).filter(function(c){
+  var _cuDesde = S.cuotasDesde||'';
+  var _cuHasta = S.cuotasHasta||'';
+  var proximasCuotas = _concFiltrar(S.creds||[]).filter(function(c){
     if(c.eliminado) return false;
     if(c.estado!=='activo'||!c.fecha) return false;
     const start=new Date(c.fecha);
     const cuotaNum=(c.pagado||0)+1;
     const vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
     const diff=Math.round((vence-new Date())/(24*60*60*1000));
-    return diff<=14 && diff>=-30; // muestra hasta 30 días de atraso y próximas 14 días
+    return diff<=30 && diff>=-30; // muestra hasta 30 días de atraso y próximas 30 días
   }).map(function(c){
     const start=new Date(c.fecha);
     const cuotaNum=(c.pagado||0)+1;
     const vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
     const diff=Math.round((vence-new Date())/(24*60*60*1000));
-    return { cred:c, cuotaNum:cuotaNum, diff:diff };
-  }).sort(function(a,b){ return a.diff-b.diff; }); // los más urgentes/atrasados primero
+    return { cred:c, cuotaNum:cuotaNum, diff:diff, venceStr:fechaLocalISO(vence) };
+  });
+  // Filtro por fecha de vencimiento
+  if(_cuDesde) proximasCuotas = proximasCuotas.filter(function(it){ return it.venceStr >= _cuDesde; });
+  if(_cuHasta) proximasCuotas = proximasCuotas.filter(function(it){ return it.venceStr <= _cuHasta; });
+  // Ordenamiento configurable (por defecto: más urgentes/atrasados primero)
+  var _cu = S.cuotasSort||{col:'vence',dir:'asc'};
+  proximasCuotas = proximasCuotas.slice().sort(function(a,b){
+    var col=_cu.col, dir=_cu.dir==='asc'?1:-1;
+    if(col==='cli'){return dir*((a.cred.cli||'').toLowerCase().localeCompare((b.cred.cli||'').toLowerCase()));}
+    if(col==='id'){var na=parseInt(String(a.cred.id).replace(/\D/g,''),10)||0,nb=parseInt(String(b.cred.id).replace(/\D/g,''),10)||0;return dir*(na<nb?-1:na>nb?1:0);}
+    if(col==='cuota'){return dir*((a.cuotaNum||0)-(b.cuotaNum||0));}
+    if(col==='estado'){return dir*((a.diff||0)-(b.diff||0));}
+    if(col==='monto'){return dir*(parseFloat(a.cred.cuotaQ||a.cred.cuota||0)-parseFloat(b.cred.cuotaQ||b.cred.cuota||0));}
+    return dir*((a.diff||0)-(b.diff||0)); // 'vence'
+  });
 
   return`<div class="page">
 
@@ -158,35 +174,49 @@ PG.pagos = function(){
   <!-- Cuotas Próximas -->
   <div class="card" style="margin-bottom:12px">
     <div class="ch" style="margin-bottom:10px">
-      <div><div class="ct">Cuotas Próximas</div><div class="cs">Clientes a cobrar en los próximos 14 días · atrasados primero</div></div>
+      <div><div class="ct">Cuotas Próximas</div><div class="cs">Clientes a cobrar en los próximos 30 días · atrasados primero</div></div>
       <span class="bdg ${proximasCuotas.length>0?'b-a':'b-g'}">${proximasCuotas.length}</span>
     </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <label style="font-size:11px;color:var(--ink3);font-weight:700">Vence desde:</label>
+      <input type="date" value="${S.cuotasDesde||''}" onchange="S.cuotasDesde=this.value;pgSet('cuotas',1);nav('pagos')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
+      <label style="font-size:11px;color:var(--ink3);font-weight:700">Hasta:</label>
+      <input type="date" value="${S.cuotasHasta||''}" onchange="S.cuotasHasta=this.value;pgSet('cuotas',1);nav('pagos')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
+      ${(S.cuotasDesde||S.cuotasHasta)?`<button class="btn btn-g btn-sm" onclick="S.cuotasDesde='';S.cuotasHasta='';pgSet('cuotas',1);nav('pagos')">✕ Limpiar</button>`:''}
+    </div>
     ${proximasCuotas.length===0 ? '<div style="text-align:center;padding:20px 0;color:var(--ink3);font-size:12px">Sin cuotas próximas ni atrasadas</div>' :
-      `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;max-height:520px;overflow-y:auto">
-      ${proximasCuotas.map(function(item){
+      `<div class="tw"><table>
+      <thead><tr>
+        ${_thSort(_cu,'setCuotasSort','cli','Cliente')}
+        ${_thSort(_cu,'setCuotasSort','id','Crédito')}
+        ${_thSort(_cu,'setCuotasSort','cuota','Cuota N°')}
+        ${_thSort(_cu,'setCuotasSort','estado','Estado')}
+        ${_thSort(_cu,'setCuotasSort','vence','Vence')}
+        ${_thSort(_cu,'setCuotasSort','monto','Monto')}
+        <th></th>
+      </tr></thead>
+      <tbody>${(()=>{const _cp=pgGet('cuotas');return proximasCuotas.slice((_cp-1)*50,_cp*50).map(function(item){
         const c=item.cred, diff=item.diff;
         const col = diff<0?'var(--red)':diff<=1?'var(--amber)':'var(--green)';
         const lbl = diff<0?`${Math.abs(diff)}d de atraso`:diff===0?'Vence hoy':diff===1?'Vence mañana':`Vence en ${diff}d`;
         const badge = diff<0?'ATRASO':diff<=1?'URGENTE':'PRÓXIMO';
-        return `<div style="background:var(--surf2);border:1px solid var(--rim);border-left:3px solid ${col};border-radius:9px;padding:10px 12px">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px">
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:700;color:var(--ink);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.cli}</div>
-              <div style="font-size:10px;color:var(--ink3);margin-top:1px">${c.id} · Cuota ${item.cuotaNum}/${c.totalCuotas||c.plazo*2||24}</div>
-            </div>
-            <span style="background:${col};color:#fff;font-size:9px;font-weight:900;padding:2px 6px;border-radius:4px;letter-spacing:.3px">${badge}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <div style="font-size:10.5px;color:${col};font-weight:700">${lbl}</div>
-            <div style="font-weight:800;font-family:var(--fd);font-size:14px;color:var(--ink)">${fmt(c.cuotaQ||c.cuota)}</div>
-          </div>
-          <div style="display:flex;gap:5px">
-            <button class="btn btn-p btn-xs" style="flex:1" onclick="openAddPago('${c.id}')">Cobrar</button>
-            <button class="btn btn-g btn-xs" style="flex:1" onclick="avisarCuotaProxima('${c.id}')" title="Enviar recordatorio al cliente por WhatsApp">Avisar</button>
-          </div>
-        </div>`;
-      }).join('')}
-      </div>`
+        const bcls = diff<0?'b-r':diff<=1?'b-a':'b-g';
+        return `<tr>
+          <td class="tdm">${c.cli}</td>
+          <td class="tds" style="font-family:var(--fd)">${c.id}</td>
+          <td class="tds">${item.cuotaNum}/${c.totalCuotas||c.plazo*2||24}</td>
+          <td><span class="bdg ${bcls}" style="font-size:9px">${badge}</span></td>
+          <td class="tds" style="color:${col};font-weight:700">${lbl}</td>
+          <td style="font-weight:800;font-family:var(--fd);color:var(--ink)">${fmt(c.cuotaQ||c.cuota)}</td>
+          <td><div style="display:flex;gap:4px">
+            <button class="btn btn-p btn-xs" onclick="openAddPago('${c.id}')">Cobrar</button>
+            <button class="btn btn-g btn-xs" onclick="avisarCuotaProxima('${c.id}')" title="Enviar recordatorio al cliente por WhatsApp">Avisar</button>
+          </div></td>
+        </tr>`;
+      }).join('')})()}
+      </tbody>
+      </table></div>
+      ${pgControls('cuotas',proximasCuotas.length,50,'pgNav')}`
     }
   </div>
 
