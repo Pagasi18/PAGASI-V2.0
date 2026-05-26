@@ -1276,6 +1276,7 @@ function liveSearchCred(q){
 function setCliSort(col){var cur=S.cliSort||{col:'nombre',dir:'asc'};S.cliSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('clientes');}
 function setPagosSort(col){var cur=S.pagosSort||{col:'fecha',dir:'desc'};S.pagosSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('pagos');}
 function setMotosSort(col){var cur=S.motosSort||{col:'modelo',dir:'asc'};S.motosSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('motos');}
+function setCuotasSort(col){var cur=S.cuotasSort||{col:'vence',dir:'asc'};S.cuotasSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('pagos');}
 function _thSort(sortState,setFn,col,label){var isActive=sortState.col===col;var arrow=isActive?(sortState.dir==='asc'?'↑':'↓'):'';return '<th onclick="'+setFn+'(\''+col+'\')" style="cursor:pointer;user-select:none;white-space:nowrap">'+label+(arrow?' <span style="color:var(--p1);font-size:10px">'+arrow+'</span>':'<span style="color:var(--ink3);font-size:9px;opacity:.4"> ⇅</span>')+'</th>';}
 function getCuotasVencidas(c){
   // Devuelve cuántas cuotas están vencidas sin pagar
