@@ -1315,7 +1315,7 @@ function calcularMoraAuto(){
     var diasAtraso=Math.floor((hoy-fechaVence)/(24*60*60*1000));
     var gracia=PLAN.diasGracia||5;
     var nuevaMora=diasAtraso>0?diasAtraso:0;
-    var nuevoEstado=nuevaMora>0?'mora':'activo';
+    var nuevoEstado=diasAtraso>gracia?'mora':'activo';
     if(c.estado==='mora' || nuevaMora>0) c.tuvoMoraHistorica=true;
     var cambio=(nuevaMora!==parseInt(c.mora||0,10)) || (c.estado!==nuevoEstado) || ((nuevaMora>0) && c.tuvoMoraHistorica!==true);
     c.mora=nuevaMora;
