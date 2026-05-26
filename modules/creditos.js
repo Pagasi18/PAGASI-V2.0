@@ -126,7 +126,7 @@ PG.creditos = function(){
   filtered = filtered.slice().sort(function(a,b){
     var col=_cs.col, dir=_cs.dir==='asc'?1:-1;
     var va,vb;
-    if(col==='id') return dir*(parseInt(a.id)||0 < parseInt(b.id)||0 ? -1 : parseInt(a.id)||0 > parseInt(b.id)||0 ? 1 : 0);
+    if(col==='id') { va=parseInt(String(a.id).replace(/\D/g,''),10)||0; vb=parseInt(String(b.id).replace(/\D/g,''),10)||0; return dir*(va<vb?-1:va>vb?1:0); }
     if(col==='cli') { va=(a.cli||'').toLowerCase(); vb=(b.cli||'').toLowerCase(); return dir*(va<vb?-1:va>vb?1:0); }
     if(col==='modelo') { va=(a.modelo||'').toLowerCase(); vb=(b.modelo||'').toLowerCase(); return dir*(va<vb?-1:va>vb?1:0); }
     if(col==='fecha') { va=a.fecha||''; vb=b.fecha||''; return dir*(va<vb?-1:va>vb?1:0); }
@@ -135,7 +135,7 @@ PG.creditos = function(){
     if(col==='cuota') return dir*(getCreditoCuotaBase(a)-getCreditoCuotaBase(b));
     if(col==='saldo') return dir*(getCreditoSaldoPendiente(a)-getCreditoSaldoPendiente(b));
     if(col==='mora') return dir*((a.mora||0)-(b.mora||0));
-    if(col==='apy') return dir*(parseFloat(a.apy||0)-parseFloat(b.apy||0));
+    if(col==='apy') { va=Number.isFinite(parseFloat(a.apy))?parseFloat(a.apy):(Number.isFinite(parseFloat((a.plan||{}).apy))?parseFloat((a.plan||{}).apy):parseFloat(PLAN.apy||0)); vb=Number.isFinite(parseFloat(b.apy))?parseFloat(b.apy):(Number.isFinite(parseFloat((b.plan||{}).apy))?parseFloat((b.plan||{}).apy):parseFloat(PLAN.apy||0)); return dir*(va-vb); }
     if(col==='estado') { va=a.estado||''; vb=b.estado||''; return dir*(va<vb?-1:va>vb?1:0); }
     return 0;
   });
