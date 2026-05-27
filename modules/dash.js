@@ -66,12 +66,12 @@ PG.dash = function(){
     const dash = pct/100*circ;
     const gap = circ - dash;
     const rot = offsetPct/100*360 - 90;
-    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="18"
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"
       stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}"
       transform="rotate(${rot} ${cx} ${cy})"
       style="transition:stroke-width .2s"
-      onmouseover="this.setAttribute('stroke-width','22')"
-      onmouseout="this.setAttribute('stroke-width','18')"/>`;
+      onmouseover="this.setAttribute('stroke-width','13')"
+      onmouseout="this.setAttribute('stroke-width','10')"/>`;
   }
 
   // Moto pie
@@ -138,27 +138,27 @@ PG.dash = function(){
   )}
 
   <!-- ROW 1: 4 KPI CARDS -->
-  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px">
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:18px">
 
-    <div class="card dash-kpi" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer;border-left:3px solid var(--p1)">
+    <div class="card dash-kpi" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer;background:var(--p1);border:none">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Cartera Activa</span>
-        <span style="font-size:9px;background:rgba(37,99,235,0.1);color:var(--p1);padding:2px 7px;border-radius:20px;font-weight:700">${activos} créditos</span>
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.85);font-family:var(--fm)">Cartera Activa</span>
+        <span style="font-size:9px;background:rgba(255,255,255,0.2);color:#fff;padding:2px 7px;border-radius:20px;font-weight:700">${activos} créditos</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:22px;letter-spacing:-1px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px">${fmt(cartera)}</div>
-      <div style="font-size:11px;color:var(--ink3)">Saldo pendiente de cobro</div>
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;justify-content:space-between;font-size:10.5px">
-        <span style="color:var(--ink3)">${completados} completados</span>
-        <span style="color:var(--p1);font-weight:700">${totalCreds} total →</span>
+      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:#fff;margin-bottom:4px">${fmt(cartera)}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.8)">Saldo pendiente de cobro</div>
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,0.2);display:flex;justify-content:space-between;font-size:10.5px">
+        <span style="color:rgba(255,255,255,0.8)">${completados} completados</span>
+        <span style="color:#fff;font-weight:700">${totalCreds} total →</span>
       </div>
     </div>
 
-    <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer;border-left:3px solid var(--green)">
+    <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);font-family:var(--fm)">Cobrado (Mes)</span>
         <span style="font-size:9px;background:var(--greens);color:var(--green);padding:2px 7px;border-radius:20px;font-weight:700">${new Date().toLocaleDateString('es-VE',{month:'short'}).replace('.','')}</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:22px;letter-spacing:-1px;color:var(--green);margin-bottom:4px">${fmt(ingMesReal)}</div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:28px;letter-spacing:-1px;color:var(--green);margin-bottom:4px">${fmt(ingMesReal)}</div>
       <div style="font-size:11px;color:var(--ink3)">Cobrado este mes</div>
       <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:4px">
         <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Cuotas recibidas</span><span style="color:var(--green);font-weight:700">${fmt(cuotasCobradasMes)}</span></div>
@@ -166,12 +166,12 @@ PG.dash = function(){
       </div>
     </div>
 
-    <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer;border-left:3px solid var(--green)">
+    <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);font-family:var(--fm)">Cobrado (Total)</span>
         ${pendPagos>0?`<span style="font-size:9px;background:rgba(232,152,10,0.12);color:var(--amber);padding:2px 7px;border-radius:20px;font-weight:700">${pendPagos} pend.</span>`:'<span style="font-size:9px;background:var(--greens);color:var(--green);padding:2px 7px;border-radius:20px;font-weight:700">Al día</span>'}
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:22px;letter-spacing:-1px;color:var(--green);margin-bottom:4px">${fmt(ingMes)}</div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:28px;letter-spacing:-1px;color:var(--green);margin-bottom:4px">${fmt(ingMes)}</div>
       <div style="font-size:11px;color:var(--ink3)">Histórico total</div>
       <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:4px">
         <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Cuotas recibidas</span><span style="color:var(--green);font-weight:700">${fmt(cuotasCobradas)}</span></div>
@@ -179,12 +179,12 @@ PG.dash = function(){
       </div>
     </div>
 
-    <div class="card dash-kpi" onclick="nav(&quot;cobranza&quot;)" style="cursor:pointer;border-left:3px solid ${mora>0?'var(--red)':'var(--green)'}">
+    <div class="card dash-kpi" onclick="nav(&quot;cobranza&quot;)" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${mora>0?'var(--red)':'var(--green)'};font-family:var(--fm)">En Mora</span>
         <span style="font-size:9px;background:${mora>0?'var(--reds)':'var(--greens)'};color:${mora>0?'var(--red)':'var(--green)'};padding:2px 7px;border-radius:20px;font-weight:700">${mora>0?mora+' clientes':'Sin mora'}</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:22px;letter-spacing:-1px;color:${mora>0?'var(--red)':'var(--green)'};margin-bottom:4px">${mora>0?mora:'✓'}</div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:28px;letter-spacing:-1px;color:${mora>0?'var(--red)':'var(--green)'};margin-bottom:4px">${mora>0?mora:'✓'}</div>
       <div style="font-size:11px;color:var(--ink3)">${mora>0?'Requieren gestión de cobro':'Todos los clientes al día'}</div>
       <div style="margin-top:10px;display:flex;flex-direction:column;gap:3px">
         ${Object.entries(moraBuckets).map(([k,v])=>v>0?`
@@ -198,12 +198,12 @@ PG.dash = function(){
       </div>
     </div>
 
-    <div class="card dash-kpi" onclick="nav(&quot;conta&quot;)" style="cursor:pointer;border-left:3px solid ${utilidad>=0?'var(--p2)':'var(--red)'}">
+    <div class="card dash-kpi" onclick="nav(&quot;conta&quot;)" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p2);font-family:var(--fm)">Utilidad</span>
         <span style="font-size:9px;background:rgba(91,141,239,0.1);color:var(--p2);padding:2px 7px;border-radius:20px;font-weight:700">${new Date().toLocaleDateString('es-VE',{month:'short'})}</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:22px;letter-spacing:-1px;color:${utilidad>=0?'var(--p2)':'var(--red)'};margin-bottom:4px">${fmt(utilidad)}</div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:28px;letter-spacing:-1px;color:${utilidad>=0?'var(--p2)':'var(--red)'};margin-bottom:4px">${fmt(utilidad)}</div>
       <div style="font-size:11px;color:var(--ink3)">Ingresos menos Egresos</div>
       <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;justify-content:space-between;font-size:10.5px">
         <span style="color:var(--green)">↑ ${fmt(ingMes)}</span>
@@ -213,7 +213,7 @@ PG.dash = function(){
   </div>
 
   <!-- ROW 2: Analytics charts -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px">
 
     <!-- CRÉDITOS CHART — primero -->
     <div class="card">
@@ -272,7 +272,7 @@ PG.dash = function(){
   </div>
 
   <!-- ROW 2b: Mora + Cuotas -->
-  <div style="display:grid;grid-template-columns:1fr 2fr;gap:14px;margin-bottom:14px">
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:18px">
 
     <div class="card">
       <div class="ch" style="margin-bottom:14px">
@@ -318,7 +318,7 @@ PG.dash = function(){
   </div>
 
   <!-- ROW 3: Tres pie charts -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px">
 
     <!-- PIE: Motos por estado -->
     <div class="card" onclick="nav(&quot;motos&quot;)" style="cursor:pointer">
@@ -328,13 +328,13 @@ PG.dash = function(){
       </div>
       <div style="display:flex;align-items:center;gap:16px">
         <div style="position:relative;flex-shrink:0">
-          <svg viewBox="0 0 100 100" style="width:90px;height:90px;transform:rotate(-90deg)">
-            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--rim)" stroke-width="18"/>
+          <svg viewBox="0 0 100 100" style="width:118px;height:118px;transform:rotate(-90deg)">
+            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--rim)" stroke-width="10"/>
             ${motoArcs}
           </svg>
           <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
-            <div style="font-family:var(--fd);font-weight:900;font-size:18px;color:var(--ink);line-height:1">${mDisp}</div>
-            <div style="font-size:8px;color:var(--ink3);font-weight:600">DISP</div>
+            <div style="font-family:var(--fd);font-weight:900;font-size:26px;color:var(--ink);line-height:1">${mDisp}</div>
+            <div style="font-size:9px;color:var(--ink3);font-weight:600;letter-spacing:.5px">DISP</div>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;flex:1">
@@ -358,18 +358,20 @@ PG.dash = function(){
       <div style="display:flex;flex-direction:column;gap:10px">
         ${(function(){
           var bars=[
-            {label:'Activos',    val:cActivos,    color:'var(--p1)'},
-            {label:'En mora',    val:cEnMora,     color:'var(--red)'},
-            {label:'Completados',val:cCompletados, color:'var(--green)'},
-            {label:'Cancelados', val:cCancelados, color:'var(--ink3)'},
+            {label:'Activos',    val:cActivos,    color:'#2563EB'},
+            {label:'En mora',    val:cEnMora,     color:'#E8335A'},
+            {label:'Completados',val:cCompletados, color:'#00B876'},
+            {label:'Cancelados', val:cCancelados, color:'#9794BB'},
           ];
           return bars.map(function(b){
             var pct=cTotal>0?Math.round(b.val/cTotal*100):0;
             return '<div>'
-              +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
-              +'<span style="font-size:11px;color:var(--ink2);font-weight:600">'+b.label+'</span>'
-              +'<span style="font-size:11px;font-weight:800;color:'+b.color+';font-family:var(--fd)">'+b.val
-              +' <span style="font-size:9px;color:var(--ink3);font-weight:600">'+pct+'%</span></span>'
+              +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
+              +'<span style="font-size:11.5px;color:var(--ink2);font-weight:600">'+b.label+'</span>'
+              +'<span style="display:flex;align-items:center;gap:7px">'
+              +'<span style="font-size:13px;font-weight:800;color:var(--ink);font-family:var(--fd)">'+b.val+'</span>'
+              +'<span style="font-size:9.5px;font-weight:700;color:'+b.color+';background:'+b.color+'1a;padding:2px 7px;border-radius:20px">'+pct+'%</span>'
+              +'</span>'
               +'</div>'
               +'<div style="background:var(--gs);border-radius:4px;height:7px;overflow:hidden">'
               +'<div style="height:100%;width:'+pct+'%;background:'+b.color+';border-radius:4px"></div>'
@@ -391,13 +393,13 @@ PG.dash = function(){
       </div>
       <div style="display:flex;align-items:center;gap:16px">
         <div style="position:relative;flex-shrink:0">
-          <svg viewBox="0 0 100 100" style="width:90px;height:90px;transform:rotate(-90deg)">
-            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--rim)" stroke-width="18"/>
-            ${metodoEntries.length>0?pagoArcs:'<circle cx="50" cy="50" r="40" fill="none" stroke="var(--rim2)" stroke-width="18"/>'}
+          <svg viewBox="0 0 100 100" style="width:118px;height:118px;transform:rotate(-90deg)">
+            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--rim)" stroke-width="10"/>
+            ${metodoEntries.length>0?pagoArcs:'<circle cx="50" cy="50" r="40" fill="none" stroke="var(--rim2)" stroke-width="10"/>'}
           </svg>
           <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
-            <div style="font-family:var(--fd);font-weight:900;font-size:16px;color:var(--ink);line-height:1">${metodoTotalReal}</div>
-            <div style="font-size:7px;color:var(--ink3);font-weight:600">TOTAL</div>
+            <div style="font-family:var(--fd);font-weight:900;font-size:24px;color:var(--ink);line-height:1">${metodoTotalReal}</div>
+            <div style="font-size:9px;color:var(--ink3);font-weight:600;letter-spacing:.5px">TOTAL</div>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;flex:1">
@@ -416,7 +418,7 @@ PG.dash = function(){
   </div>
 
   <!-- ROW 4: Últimos pagos + Alertas mora -->
-  <div style="display:grid;grid-template-columns:1.5fr 1.5fr;gap:14px;margin-bottom:14px">
+  <div style="display:grid;grid-template-columns:1.5fr 1.5fr;gap:16px;margin-bottom:18px">
 
     <div class="card">
       <div class="ch" style="margin-bottom:10px">
@@ -473,7 +475,7 @@ PG.dash = function(){
   </div>
 
   <!-- ROW 5: Quick access -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
     ${[
       ['CLI','var(--gs)','var(--p1)','rgba(37,99,235,0.15)','Clientes',_concFiltrarClientes(S.clientes||[]).length,'registrados',"nav('clientes')"],
       ['MOT','var(--greens)','var(--green)','rgba(6,176,106,0.15)','Disponibles',dispMotos,'de '+_SMOTOS.filter(m=>!m.eliminado).length+' motos',"nav('motos');setTimeout(()=>setMTab('disponible'),100)"],

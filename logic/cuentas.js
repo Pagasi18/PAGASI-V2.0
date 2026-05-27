@@ -74,7 +74,7 @@ function renderCuentas(){
 
   var tabBar='<div style="display:flex;gap:0;border-bottom:2px solid var(--rim);margin-bottom:20px">'
     +['cuentas','historial','pendientes'].map(function(t){
-      var labels={cuentas:'ðŸ¦ Cuentas',historial:'ðŸ“‹ Historial',pendientes:'â³ Pendientes'};
+      var labels={cuentas:' Cuentas',historial:' Historial',pendientes:'â³ Pendientes'};
       var active=tab===t;
       return '<button onclick="switchCuentasTab(\''+t+'\')" style="'
         +'background:none;border:none;padding:11px 20px;font-size:13px;font-weight:'+(active?'800':'600')
@@ -123,28 +123,28 @@ function renderTabCuentasBanc(){
 
   // â•â•â• KPIs row â•â•â•
   var kpisHTML = '<div class="sg" style="grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px">'
-    +'<div class="stat" style="border-top:3px solid var(--p1)">'
-      +'<div class="st-v" style="color:var(--p1);font-size:22px">'+fmt(total)+'</div>'
+    +'<div class="stat">'
+      +'<div class="st-v" style="color:var(--p1);font-size:26px">'+fmt(total)+'</div>'
       +'<div class="st-l">Saldo total</div>'
       +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+nCuentasLbl(cuentas.length)+'</div>'
     +'</div>'
-    +'<div class="stat" style="border-top:3px solid var(--green)">'
-      +'<div class="st-v" style="color:var(--green);font-size:22px">'+fmt(ingresosMes)+'</div>'
+    +'<div class="stat">'
+      +'<div class="st-v" style="color:var(--green);font-size:26px">'+fmt(ingresosMes)+'</div>'
       +'<div class="st-l">Ingresos del mes</div>'
       +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+movsMes.filter(function(m){return m.cuentaDestino && m.tipo!=='transferencia';}).length+' movimientos</div>'
     +'</div>'
-    +'<div class="stat" style="border-top:3px solid var(--red)">'
-      +'<div class="st-v" style="color:var(--red);font-size:22px">'+fmt(egresosMes)+'</div>'
+    +'<div class="stat">'
+      +'<div class="st-v" style="color:var(--red);font-size:26px">'+fmt(egresosMes)+'</div>'
       +'<div class="st-l">Egresos del mes</div>'
       +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+movsMes.filter(function(m){return m.cuentaOrigen && m.tipo!=='transferencia';}).length+' movimientos</div>'
     +'</div>'
-    +'<div class="stat" style="border-top:3px solid '+(netoMes>=0?'var(--green)':'var(--red)')+'">'
-      +'<div class="st-v" style="color:'+(netoMes>=0?'var(--green)':'var(--red)')+';font-size:22px">'+(netoMes>=0?'+':'')+fmt(netoMes)+'</div>'
+    +'<div class="stat">'
+      +'<div class="st-v" style="color:'+(netoMes>=0?'var(--green)':'var(--red)')+';font-size:26px">'+(netoMes>=0?'+':'')+fmt(netoMes)+'</div>'
       +'<div class="st-l">Flujo neto</div>'
       +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+now.toLocaleDateString('es-VE',{month:'long'})+'</div>'
     +'</div>'
-    +'<div class="stat" style="border-top:3px solid var(--amber)">'
-      +'<div class="st-v" style="color:var(--amber);font-size:22px">'+transfMes+'</div>'
+    +'<div class="stat">'
+      +'<div class="st-v" style="color:var(--amber);font-size:26px">'+transfMes+'</div>'
       +'<div class="st-l">Transferencias</div>'
       +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">Entre cuentas</div>'
     +'</div>'
@@ -187,7 +187,7 @@ function renderTabCuentasBanc(){
     var moneda = (c.moneda||'USD').toUpperCase()==='BS'?'Bs':'$';
     var accentColor = (c.moneda||'USD').toUpperCase()==='BS' ? '#60A5FA' : 'var(--p1)';
 
-    return '<div class="card" onclick="verMovsCuenta(\''+c.nombre+'\')" style="cursor:pointer;padding:16px 18px;border-top:3px solid '+accentColor+'">'
+    return '<div class="card" onclick="verMovsCuenta(\''+c.nombre+'\')" style="cursor:pointer;padding:16px 18px">'
 
       // Fila 1: ícono + nombre + badge moneda
       +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
@@ -310,7 +310,7 @@ function renderDetalleCuenta(nombre){
         +'title="Anular movimiento (solo Admin)" '
         +'style="background:none;border:none;cursor:pointer;color:var(--ink3);font-size:13px;padding:4px 7px;border-radius:6px;transition:all .15s" '
         +'onmouseover="this.style.color=\'var(--red)\';this.style.background=\'var(--reds)\'" '
-        +'onmouseout="this.style.color=\'var(--ink3)\';this.style.background=\'none\'">âŠ˜</button>';
+        +'onmouseout="this.style.color=\'var(--ink3)\';this.style.background=\'none\'"></button>';
     }
 
     return '<tr class="det-row" style="'+rowStyle+'" data-buscar="'
@@ -365,12 +365,12 @@ function renderDetalleCuenta(nombre){
         +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);font-weight:700;margin-bottom:6px">Saldo actual</div>'
         +'<div style="font-family:var(--fd);font-weight:900;font-size:24px;color:var(--ink);letter-spacing:-1px">'+fmt(saldo)+'</div>'
       +'</div>'
-      +'<div class="card" style="padding:16px 20px;border-left:3px solid var(--green)">'
+      +'<div class="card" style="padding:16px 20px">'
         +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--green);font-weight:700;margin-bottom:6px">↑ Total ingresos</div>'
         +'<div style="font-family:var(--fd);font-weight:900;font-size:24px;color:var(--green);letter-spacing:-1px">+'+fmt(totalIng)+'</div>'
         +'<div style="font-size:10.5px;color:var(--ink3);margin-top:2px">'+activos.filter(function(m){return m.cuentaDestino===nombre;}).length+' transacciones</div>'
       +'</div>'
-      +'<div class="card" style="padding:16px 20px;border-left:3px solid var(--red)">'
+      +'<div class="card" style="padding:16px 20px">'
         +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--red);font-weight:700;margin-bottom:6px">↓ Total egresos</div>'
         +'<div style="font-family:var(--fd);font-weight:900;font-size:24px;color:var(--red);letter-spacing:-1px">âˆ’'+fmt(totalEg)+'</div>'
         +'<div style="font-size:10.5px;color:var(--ink3);margin-top:2px">'+activos.filter(function(m){return m.cuentaOrigen===nombre;}).length+' transacciones</div>'
@@ -382,7 +382,7 @@ function renderDetalleCuenta(nombre){
       +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">'
         // Buscador
         +'<div style="position:relative;flex:1;min-width:220px">'
-          +'<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ink3);font-size:12px;pointer-events:none">â—†</span>'
+          +'<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ink3);font-size:12px;pointer-events:none"></span>'
           +'<input id="det-srch" type="text" placeholder="Buscar por concepto, monto, referencia, fecha, usuario..." '
             +'style="width:100%;box-sizing:border-box;padding:8px 10px 8px 30px;border:1px solid var(--rim);border-radius:10px;font-size:12.5px;background:var(--surf2);color:var(--ink);font-family:var(--f);outline:none" '
             +'oninput="filtrarDetalleCuenta(this.value)" '
@@ -466,7 +466,7 @@ function anularMovimiento(id, cuenta){
   if(m.eliminado){ toast('Este movimiento ya fue anulado','error'); return; }
 
   // Modal de confirmación con razón
-  $('mic').textContent='âŠ˜';
+  setMicon('anular');
   $('mtt').textContent='Anular movimiento';
   $('msb').textContent='El movimiento seguirá visible pero no contará en saldos ni contabilidad';
   $('modal-box').className='modal';
@@ -479,7 +479,7 @@ function anularMovimiento(id, cuenta){
     +'<div class="fg"><label>Razón de anulación *</label>'
     +'<input class="fi" id="anul_razon" placeholder="Ej: Error de registro, duplicado, reverso..." autofocus></div>';
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    +'<button class="btn btn-d" onclick="confirmarAnulacion(\''+id+'\',\''+cuenta+'\')">âŠ˜ Confirmar anulación</button>';
+    +'<button class="btn btn-d" onclick="confirmarAnulacion(\''+id+'\',\''+cuenta+'\')"> Confirmar anulación</button>';
   $('ov').style.display='flex';
 }
 
@@ -531,28 +531,28 @@ function renderTabHistorial(){
   var promedioPorMov = movsActivos.length>0 ? (totalIngresos+totalEgresos)/movsActivos.length : 0;
 
   var kpisHTML = '<div class="sg" style="grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px">'
-    +'<div class="stat" style="border-top:3px solid var(--green)">'
-      +'<div class="st-v" style="color:var(--green);font-size:20px">+'+fmt(totalIngresos)+'</div>'
+    +'<div class="stat">'
+      +'<div class="st-v" style="color:var(--green);font-size:26px">+'+fmt(totalIngresos)+'</div>'
       +'<div class="st-l">Ingresos</div>'
       +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+movsActivos.filter(function(m){return m.cuentaDestino && m.tipo!=='transferencia';}).length+' movimientos</div>'
     +'</div>'
-    +'<div class="stat" style="border-top:3px solid var(--red)">'
-      +'<div class="st-v" style="color:var(--red);font-size:20px">-'+fmt(totalEgresos)+'</div>'
+    +'<div class="stat">'
+      +'<div class="st-v" style="color:var(--red);font-size:26px">-'+fmt(totalEgresos)+'</div>'
       +'<div class="st-l">Egresos</div>'
       +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+movsActivos.filter(function(m){return m.cuentaOrigen && m.tipo!=='transferencia';}).length+' movimientos</div>'
     +'</div>'
-    +'<div class="stat" style="border-top:3px solid '+(neto>=0?'var(--green)':'var(--red)')+'">'
-      +'<div class="st-v" style="color:'+(neto>=0?'var(--green)':'var(--red)')+';font-size:20px">'+(neto>=0?'+':'')+fmt(neto)+'</div>'
+    +'<div class="stat">'
+      +'<div class="st-v" style="color:'+(neto>=0?'var(--green)':'var(--red)')+';font-size:26px">'+(neto>=0?'+':'')+fmt(neto)+'</div>'
       +'<div class="st-l">Neto</div>'
       +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">Balance del mes</div>'
     +'</div>'
-    +'<div class="stat" style="border-top:3px solid var(--p1)">'
-      +'<div class="st-v" style="color:var(--p1);font-size:20px">'+movs.length+'</div>'
+    +'<div class="stat">'
+      +'<div class="st-v" style="color:var(--p1);font-size:26px">'+movs.length+'</div>'
       +'<div class="st-l">Movimientos</div>'
       +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+totalTransf+' transferencias'+(anulados>0?' · '+anulados+' anulados':'')+'</div>'
     +'</div>'
-    +'<div class="stat" style="border-top:3px solid var(--amber)">'
-      +'<div class="st-v" style="color:var(--amber);font-size:20px">'+fmt(promedioPorMov)+'</div>'
+    +'<div class="stat">'
+      +'<div class="st-v" style="color:var(--amber);font-size:26px">'+fmt(promedioPorMov)+'</div>'
       +'<div class="st-l">Promedio</div>'
       +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">Por movimiento</div>'
     +'</div>'
@@ -627,7 +627,7 @@ function renderTabHistorial(){
     var tipoIcon = esTransfer ? 'â‡„' : (esIngreso ? 'â†©' : 'â†ª');
     var tipoBg = anulado ? 'var(--surf2)' : (esTransfer ? 'var(--ambers)' : (esIngreso ? 'var(--greens)' : 'var(--reds)'));
     var anulTag=anulado?'<span style="font-size:9px;background:rgba(231,76,60,0.12);color:var(--red);border-radius:20px;padding:2px 8px;font-weight:800;margin-left:6px">ANULADO</span>':'';
-    var anulBtn=(!anulado&&esAdmin)?'<button onclick="anularMovimiento(\''+m.id+'\',null)" title="Anular movimiento" style="background:none;border:none;cursor:pointer;color:var(--ink3);font-size:14px;padding:4px 8px;border-radius:6px;transition:all .15s" onmouseover="this.style.color=\'var(--red)\';this.style.background=\'var(--reds)\'" onmouseout="this.style.color=\'var(--ink3)\';this.style.background=\'none\'">âŠ˜</button>':'';
+    var anulBtn=(!anulado&&esAdmin)?'<button onclick="anularMovimiento(\''+m.id+'\',null)" title="Anular movimiento" style="background:none;border:none;cursor:pointer;color:var(--ink3);font-size:14px;padding:4px 8px;border-radius:6px;transition:all .15s" onmouseover="this.style.color=\'var(--red)\';this.style.background=\'var(--reds)\'" onmouseout="this.style.color=\'var(--ink3)\';this.style.background=\'none\'"></button>':'';
     var montoColor = anulado ? 'var(--ink3)' : (esIngreso ? '#27ae60' : '#e74c3c');
 
     return '<tr style="'+(anulado?'opacity:0.55;':'')+'transition:background .15s" onmouseover="this.style.background=\'var(--surf2)\'" onmouseout="this.style.background=\'\'">'
@@ -718,23 +718,23 @@ function renderTabPendientes(){
   var clientesAlDiaKpi = credActivosKpi.filter(function(c){return c.estado==='activo';}).length;
 
   var kpisHTML = '<div class="sg" style="grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'
-    +'<div class="stat" style="border-top:3px solid var(--green)">'
-      +'<div class="st-v" style="color:var(--green);font-size:22px">'+fmt(totalPorCobrar + totalManualCobrar)+'</div>'
+    +'<div class="stat">'
+      +'<div class="st-v" style="color:var(--green);font-size:26px">'+fmt(totalPorCobrar + totalManualCobrar)+'</div>'
       +'<div class="st-l">Por cobrar</div>'
       +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+credActivosKpi.length+' créditos'+(manualCobrarKpi.length>0?' · '+manualCobrarKpi.length+' manuales':'')+'</div>'
     +'</div>'
-    +'<div class="stat" style="border-top:3px solid var(--red)">'
-      +'<div class="st-v" style="color:var(--red);font-size:22px">'+fmt(totalManualPagar)+'</div>'
+    +'<div class="stat">'
+      +'<div class="st-v" style="color:var(--red);font-size:26px">'+fmt(totalManualPagar)+'</div>'
       +'<div class="st-l">Por pagar</div>'
       +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+manualPagarKpi.length+' pendiente'+(manualPagarKpi.length!==1?'s':'')+'</div>'
     +'</div>'
-    +'<div class="stat" style="border-top:3px solid '+(clientesMoraKpi>0?'var(--red)':'var(--green)')+'">'
-      +'<div class="st-v" style="color:'+(clientesMoraKpi>0?'var(--red)':'var(--green)')+';font-size:22px">'+clientesMoraKpi+'</div>'
+    +'<div class="stat">'
+      +'<div class="st-v" style="color:'+(clientesMoraKpi>0?'var(--red)':'var(--green)')+';font-size:26px">'+clientesMoraKpi+'</div>'
       +'<div class="st-l">En mora</div>'
       +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+clientesAlDiaKpi+' al día</div>'
     +'</div>'
-    +'<div class="stat" style="border-top:3px solid var(--p1)">'
-      +'<div class="st-v" style="color:var(--p1);font-size:22px">'+fmt((totalPorCobrar + totalManualCobrar) - totalManualPagar)+'</div>'
+    +'<div class="stat">'
+      +'<div class="st-v" style="color:var(--p1);font-size:26px">'+fmt((totalPorCobrar + totalManualCobrar) - totalManualPagar)+'</div>'
       +'<div class="st-l">Balance neto</div>'
       +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">Por cobrar âˆ’ por pagar</div>'
     +'</div>'
@@ -941,7 +941,7 @@ function openAgregarPendiente(tipo){
   var esCobrar=tipo==='cobrar';
   var color=esCobrar?'var(--p1)':'#e74c3c';
   var label=esCobrar?'por cobrar':'por pagar';
-  $('mic').textContent=esCobrar?'PND':'PAG';
+  setMicon('pago');
   $('mtt').textContent='Nueva cuenta pendiente '+label;
   $('msb').textContent='Se agregará a cuentas '+label;
   $('modal-box').className='modal';
@@ -1013,7 +1013,7 @@ function marcarPendientePagado(id){
 
 // ── DEPÓSITO ──
 function openDeposito(cuentaNombre){
-  $('mic').textContent='✓';$('mtt').textContent='Registrar Depósito';
+  setMicon('deposito');$('mtt').textContent='Registrar Depósito';
   $('msb').textContent=cuentaNombre||'Selecciona la cuenta';
   $('modal-box').className='modal';
   var opts = (_cuentasBanc||[]).map(function(cu){
@@ -1056,7 +1056,7 @@ function openDeposito(cuentaNombre){
 
 // ── RETIRO ──
 function openRetiro(cuentaNombre){
-  $('mic').textContent='â—';$('mtt').textContent='Registrar Retiro';
+  setMicon('retiro');$('mtt').textContent='Registrar Retiro';
   $('msb').textContent=cuentaNombre||'Selecciona la cuenta';
   $('modal-box').className='modal';
   var opts = (_cuentasBanc||[]).map(function(cu){
@@ -1099,7 +1099,7 @@ function openRetiro(cuentaNombre){
 
 // ── TRANSFERENCIA ──
 function openTransferencia(cuentaNombre){
-  $('mic').textContent='â†»';$('mtt').textContent='Transferencia entre Cuentas';$('msb').textContent='Mueve dinero entre cuentas';
+  setMicon('transfer');$('mtt').textContent='Transferencia entre Cuentas';$('msb').textContent='Mueve dinero entre cuentas';
   $('modal-box').className='modal';
   var opts = (_cuentasBanc||[]).map(function(cu){
     return '<option value="'+cu.nombre+'">'+cu.nombre+'</option>';

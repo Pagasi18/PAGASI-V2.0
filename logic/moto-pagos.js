@@ -12,7 +12,7 @@ function _mpagoFilaHtml(prefix, idx){
     + '<select class="fs '+prefix+'-cuenta" onchange="_mpagoMarcarTocado(this,\''+prefix+'\')">'+opts+'</select></div>'
     + '<div class="fg" style="margin:0"><label style="font-size:11px">Monto ($)</label>'
     + '<input class="fi '+prefix+'-monto" type="number" step="0.01" placeholder="0.00" oninput="_mpagoMarcarTocado(this,\''+prefix+'\');_mpagoActualizarTotales(\''+prefix+'\')"></div>'
-    + '<button type="button" class="btn btn-g btn-sm '+prefix+'-del" style="height:38px;padding:0 10px" onclick="_mpagoEliminarFila(this,\''+prefix+'\')" title="Eliminar">Ã—</button>'
+    + '<button type="button" class="btn btn-g btn-sm '+prefix+'-del" style="height:38px;padding:0 10px" onclick="_mpagoEliminarFila(this,\''+prefix+'\')" title="Eliminar">x</button>'
     + '</div>';
 }
 // El usuario tocó esta fila → ya no autorellenamos

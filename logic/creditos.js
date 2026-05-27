@@ -74,7 +74,7 @@ function _wzRender(motoId){
     + '<div id="wz_cli_chip" style="display:none;align-items:center;gap:8px;padding:9px 11px;background:rgba(74,107,255,.1);border:1.5px solid var(--p1);border-radius:9px">'
     + '<span style="width:8px;height:8px;border-radius:50%;background:var(--p1);flex-shrink:0"></span>'
     + '<div style="flex:1;min-width:0"><div id="wz_cli_chip_nom" style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div><div id="wz_cli_chip_ci" style="font-size:11px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div></div>'
-    + '<button type="button" onclick="_wzCliClear()" style="border:none;background:rgba(255,71,87,.12);color:var(--red);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700">Ã—</button>'
+    + '<button type="button" onclick="_wzCliClear()" style="border:none;background:rgba(255,71,87,.12);color:var(--red);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700">x</button>'
     + '</div>'
     + '<input type="text" class="fi" id="wz_cli_search" autocomplete="off" placeholder="Buscar cliente por nombre o cédula..." oninput="_wzCliSearch()" onfocus="_wzCliSearch()" onblur="setTimeout(_wzCliBlur,200)">'
     + '<input type="hidden" id="wz_cliente_sel" value="">'
@@ -2005,7 +2005,7 @@ function cancelarCred(credId){
   var c = S.creds.find(function(x){return x.id===credId;}); if(!c) return;
   window._cancelCredId = credId;
   window._cancelCredModo = 'mantener';
-  $('mic').textContent='✕'; $('mtt').textContent='Eliminar Crédito'; $('msb').textContent='El registro quedará auditado';
+  setMicon('eliminar'); $('mtt').textContent='Eliminar Crédito'; $('msb').textContent='El registro quedará auditado';
   $('modal-box').className='modal';
   $('mbd').innerHTML = '<div style="text-align:left;padding:10px 0">'
     +'<div style="text-align:center;font-size:42px;margin-bottom:10px">FIN</div>'
@@ -2086,10 +2086,10 @@ function restaurarCred(credId){
     return p && p.eliminado && p.cred===credId && p.eliminadoModo==='completo';
   });
 
-  $('mic').textContent='â†º'; $('mtt').textContent='Restaurar Crédito'; $('msb').textContent=c.id+' · '+c.cli;
+  setMicon('restaurar'); $('mtt').textContent='Restaurar Crédito'; $('msb').textContent=c.id+' · '+c.cli;
   $('modal-box').className='modal';
   $('mbd').innerHTML = '<div style="text-align:center;padding:12px 0">'
-    +'<div style="font-size:42px;margin-bottom:10px;color:var(--p1)">â†º</div>'
+    +'<div style="font-size:42px;margin-bottom:10px;color:var(--p1)"></div>'
     +'<div style="font-size:15px;font-weight:800;margin-bottom:6px">¿Restaurar el crédito '+c.id+'?</div>'
     +'<div style="color:var(--ink3);font-size:13px;margin-bottom:14px">'+c.cli+' · '+c.modelo+'</div>'
     +'<div style="background:var(--gs);border:1px solid var(--rim2);border-radius:10px;padding:12px;text-align:left;font-size:12.5px;color:var(--ink2);line-height:1.55">'
@@ -2224,7 +2224,7 @@ function ejecutarDelCred(audit){
 
 function openEditCred(credId){
   var c = S.creds.find(function(x){return x.id===credId;}); if(!c) return;
-  $('mic').textContent='â‰¡'; $('mtt').textContent='Editar Crédito'; $('msb').textContent=c.id+' · '+c.cli;
+  setMicon('editar'); $('mtt').textContent='Editar Crédito'; $('msb').textContent=c.id+' · '+c.cli;
   $('modal-box').className='modal';
   $('mbd').innerHTML = '<div class="fgr c1" style="gap:9px">'
     // Info only (read-only)

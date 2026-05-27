@@ -788,7 +788,7 @@ function enviarNotificaciones(){
   // ── Si no hay destinatarios con el filtro, abrir de todos modos ──
   if(!destinatarios.length){
     // Fallback: ofrece abrir WhatsApp con número manual
-    $('mic').textContent='MSG'; $('mtt').textContent='Enviar mensaje'; $('msb').textContent='Sin destinatarios automáticos';
+    setMicon('mensaje'); $('mtt').textContent='Enviar mensaje'; $('msb').textContent='Sin destinatarios automáticos';
     $('modal-box').className='modal';
     $('mbd').innerHTML='<div class="fg"><label>No se encontraron destinatarios con el filtro seleccionado.<br>Puedes enviar manualmente:</label></div>'
       +'<div class="fgr" style="gap:8px;margin-top:10px">'

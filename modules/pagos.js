@@ -110,27 +110,27 @@ PG.pagos = function(){
 
   <!-- KPI cards -->
   <div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:14px">
-    <div class="stat" style="border-left:3px solid var(--green)">
+    <div class="stat">
       <div class="st-ic" style="background:var(--greens);color:var(--green);font-size:9px;font-weight:800">✓</div>
-      <div class="st-v" style="color:var(--green);font-size:18px">${fmt(totalConf)}</div>
+      <div class="st-v" style="color:var(--green);font-size:26px">${fmt(totalConf)}</div>
       <div class="st-l">Cobrado confirmado <span style="opacity:.6;font-size:10px">${confs.length}</span></div>
     </div>
-    <div class="stat" style="border-left:3px solid var(--amber)">
+    <div class="stat">
       <div class="st-ic" style="background:var(--ambers);color:var(--amber);font-size:9px;font-weight:800">PND</div>
-      <div class="st-v" style="color:var(--amber);font-size:18px">${fmt(totalPend)}</div>
+      <div class="st-v" style="color:var(--amber);font-size:26px">${fmt(totalPend)}</div>
       <div class="st-l">Pendiente por confirmar <span style="opacity:.6;font-size:10px">${pends.length}</span></div>
     </div>
-    <div class="stat" style="border-left:3px solid var(--p1)">
+    <div class="stat">
       <div class="st-ic" style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800">MES</div>
-      <div class="st-v" style="color:var(--p1);font-size:18px">${fmt(totalMes)}</div>
+      <div class="st-v" style="color:var(--p1);font-size:26px">${fmt(totalMes)}</div>
       <div class="st-l">Cobrado este mes <span style="opacity:.6;font-size:10px">${pagosMes.length} pagos</span></div>
     </div>
-    <div class="stat" style="border-left:3px solid var(--p1)">
+    <div class="stat">
       <div class="st-ic" style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:800">AVG</div>
-      <div class="st-v" style="color:var(--p1);font-size:18px">${fmt(promMes)}</div>
+      <div class="st-v" style="color:var(--p1);font-size:26px">${fmt(promMes)}</div>
       <div class="st-l">Promedio por pago (mes)</div>
     </div>
-    <div class="stat" style="border-left:3px solid var(--green)">
+    <div class="stat">
       <div class="st-ic" style="background:var(--greens);color:var(--green);font-size:9px;font-weight:800">TOP</div>
       <div class="st-v" style="color:var(--green);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${topMetodo.nombre || '—'}</div>
       <div class="st-l">Método más usado · ${fmt(topMetodo.total)}</div>
@@ -279,7 +279,7 @@ PG.pagos = function(){
   <div class="card">
     <div class="ch">
       <div><div class="ct">Registro de pagos</div><div class="cs">${filtered.length} resultado${filtered.length!==1?'s':''}</div></div>
-      ${pagosEliminados.length>0?`<button class="btn btn-g btn-sm" onclick="setPagosTab('archivados')" style="border-left:3px solid var(--red)">Ver archivados · ${pagosEliminados.length}</button>`:''}
+      ${pagosEliminados.length>0?`<button class="btn btn-g btn-sm" onclick="setPagosTab('archivados')" style="">Ver archivados · ${pagosEliminados.length}</button>`:''}
     </div>
     <div class="tw"><table>
     <thead><tr>

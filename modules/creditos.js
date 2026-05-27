@@ -204,27 +204,27 @@ PG.creditos = function(){
   <!-- KPIs FILA 1 (estado de créditos) -->
   <!-- ══════════════════════════════════════════════════════════════ -->
   <div class="sg" style="grid-template-columns:repeat(5,1fr);margin-bottom:10px">
-    <div class="stat" style="border-left:3px solid var(--p1);padding:11px 13px">
+    <div class="stat">
       <div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Total creados</div>
       <div style="font-size:20px;font-weight:900;font-family:var(--fd);color:var(--p1);margin-top:3px">${allCreds.length}</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">histórico</div>
     </div>
-    <div class="stat" style="border-left:3px solid var(--p1);padding:11px 13px">
+    <div class="stat">
       <div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Activos</div>
       <div style="font-size:20px;font-weight:900;font-family:var(--fd);color:var(--p1);margin-top:3px">${activos.length}</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">${alDia.length} al día</div>
     </div>
-    <div class="stat" style="border-left:3px solid var(--red);padding:11px 13px">
+    <div class="stat">
       <div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase;letter-spacing:.5px">En mora</div>
       <div style="font-size:20px;font-weight:900;font-family:var(--fd);color:var(--red);margin-top:3px">${enMora.length}</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">${tasaMora}% · ${fmt(moraAcumulada)}</div>
     </div>
-    <div class="stat" style="border-left:3px solid var(--green);padding:11px 13px">
+    <div class="stat">
       <div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Completados</div>
       <div style="font-size:20px;font-weight:900;font-family:var(--fd);color:var(--green);margin-top:3px">${completados.length}</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">100% pagados</div>
     </div>
-    <div class="stat" style="border-left:3px solid var(--ink3);padding:11px 13px;cursor:pointer" onclick="setCredTab('archivados')">
+    <div class="stat" onclick="setCredTab('archivados')">
       <div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Archivados</div>
       <div style="font-size:20px;font-weight:900;font-family:var(--fd);color:var(--ink3);margin-top:3px">${archivados.length}</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">cancelados + recuperados</div>
@@ -426,7 +426,7 @@ PG.creditos = function(){
       ${modelosSorted.map(([modelo,info])=>{
         const morapct = info.total>0 ? Math.round(info.mora/info.total*100) : 0;
         const riskColor = morapct<=10?'var(--green)':morapct<=25?'var(--amber)':'var(--red)';
-        return `<div style="padding:12px;background:var(--surf2);border-radius:10px;border-top:3px solid ${riskColor}">
+        return `<div style="padding:12px;background:var(--surf2);border-radius:10px">
           <div style="font-size:11px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);margin-bottom:6px" title="${modelo}">${modelo}</div>
           <div style="font-size:17px;font-weight:900;font-family:var(--fd);color:var(--p1);line-height:1.1">${info.total}</div>
           <div style="font-size:10px;color:var(--ink3);margin-top:1px">créditos</div>

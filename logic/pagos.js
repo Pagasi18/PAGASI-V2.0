@@ -43,7 +43,7 @@ window.restaurarPago=restaurarPago;
 // Logica de creditos y wizard de solicitudes movida a logic/creditos.js.
 
 function openAddPago(preCredId){
-  $('mic').textContent='PAG';$('mtt').textContent='Registrar Pago';$('msb').textContent='Plan '+PLAN.plazo+' meses';
+  setMicon('pago');$('mtt').textContent='Registrar Pago';$('msb').textContent='Plan '+PLAN.plazo+' meses';
   $('modal-box').className='modal';
   $('mbd').innerHTML=`
     <div class="fgr c1" style="gap:9px"><div class="fg"><label>Crédito</label><select class="fs" id="p_cred" onchange="updPagoMonto(this)">${S.creds.filter(c=>c.estado==='activo'||c.estado==='mora').map(c=>`<option value="${c.id}" data-cuota="${c.cuota}" data-cuotaq="${c.cuotaQ}" ${preCredId&&String(c.id)===String(preCredId)?'selected':''}>${c.id} — ${c.cli} (${c.modelo})</option>`).join('')}</select></div></div>
@@ -401,7 +401,7 @@ function openAmort(id){
   // Cuota mensual (para display)
   var cuotaMensual = parseFloat(c.cuotaM||c.cuotaMensual||cuota*2);
 
-  $('mic').textContent='RPT';$('mtt').textContent='Detalle del Crédito';$('msb').textContent=`${c.id} — ${c.cli}`;
+  setMicon('detalle');$('mtt').textContent='Detalle del Crédito';$('msb').textContent=`${c.id} — ${c.cli}`;
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML=`
     <!-- â•â•â•â•â•â•â• HEADER: Cliente + Estado â•â•â•â•â•â•â• -->
@@ -611,7 +611,7 @@ function whatsappCliente(credId){
 function confirmarRecuperacion(credId){
   var c=S.creds.find(function(x){return x.id===credId;});
   if(!c) return;
-  $('mic').textContent='Key';
+  setMicon('llave');
   $('mtt').textContent='Recuperar Unidad';
   $('msb').textContent=c.cli+' · '+c.modelo;
   $('modal-box').className='modal';
@@ -643,7 +643,7 @@ function confirmarDelPago(id){
   window._delPagoId=id;
   window._delPagoRazon='';
   window._delPagoModo=(p.mantenerEnAmortizacion===true)?'mantener':'completo';
-  $('mic').textContent='Del';$('mtt').textContent='Eliminar Pago';$('msb').textContent='El registro quedará auditado';
+  setMicon('eliminar');$('mtt').textContent='Eliminar Pago';$('msb').textContent='El registro quedará auditado';
   $('modal-box').className='modal';
   $('mbd').innerHTML='<div style="text-align:left;padding:10px 0">'
     +'<div style="text-align:center;font-size:42px;margin-bottom:10px">PAG</div>'
@@ -1158,7 +1158,7 @@ function openPagoRapido(credId){
 
 function openEditPago(pagoId){
   var p = S.pagos.find(function(x){return x.id===pagoId;}); if(!p) return;
-  $('mic').textContent='Editar'; $('mtt').textContent='Editar Pago'; $('msb').textContent=pagoId+' · '+p.cli;
+  setMicon('editar'); $('mtt').textContent='Editar Pago'; $('msb').textContent=pagoId+' · '+p.cli;
   $('modal-box').className='modal';
   var metOpts = (_cuentasBanc||[]).map(function(c){
     return '<option value="'+c.nombre+'" '+(p.metodo===c.nombre?'selected':'')+'>'+c.nombre+'</option>';
@@ -1328,7 +1328,7 @@ function calcularMoraAuto(){
 
 // NOTA COBRANZA
 function openNota(id){
-  $('mic').textContent='Nota';$('mtt').textContent='Nota de Cobranza';$('msb').textContent=id;
+  setMicon('nota');$('mtt').textContent='Nota de Cobranza';$('msb').textContent=id;
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
     +'<div>'

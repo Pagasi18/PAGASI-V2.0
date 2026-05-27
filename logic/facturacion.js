@@ -12,18 +12,18 @@ function mostrarAlertaMora(){
 
   function grupoHTML(lista, color, icon, label){
     if(!lista.length) return '';
-    return '<div style="margin-bottom:14px">'
-      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:'+color+';margin-bottom:8px">'+icon+' '+label+' ('+lista.length+')</div>'
-      +'<div style="display:flex;flex-direction:column;gap:6px">'
+    return '<div style="margin-bottom:16px">'
+      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:'+color+';margin-bottom:9px">'+icon+' '+label+' ('+lista.length+')</div>'
+      +'<div style="display:flex;flex-direction:column;gap:8px">'
       +lista.map(function(c){
         var cl = S.clientes.find(function(x){ return x.nombre===c.cli; })||{};
-        return '<div style="display:flex;align-items:center;gap:10px;background:var(--surf2);border-radius:10px;padding:9px 12px;border-left:3px solid '+color+'">'
+        return '<div style="display:flex;align-items:center;gap:10px;background:var(--surf2);border-radius:12px;padding:11px 14px">'
           +'<div style="flex:1;min-width:0">'
-            +'<div style="font-size:12.5px;font-weight:700;color:var(--ink)">'+c.cli+'</div>'
-            +'<div style="font-size:10.5px;color:var(--ink3);margin-top:1px">'+c.id+' · '+c.modelo+(cl.tel?' · '+cl.tel:'')+'</div>'
+            +'<div style="font-size:13px;font-weight:700;color:var(--ink)">'+c.cli+'</div>'
+            +'<div style="font-size:10.5px;color:var(--ink3);margin-top:2px">'+c.id+' · '+c.modelo+(cl.tel?' · '+cl.tel:'')+'</div>'
           +'</div>'
           +'<div style="text-align:right;flex-shrink:0;margin-right:10px">'
-            +'<div style="font-family:var(--fd);font-weight:900;font-size:16px;color:'+color+'">'+c.mora+'d</div>'
+            +'<div style="font-family:var(--fd);font-weight:900;font-size:17px;color:'+color+'">'+c.mora+'d</div>'
             +'<div style="font-size:10px;color:var(--ink3)">mora</div>'
           +'</div>'
           +'<button class="btn btn-p btn-sm" onclick="closeM();openPagoRapido(\''+c.id+'\')">Cobrar</button>'
@@ -33,24 +33,27 @@ function mostrarAlertaMora(){
       +'</div></div>';
   }
 
-  $('mic').textContent = '';
+  $('mic').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+  $('mic').style.color = '#E8335A';
+  $('mic').style.background = '#FCEBEB';
+  $('mic').style.border = 'none';
   $('mtt').textContent = 'Alertas de Mora — '+enMora.length+' cliente'+(enMora.length!==1?'s':'');
   $('msb').textContent = 'Revisión al ' + new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
   $('modal-box').className = 'modal modal-lg';
   $('mbd').innerHTML =
     '<div style="max-height:65vh;overflow-y:auto;padding:4px 2px">'
-    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">'
-      +'<div style="background:rgba(231,76,60,0.08);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(231,76,60,0.2)">'
-        +'<div style="font-size:22px;font-weight:900;color:var(--red)">'+critico.length+'</div>'
-        +'<div style="font-size:10px;color:var(--ink3);margin-top:2px"> Crítico +30d</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">'
+      +'<div style="background:#FCEBEB;border-radius:14px;padding:16px;text-align:center">'
+        +'<div style="font-family:var(--fd);font-size:30px;font-weight:900;color:#E8335A;line-height:1">'+critico.length+'</div>'
+        +'<div style="font-size:10.5px;color:#A32D2D;margin-top:6px;font-weight:600">Crítico +30d</div>'
       +'</div>'
-      +'<div style="background:rgba(245,166,35,0.08);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(245,166,35,0.2)">'
-        +'<div style="font-size:22px;font-weight:900;color:var(--amber)">'+alto.length+'</div>'
-        +'<div style="font-size:10px;color:var(--ink3);margin-top:2px"> Alto 16–30d</div>'
+      +'<div style="background:#FAEEDA;border-radius:14px;padding:16px;text-align:center">'
+        +'<div style="font-family:var(--fd);font-size:30px;font-weight:900;color:#BA7517;line-height:1">'+alto.length+'</div>'
+        +'<div style="font-size:10.5px;color:#854F0B;margin-top:6px;font-weight:600">Alto 16–30d</div>'
       +'</div>'
-      +'<div style="background:rgba(245,166,35,0.05);border-radius:12px;padding:12px;text-align:center;border:1px solid rgba(245,166,35,0.15)">'
-        +'<div style="font-size:22px;font-weight:900;color:var(--amber)">'+moderado.length+'</div>'
-        +'<div style="font-size:10px;color:var(--ink3);margin-top:2px"> Moderado 1–15d</div>'
+      +'<div style="background:#FFF6E5;border-radius:14px;padding:16px;text-align:center">'
+        +'<div style="font-family:var(--fd);font-size:30px;font-weight:900;color:#C9A227;line-height:1">'+moderado.length+'</div>'
+        +'<div style="font-size:10.5px;color:#946F0B;margin-top:6px;font-weight:600">Moderado 1–15d</div>'
       +'</div>'
     +'</div>'
     +grupoHTML(critico, 'var(--red)', '', 'CRÍTICO — Más de 30 días')
@@ -67,7 +70,7 @@ function mostrarAlertaMora(){
 // FEATURE 2: RECIBO / COMPROBANTE DE PAGO
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function ofrecerRecibo(pago, cred){
-  $('mic').textContent = '✓';
+  setMicon('check');
   $('mtt').textContent = 'Pago Registrado';
   $('msb').textContent = 'El pago fue guardado exitosamente';
   $('modal-box').className = 'modal';
@@ -304,7 +307,7 @@ function abrirDetallePago(pagoId){
   if(!p){ toast('Pago no encontrado','error'); return; }
   var cred = (S.creds||[]).find(function(x){ return x.id === p.cred; });
   var fac = _facGetByPagoId(p.id);
-  $('mic').textContent = 'PAG';
+  setMicon('pago');
   $('mtt').textContent = 'Detalle del Pago';
   $('msb').textContent = p.id;
   $('modal-box').className = 'modal';
@@ -364,7 +367,7 @@ function abrirGenerarFactura(pagoId){
   var emp = getEmpresa();
   var nextNum = _facSiguienteNumeroFactura();
   var nextCtrl = _facSiguienteNumeroControl();
-  $('mic').textContent='FAC';
+  setMicon('factura');
   $('mtt').textContent='Generar Factura';
   $('msb').textContent='Pago '+p.id;
   $('modal-box').className='modal';
@@ -459,12 +462,12 @@ function crearFactura(pagoId){
 function abrirVerFactura(facId){
   var fac = (S.facturas||[]).find(function(x){ return x.id === facId; });
   if(!fac){ toast('Factura no encontrada','error'); return; }
-  $('mic').textContent='FAC';
+  setMicon('factura');
   $('mtt').textContent='Factura '+fac.numero;
   $('msb').textContent='Control: '+fac.numeroControl;
   $('modal-box').className='modal';
   var anuladaBlock = fac.anulada
-    ? '<div style="background:rgba(255,71,87,0.12);border:1px solid rgba(255,71,87,0.35);border-radius:9px;padding:11px;margin-bottom:12px"><div style="color:var(--red);font-weight:800;font-size:13px;margin-bottom:4px">âŠ˜ FACTURA ANULADA</div><div style="font-size:11.5px;color:var(--ink2)">Anulada: '+fmtFechaHora(fac.fechaAnulacion)+' por '+(fac.anuladaPor||'—')+'</div><div style="font-size:11.5px;color:var(--ink2);margin-top:3px">Razón: '+(fac.razonAnulacion||'—')+'</div></div>'
+    ? '<div style="background:rgba(255,71,87,0.12);border:1px solid rgba(255,71,87,0.35);border-radius:9px;padding:11px;margin-bottom:12px"><div style="color:var(--red);font-weight:800;font-size:13px;margin-bottom:4px"> FACTURA ANULADA</div><div style="font-size:11.5px;color:var(--ink2)">Anulada: '+fmtFechaHora(fac.fechaAnulacion)+' por '+(fac.anuladaPor||'—')+'</div><div style="font-size:11.5px;color:var(--ink2);margin-top:3px">Razón: '+(fac.razonAnulacion||'—')+'</div></div>'
     : '';
   $('mbd').innerHTML =
     anuladaBlock
@@ -505,10 +508,10 @@ function abrirVerFactura(facId){
     + '</div>';
   var ftHtml = '<button class="btn btn-g" onclick="abrirDetallePago(\''+fac.pagoId+'\')">â† Volver al pago</button>';
   if(!fac.anulada){
-    ftHtml += '<button class="btn btn-s" onclick="abrirImprimirFactura(\''+fac.id+'\')">ðŸ–¨ Imprimir</button>';
+    ftHtml += '<button class="btn btn-s" onclick="abrirImprimirFactura(\''+fac.id+'\')"> Imprimir</button>';
     ftHtml += '<button class="btn btn-d" onclick="abrirAnularFactura(\''+fac.id+'\')">Anular</button>';
   } else {
-    ftHtml += '<button class="btn btn-s" onclick="abrirImprimirFactura(\''+fac.id+'\')">ðŸ–¨ Imprimir copia</button>';
+    ftHtml += '<button class="btn btn-s" onclick="abrirImprimirFactura(\''+fac.id+'\')"> Imprimir copia</button>';
   }
   $('mft').innerHTML = ftHtml;
   $('ov').style.display='flex';
@@ -518,7 +521,7 @@ function abrirVerFactura(facId){
 function abrirImprimirFactura(facId){
   var fac = (S.facturas||[]).find(function(x){ return x.id === facId; });
   if(!fac){ toast('Factura no encontrada','error'); return; }
-  $('mic').textContent='IMP';
+  setMicon('imprimir');
   $('mtt').textContent='Imprimir Factura';
   $('msb').textContent='N° '+fac.numero;
   $('modal-box').className='modal';
@@ -526,15 +529,15 @@ function abrirImprimirFactura(facId){
     '<div style="font-size:12.5px;color:var(--ink2);margin-bottom:14px">Selecciona el formato de impresión:</div>'
     + '<div style="display:grid;gap:10px">'
     + '<button class="btn btn-p" style="padding:14px;text-align:left;display:flex;align-items:center;gap:12px" onclick="imprimirFactura(\''+fac.id+'\',\'carta\')">'
-    + '<span style="font-family:var(--fd);font-weight:800;font-size:18px;width:60px;text-align:center">ðŸ“„</span>'
-    + '<span><div style="font-weight:700;font-size:13.5px">Carta (8.5\" Ã— 11\")</div><div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:400">Impresora estándar — Hoja completa</div></span>'
+    + '<span style="font-family:var(--fd);font-weight:800;font-size:18px;width:60px;text-align:center"></span>'
+    + '<span><div style="font-weight:700;font-size:13.5px">Carta (8.5\" x 11\")</div><div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:400">Impresora estándar — Hoja completa</div></span>'
     + '</button>'
     + '<button class="btn btn-p" style="padding:14px;text-align:left;display:flex;align-items:center;gap:12px" onclick="imprimirFactura(\''+fac.id+'\',\'media\')">'
-    + '<span style="font-family:var(--fd);font-weight:800;font-size:18px;width:60px;text-align:center">ðŸ“ƒ</span>'
-    + '<span><div style="font-weight:700;font-size:13.5px">Media Carta (8.5\" Ã— 5.5\")</div><div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:400">2 facturas por hoja — Ahorro de papel</div></span>'
+    + '<span style="font-family:var(--fd);font-weight:800;font-size:18px;width:60px;text-align:center"></span>'
+    + '<span><div style="font-weight:700;font-size:13.5px">Media Carta (8.5\" x 5.5\")</div><div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:400">2 facturas por hoja — Ahorro de papel</div></span>'
     + '</button>'
     + '<button class="btn btn-p" style="padding:14px;text-align:left;display:flex;align-items:center;gap:12px" onclick="imprimirFactura(\''+fac.id+'\',\'ticket\')">'
-    + '<span style="font-family:var(--fd);font-weight:800;font-size:18px;width:60px;text-align:center">ðŸ§¾</span>'
+    + '<span style="font-family:var(--fd);font-weight:800;font-size:18px;width:60px;text-align:center"></span>'
     + '<span><div style="font-weight:700;font-size:13.5px">Ticket 80mm</div><div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:400">Impresora térmica — Comprobante rápido</div></span>'
     + '</button>'
     + '</div>';
@@ -665,7 +668,7 @@ function abrirAnularFactura(facId){
   var fac = (S.facturas||[]).find(function(x){ return x.id === facId; });
   if(!fac){ toast('Factura no encontrada','error'); return; }
   if(fac.anulada){ toast('Esta factura ya está anulada','warning'); return; }
-  $('mic').textContent='AN';
+  setMicon('anular');
   $('mtt').textContent='Anular Factura';
   $('msb').textContent='N° '+fac.numero;
   $('modal-box').className='modal';
@@ -943,11 +946,11 @@ function _renderLibroSeniat(){
     + '<div class="card" style="margin-bottom:14px">'
     + '<div class="ch"><div><div class="ct">Totales del período</div><div class="cs">'+pagos.length+' operaciones</div></div></div>'
     + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:6px">'
-    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--ink3)"><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Base imponible</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totBase)+'</div></div>'
-    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--p1)"><div style="font-size:9.5px;font-weight:800;color:var(--p1);text-transform:uppercase;letter-spacing:.5px">IVA débito fiscal</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totIva)+'</div></div>'
-    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--amber)"><div style="font-size:9.5px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.5px">IGTF percibido</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totIgtf)+'</div></div>'
-    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--green)"><div style="font-size:9.5px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px">Total cobrado</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totTotal)+'</div></div>'
-    + '<div style="background:var(--gs);padding:11px;border-radius:9px;border-left:3px solid var(--green)"><div style="font-size:9.5px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px">Total + IGTF</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totConIgtf)+'</div></div>'
+    + '<div style="background:var(--gs);padding:11px;border-radius:9px;"><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Base imponible</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totBase)+'</div></div>'
+    + '<div style="background:var(--gs);padding:11px;border-radius:9px;"><div style="font-size:9.5px;font-weight:800;color:var(--p1);text-transform:uppercase;letter-spacing:.5px">IVA débito fiscal</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totIva)+'</div></div>'
+    + '<div style="background:var(--gs);padding:11px;border-radius:9px;"><div style="font-size:9.5px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.5px">IGTF percibido</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totIgtf)+'</div></div>'
+    + '<div style="background:var(--gs);padding:11px;border-radius:9px;"><div style="font-size:9.5px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px">Total cobrado</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totTotal)+'</div></div>'
+    + '<div style="background:var(--gs);padding:11px;border-radius:9px;"><div style="font-size:9.5px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px">Total + IGTF</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totConIgtf)+'</div></div>'
     + '</div>'
     + (clientesSinCI > 0 ? '<div style="margin-top:10px;padding:9px 11px;background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.25);border-radius:8px;font-size:11px;color:var(--red)">âš  Hay <strong>'+clientesSinCI+' pago'+(clientesSinCI>1?'s':'')+'</strong> con cliente sin CI/RIF registrado. SENIAT lo exige para el libro.</div>' : '')
     + '</div>'
@@ -955,8 +958,8 @@ function _renderLibroSeniat(){
     + '<div class="card">'
     + '<div class="ch"><div><div class="ct">Detalle de operaciones</div><div class="cs">Estilo Libro de Ventas SENIAT</div></div>'
     + '<div style="display:flex;gap:6px">'
-    + '<button class="btn btn-g btn-sm" onclick="_libroSeniatExportarCSV()">ðŸ“Š Exportar CSV</button>'
-    + '<button class="btn btn-p btn-sm" onclick="_libroSeniatImprimir()">ðŸ–¨ Imprimir / PDF</button>'
+    + '<button class="btn btn-g btn-sm" onclick="_libroSeniatExportarCSV()"> Exportar CSV</button>'
+    + '<button class="btn btn-p btn-sm" onclick="_libroSeniatImprimir()"> Imprimir / PDF</button>'
     + '</div></div>'
     + (pagos.length === 0
       ? '<div style="padding:30px 0;text-align:center;color:var(--ink3);font-size:13px">Sin operaciones en este período</div>'

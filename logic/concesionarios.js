@@ -274,7 +274,7 @@ function _concRender(){
     )
     // KPIs
     + '<div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:16px">'
-    + '<div class="stat" style="border-left:3px solid var(--p1)">'
+    + '<div class="stat" style="">'
     + '<div class="st-v" style="font-size:22px">'+lista.filter(function(c){return c.activo!==false;}).length+'</div>'
     + '<div class="st-l">Sedes activas</div>'
     + '</div>'
@@ -282,7 +282,7 @@ function _concRender(){
     + '<div class="st-v" style="font-size:22px">'+lista.length+'</div>'
     + '<div class="st-l">Total sedes</div>'
     + '</div>'
-    + '<div class="stat" style="border-left:3px solid var(--amber)">'
+    + '<div class="stat" style="">'
     + '<div class="st-v" style="color:var(--amber);font-size:22px">'+(sinAsig.creds+sinAsig.motos+sinAsig.clis+sinAsig.pagos)+'</div>'
     + '<div class="st-l">Sin asignar</div>'
     + '<div style="font-size:10px;color:var(--ink3);margin-top:3px">registros históricos</div>'
@@ -374,7 +374,7 @@ function _concRender(){
 function _concOpenEdit(id){
   var existing = id ? _concGetById(id) : null;
   var c = existing || { id:'', nombre:'', direccion:'', ciudad:'', telefono:'', activo:true };
-  $('mic').textContent='CNC';
+  setMicon('conces');
   $('mtt').textContent= existing ? 'Editar Concesionario' : 'Nuevo Concesionario';
   $('msb').textContent= existing ? c.id : 'Sede o punto de venta';
   $('modal-box').className='modal';
@@ -466,7 +466,7 @@ function _concAbrirDetalle(id){
     pagos: (S.pagos||[]).filter(function(p){return !p.eliminado && p.concesionarioId===id;})
   };
   var usuarios = (typeof _usersCache!=='undefined'&&_usersCache) ? _usersCache.filter(function(u){return (u.concesionarios||[]).indexOf(id)!==-1;}) : [];
-  $('mic').textContent='CNC';
+  setMicon('conces');
   $('mtt').textContent= c.nombre;
   $('msb').textContent= 'Detalle del concesionario';
   $('modal-box').className='modal modal-lg';
@@ -515,7 +515,7 @@ function _concAbrirAsignarMasivo(){
   var concesList = (S.concesionarios||[]).filter(function(c){return !c.eliminado && c.activo!==false;});
   if(!concesList.length){ toast('No hay concesionarios disponibles','error'); return; }
   var sin = _concContarSinAsignar();
-  $('mic').textContent='MAS';
+  setMicon('conces');
   $('mtt').textContent='Asignación Masiva de Histórico';
   $('msb').textContent='Aplicar concesionario a todo lo sin asignar';
   $('modal-box').className='modal';
@@ -627,7 +627,7 @@ function _concRenderAsignarIndividual(){
   if(!concesList.length){ toast('No hay concesionarios disponibles','error'); return; }
   var tipo = _concAsignIndState.tipo || 'motos';
   var q = (_concAsignIndState.q || '').toLowerCase().trim();
-  $('mic').textContent='IND';
+  setMicon('detalle');
   $('mtt').textContent='Asignación Individual';
   $('msb').textContent='Asigna registros uno por uno';
   $('modal-box').className='modal modal-lg';

@@ -46,7 +46,7 @@ function globalSearch(q){
   });
   S.creds.filter(c=>!c.eliminado).forEach(function(c){
     if((c.id+' '+c.cli+' '+c.modelo+' '+(c.vin||'')).toLowerCase().includes(val)){
-      results.push({tipo:'crédito',icon:'â‰¡',titulo:c.id+' — '+c.cli,
+      results.push({tipo:'crédito',icon:'',titulo:c.id+' — '+c.cli,
         sub:c.modelo+' · '+c.estado+' · '+(c.pagado||0)+' cuotas',
         accion:function(){ nav('creditos'); setTimeout(function(){openAmort(c.id);},100); }});
     }
@@ -378,7 +378,7 @@ function renderCredChart(){
   var totalCounts = counts.reduce(function(a,b){return a+b;},0);
   var wrap = canvas.parentElement;
   var placeholder = wrap ? wrap.querySelector('.chart-empty') : null;
-  if(!placeholder && wrap){ placeholder = document.createElement('div'); placeholder.className='chart-empty'; placeholder.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink3);font-size:12px;font-weight:700;gap:6px'; placeholder.innerHTML='<div style="font-size:28px;opacity:.3">ðŸ“Š</div><div>Sin créditos en este período</div>'; wrap.appendChild(placeholder); }
+  if(!placeholder && wrap){ placeholder = document.createElement('div'); placeholder.className='chart-empty'; placeholder.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink3);font-size:12px;font-weight:700;gap:6px'; placeholder.innerHTML='<div style="font-size:28px;opacity:.3"></div><div>Sin créditos en este período</div>'; wrap.appendChild(placeholder); }
   if(placeholder) placeholder.style.display = totalCounts===0 ? 'flex' : 'none';
   canvas.style.display = totalCounts===0 ? 'none' : 'block';
   if(totalCounts===0) return;

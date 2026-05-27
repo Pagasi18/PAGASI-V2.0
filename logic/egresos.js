@@ -1,6 +1,6 @@
 // Logica de egresos. Extraido mecanicamente de assets/pagasi-app.js.
 function openAddEgreso(){
-  $('mic').textContent='$$';$('mtt').textContent='Registrar Egreso';$('msb').textContent='Contabilidad';
+  setMicon('egreso');$('mtt').textContent='Registrar Egreso';$('msb').textContent='Contabilidad';
   $('modal-box').className='modal';
   var _metodosOpts = (_cuentasBanc||[]).map(function(c){return '<option>'+c.nombre+'</option>';}).join('');
   $('mbd').innerHTML = '<div class="fgr c1" style="gap:9px">'
@@ -63,7 +63,7 @@ function delEgreso(id){
   var i=S.egresos.findIndex(function(x){return x.id===id;});
   if(i<0) return;
   var eg=S.egresos[i];
-  $('mic').textContent='Del';
+  setMicon('eliminar');
   $('mtt').textContent='Eliminar Egreso';
   $('msb').textContent='El registro quedará auditado';
   $('modal-box').className='modal';

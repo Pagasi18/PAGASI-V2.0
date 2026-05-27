@@ -19,7 +19,7 @@ function abrirFiniquito(credId){
   var purpleDark = '#4C2ED0';
   var purpleLight = '#F2EEFF';
 
-  $('mic').textContent='';
+  setMicon('detalle');
   $('mtt').textContent='¡Contrato Finalizado!';
   $('msb').textContent=c.cli+' completó su arrendamiento';
   $('modal-box').className='modal modal-lg';
@@ -641,8 +641,8 @@ function pgControls(key, total, perPage, navFn){
   return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 4px 2px;font-size:12px;color:var(--ink3)">'
     +'<span>'+from+' – '+to+' de '+total+' registros</span>'
     +'<div style="display:flex;gap:6px">'
-    +(cur>1?'<button class="btn btn-g btn-xs" onclick="'+navFn+'(\''+key+'\','+(cur-1)+')">â€¹ Anterior</button>':'')
-    +(cur<pages?'<button class="btn btn-g btn-xs" onclick="'+navFn+'(\''+key+'\','+(cur+1)+')">Siguiente â€º</button>':'')
+    +(cur>1?'<button class="btn btn-g btn-xs" onclick="'+navFn+'(\''+key+'\','+(cur-1)+')">‹ Anterior</button>':'')
+    +(cur<pages?'<button class="btn btn-g btn-xs" onclick="'+navFn+'(\''+key+'\','+(cur+1)+')">Siguiente ›</button>':'')
     +'<span style="background:var(--surf2);border-radius:6px;padding:3px 8px;font-weight:700;color:var(--ink2)">'+cur+'/'+pages+'</span>'
     +'</div></div>';
 }

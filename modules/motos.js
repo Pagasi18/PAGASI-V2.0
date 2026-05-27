@@ -93,33 +93,33 @@ PG.motos = function(){
 
   <!-- ═══ KPIs PRINCIPALES ═══ -->
   <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px">
-    <div class="stat" style="border-top:3px solid var(--ink3)">
+    <div class="stat">
       <div class="st-v" style="font-size:22px">${total}</div>
       <div class="st-l">Total unidades</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">+${nuevasEsteMes} este mes</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--green)">
-      <div class="st-v" style="color:var(--green);font-size:22px">${dispN}</div>
+    <div class="stat">
+      <div class="st-v" style="color:var(--green);font-size:26px">${dispN}</div>
       <div class="st-l">Disponibles</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">${fmt(valorDisp)}</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--p1)">
-      <div class="st-v" style="color:var(--p1);font-size:22px">${finN}</div>
+    <div class="stat">
+      <div class="st-v" style="color:var(--p1);font-size:26px">${finN}</div>
       <div class="st-l">Financiadas</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">${total?Math.round(finN/total*100):0}% del total</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--red)">
-      <div class="st-v" style="color:var(--red);font-size:22px">${recN}</div>
+    <div class="stat">
+      <div class="st-v" style="color:var(--red);font-size:26px">${recN}</div>
       <div class="st-l">Recuperadas</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">${fmt(valorRec)}</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--blue,#3b82f6)">
+    <div class="stat">
       <div class="st-v" style="color:var(--blue,#3b82f6);font-size:22px">${invN}</div>
       <div class="st-l">Inventario</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">${fmt(valorInv)}</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--amber)">
-      <div class="st-v" style="color:var(--amber);font-size:22px">${fmt(precioPromDisp).replace('$','$')}</div>
+    <div class="stat">
+      <div class="st-v" style="color:var(--amber);font-size:26px">${fmt(precioPromDisp).replace('$','$')}</div>
       <div class="st-l">Precio prom.</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">Disponibles</div>
     </div>

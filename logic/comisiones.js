@@ -201,29 +201,29 @@ function _comisionesRender(){
   var html = '<div class="page">'
     + pageBanner('Vendedores y cobradores · Pago de comisiones','Comisiones',
         '<b>'+usuarios.length+'</b> usuarios · Por pagar: <b style="color:var(--green)">'+fmt(totalDebe)+'</b> · Pagado: <b>'+fmt(totalPagado)+'</b>',
-        [{label:'↓ Exportar CSV', onclick:'_comExportarCSV()'},{label:'â†» Actualizar', onclick:'nav(&quot;comisiones&quot;)'}]);
+        [{label:'↓ Exportar CSV', onclick:'_comExportarCSV()'},{label:'Actualizar', onclick:'nav(&quot;comisiones&quot;)'}]);
 
   // KPIs
   html += '<div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:16px">'
-    + '<div class="stat" style="border-top:3px solid var(--green)"><div class="st-v" style="color:var(--green);font-size:22px">'+fmt(totalDebe)+'</div><div class="st-l">Por pagar</div></div>'
-    + '<div class="stat" style="border-top:3px solid var(--p1)"><div class="st-v" style="font-size:22px">'+fmt(totalGenerado)+'</div><div class="st-l">Total generado</div></div>'
-    + '<div class="stat" style="border-top:3px solid var(--amber)"><div class="st-v" style="color:var(--amber);font-size:22px">'+fmt(totalPagado)+'</div><div class="st-l">Pagado total</div></div>'
-    + '<div class="stat" style="border-top:3px solid var(--ink3)"><div class="st-v" style="font-size:22px">'+todasGeneradas.length+'</div><div class="st-l">Transacciones</div></div>'
+    + '<div class="stat"><div class="st-v" style="color:var(--green);font-size:26px">'+fmt(totalDebe)+'</div><div class="st-l">Por pagar</div></div>'
+    + '<div class="stat"><div class="st-v" style="font-size:26px">'+fmt(totalGenerado)+'</div><div class="st-l">Total generado</div></div>'
+    + '<div class="stat"><div class="st-v" style="color:var(--amber);font-size:26px">'+fmt(totalPagado)+'</div><div class="st-l">Pagado total</div></div>'
+    + '<div class="stat"><div class="st-v" style="font-size:26px">'+todasGeneradas.length+'</div><div class="st-l">Transacciones</div></div>'
     + '</div>';
 
   // Tab bar
   html += '<div style="display:flex;gap:0;border-bottom:2px solid var(--rim);margin-bottom:16px">'
-    + [['vendedores','ðŸ‘¤ Vendedores'],['generadas','ðŸ“‹ Generadas'],['historial','ðŸ’³ Pagos realizados']].map(function(t){
+    + [['vendedores','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:5px"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg>Vendedores'],['generadas','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:5px"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>Generadas'],['historial','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:5px"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>Pagos realizados']].map(function(t){
         var act = tab===t[0];
-        return '<button onclick="window._comTab=&quot;'+t[0]+'&quot;;nav(&quot;comisiones&quot;)" style="background:none;border:none;padding:11px 18px;font-size:13px;font-weight:'+(act?'800':'600')+';color:'+(act?'var(--p1)':'var(--ink3)')+';border-bottom:3px solid '+(act?'var(--p1)':'transparent')+';margin-bottom:-2px;cursor:pointer;font-family:var(--f);transition:color .15s">'+t[1]+'</button>';
+        return '<button onclick="window._comTab=&quot;'+t[0]+'&quot;nav(&quot;comisiones&quot;)" style="background:none;border:none;padding:11px 18px;font-size:13px;font-weight:'+(act?'800':'600')+';color:'+(act?'var(--p1)':'var(--ink3)')+';border-bottom:3px solid '+(act?'var(--p1)':'transparent')+';margin-bottom:-2px;cursor:pointer;font-family:var(--f);transition:color .15s">'+t[1]+'</button>';
       }).join('')
     + '</div>';
 
   // ── Tab: Vendedores ──
   if(tab === 'vendedores'){
-    html += '<div style="margin-bottom:14px"><div class="srch"><span class="srch-i">â—†</span><input type="text" id="com-search" placeholder="Buscar vendedor..." oninput="_comFiltrar()"></div></div>';
+    html += '<div style="margin-bottom:14px"><div class="srch"><span class="srch-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span><input type="text" id="com-search" placeholder="Buscar vendedor..." oninput="_comFiltrar()"></div></div>';
     if(!usuarios.length){
-      html += '<div class="empty"><div class="e-ic">â—‡</div><div class="e-tt">Sin usuarios con comisiones activas</div><button class="btn btn-p btn-sm" style="margin-top:14px" onclick="nav(&quot;users&quot;)">Ir a Usuarios</button></div>';
+      html += '<div class="empty"><div class="e-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:32px;height:32px;opacity:.4"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></div><div class="e-tt">Sin usuarios con comisiones activas</div><button class="btn btn-p btn-sm" style="margin-top:14px" onclick="nav(&quot;users&quot;)">Ir a Usuarios</button></div>';
     } else {
       html += '<div id="com-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">';
       usuarios.forEach(function(u){ html += _comTarjetaHtml(u); });
@@ -233,7 +233,7 @@ function _comisionesRender(){
   // ── Tab: Comisiones Generadas ──
   } else if(tab === 'generadas'){
     if(!todasGeneradas.length){
-      html += '<div class="empty"><div class="e-ic">â—ˆ</div><div class="e-tt">Sin comisiones generadas</div><div style="font-size:12px;color:var(--ink3);margin-top:4px">Las comisiones aparecerán aquí cuando se registren ventas y cobranzas.</div></div>';
+      html += '<div class="empty"><div class="e-ic"></div><div class="e-tt">Sin comisiones generadas</div><div style="font-size:12px;color:var(--ink3);margin-top:4px">Las comisiones aparecerán aquí cuando se registren ventas y cobranzas.</div></div>';
     } else {
       // Filtro por usuario
       var usuariosUnicos = [];
@@ -274,7 +274,7 @@ function _comisionesRender(){
             var esVenta = g.tipo === 'venta';
             var iconBg = esVenta ? 'var(--greens)' : 'var(--blues)';
             var iconColor = esVenta ? 'var(--green)' : 'var(--blue)';
-            var iconLbl = esVenta ? 'ðŸ·' : 'ðŸ’µ';
+            var iconLbl = esVenta ? '·' : '';
             var inics = g.usuario.split(' ').slice(0,2).map(function(w){return (w[0]||'').toUpperCase();}).join('');
             return '<tr>'
               +'<td><div style="width:32px;height:32px;border-radius:9px;background:'+iconBg+';display:flex;align-items:center;justify-content:center;font-size:14px">'+iconLbl+'</div></td>'
@@ -295,7 +295,7 @@ function _comisionesRender(){
   // ── Tab: Historial de pagos ──
   } else {
     if(!historial.length){
-      html += '<div class="empty"><div class="e-ic">â—ˆ</div><div class="e-tt">Sin pagos de comisiones registrados</div><div style="font-size:12px;color:var(--ink3);margin-top:4px">Los pagos aparecerán aquí cuando uses el botón "$ Pagar" en cada tarjeta.</div></div>';
+      html += '<div class="empty"><div class="e-ic"></div><div class="e-tt">Sin pagos de comisiones registrados</div><div style="font-size:12px;color:var(--ink3);margin-top:4px">Los pagos aparecerán aquí cuando uses el botón "$ Pagar" en cada tarjeta.</div></div>';
     } else {
       // Mini KPIs del historial
       var totalHistorial = historial.reduce(function(a,e){return a+(parseFloat(e.monto)||0);},0);
@@ -304,9 +304,9 @@ function _comisionesRender(){
       var totalMes = pagosMes.reduce(function(a,e){return a+(parseFloat(e.monto)||0);},0);
 
       html += '<div class="sg" style="grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
-        + '<div class="stat" style="border-top:3px solid var(--amber)"><div class="st-v" style="font-size:20px;color:var(--amber)">'+fmt(totalHistorial)+'</div><div class="st-l">Total pagado histórico</div></div>'
-        + '<div class="stat" style="border-top:3px solid var(--p1)"><div class="st-v" style="font-size:20px;color:var(--p1)">'+fmt(totalMes)+'</div><div class="st-l">Pagado este mes</div></div>'
-        + '<div class="stat" style="border-top:3px solid var(--ink3)"><div class="st-v" style="font-size:20px">'+historial.length+'</div><div class="st-l">Pagos realizados</div></div>'
+        + '<div class="stat"><div class="st-v" style="font-size:26px;color:var(--amber)">'+fmt(totalHistorial)+'</div><div class="st-l">Total pagado histórico</div></div>'
+        + '<div class="stat"><div class="st-v" style="font-size:26px;color:var(--p1)">'+fmt(totalMes)+'</div><div class="st-l">Pagado este mes</div></div>'
+        + '<div class="stat"><div class="st-v" style="font-size:26px">'+historial.length+'</div><div class="st-l">Pagos realizados</div></div>'
         + '</div>'
         + '<div class="card" style="padding:0;overflow:hidden">'
         + '<div class="ch" style="padding:13px 16px;border-bottom:1px solid var(--rim2)">'
@@ -327,7 +327,7 @@ function _comisionesRender(){
             var inics=(e.usuarioComisionNombre||'?').split(' ').slice(0,2).map(function(w){return (w[0]||'').toUpperCase();}).join('');
             var u=(_usersCache||[]).find(function(x){return (x.nombre||x.email||'').toLowerCase()===(e.usuarioComisionNombre||'').toLowerCase();});
             return '<tr>'
-              +'<td><div style="width:32px;height:32px;border-radius:9px;background:var(--ambers);display:flex;align-items:center;justify-content:center;font-size:14px">ðŸ’³</div></td>'
+              +'<td><div style="width:32px;height:32px;border-radius:9px;background:var(--ambers);display:flex;align-items:center;justify-content:center;font-size:14px"></div></td>'
               +'<td style="font-size:11.5px;color:var(--ink3);white-space:nowrap;font-family:var(--fd)">'+(e.fecha||'—')+'</td>'
               +'<td><div style="display:flex;align-items:center;gap:7px">'
                 +'<div style="width:26px;height:26px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:8.5px;font-weight:900;color:#fff;flex-shrink:0">'+inics+'</div>'
@@ -337,7 +337,7 @@ function _comisionesRender(){
               +'<td style="font-size:11.5px;color:var(--ink2)">'+(e.forma||e.cuenta||'—')+'</td>'
               +'<td style="font-size:11px;color:var(--ink3)">'+(e.creadoPor||'—')+'</td>'
               +'<td style="font-size:11px;color:var(--ink3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(e.notas||'—')+'</td>'
-              +'<td><button class="btn btn-d btn-xs" onclick="_comAbrirEliminarPago('+e.id+',&quot;'+(u&&u.uid||'')+'&quot;)">Ã—</button></td>'
+              +'<td><button class="btn btn-d btn-xs" onclick="_comAbrirEliminarPago('+e.id+',&quot;'+(u&&u.uid||'')+'&quot;)">x</button></td>'
               +'</tr>';
           }).join('')
         + '</tbody></table></div></div>';
@@ -418,7 +418,7 @@ function _comTarjetaHtml(u){
       + '</div></div>';
   }
 
-  return '<div class="com-card card" data-nombre="'+nombreEsc.toLowerCase()+'" style="cursor:default;border-top:3px solid '+accentColor+';padding:16px 18px">'
+  return '<div class="com-card card" data-nombre="'+nombreEsc.toLowerCase()+'" style="cursor:default;padding:16px 18px">'
 
     // Fila 1: avatar + nombre + "por pagar" prominente
     + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'
@@ -426,8 +426,8 @@ function _comTarjetaHtml(u){
       + '<div style="flex:1;min-width:0">'
         + '<div style="font-weight:800;font-size:13.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+nombre+'</div>'
         + '<div style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap">'
-          + '<span style="background:var(--gs);color:var(--p1);padding:2px 7px;border-radius:10px;font-size:9.5px;font-weight:800">ðŸ· '+ventaLbl+'</span>'
-          + '<span style="background:var(--greens);color:var(--green);padding:2px 7px;border-radius:10px;font-size:9.5px;font-weight:800">ðŸ’µ '+cobroLbl+'</span>'
+          + '<span style="background:var(--gs);color:var(--p1);padding:2px 7px;border-radius:10px;font-size:9.5px;font-weight:800">· '+ventaLbl+'</span>'
+          + '<span style="background:var(--greens);color:var(--green);padding:2px 7px;border-radius:10px;font-size:9.5px;font-weight:800"> '+cobroLbl+'</span>'
         + '</div>'
       + '</div>'
     + '</div>'
@@ -494,7 +494,7 @@ function _comAbrirPagar(uid){
   if(s.saldo <= 0){ toast('Este usuario no tiene saldo pendiente','info'); return; }
   var cuentas = (typeof _cuentasBanc !== 'undefined' && _cuentasBanc) ? _cuentasBanc : [];
   if(!cuentas.length){ toast('No hay cuentas bancarias configuradas','error'); return; }
-  $('mic').textContent='COM';
+  setMicon('comision');
   $('mtt').textContent='Pagar Comisión';
   $('msb').textContent=u.nombre || u.email;
   $('modal-box').className='modal';
@@ -625,7 +625,7 @@ function _comAbrirDetalle(uid){
   if(!u){ toast('Usuario no encontrado','error'); return; }
   var s = _comGetSaldo(u);
   var pagosRealizados = _comGetPagosRealizados(u);
-  $('mic').textContent='DET';
+  setMicon('detalle');
   $('mtt').textContent='Detalle · '+(u.nombre||u.email);
   $('msb').textContent='Comisiones generadas y pagos';
   $('modal-box').className='modal modal-lg';
@@ -707,9 +707,9 @@ function _comAbrirDetalle(uid){
                 + '<div style="font-weight:800;font-size:12px;color:var(--ink1);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+d.nombre+'</div>'
                 + '<div style="font-family:var(--fd);font-size:18px;font-weight:900;color:var(--p1);line-height:1;margin-bottom:6px">$'+d.total.toFixed(2)+'</div>'
                 + '<div style="display:flex;gap:8px;margin-bottom:7px">'
-                  + '<span style="font-size:10px;color:var(--ink3)">ðŸ· <b>'+d.nVentas+'</b> venta'+(d.nVentas===1?'':'s')+' · $'+d.porVenta.toFixed(2)+'</span>'
+                  + '<span style="font-size:10px;color:var(--ink3)">· <b>'+d.nVentas+'</b> venta'+(d.nVentas===1?'':'s')+' · $'+d.porVenta.toFixed(2)+'</span>'
                 + '</div>'
-                + '<div style="font-size:10px;color:var(--ink3);margin-bottom:7px">ðŸ’µ <b>'+d.nCobranzas+'</b> cobro'+(d.nCobranzas===1?'':'s')+' · $'+d.porCobranza.toFixed(2)+'</div>'
+                + '<div style="font-size:10px;color:var(--ink3);margin-bottom:7px"> <b>'+d.nCobranzas+'</b> cobro'+(d.nCobranzas===1?'':'s')+' · $'+d.porCobranza.toFixed(2)+'</div>'
                 + '<div style="height:3px;background:var(--rim);border-radius:2px;overflow:hidden">'
                   + '<div style="height:100%;width:'+pctSede+'%;background:var(--grad);border-radius:2px"></div>'
                 + '</div>'
@@ -742,7 +742,7 @@ function _comDetalleSetTab(tab, uid){
 function _comAbrirEliminarPago(egId, uid){
   var eg = (S.egresos||[]).find(function(x){return x.id === egId || x.id === Number(egId);});
   if(!eg){ toast('Egreso no encontrado','error'); return; }
-  $('mic').textContent='DEL';
+  setMicon('eliminar');
   $('mtt').textContent='Eliminar Pago de Comisión';
   $('msb').textContent='$'+(parseFloat(eg.monto)||0).toFixed(2);
   $('modal-box').className='modal';

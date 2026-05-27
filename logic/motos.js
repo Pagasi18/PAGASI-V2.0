@@ -43,6 +43,8 @@ function motoRow(m){
       <div class="tdm">${motoEsc(m.modelo||'Sin modelo')}${m.anio?` <span style="font-size:10px;color:var(--ink3);font-weight:700">${motoEsc(m.anio)}</span>`:''}</div>
       <div class="tds">VIN ${motoEsc(m.vin||'-')}${m.color?' - '+motoEsc(m.color):''}</div>
     </td>
+    <td>${cred?`<button class="btn btn-g btn-xs" onclick="event.stopPropagation();openAmort(${credArg})">${motoEsc(cred.id||'Credito')}</button><div class="tds">${motoEsc(avance)}</div>`:'<span style="color:var(--ink3);font-size:11px">-</span>'}</td>
+    <td>${cliente?`<span class="bdg b-p">${motoEsc(cliente)}</span>`:'<span style="color:var(--ink3);font-size:11px">-</span>'}</td>
     <td class="tds">${motoEsc(m.marca||'-')}</td>
     <td>
       <select class="bdg ${estadoBdg[m.estado]||'b-g'}" onchange="changeMotoStatus(${idArg},this.value)" title="Cambiar estado" style="cursor:pointer;font-weight:800;font-size:10px;${estadoStyle[m.estado]||estadoStyle.disponible}">
@@ -52,8 +54,6 @@ function motoRow(m){
     <td><div class="tdm">${fmt(m.precio)}</div><div class="tds">Inicial ${fmt(m.ini)}</div></td>
     <td><div class="tdm" style="color:var(--p1)">${fmt(m.cuotaM)}</div><div class="tds">${fmt(m.cuotaQ)} quincenal</div></td>
     <td><div class="tdm">${fmt(m.totalPagado)}</div><div class="tds">total plan</div></td>
-    <td>${cred?`<button class="btn btn-g btn-xs" onclick="event.stopPropagation();openAmort(${credArg})">${motoEsc(cred.id||'Credito')}</button><div class="tds">${motoEsc(avance)}</div>`:'<span style="color:var(--ink3);font-size:11px">-</span>'}</td>
-    <td>${cliente?`<span class="bdg b-p">${motoEsc(cliente)}</span>`:'<span style="color:var(--ink3);font-size:11px">-</span>'}</td>
     <td onclick="event.stopPropagation()">
       <div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap">
         ${m.estado==='disponible'?`<button class="btn btn-p btn-xs" onclick="openAddCredConMoto(${idArg})">Solicitud</button>`:''}
@@ -112,6 +112,8 @@ function renderMotoGrid(){
   var sorted=fil.slice().sort(function(a,b){
     var dir=sort.dir==='desc'?-1:1, col=sort.col||'modelo', va, vb;
     if(col==='precio'||col==='cuotaM'||col==='totalPagado'||col==='anio') return dir*((parseFloat(a[col]||0)||0)-(parseFloat(b[col]||0)||0));
+    if(col==='cliente'){ va=String(a.cliente||a.propietario||'').toLowerCase(); vb=String(b.cliente||b.propietario||'').toLowerCase(); return dir*(va<vb?-1:va>vb?1:0); }
+    if(col==='credito'){ var ca=creditoAsignadoMoto(a), cb=creditoAsignadoMoto(b); va=String(ca&&ca.id||'').toLowerCase(); vb=String(cb&&cb.id||'').toLowerCase(); return dir*(va<vb?-1:va>vb?1:0); }
     va=String(a[col]||'').toLowerCase(); vb=String(b[col]||'').toLowerCase();
     return dir*(va<vb?-1:va>vb?1:0);
   });
@@ -120,12 +122,14 @@ function renderMotoGrid(){
     <div class="tw tw-compact"><table>
       <thead><tr>
         ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','modelo','Motocicleta')}
+        ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','credito','Credito')}
+        ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','cliente','Cliente')}
         ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','marca','Marca')}
         ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','estado','Estado')}
         ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','precio','Precio')}
         ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','cuotaM','Cuotas')}
         ${_thSort(S.motosSort||{col:'modelo',dir:'asc'},'setMotosSort','totalPagado','Total')}
-        <th>Credito</th><th>Cliente</th><th></th>
+        <th></th>
       </tr></thead>
       <tbody>${sorted.map(motoRow).join('')}</tbody>
     </table></div>
@@ -165,7 +169,7 @@ function filterMotos(q){
   const g=$('mgr');
   var elimHTML=_M.filter(m=>m.eliminado).length
   ?'<div style="margin-top:14px;padding:10px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)">'+'<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px">Motos eliminadas</div>'+_M.filter(m=>m.eliminado).map(function(m){return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rim)">'+'<div style="flex:1"><span style="font-size:12px;font-weight:700;opacity:0.6;text-decoration:line-through">'+motoEsc(m.modelo)+'</span>'+'<span style="font-size:10px;color:var(--ink3);margin-left:6px">'+motoEsc(m.vin)+'</span></div>'+'<span style="font-size:10px;color:var(--red)">Del '+motoEsc(m.eliminadoPor||'Admin')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoRazon?' - '+motoEsc(m.eliminadoRazon):'')+'</span>'+'<span style="font-size:10px;color:var(--ink3)">'+( m.eliminadoEn?' - '+motoEsc(m.eliminadoEn.split('T')[0]):'')+'</span>'+'</div>';}).join('')+'</div>':'';
-  if(g) g.innerHTML=(f.length?`<div class="card" style="margin-bottom:14px"><div class="ch"><div><div class="ct">Listado de motocicletas</div><div class="cs">${f.length} resultado${f.length!==1?'s':''}</div></div></div><div class="tw tw-compact"><table><thead><tr><th>Motocicleta</th><th>Marca</th><th>Estado</th><th>Precio</th><th>Cuotas</th><th>Total</th><th>Credito</th><th>Cliente</th><th></th></tr></thead><tbody>${f.map(motoRow).join('')}</tbody></table></div></div>`:`<div class="empty"><span class="e-ic">MOT</span><div class="e-tt">Sin resultados para "${motoEsc(q)}"</div></div>`)+elimHTML;
+  if(g) g.innerHTML=(f.length?`<div class="card" style="margin-bottom:14px"><div class="ch"><div><div class="ct">Listado de motocicletas</div><div class="cs">${f.length} resultado${f.length!==1?'s':''}</div></div></div><div class="tw tw-compact"><table><thead><tr><th>Motocicleta</th><th>Credito</th><th>Cliente</th><th>Marca</th><th>Estado</th><th>Precio</th><th>Cuotas</th><th>Total</th><th></th></tr></thead><tbody>${f.map(motoRow).join('')}</tbody></table></div></div>`:`<div class="empty"><span class="e-ic">MOT</span><div class="e-tt">Sin resultados para "${motoEsc(q)}"</div></div>`)+elimHTML;
 }
 
 // PAGO DE COMPRA DE MOTO — helpers compartidos
@@ -176,7 +180,7 @@ var _MPAGO_PREFIX = 'mpago';
 
 function openAddMoto(id=null){
   const m=id?S.motos.find(x=>String(x.id)===String(id)):null,ed=!!m;
-  $('mic').textContent='MOT';
+  setMicon('moto');
   $('mtt').textContent=ed?'Editar Moto':'Nueva Unidad al Inventario';
   $('msb').textContent=ed?m.modelo:'Unidad física — VIN, color, estado';
   $('modal-box').className='modal';
@@ -643,7 +647,7 @@ function restaurarMoto(id){
 function delMoto(id){
   if(!requireDeletePermission()) return;
   const m=S.motos.find(x=>String(x.id)===String(id));if(!m)return;
-  $('mic').textContent='Del';$('mtt').textContent='Eliminar Moto';$('msb').textContent='No se puede deshacer';
+  setMicon('eliminar');$('mtt').textContent='Eliminar Moto';$('msb').textContent='No se puede deshacer';
   $('modal-box').className='modal';
   $('mbd').innerHTML=`<div style="text-align:center;padding:14px 0"><div style="font-size:46px;margin-bottom:12px">MOT</div><div style="font-size:16px;font-weight:800;margin-bottom:5px">${m.modelo}</div><div style="color:var(--ink3);margin-bottom:18px;font-size:12px">Precio: ${fmt(m.precio)}</div><div style="background:var(--reds);border:1px solid rgba(240,75,106,0.2);border-radius:var(--r8);padding:11px;color:var(--red);font-size:13px;font-weight:700">¿Confirmas eliminar esta moto del catálogo?</div></div>`;
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-d" onclick="cDel(${id})">Eliminar</button>`;
@@ -684,7 +688,7 @@ function _delMotoConPagos(m, i){
   var totalGastos = gastos.reduce(function(a,g){return a+(parseFloat(g.monto)||0);},0);
   var listaCuentas = gastos.map(function(g){ return '<li style="margin-bottom:3px">'+g.forma+' — <strong>$'+(parseFloat(g.monto)||0).toFixed(2)+'</strong></li>'; }).join('');
 
-  $('mic').textContent='Del';
+  setMicon('eliminar');
   $('mtt').textContent='Eliminar Moto';
   $('msb').textContent='El registro quedará auditado';
   $('modal-box').className='modal';

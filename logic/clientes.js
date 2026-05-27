@@ -316,7 +316,7 @@ function verCliente(id){
   });
   timeline = timeline.slice(0,8);
 
-  $('mic').textContent=esPremium?'★':'CLI';
+  setMicon(esPremium?'star':'cliente');
   $('mtt').textContent=c.nombre||'Cliente';
   $('msb').textContent=(c.cedula||'')+(c.ciudad?' · '+c.ciudad:'');
   $('modal-box').className='modal modal-lg';
@@ -573,7 +573,7 @@ function verCliente(id){
   if(ingreso>0 && cuotaActivaTotal>0){
     var cuotaMensual = cuotaActivaTotal*2;
     var indicColor = ratioCuotaIng<=30?'var(--green)':ratioCuotaIng<=50?'var(--amber)':'var(--red)';
-    html += '<div style="margin-top:12px;padding:10px 12px;background:var(--surf2);border-radius:9px;border-left:3px solid '+indicColor+'">'
+    html += '<div style="margin-top:12px;padding:10px 12px;background:var(--surf2);border-radius:9px;">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px">'
       + '<div style="font-size:11px;color:var(--ink2);font-weight:700">Capacidad de pago (cuota mensual vs. ingreso)</div>'
       + '<div style="font-size:18px;font-weight:900;color:'+indicColor+'">'+ratioCuotaIng+'%</div>'
@@ -604,7 +604,7 @@ function verCliente(id){
       + '</div>';
     // Deuda activa
     if(c.cashea_deuda==='si' || c.cashea_monto>0){
-      html += '<div style="margin-top:12px;padding:10px 12px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:9px">'
+      html += '<div style="margin-top:12px;padding:10px 12px;background:var(--ambers);border-radius:9px">'
         + '<div style="font-size:11px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px"> Deuda activa con Cashea</div>'
         + '<div class="cf-grid-3">'
         + field('Monto deuda', c.cashea_monto>0 ? valMoney(c.cashea_monto) : null)

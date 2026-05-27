@@ -315,7 +315,7 @@ function _usersRenderList(){
       else lastTxt = new Date(u.lastLogin).toLocaleDateString('es-VE');
     }
 
-    return '<div class="card" onclick="openUserPanel(\''+u.uid+'\')" style="cursor:pointer;padding:14px 16px;border-top:3px solid '+info.color+'">'
+    return '<div class="card" onclick="openUserPanel(\''+u.uid+'\')" style="cursor:pointer;padding:14px 16px">'
       // Avatar + nombre
       +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
         +'<div style="position:relative;flex-shrink:0">'
@@ -699,7 +699,7 @@ function cambiarRolUsuario(uid){
   if(!u){ toast('Usuario no encontrado','error'); return; }
   if(!db){ toast('Requiere Firebase','error'); return; }
 
-  $('mic').textContent=''; $('mtt').textContent='Cambiar Rol'; $('msb').textContent=u.nombre||u.email;
+  setMicon('rol'); $('mtt').textContent='Cambiar Rol'; $('msb').textContent=u.nombre||u.email;
   $('modal-box').className='modal';
 
   var rolesHtml = Object.keys(ROLES_INFO).map(function(r){
@@ -715,7 +715,7 @@ function cambiarRolUsuario(uid){
       +'</div></label>';
   }).join('');
 
-  $('mbd').innerHTML = '<div style="padding:10px 12px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:8px;margin-bottom:12px;font-size:11.5px;color:var(--ink2);line-height:1.5"> Al cambiar el rol, los permisos se <b>resetean</b> a los del nuevo rol.</div>'
+  $('mbd').innerHTML = '<div style="padding:10px 12px;background:var(--ambers);border-radius:8px;margin-bottom:12px;font-size:11.5px;color:var(--ink2);line-height:1.5"> Al cambiar el rol, los permisos se <b>resetean</b> a los del nuevo rol.</div>'
     + '<div>'+rolesHtml+'</div>';
 
   S.saveFn = function(){
@@ -770,9 +770,9 @@ function cambiarPasswordUsuario(uid){
   var u = _usersCache.find(function(x){return x.uid===uid;});
   if(!u){ toast('Usuario no encontrado','error'); return; }
 
-  $('mic').textContent=''; $('mtt').textContent='Cambiar Contraseña'; $('msb').textContent=u.nombre||u.email;
+  setMicon('llave'); $('mtt').textContent='Cambiar Contraseña'; $('msb').textContent=u.nombre||u.email;
   $('modal-box').className='modal';
-  $('mbd').innerHTML = '<div style="padding:10px 12px;background:var(--gs);border-left:3px solid var(--p1);border-radius:8px;margin-bottom:12px;font-size:11.5px;color:var(--ink2);line-height:1.5">'
+  $('mbd').innerHTML = '<div style="padding:10px 12px;background:var(--gs);border-radius:8px;margin-bottom:12px;font-size:11.5px;color:var(--ink2);line-height:1.5">'
     +'Establece una nueva contraseña para este usuario. El sistema le enviará un email con las nuevas credenciales.</div>'
     +'<div class="fg" style="margin-bottom:10px"><label>Nueva contraseña *</label><input class="fi" id="cp_new" type="password" placeholder="Mín. 6 caracteres" autocomplete="new-password"></div>'
     +'<div class="fg"><label>Confirmar contraseña *</label><input class="fi" id="cp_confirm" type="password" placeholder="Repetir la contraseña" autocomplete="new-password"></div>'
@@ -822,7 +822,7 @@ function _cpGen(len){
 // ── Usuario DEMO con expiración ──
 function openCreateDemoUser(){
   if(!db){ toast('Requiere Firebase activo','error'); return; }
-  $('mic').textContent='⏱'; $('mtt').textContent='Crear Usuario Demo'; $('msb').textContent='Acceso temporal con expiración automática';
+  setMicon('reloj'); $('mtt').textContent='Crear Usuario Demo'; $('msb').textContent='Acceso temporal con expiración automática';
   $('modal-box').className='modal';
 
   var horasOpts = [1,2,3,4,5,6,7,8,9,10,11,12,24,48,72].map(function(h){
@@ -941,7 +941,7 @@ function _randomToken(len){
 // ══════════════════════════════════════════
 function openInviteUser(){
   if(!db||!auth){ toast('Requiere Firebase activo para invitar usuarios','error'); return; }
-  $('mic').textContent='USR'; $('mtt').textContent='Invitar Nuevo Usuario'; $('msb').textContent='Elige un rol y envía la invitación';
+  setMicon('user'); $('mtt').textContent='Invitar Nuevo Usuario'; $('msb').textContent='Elige un rol y envía la invitación';
   $('modal-box').className='modal modal-lg';
 
   function buildCheckboxes(presetPerms){
@@ -1108,7 +1108,7 @@ function editarUsuario(uid){
   db.collection('usuarios').doc(uid).get().then(function(doc){
     if(!doc.exists){ toast('Usuario no encontrado','error'); return; }
     var u=doc.data();
-    $('mic').textContent='Editar'; $('mtt').textContent='Editar Permisos'; $('msb').textContent=u.nombre||u.email;
+    setMicon('editar'); $('mtt').textContent='Editar Permisos'; $('msb').textContent=u.nombre||u.email;
     $('modal-box').className='modal';
     var modCheckboxes=Object.keys(PGL).map(function(key){
       var checked=(u.permisos||[]).includes(key);
@@ -1246,7 +1246,7 @@ function editarUsuario(uid){
 
 function confirmarEliminarUsuario(uid,nombre){
   if(!requireDeletePermission()) return;
-  $('mic').textContent='Del'; $('mtt').textContent='Eliminar Usuario'; $('msb').textContent=nombre;
+  setMicon('eliminar'); $('mtt').textContent='Eliminar Usuario'; $('msb').textContent=nombre;
   $('modal-box').className='modal';
   $('mbd').innerHTML='<div style="text-align:center;padding:12px 0">'
     +'<div style="font-size:38px;margin-bottom:10px"></div>'
@@ -1270,7 +1270,7 @@ function copiarLink(token){
   }
 }
 function mostrarLinkInvitacion(link, email){
-  $('mic').textContent=''; $('mtt').textContent='Link de invitación'; $('msb').textContent='Envíalo a '+email;
+  setMicon('link'); $('mtt').textContent='Link de invitación'; $('msb').textContent='Envíalo a '+email;
   $('modal-box').className='modal';
   $('mbd').innerHTML=''
     +'<div style="text-align:center;margin-bottom:16px">'

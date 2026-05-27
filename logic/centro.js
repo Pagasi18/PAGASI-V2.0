@@ -85,14 +85,14 @@ function wtHTML(){
     '<b>'+st.total+'</b> activas · <b style="color:var(--red)">'+st.vencidas+'</b> vencidas · <b style="color:var(--amber)">'+st.proceso+'</b> en proceso',
     [{label:'+ Nueva tarea',onclick:'openWtTask()',primary:true}]);
   if(st.hoy+st.vencidas>0){
-    html+='<div style="background:#fffbeb;border:1px solid #f5c418;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:16px">'
-      +'<div style="width:34px;height:34px;background:#f5c418;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#78350f;font-size:16px;flex-shrink:0">!</div>'
-      +'<div style="flex:1"><div style="font-weight:800;font-size:14px;color:#78350f">'+(st.hoy+st.vencidas)+' tarea(s) requieren atención</div>'
-      +'<div style="font-size:12px;color:#92400e;margin-top:2px">'+st.hoy+' para hoy · '+st.vencidas+' vencidas</div></div>'
-      +'<button class="btn btn-sm" style="background:#f5c418;color:#78350f;border:none;font-weight:800;cursor:pointer" onclick="wtSetFilter(\'hoy\')">Ver</button></div>';
+    html+='<div style="background:#FFF6E5;border:1px solid #FAEEDA;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:18px">'
+      +'<div style="width:38px;height:38px;background:#FAEEDA;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#BA7517;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>'
+      +'<div style="flex:1"><div style="font-weight:800;font-size:14px;color:#854F0B">'+(st.hoy+st.vencidas)+' tarea(s) requieren atención</div>'
+      +'<div style="font-size:12px;color:#946F0B;margin-top:2px">'+st.hoy+' para hoy · '+st.vencidas+' vencidas</div></div>'
+      +'<button class="btn btn-sm" style="background:#BA7517;color:#fff;border:none;font-weight:700;cursor:pointer" onclick="wtSetFilter(\'hoy\')">Ver</button></div>';
   }
   html+='<div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">';
-  html+=wtM6('Hoy',st.hoy,'!','#eeedfe','#534ab7')+wtM6('Vencidas',st.vencidas,'!','rgba(226,75,74,.12)','#a32d2d')+wtM6('En proceso',st.proceso,'>','rgba(239,159,39,.12)','#854f0b')+wtM6('Archivadas',st.archivadas,'✓','var(--surf2)','var(--ink3)');
+  html+=wtM6('Hoy',st.hoy,'',' #E6F1FB','#2563EB')+wtM6('Vencidas',st.vencidas,'','#FCEBEB','#E8335A')+wtM6('En proceso',st.proceso,'','#FAEEDA','#BA7517')+wtM6('Archivadas',st.archivadas,'','#E1F5EE','#00B876');
   html+='</div>';
   html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px">';
   html+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
@@ -102,9 +102,9 @@ function wtHTML(){
   html+='</div><span style="font-size:11px;color:var(--ink3);font-weight:700">'+wtEsc(isAdminUser()?'Equipo completo':'Mis tareas')+'</span></div>';
   if(WT_FILTER==='kanban'||WT_FILTER==='todas'){
     var cols=[
-      {id:'pendiente',label:'Pendiente',color:'#3B82F6',bg:'#eff6ff',tc:'#1d4ed8',tasks:all.filter(function(t){return t.estado==='pendiente';})},
-      {id:'proceso',label:'En proceso',color:'#ef9f27',bg:'#faeeda',tc:'#854f0b',tasks:all.filter(function(t){return t.estado==='proceso';})},
-      {id:'completada',label:'Completada',color:'#639922',bg:'#eaf3de',tc:'#3b6d11',tasks:all.filter(function(t){return t.estado==='completada';})},
+      {id:'pendiente',label:'Pendiente',color:'#2563EB',bg:'#E6F1FB',tc:'#185FA5',tasks:all.filter(function(t){return t.estado==='pendiente';})},
+      {id:'proceso',label:'En proceso',color:'#BA7517',bg:'#FAEEDA',tc:'#854F0B',tasks:all.filter(function(t){return t.estado==='proceso';})},
+      {id:'completada',label:'Completada',color:'#00B876',bg:'#E1F5EE',tc:'#0F6E56',tasks:all.filter(function(t){return t.estado==='completada';})},
     ];
     html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start">';
     cols.forEach(function(col){
@@ -136,10 +136,16 @@ function wtHTML(){
 }
 
 function wtM6(label,val,icon,bg,color){
-  return '<div class="card" style="padding:14px 16px"><div style="display:flex;align-items:center;gap:12px">'
-    +'<div style="width:40px;height:40px;border-radius:12px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-weight:950;font-size:14px;color:'+color+';flex-shrink:0">'+icon+'</div>'
-    +'<div><div style="font-size:10.5px;color:var(--ink3);font-weight:900;text-transform:uppercase;letter-spacing:.7px">'+label+'</div>'
-    +'<div style="font-size:26px;font-weight:950;font-family:var(--fd);letter-spacing:-.8px;color:var(--ink)">'+val+'</div></div></div></div>';
+  var icons = {
+    'hoy':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+    'vencidas':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    'en proceso':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><path d="M21 12a9 9 0 1 1-6.2-8.5"/><path d="M21 3v6h-6"/></svg>',
+    'archivadas':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>'
+  };
+  var svg = icons[label.toLowerCase()] || icon;
+  return '<div class="stat"><div class="st-ic" style="background:'+bg+';color:'+color+'">'+svg+'</div>'
+    +'<div class="st-l" style="margin-top:0;margin-bottom:6px">'+label+'</div>'
+    +'<div class="st-v">'+val+'</div></div>';
 }
 
 function wtKanbanCard(t,today){
@@ -150,7 +156,7 @@ function wtKanbanCard(t,today){
   var comments=(t.comentarios||[]).length;
   var isDone=t.estado==='completada';
   var tid=wtEsc(t.id);
-  var html='<div class="card" style="padding:12px;margin-bottom:8px;border-left:3px solid '+borderCol+';cursor:pointer;user-select:none" draggable="true"'
+  var html='<div class="card" style="padding:14px;margin-bottom:10px;cursor:pointer;user-select:none" draggable="true"'
     +' onclick="wtVerTarea(\''+tid+'\')"'
     +' ondragstart="event.stopPropagation();wtDragStart(event,\''+tid+'\')"'
     +' ondragend="document.querySelectorAll(\'[ondrop]\').forEach(function(c){c.style.background=\'\'})">';
@@ -191,7 +197,7 @@ function wtListCard(t,today){
   var act=t.archivado
     ?'<button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtRestore(\''+tid+'\')">Restaurar</button>'
     :'<button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtNextStatus(\''+tid+'\')">Avanzar</button><button class="btn btn-g btn-sm" onclick="event.stopPropagation();openWtTask(\''+tid+'\')">Editar</button><button class="btn btn-g btn-sm" onclick="event.stopPropagation();wtArchive(\''+tid+'\')">Archivar</button>';
-  return '<div class="card" style="padding:14px;border-left:4px solid '+borderCol+';cursor:pointer" onclick="wtVerTarea(\''+tid+'\')">'
+  return '<div class="card" style="padding:14px;cursor:pointer" onclick="wtVerTarea(\''+tid+'\')">'
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
     +'<div style="flex:1;min-width:0">'
     +'<div style="font-weight:700;font-size:14px;margin-bottom:4px;color:var(--ink)">'+wtEsc(t.titulo)+'</div>'

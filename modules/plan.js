@@ -12,7 +12,7 @@ PG.plan = function(){
     var esPrincipal = !!p.principal;
     var accentColor = esPrincipal ? 'var(--p1)' : 'var(--ink3)';
     var inicialPct = p.inicial ? Math.round(p.inicial * 100) : (p.inicial === 0 ? 0 : p.inicial);
-    return '<div class="card" style="border-top:3px solid '+accentColor+';padding:16px 18px">'
+    return '<div class="card" style="padding:16px 18px">'
       // Nombre + badge
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
         +'<div style="flex:1;font-weight:800;font-size:13.5px;color:var(--ink)">'+(p.nombre||('Plan '+p.plazo+' Meses'))+'</div>'

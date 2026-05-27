@@ -124,7 +124,7 @@ function guardarScoreCfg(){
 
 // ── Simulador interactivo ──
 function abrirScoreSimulador(){
-  $('mic').textContent=''; $('mtt').textContent='Simulador de Score'; $('msb').textContent='Prueba distintos escenarios con la política actual';
+  setMicon('score'); $('mtt').textContent='Simulador de Score'; $('msb').textContent='Prueba distintos escenarios con la política actual';
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML = ''
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
@@ -390,7 +390,7 @@ function scSimular(){
     + '</div>';
 
   if(res.motivosRechazo.length){
-    html += '<div style="padding:10px 12px;background:var(--reds);border-left:3px solid var(--red);border-radius:8px;margin-bottom:12px">'
+    html += '<div style="padding:10px 12px;background:var(--reds);border-radius:8px;margin-bottom:12px">'
       + '<div style="font-size:11px;font-weight:800;color:var(--red);text-transform:uppercase;margin-bottom:4px"> Rechazo automático por:</div>';
     res.motivosRechazo.forEach(function(m){
       html += '<div style="font-size:12px;color:var(--ink);margin-top:3px">• '+m+'</div>';
@@ -427,7 +427,7 @@ function scSimular(){
 
 // ── Análisis del portafolio actual ──
 function abrirScoreAnalisis(){
-  $('mic').textContent=''; $('mtt').textContent='Análisis del Portafolio'; $('msb').textContent='Distribución de score y mora actual';
+  setMicon('detalle'); $('mtt').textContent='Análisis del Portafolio'; $('msb').textContent='Distribución de score y mora actual';
   $('modal-box').className='modal modal-lg';
 
   // Recopilar datos
@@ -521,7 +521,7 @@ function abrirScoreAnalisis(){
         + '<div style="font-size:11px;color:var(--ink3)">Ingreso: $'+ing+'/mes · '+(c.trabajo||'—')+' · '+(c.ciudad||'—')+'</div></div>'
         + '</div>';
     });
-    html += '<div style="padding:10px 12px;background:var(--ambers);border-left:3px solid var(--amber);border-radius:8px;margin-top:10px;font-size:11.5px;color:var(--ink2);line-height:1.5">'
+    html += '<div style="padding:10px 12px;background:var(--ambers);border-radius:8px;margin-top:10px;font-size:11.5px;color:var(--ink2);line-height:1.5">'
       + '<b>Observación:</b> si un cliente con $200/mes está arriba de 600, probablemente el peso de "Capacidad de pago" es bajo o el ingreso mínimo base es muy permisivo. Ve a la pestaña Ratio y revisa "Ingreso mínimo base".'
       + '</div></div>';
   }
@@ -532,7 +532,7 @@ function abrirScoreAnalisis(){
     recos.forEach(function(r){
       var bg = r.tipo==='crit'?'var(--reds)':r.tipo==='warn'?'var(--ambers)':'var(--greens)';
       var bc = r.tipo==='crit'?'var(--red)':r.tipo==='warn'?'var(--amber)':'var(--green)';
-      html += '<div style="padding:10px 12px;background:'+bg+';border-left:3px solid '+bc+';border-radius:8px;margin-bottom:6px;font-size:12px;color:var(--ink2);line-height:1.5">'+r.txt+'</div>';
+      html += '<div style="padding:10px 12px;background:'+bg+';border-radius:8px;margin-bottom:6px;font-size:12px;color:var(--ink2);line-height:1.5">'+r.txt+'</div>';
     });
     html += '</div>';
   }

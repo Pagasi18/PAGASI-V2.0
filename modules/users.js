@@ -21,19 +21,19 @@ PG.users = function(){
 
   <!-- KPIs compactos -->
   <div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:14px">
-    <div class="stat" style="border-top:3px solid var(--p1)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--p1)" id="users-kpi-total">...</div>
       <div class="st-l">Usuarios activos</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--amber)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--amber)" id="users-kpi-pending">...</div>
       <div class="st-l">Invitaciones pendientes</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--green)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--green)" id="users-kpi-online">...</div>
       <div class="st-l">Conectados hoy</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--blue)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--blue)" id="users-kpi-roles">6</div>
       <div class="st-l">Roles configurados</div>
     </div>

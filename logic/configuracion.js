@@ -142,7 +142,7 @@ function guardarPlan(){
 // ══════════════════════════════════════════
 
 function agregarCuentaBanc(){
-  $('mic').textContent='BNK'; $('mtt').textContent='Agregar Cuenta / Método de Pago'; $('msb').textContent='Se usará como método de cobro y en el módulo Cuentas';
+  setMicon('banco'); $('mtt').textContent='Agregar Cuenta / Método de Pago'; $('msb').textContent='Se usará como método de cobro y en el módulo Cuentas';
   $('modal-box').className='modal';
   $('mbd').innerHTML='<div class="fgr c1" style="gap:10px">'
     +'<div class="fg"><label>Nombre *</label><input class="fi" id="cb_nombre" placeholder="Ej: Bancamiga Bs, Zelle USD, Efectivo..."></div>'
@@ -179,7 +179,7 @@ function guardarCuentasBanc(){
 }
 
 function agregarCobrador(){
-  $('mic').textContent='CLI'; $('mtt').textContent='Agregar Cobrador'; $('msb').textContent='Se mostrará en los formularios de pago y cobranza';
+  setMicon('cliente'); $('mtt').textContent='Agregar Cobrador'; $('msb').textContent='Se mostrará en los formularios de pago y cobranza';
   $('modal-box').className='modal';
   $('mbd').innerHTML='<div class="fg"><label>Nombre del cobrador *</label><input class="fi" id="cob_nombre" placeholder="Ej: Juan Pérez"></div>';
   S.saveFn = function(){
@@ -209,7 +209,7 @@ function openAddCatalogo(){ openEditCatalogo(null); }
 function openEditCatalogo(id){
   var item = id ? CATALOGO.find(function(c){return c.id===id;}) : null;
   var ed = !!item;
-  $('mic').textContent = ed ? 'Editar' : 'MOT';
+  setMicon(ed?'editar':'moto');
   $('mtt').textContent = ed ? 'Editar Modelo' : 'Agregar Modelo al Catálogo';
   $('msb').textContent = ed ? item.modelo : 'El precio se usará para calcular cuotas automáticamente';
   $('modal-box').className = 'modal';
@@ -264,7 +264,7 @@ function delCatalogo(id){
   if(!requireDeletePermission()) return;
   var item = CATALOGO.find(function(c){return c.id===id;});
   if(!item) return;
-  $('mic').textContent='Del'; $('mtt').textContent='Eliminar Modelo'; $('msb').textContent='No se puede deshacer';
+  setMicon('eliminar'); $('mtt').textContent='Eliminar Modelo'; $('msb').textContent='No se puede deshacer';
   $('modal-box').className='modal';
   $('mbd').innerHTML = '<div style="text-align:center;padding:16px 0">'
     + '<div style="font-size:42px;margin-bottom:10px">MOT</div>'
@@ -304,7 +304,7 @@ function delPlanExtra(idx){
 }
 
 function openAddPlan(){
-  $('mic').textContent='PLN'; $('mtt').textContent='Nuevo Plan Financiero'; $('msb').textContent='Se agrega como opción adicional';
+  setMicon('plan'); $('mtt').textContent='Nuevo Plan Financiero'; $('msb').textContent='Se agrega como opción adicional';
   $('modal-box').className='modal';
   $('mbd').innerHTML = '<div class="fgr" style="gap:8px">'
     + '<div class="fg"><label>Nombre del plan *</label><input class="fi" id="np_nombre" placeholder="Ej: Plan 12 Meses"></div>'

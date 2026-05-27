@@ -532,22 +532,22 @@ PG.reportes = function(){
 
   <!-- Resumen proyección -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
-    <div class="stat" style="border-top:3px solid var(--p1)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--p1);font-size:22px">${fmt(proyRealmes)}</div>
       <div class="st-l">Próximo mes</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">${futMeses[0]?futMeses[0].cuotas:0} cuotas esperadas</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--green)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--green);font-size:22px">${fmt(proy3Real)}</div>
       <div class="st-l">Próximos 3 meses</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">${futMeses.slice(0,3).reduce((a,x)=>a+x.cuotas,0)} cuotas</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--amber)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--amber);font-size:22px">${fmt(proy6Real)}</div>
       <div class="st-l">Próximos 6 meses</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">${futMeses.slice(0,6).reduce((a,x)=>a+x.cuotas,0)} cuotas</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--green)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--green);font-size:22px">${fmt(proy12Real)}</div>
       <div class="st-l">Próximos 12 meses</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">${futMeses.slice(0,12).reduce((a,x)=>a+x.cuotas,0)} cuotas</div>
@@ -649,17 +649,17 @@ PG.reportes = function(){
 
   <!-- Totales -->
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
-    <div class="stat" style="border-top:3px solid var(--red)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--red);font-size:22px">${fmt(totalEgresos)}</div>
       <div class="st-l">Total egresos</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">${egresos.length} registros</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--amber)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--amber);font-size:22px">${Object.keys(egresosCat).length}</div>
       <div class="st-l">Categorías</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">Distintas categorías de gasto</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--p1)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--p1);font-size:22px">${fmt(promEg)}</div>
       <div class="st-l">Promedio mensual</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">Últimos 3 meses (burn rate)</div>

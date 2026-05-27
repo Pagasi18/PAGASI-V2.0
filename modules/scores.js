@@ -121,32 +121,32 @@ PG.scores = function(){
 
     <!-- ═══ KPIs DEL PORTFOLIO ═══ -->
     <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px">
-      <div class="stat" style="border-top:3px solid var(--p1)">
+      <div class="stat" style="">
         <div class="st-v" style="color:var(--p1);font-size:24px">${scoreProm||'—'}</div>
         <div class="st-l">Score promedio</div>
         <div style="font-size:10px;color:var(--ink3);margin-top:3px">Mediana: ${scoreMediana||'—'}</div>
       </div>
-      <div class="stat" style="border-top:3px solid var(--green)">
+      <div class="stat" style="">
         <div class="st-v" style="color:var(--green);font-size:24px">${nExc}</div>
         <div class="st-l">Excelente ≥${umbExc}</div>
         <div style="font-size:10px;color:var(--ink3);margin-top:3px">${pct(nExc)}% del total</div>
       </div>
-      <div class="stat" style="border-top:3px solid var(--p1)">
+      <div class="stat" style="">
         <div class="st-v" style="color:var(--p1);font-size:24px">${nBue}</div>
         <div class="st-l">Bueno ${umbBue}-${umbExc-1}</div>
         <div style="font-size:10px;color:var(--ink3);margin-top:3px">${pct(nBue)}% del total</div>
       </div>
-      <div class="stat" style="border-top:3px solid var(--amber)">
+      <div class="stat" style="">
         <div class="st-v" style="color:var(--amber);font-size:24px">${nReg}</div>
         <div class="st-l">Regular ${umbReg}-${umbBue-1}</div>
         <div style="font-size:10px;color:var(--ink3);margin-top:3px">${pct(nReg)}% del total</div>
       </div>
-      <div class="stat" style="border-top:3px solid var(--red)">
+      <div class="stat" style="">
         <div class="st-v" style="color:var(--red);font-size:24px">${nBajo}</div>
         <div class="st-l">Rechazable &lt;${umbReg}</div>
         <div style="font-size:10px;color:var(--ink3);margin-top:3px">${pct(nBajo)}% del total</div>
       </div>
-      <div class="stat" style="border-top:3px solid var(--ink3)">
+      <div class="stat" style="">
         <div class="st-v" style="font-size:24px">${cobertura}%</div>
         <div class="st-l">Cobertura</div>
         <div style="font-size:10px;color:var(--ink3);margin-top:3px">${clientesConScore.length}/${totalClientes} clientes</div>
@@ -305,7 +305,7 @@ PG.scores = function(){
           <div class="fg"><label style="color:var(--p1);font-weight:700">○ Bueno (aprobar) ≥</label><input class="fi" id="sc_umb_bue" type="number" min="300" max="850" value="${SCORE_CFG.umbrales.bueno}"><div style="font-size:10.5px;color:var(--ink3);margin-top:3px">${nBue} clientes en esta categoría</div></div>
           <div class="fg"><label style="color:var(--amber);font-weight:700"> Regular (revisar manual) ≥</label><input class="fi" id="sc_umb_reg" type="number" min="300" max="850" value="${SCORE_CFG.umbrales.regular}"><div style="font-size:10.5px;color:var(--ink3);margin-top:3px">${nReg} clientes en esta categoría</div></div>
         </div>
-        <div style="margin-top:12px;padding:12px 14px;background:var(--reds);border-left:3px solid var(--red);border-radius:9px;font-size:11.5px;color:var(--ink2)">
+        <div style="margin-top:12px;padding:12px 14px;background:var(--reds);border-radius:9px;font-size:11.5px;color:var(--ink2)">
           <b style="color:var(--red)"> Atención:</b> Todo score por <b>debajo del umbral regular (${umbReg})</b> se rechaza automáticamente. Actualmente hay <b>${nBajo} clientes</b> (${pct(nBajo)}%) que caerían en esta categoría.
         </div>
         <!-- Barra visual -->
@@ -417,21 +417,21 @@ PG.scores = function(){
 
     <!-- ═══ INSIGHTS / ANALYSIS ═══ -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
-      <div class="card" style="border-left:3px solid var(--p1)">
+      <div class="card" style="">
         <div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:8px"> Insight · Correlación</div>
         <div style="font-size:15px;font-weight:800;margin-bottom:6px">Score promedio en clientes con mora: <span style="color:var(--red)">${scoreProMora||'—'}</span></div>
         <div style="font-size:11.5px;color:var(--ink3);line-height:1.5">
           ${scoreProMora && scoreProm ? (scoreProMora < scoreProm - 50 ? 'El modelo predice bien: los clientes en mora tienen score significativamente menor ('+(scoreProm-scoreProMora)+' puntos menos que el promedio).' : 'Revisa los pesos: el score no está separando bien a los buenos de los malos pagadores.') : 'Necesitas más datos históricos para validar el modelo.'}
         </div>
       </div>
-      <div class="card" style="border-left:3px solid var(--amber)">
+      <div class="card" style="">
         <div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--amber);margin-bottom:8px"> Insight · Cobertura</div>
         <div style="font-size:15px;font-weight:800;margin-bottom:6px">${sinScore} clientes sin score asignado</div>
         <div style="font-size:11.5px;color:var(--ink3);line-height:1.5">
           ${sinScore>0?'Haz clic en "Recalcular portfolio" para calificar a todos tus clientes con la configuración actual y obtener mejores insights.':'✓ Excelente · todos tus clientes están calificados.'}
         </div>
       </div>
-      <div class="card" style="border-left:3px solid var(--green)">
+      <div class="card" style="">
         <div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--green);margin-bottom:8px"> Insight · Portfolio</div>
         <div style="font-size:15px;font-weight:800;margin-bottom:6px">${pct(nExc+nBue)}% de los clientes son aprobables</div>
         <div style="font-size:11.5px;color:var(--ink3);line-height:1.5">

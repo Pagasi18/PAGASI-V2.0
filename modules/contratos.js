@@ -51,32 +51,32 @@ PG.contratos = function(){
 
   <!-- ═══ KPIs ═══ -->
   <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px">
-    <div class="stat" style="border-top:3px solid var(--p1)">
-      <div class="st-v" style="color:var(--p1);font-size:22px">${credsActivos.length}</div>
+    <div class="stat">
+      <div class="st-v" style="color:var(--p1);font-size:26px">${credsActivos.length}</div>
       <div class="st-l">Activos</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">En vigencia</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--green)">
-      <div class="st-v" style="color:var(--green);font-size:20px">${fmt(valorActivos)}</div>
+    <div class="stat">
+      <div class="st-v" style="color:var(--green);font-size:26px">${fmt(valorActivos)}</div>
       <div class="st-l">Valor cartera</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">En contratos activos</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--amber)">
-      <div class="st-v" style="color:var(--amber);font-size:22px">${nuevosMes}</div>
+    <div class="stat">
+      <div class="st-v" style="color:var(--amber);font-size:26px">${nuevosMes}</div>
       <div class="st-l">Nuevos este mes</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">Firmas recientes</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--red)">
-      <div class="st-v" style="color:var(--red);font-size:22px">${enMora}</div>
+    <div class="stat">
+      <div class="st-v" style="color:var(--red);font-size:26px">${enMora}</div>
       <div class="st-l">Con mora</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">Requieren seguimiento</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--blue,#3b82f6)">
+    <div class="stat">
       <div class="st-v" style="color:var(--blue,#3b82f6);font-size:22px">${porVencer30d}</div>
       <div class="st-l">Por vencer 30d</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">Próximas finalizaciones</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--ink3)">
+    <div class="stat">
       <div class="st-v" style="font-size:22px">${plazoProm}m</div>
       <div class="st-l">Plazo promedio</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">Cuota: ${fmt(cuotaProm)}</div>
@@ -111,15 +111,15 @@ PG.contratos = function(){
       </div>
 
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--rim2);display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-        <div style="padding:10px 12px;background:rgba(5,160,96,.06);border-radius:8px;border-left:3px solid var(--green)">
+        <div style="padding:10px 12px;background:rgba(5,160,96,.06);border-radius:8px;">
           <div style="font-size:10px;color:var(--ink3);font-weight:700;text-transform:uppercase">Tasa de éxito</div>
           <div style="font-size:18px;font-weight:900;color:var(--green);margin-top:2px">${totalContratos?Math.round(completados/totalContratos*100):0}%</div>
         </div>
-        <div style="padding:10px 12px;background:rgba(217,59,90,.06);border-radius:8px;border-left:3px solid var(--red)">
+        <div style="padding:10px 12px;background:rgba(217,59,90,.06);border-radius:8px;">
           <div style="font-size:10px;color:var(--ink3);font-weight:700;text-transform:uppercase">Tasa recuperación</div>
           <div style="font-size:18px;font-weight:900;color:var(--red);margin-top:2px">${totalContratos?Math.round(recuperados/totalContratos*100):0}%</div>
         </div>
-        <div style="padding:10px 12px;background:rgba(37,99,235,.06);border-radius:8px;border-left:3px solid var(--p1)">
+        <div style="padding:10px 12px;background:rgba(37,99,235,.06);border-radius:8px;">
           <div style="font-size:10px;color:var(--ink3);font-weight:700;text-transform:uppercase">Vigentes</div>
           <div style="font-size:18px;font-weight:900;color:var(--p1);margin-top:2px">${totalContratos?Math.round(credsActivos.length/totalContratos*100):0}%</div>
         </div>
@@ -228,7 +228,7 @@ PG.contratos = function(){
         </div>
         <div class="lst" style="max-height:260px;overflow-y:auto">${credsActivos.length?credsActivos.map(function(c){
           var col = c.mora>0?'var(--red)':'var(--green)';
-          return '<div class="li" style="border-left:3px solid '+col+'">'
+          return '<div class="li" style="">'
             +'<div class="li-ic" style="background:var(--gs)">CTR</div>'
             +'<div style="flex:1;min-width:0">'
             +'<div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.id+' — '+c.cli+'</div>'
@@ -248,7 +248,7 @@ PG.contratos = function(){
           </summary>
           <div class="lst" style="max-height:200px;overflow-y:auto;margin-top:6px">${credsArchivados.map(function(c){
             var col = c.estado==='recuperado'||c.estado==='recuperada' ? 'var(--red)' : '#6b7280';
-            return '<div class="li" style="background:var(--gs);opacity:.85;border-left:3px solid '+col+'">'
+            return '<div class="li" style="background:var(--gs);opacity:.85;">'
               +'<div class="li-ic" style="background:var(--rim)">ARC</div>'
               +'<div style="flex:1;min-width:0">'
               +'<div style="font-size:12px;font-weight:700;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.id+' — '+c.cli+'</div>'

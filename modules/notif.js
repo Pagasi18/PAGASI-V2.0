@@ -62,32 +62,32 @@ PG.notif = function(){
 
   <!-- KPIs compactos · segmentos de mora/vencimiento -->
   <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px">
-    <div class="stat" style="border-top:3px solid var(--red)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--red);font-size:22px">${moraClientes.length}</div>
       <div class="st-l">En mora</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">${moraCritica.length+moraAlta.length} graves</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--amber)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--amber);font-size:22px">${proximasCuotas.length}</div>
       <div class="st-l">Vencen 7d</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">Próximas cuotas</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--p1)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--p1);font-size:22px">${S.creds.filter(c=>c.estado==='activo').length}</div>
       <div class="st-l">Activos</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">Créditos al día</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--green)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--green);font-size:22px">${conTelefono.length}</div>
       <div class="st-l">Con WhatsApp</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">${pctCobertura}% cobertura</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--ink3)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--ink3);font-size:22px">${sinTelefono}</div>
       <div class="st-l">Sin teléfono</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">Requieren datos</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--p1)">
+    <div class="stat" style="">
       <div class="st-v" style="color:var(--p1);font-size:22px">${totalEnviados}</div>
       <div class="st-l">Enviados histórico</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:3px">Todos los canales</div>
@@ -257,7 +257,7 @@ PG.notif = function(){
         <option value="custom">Mensaje Personalizado</option>
       </select>
 
-      <div id="notif-tipo-desc" style="margin-top:10px;font-size:11.5px;color:var(--ink3);padding:8px 10px;background:var(--surf2);border-radius:8px;border-left:3px solid var(--p1);line-height:1.4">
+      <div id="notif-tipo-desc" style="margin-top:10px;font-size:11.5px;color:var(--ink3);padding:8px 10px;background:var(--surf2);border-radius:8px;line-height:1.4">
         Selecciona una plantilla para ver su descripción.
       </div>
 

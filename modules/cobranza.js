@@ -164,32 +164,32 @@ PG.cobranza = function(){
 
   <!-- ═══ KPIs COMPACTOS ═══ -->
   <div class="sg" style="grid-template-columns:repeat(6,1fr);margin-bottom:14px">
-    <div class="stat" style="border-top:3px solid var(--red)">
+    <div class="stat">
       <div class="st-v" style="color:var(--red);font-size:26px">${mora.length}</div>
       <div class="st-l">En mora</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">de ${totalActivos} activos · ${tasaMora}%</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--amber)">
-      <div class="st-v" style="color:var(--amber);font-size:20px">${fmt(deudaTotal)}</div>
+    <div class="stat">
+      <div class="st-v" style="color:var(--amber);font-size:26px">${fmt(deudaTotal)}</div>
       <div class="st-l">Deuda total</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">~${promMora}d promedio</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--green)">
-      <div class="st-v" style="color:var(--green);font-size:22px">${fmt(cobradoHoy)}</div>
+    <div class="stat">
+      <div class="st-v" style="color:var(--green);font-size:26px">${fmt(cobradoHoy)}</div>
       <div class="st-l">Cobrado hoy</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">${pagosHoy.length} pagos</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--p1)">
-      <div class="st-v" style="color:var(--p1);font-size:20px">${fmt(cobradoSemana)}</div>
+    <div class="stat">
+      <div class="st-v" style="color:var(--p1);font-size:26px">${fmt(cobradoSemana)}</div>
       <div class="st-l">Esta semana</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">${tendenciaSemanal>0?'↑ +'+tendenciaSemanal+'%':tendenciaSemanal<0?'↓ '+tendenciaSemanal+'%':'→ estable'}</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--green)">
+    <div class="stat">
       <div class="st-v" style="color:var(--green);font-size:26px">${efectividadMes}%</div>
       <div class="st-l">Efectividad mes</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">${fmt(cobradoMes)} cobrado</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--ink3)">
+    <div class="stat">
       <div class="st-v" style="font-size:22px">${alDia}</div>
       <div class="st-l">Al día</div>
       <div style="font-size:10px;color:var(--green);margin-top:2px;font-weight:700">✓ sin mora</div>

@@ -51,22 +51,22 @@ PG.config = function(){
 
   <!-- Estado Firebase — stat compacto -->
   <div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">
-    <div class="stat" style="border-top:3px solid ${db?'var(--green)':'var(--red)'}">
+    <div class="stat">
       <div class="st-v" style="color:${db?'var(--green)':'var(--red)'};font-size:20px">${db?'✓ Online':'✕ Local'}</div>
       <div class="st-l">Firebase</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">${db?'Datos en la nube':'Sin sincronización'}</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--p1)">
+    <div class="stat" style="">
       <div class="st-v" style="font-size:20px;color:var(--p1)">${PLAN.factor}x</div>
       <div class="st-l">Factor activo</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">Plan ${PLAN.plazo} meses</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--amber)">
+    <div class="stat" style="">
       <div class="st-v" style="font-size:20px;color:var(--amber)">${window._tasaBsGlobal||1} Bs</div>
       <div class="st-l">Tasa de cambio</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">por dólar</div>
     </div>
-    <div class="stat" style="border-top:3px solid var(--ink3)">
+    <div class="stat" style="">
       <div class="st-v" style="font-size:20px">${PLAN.inicial*100}% ini · ${PLAN.moraPct||5}% mora</div>
       <div class="st-l">Parámetros clave</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">${PLAN.diasGracia||5}d de gracia</div>
@@ -211,7 +211,7 @@ PG.config = function(){
   <div id="cfg-tab-sistema" style="display:${cfgTab==='sistema'?'block':'none'}">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
       <!-- Sincronización Firebase -->
-      <div class="card" style="border-top:3px solid var(--p1)">
+      <div class="card" style="">
         <div class="ch"><div><div class="ct">Sincronización Firebase</div><div class="cs">Estado de conexión y caché local</div></div></div>
         <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${db?'var(--greens)':'var(--reds)'};border-radius:9px;margin:8px 0;border:1px solid ${db?'rgba(0,184,118,.2)':'rgba(217,59,90,.2)'}">
           <div style="width:10px;height:10px;border-radius:50%;background:${db?'var(--green)':'var(--red)'};flex-shrink:0"></div>
@@ -226,7 +226,7 @@ PG.config = function(){
       </div>
 
       <!-- Reglas Firestore -->
-      <div class="card" style="border-top:3px solid var(--amber)">
+      <div class="card" style="">
         <div class="ch">
           <div><div class="ct">Reglas de Seguridad Firestore</div><div class="cs">Copia en Firebase Console → Firestore → Reglas</div></div>
           <a href="https://console.firebase.google.com" target="_blank" rel="noopener" class="btn btn-g btn-sm">Abrir →</a>
@@ -242,7 +242,7 @@ service cloud.firestore {
       </div>
 
       <!-- Backup -->
-      <div class="card" style="border-top:3px solid var(--green)">
+      <div class="card" style="">
         <div class="ch"><div><div class="ct">Backup y Restauración</div><div class="cs">Exporta o importa todos los datos</div></div></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px">
           <div>
@@ -268,7 +268,7 @@ service cloud.firestore {
 
 
       <!-- Auditoría de Datos -->
-      <div class="card" style="border-top:3px solid var(--red)">
+      <div class="card" style="">
         <div class="ch">
           <div>
             <div class="ct" style="color:var(--red)">Auditoría de Datos</div>
