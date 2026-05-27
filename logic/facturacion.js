@@ -302,7 +302,7 @@ function _facBuildConcepto(pago, cred){
     return 'Pago de cuota' + suffix;
   }
 
-  // Todos los pagos confirmados del crédito (sin la inicial ni este), ordenados por fecha+id
+  // Todos los pagos confirmados del crédito (sin la inicial), ordenados por fecha+id
   var allPagos = (typeof S !== 'undefined' && Array.isArray(S.pagos)) ? S.pagos.filter(function(x){
     return x && !x.eliminado && x.cred === credId
         && x.estado === 'confirmado'
@@ -345,20 +345,17 @@ function _facBuildConcepto(pago, cred){
 
   // ¿Venía con saldo pendiente de una cuota anterior?
   if(saldoAnterior > eps){
-    // Este pago termina de saldar la cuota en curso
     partes.push('Saldo Cuota Nº ' + cuotaEnCurso + ' (' + _facFmtUsd(cuotaBase - saldoAnterior) + ')');
     cuotaEnCurso++;
     cuotasCompletadas--;
   }
 
-  // Cuotas pagadas completas a partir de ahí
   if(cuotasCompletadas === 1){
     partes.push('Cuota Nº ' + cuotaEnCurso);
   } else if(cuotasCompletadas > 1){
     partes.push('Cuotas Nº ' + cuotaEnCurso + ' a Nº ' + (cuotaEnCurso + cuotasCompletadas - 1));
   }
 
-  // Parcial sobre la siguiente cuota
   if(nuevoSaldo > eps){
     partes.push('parcial Cuota Nº ' + (completadasDespues + 1)
               + ' (' + _facFmtUsd(nuevoSaldo) + ' de ' + _facFmtUsd(cuotaBase) + ')');

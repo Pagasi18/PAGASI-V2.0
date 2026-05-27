@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sincronizar Catálogo · Pagasi</title>
+<script src="vendor/firebase-app-compat.js"></script>
+<script src="vendor/firebase-auth-compat.js"></script>
+<script src="vendor/firebase-firestore-compat.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+body{background:linear-gradient(180deg,#F8FAFC 0%,#E5EEFF 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+.card{background:#fff;border-radius:18px;box-shadow:0 24px 60px rgba(37,99,235,.12),0 2px 8px rgba(0,0,0,.04);max-width:560px;width:100%;overflow:hidden;}
+.header{background:linear-gradient(135deg,#2563EB 0%,#1D4ED8 100%);color:#fff;padding:32px 32px 28px;}
+.header h1{font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:6px;}
+.header p{font-size:13.5px;opacity:.85;line-height:1.5;}
+.body{padding:28px 32px;}
+.warn{background:#FFFBEB;border:1px solid #FCD34D;border-radius:10px;padding:14px 16px;font-size:12.5px;color:#92400E;line-height:1.55;margin-bottom:22px;}
+.warn b{color:#78350F;}
+.list{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;max-height:220px;overflow-y:auto;padding:8px 0;margin-bottom:22px;font-size:12px;font-family:ui-monospace,Menlo,monospace;}
+.list .group{font-weight:800;color:#2563EB;padding:8px 16px 4px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;}
+.list .item{display:flex;justify-content:space-between;padding:4px 16px;color:#334155;}
+.list .item .price{color:#16A34A;font-weight:700;}
+.btn{display:flex;width:100%;align-items:center;justify-content:center;gap:8px;background:#2563EB;color:#fff;border:none;font-family:inherit;font-size:15px;font-weight:700;padding:14px 22px;border-radius:12px;cursor:pointer;transition:all .2s;box-shadow:0 4px 14px rgba(37,99,235,.32);}
+.btn:hover{background:#1D4ED8;transform:translateY(-1px);box-shadow:0 8px 22px rgba(37,99,235,.42);}
+.btn:disabled{background:#94A3B8;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn-secondary{background:#F1F5F9;color:#334155;box-shadow:none;margin-top:10px;}
+.btn-secondary:hover{background:#E2E8F0;transform:none;box-shadow:none;}
+.status{margin-top:18px;padding:14px 16px;border-radius:10px;font-size:13px;font-weight:600;display:none;line-height:1.5;}
+.status.ok{display:block;background:#F0FDF4;border:1px solid #BBF7D0;color:#166534;}
+.status.error{display:block;background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;}
+.status.info{display:block;background:#EFF6FF;border:1px solid #BFDBFE;color:#1E40AF;}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.meta{font-size:11px;color:#64748B;text-align:center;margin-top:18px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <h1>Sincronizar Catálogo</h1>
+    <p>Sobreescribe el documento <code style="background:rgba(255,255,255,.18);padding:1px 6px;border-radius:4px;font-family:ui-monospace,monospace;font-size:12px">config/catalogo</code> en Firestore con las 41 motos actualizadas del archivo Excel.</p>
+  </div>
+  <div class="body">
+    <div class="warn">
+      <b>⚠ Atención:</b> Esto <b>reemplaza completamente</b> el catálogo en Firestore. Los modelos custom que agregaste manualmente desde el admin (como "R3X 250 2026", "CAPUCCINO TR180") se borrarán y se reemplazarán por los 41 oficiales.
+    </div>
+
+    <div class="list" id="motoList"></div>
+
+    <button class="btn" id="btnSync" onclick="ejecutarSync()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      <span id="btnText">Sincronizar 41 motos a Firestore</span>
+    </button>
+
+    <button class="btn btn-secondary" onclick="window.location='admin.html'">← Volver al admin</button>
+
+    <div class="status" id="status"></div>
+    <div class="meta">Proyecto Firebase: <b>pagasi-v2</b></div>
+  </div>
+</div>
+
+<script>
+// ─── Firebase config (mismo del admin) ──────────────────────
+var FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyDt07EYdmvIqjU5a9CGPMQdYz8iBJ69Su8',
+  authDomain: 'pagasi-v2.firebaseapp.com',
+  projectId: 'pagasi-v2',
+  storageBucket: 'pagasi-v2.firebasestorage.app',
+  messagingSenderId: '951911859002',
+  appId: '1:951911859002:web:1eb8f0af7bcbd508474603'
+};
+
+// ─── Catálogo 41 motos al 27/05/2026 ────────────────────────
+const CATALOGO_NUEVO = [
+  {id:1,  sede:'EK Bello Monte',     modelo:'NEW HORSE 150',       precio:1320.00},
+  {id:2,  sede:'EK Bello Monte',     modelo:'EK XPRESS 150',       precio:1099.00},
+  {id:3,  sede:'EK Bello Monte',     modelo:'EK XPRESS II 150',    precio:1126.00},
+  {id:4,  sede:'EK Bello Monte',     modelo:'EK XPRESS 200S',      precio:1360.00},
+  {id:5,  sede:'EK Bello Monte',     modelo:'EK XPRESS 150 LITE',  precio:1020.00},
+  {id:6,  sede:'EK Bello Monte',     modelo:'NEW OWEN II 150',     precio:1265.00},
+  {id:7,  sede:'EK Bello Monte',     modelo:'OWEN 200S',           precio:1550.00},
+  {id:8,  sede:'EK Bello Monte',     modelo:'RK 200',              precio:1750.00},
+  {id:9,  sede:'EK Bello Monte',     modelo:'RK 250',              precio:2075.00},
+  {id:10, sede:'EK Bello Monte',     modelo:'TX 250 GS',           precio:2650.00},
+  {id:11, sede:'EK Bello Monte',     modelo:'MATRIX 150 LITE',     precio:1290.00},
+  {id:12, sede:'EK Bello Monte',     modelo:'MATRIX 150',          precio:1550.00},
+  {id:13, sede:'EK Bello Monte',     modelo:'NEW OUTLOOK 175',     precio:2450.00},
+  {id:14, sede:'EK Bello Monte',     modelo:'OUTLOOK XL PALETA',   precio:4851.00},
+  {id:15, sede:'EK Bello Monte',     modelo:'ATLAS 200HD',         precio:4600.00},
+  {id:16, sede:'EK Bello Monte',     modelo:'OWEN 200S AMARILLO',  precio:1500.00},
+  {id:17, sede:'EK Bello Monte',     modelo:'ARSEN',               precio:1950.00},
+  {id:18, sede:'Boleita',            modelo:'LECHUZA I',           precio:1700.00},
+  {id:19, sede:'Boleita',            modelo:'LECHUZA II',          precio:1900.00},
+  {id:20, sede:'Boleita',            modelo:'CUERVO',              precio:1149.00},
+  {id:21, sede:'Boleita',            modelo:'CANARIO',             precio:1190.00},
+  {id:22, sede:'Boleita',            modelo:'FÉNIX 150',           precio:1450.00},
+  {id:23, sede:'Boleita',            modelo:'FÉNIX 200',           precio:1590.00},
+  {id:24, sede:'Boleita',            modelo:'ÁGUILA',              precio:980.00},
+  {id:25, sede:'Boleita',            modelo:'CÓNDOR',              precio:1190.00},
+  {id:26, sede:'Boleita',            modelo:'TUCÁN II',            precio:1239.00},
+  {id:27, sede:'Toro Sabana Grande', modelo:'JAGUAR 150',          precio:1090.00},
+  {id:28, sede:'Toro Sabana Grande', modelo:'TRX150 RAYO',         precio:1050.00},
+  {id:29, sede:'Toro Sabana Grande', modelo:'TRX150 PALETA',       precio:1070.00},
+  {id:30, sede:'Toro Sabana Grande', modelo:'LEÓN 200',            precio:1320.00},
+  {id:31, sede:'Toro Sabana Grande', modelo:'REX 150',             precio:1520.00},
+  {id:32, sede:'Toro Sabana Grande', modelo:'REX 250',             precio:2090.00},
+  {id:33, sede:'Toro Sabana Grande', modelo:'REX 250 MT',          precio:2100.00},
+  {id:34, sede:'Toro Sabana Grande', modelo:'R3X',                 precio:2590.00},
+  {id:35, sede:'Toro Sabana Grande', modelo:'MOKA',                precio:1295.00},
+  {id:36, sede:'Toro Sabana Grande', modelo:'FOX',                 precio:1850.00},
+  {id:37, sede:'Toro Sabana Grande', modelo:'POWER',               precio:1880.00},
+  {id:38, sede:'Toro Sabana Grande', modelo:'TANK III',            precio:2500.00},
+  {id:39, sede:'Toro Sabana Grande', modelo:'TANK',                precio:1920.00},
+  {id:40, sede:'Toro Sabana Grande', modelo:'CAPPUCINO',           precio:1890.00},
+  {id:41, sede:'Toro Sabana Grande', modelo:'TYPHOON',             precio:1690.00}
+];
+
+// ─── Pintar lista ───────────────────────────────────────────
+(function(){
+  var grupos = {};
+  var orden = [];
+  CATALOGO_NUEVO.forEach(function(m){
+    if(!grupos[m.sede]){ grupos[m.sede]=[]; orden.push(m.sede); }
+    grupos[m.sede].push(m);
+  });
+  var html = '';
+  orden.forEach(function(s){
+    html += '<div class="group">'+s+' ('+grupos[s].length+')</div>';
+    grupos[s].forEach(function(m){
+      html += '<div class="item"><span>'+m.id+'. '+m.modelo+'</span><span class="price">$'+m.precio.toLocaleString('en-US')+'</span></div>';
+    });
+  });
+  document.getElementById('motoList').innerHTML = html;
+})();
+
+// ─── Setup Firebase ─────────────────────────────────────────
+var fbApp = null, fbAuth = null, db = null;
+function setStatus(type, html){
+  var el = document.getElementById('status');
+  el.className = 'status ' + type;
+  el.innerHTML = html;
+}
+
+function initFb(){
+  if(fbApp) return true;
+  try{
+    fbApp = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
+    fbAuth = firebase.auth(fbApp);
+    db = firebase.firestore(fbApp);
+    return true;
+  } catch(e){
+    setStatus('error', '❌ Error inicializando Firebase: ' + e.message);
+    return false;
+  }
+}
+
+async function ejecutarSync(){
+  var btn = document.getElementById('btnSync');
+  var btnText = document.getElementById('btnText');
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="spinner"></span> Conectando con Firebase…';
+  setStatus('info', 'Conectando…');
+
+  if(!initFb()){ btn.disabled = false; btnText.textContent = 'Reintentar'; return; }
+
+  try{
+    if(!fbAuth.currentUser){
+      btnText.innerHTML = '<span class="spinner"></span> Autenticando…';
+      await fbAuth.signInAnonymously();
+    }
+
+    btnText.innerHTML = '<span class="spinner"></span> Guardando en Firestore…';
+    setStatus('info', '📡 Escribiendo <code>config/catalogo</code> con 41 motos…');
+
+    await db.collection('config').doc('catalogo').set({
+      items: CATALOGO_NUEVO,
+      lastSync: new Date().toISOString(),
+      syncedBy: 'sync-catalogo.html',
+      version: '41-motos-3-sedes-2026-05-27'
+    });
+
+    // Limpiar localStorage del admin para forzar refresh
+    try { localStorage.removeItem('pagasi_catalogo_config'); } catch(e){}
+
+    setStatus('ok',
+      '✅ <b>Catálogo sincronizado correctamente.</b><br>'
+      + '41 motos guardadas en <code>config/catalogo</code>.<br><br>'
+      + '<b>Próximos pasos:</b><br>'
+      + '1. Cierra esta pestaña.<br>'
+      + '2. Abre el admin en <b>modo incógnito</b> (Ctrl+Shift+N / Cmd+Shift+N) o haz hard-refresh (Ctrl+Shift+R / Cmd+Shift+R).<br>'
+      + '3. Verifica en <i>Plan &amp; Precios</i> y en el dropdown de Motos que aparezcan las 41.'
+    );
+    btnText.textContent = '✓ Listo — 41 motos sincronizadas';
+    btn.style.background = '#16A34A';
+    btn.style.boxShadow = '0 4px 14px rgba(22,163,74,.32)';
+  } catch(e){
+    console.error(e);
+    var msg = e.message || String(e);
+    if(msg.indexOf('admin-restricted-operation') >= 0){
+      setStatus('error', '❌ Anonymous Auth está deshabilitado.<br>Ve a Firebase Console → Authentication → Sign-in method → Anonymous → Enable.');
+    } else if(msg.indexOf('permission-denied') >= 0){
+      setStatus('error', '❌ Permisos denegados. Revisa las reglas de Firestore (debe permitir write si auth != null).');
+    } else {
+      setStatus('error', '❌ Error: ' + msg);
+    }
+    btn.disabled = false;
+    btnText.textContent = 'Reintentar';
+  }
+}
+</script>
+</body>
+</html>

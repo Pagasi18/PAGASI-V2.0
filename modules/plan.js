@@ -70,7 +70,6 @@ PG.plan = function(){
 
   <!-- CATÁLOGO agrupado por SEDE -->
   ${(function(){
-    // Agrupar el CATALOGO por sede
     var bySede = {};
     var ordenSedes = [];
     CATALOGO.forEach(function(c){
@@ -80,13 +79,11 @@ PG.plan = function(){
     });
     var filtroSede = window._planSedeFiltro || '_todas';
 
-    // Pills selector de sede + totales
     var chipsHTML = '<button class="btn '+(filtroSede==='_todas'?'btn-p':'btn-g')+' btn-xs" onclick="setPlanSedeFiltro(\'_todas\')">Todas ('+CATALOGO.length+')</button>'
       + ordenSedes.map(function(s){
           return '<button class="btn '+(filtroSede===s?'btn-p':'btn-g')+' btn-xs" onclick="setPlanSedeFiltro('+JSON.stringify(s).replace(/"/g,'&quot;')+')">'+s+' ('+bySede[s].length+')</button>';
         }).join('');
 
-    // Tarjeta de una moto (reutilizable)
     function tarjeta(c){
       var r = calcMoto(c.precio);
       var sedeBadge = c.sede ? '<span style="background:rgba(74,107,255,.10);color:var(--p1);border:1px solid rgba(74,107,255,.22);font-size:9px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;padding:2px 7px;border-radius:50px;margin-left:auto;white-space:nowrap">'+c.sede+'</span>' : '';
@@ -114,12 +111,10 @@ PG.plan = function(){
         +'</div>';
     }
 
-    // Renderizar secciones — una por sede o solo la seleccionada
     var sedesARender = (filtroSede === '_todas') ? ordenSedes : [filtroSede];
     var seccionesHTML = sedesARender.map(function(s){
       var motos = bySede[s] || [];
       if(!motos.length) return '';
-      // Resumen sede: precio promedio, min, max
       var precios = motos.map(function(c){ return parseFloat(c.precio)||0; });
       var minP = Math.min.apply(null, precios);
       var maxP = Math.max.apply(null, precios);
