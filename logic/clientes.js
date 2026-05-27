@@ -740,7 +740,13 @@ function cfTab(clienteId, tab){
   var modal = $('mbd');
   if(!modal) return;
   var tabs = modal.querySelectorAll('.cf-tab');
-  tabs.forEach(function(t){ t.classList.toggle('is-active', t.getAttribute('data-tab')===tab); });
+  tabs.forEach(function(t){
+    var active = t.getAttribute('data-tab')===tab;
+    t.classList.toggle('is-active', active);
+    if(active && t.scrollIntoView){
+      try{ t.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'}); }catch(e){}
+    }
+  });
   var panels = modal.querySelectorAll('.cf-panel');
   panels.forEach(function(p){ p.classList.toggle('is-active', p.getAttribute('data-tab')===tab); });
 }
