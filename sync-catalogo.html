@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sincronizar Catálogo · Pagasi</title>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
 body{background:linear-gradient(180deg,#F8FAFC 0%,#E5EEFF 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
@@ -48,9 +45,9 @@ body{background:linear-gradient(180deg,#F8FAFC 0%,#E5EEFF 100%);min-height:100vh
 
     <div class="list" id="motoList"></div>
 
-    <button class="btn" id="btnSync" onclick="ejecutarSync()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-      <span id="btnText">Sincronizar 41 motos a Firestore</span>
+    <button class="btn" id="btnSync" onclick="ejecutarSync()" disabled>
+      <span class="spinner"></span>
+      <span id="btnText">Cargando Firebase SDK…</span>
     </button>
 
     <button class="btn btn-secondary" onclick="window.location='admin.html'">← Volver al admin</button>
@@ -60,9 +57,12 @@ body{background:linear-gradient(180deg,#F8FAFC 0%,#E5EEFF 100%);min-height:100vh
   </div>
 </div>
 
-<script>
-// ─── Firebase config (mismo del admin) ──────────────────────
-var FIREBASE_CONFIG = {
+<script type="module">
+// ════════════════════════════════════════════════════════════════
+// Sync Catalogo · Carga Firebase modular (no depende de vendor/)
+// ════════════════════════════════════════════════════════════════
+
+const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyDt07EYdmvIqjU5a9CGPMQdYz8iBJ69Su8',
   authDomain: 'pagasi-v2.firebaseapp.com',
   projectId: 'pagasi-v2',
@@ -71,7 +71,6 @@ var FIREBASE_CONFIG = {
   appId: '1:951911859002:web:1eb8f0af7bcbd508474603'
 };
 
-// ─── Catálogo 41 motos al 27/05/2026 ────────────────────────
 const CATALOGO_NUEVO = [
   {id:1,  sede:'EK Bello Monte',     modelo:'NEW HORSE 150',       precio:1320.00},
   {id:2,  sede:'EK Bello Monte',     modelo:'EK XPRESS 150',       precio:1099.00},
@@ -116,71 +115,75 @@ const CATALOGO_NUEVO = [
   {id:41, sede:'Toro Sabana Grande', modelo:'TYPHOON',             precio:1690.00}
 ];
 
-// ─── Pintar lista ───────────────────────────────────────────
-(function(){
-  var grupos = {};
-  var orden = [];
-  CATALOGO_NUEVO.forEach(function(m){
+// Pintar lista de motos
+(function pintarLista(){
+  const grupos = {};
+  const orden = [];
+  CATALOGO_NUEVO.forEach(m => {
     if(!grupos[m.sede]){ grupos[m.sede]=[]; orden.push(m.sede); }
     grupos[m.sede].push(m);
   });
-  var html = '';
-  orden.forEach(function(s){
-    html += '<div class="group">'+s+' ('+grupos[s].length+')</div>';
-    grupos[s].forEach(function(m){
-      html += '<div class="item"><span>'+m.id+'. '+m.modelo+'</span><span class="price">$'+m.precio.toLocaleString('en-US')+'</span></div>';
+  let html = '';
+  orden.forEach(s => {
+    html += `<div class="group">${s} (${grupos[s].length})</div>`;
+    grupos[s].forEach(m => {
+      html += `<div class="item"><span>${m.id}. ${m.modelo}</span><span class="price">$${m.precio.toLocaleString('en-US')}</span></div>`;
     });
   });
   document.getElementById('motoList').innerHTML = html;
 })();
 
-// ─── Setup Firebase ─────────────────────────────────────────
-var fbApp = null, fbAuth = null, db = null;
 function setStatus(type, html){
-  var el = document.getElementById('status');
+  const el = document.getElementById('status');
   el.className = 'status ' + type;
   el.innerHTML = html;
 }
 
-function initFb(){
-  if(fbApp) return true;
-  try{
-    fbApp = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
-    fbAuth = firebase.auth(fbApp);
-    db = firebase.firestore(fbApp);
-    return true;
-  } catch(e){
-    setStatus('error', '❌ Error inicializando Firebase: ' + e.message);
-    return false;
-  }
+// Importar Firebase SDK modular dinámicamente desde el CDN oficial
+let app, auth, db, signInAnonymously, setDoc, doc;
+try {
+  const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+  const fbAuth = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+  const fbStore = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+
+  app = initializeApp(FIREBASE_CONFIG);
+  auth = fbAuth.getAuth(app);
+  db = fbStore.getFirestore(app);
+  signInAnonymously = fbAuth.signInAnonymously;
+  setDoc = fbStore.setDoc;
+  doc = fbStore.doc;
+
+  // Habilitar botón
+  const btn = document.getElementById('btnSync');
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span id="btnText">Sincronizar 41 motos a Firestore</span>';
+  setStatus('info', '🟢 Firebase SDK cargado correctamente. Listo para sincronizar.');
+} catch(e) {
+  console.error('Error cargando Firebase SDK:', e);
+  setStatus('error', `❌ No pude cargar el Firebase SDK desde gstatic.com.<br>Error: ${e.message}<br><br>Verifica tu conexión a internet o si tienes alguna extensión bloqueando scripts (ej. adblocker).`);
+  const btn = document.getElementById('btnSync');
+  btn.innerHTML = '<span id="btnText">No se pudo cargar Firebase</span>';
 }
 
-async function ejecutarSync(){
-  var btn = document.getElementById('btnSync');
-  var btnText = document.getElementById('btnText');
+window.ejecutarSync = async function(){
+  const btn = document.getElementById('btnSync');
   btn.disabled = true;
-  btnText.innerHTML = '<span class="spinner"></span> Conectando con Firebase…';
-  setStatus('info', 'Conectando…');
+  btn.innerHTML = '<span class="spinner"></span><span id="btnText">Autenticando…</span>';
+  setStatus('info', 'Conectando con Firebase…');
 
-  if(!initFb()){ btn.disabled = false; btnText.textContent = 'Reintentar'; return; }
+  try {
+    await signInAnonymously(auth);
 
-  try{
-    if(!fbAuth.currentUser){
-      btnText.innerHTML = '<span class="spinner"></span> Autenticando…';
-      await fbAuth.signInAnonymously();
-    }
+    btn.innerHTML = '<span class="spinner"></span><span id="btnText">Guardando 41 motos…</span>';
+    setStatus('info', '📡 Escribiendo <code>config/catalogo</code>…');
 
-    btnText.innerHTML = '<span class="spinner"></span> Guardando en Firestore…';
-    setStatus('info', '📡 Escribiendo <code>config/catalogo</code> con 41 motos…');
-
-    await db.collection('config').doc('catalogo').set({
+    await setDoc(doc(db, 'config', 'catalogo'), {
       items: CATALOGO_NUEVO,
       lastSync: new Date().toISOString(),
       syncedBy: 'sync-catalogo.html',
       version: '41-motos-3-sedes-2026-05-27'
     });
 
-    // Limpiar localStorage del admin para forzar refresh
     try { localStorage.removeItem('pagasi_catalogo_config'); } catch(e){}
 
     setStatus('ok',
@@ -188,26 +191,26 @@ async function ejecutarSync(){
       + '41 motos guardadas en <code>config/catalogo</code>.<br><br>'
       + '<b>Próximos pasos:</b><br>'
       + '1. Cierra esta pestaña.<br>'
-      + '2. Abre el admin en <b>modo incógnito</b> (Ctrl+Shift+N / Cmd+Shift+N) o haz hard-refresh (Ctrl+Shift+R / Cmd+Shift+R).<br>'
-      + '3. Verifica en <i>Plan &amp; Precios</i> y en el dropdown de Motos que aparezcan las 41.'
+      + '2. Abre el admin en <b>modo incógnito</b> o haz <b>Cmd+Shift+R</b>.<br>'
+      + '3. Verifica que en <i>Motos → + Nueva</i> aparezcan las 41 motos.'
     );
-    btnText.textContent = '✓ Listo — 41 motos sincronizadas';
+    btn.innerHTML = '<span id="btnText">✓ 41 motos sincronizadas</span>';
     btn.style.background = '#16A34A';
     btn.style.boxShadow = '0 4px 14px rgba(22,163,74,.32)';
-  } catch(e){
+  } catch(e) {
     console.error(e);
-    var msg = e.message || String(e);
-    if(msg.indexOf('admin-restricted-operation') >= 0){
-      setStatus('error', '❌ Anonymous Auth está deshabilitado.<br>Ve a Firebase Console → Authentication → Sign-in method → Anonymous → Enable.');
-    } else if(msg.indexOf('permission-denied') >= 0){
-      setStatus('error', '❌ Permisos denegados. Revisa las reglas de Firestore (debe permitir write si auth != null).');
+    const msg = e.message || String(e);
+    if(msg.indexOf('admin-restricted-operation') >= 0 || e.code === 'auth/admin-restricted-operation'){
+      setStatus('error', '❌ Anonymous Auth está deshabilitado.<br>Firebase Console → Authentication → Sign-in method → Anonymous → Enable.');
+    } else if(msg.indexOf('permission-denied') >= 0 || e.code === 'permission-denied'){
+      setStatus('error', '❌ Permisos denegados en Firestore. Revisa las reglas: <code>allow read, write: if request.auth != null;</code>');
     } else {
       setStatus('error', '❌ Error: ' + msg);
     }
     btn.disabled = false;
-    btnText.textContent = 'Reintentar';
+    btn.innerHTML = '<span id="btnText">Reintentar</span>';
   }
-}
+};
 </script>
 </body>
 </html>
