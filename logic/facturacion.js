@@ -74,6 +74,7 @@ function ofrecerRecibo(pago, cred){
   $('mtt').textContent = 'Pago Registrado';
   $('msb').textContent = 'El pago fue guardado exitosamente';
   $('modal-box').className = 'modal';
+  var conceptoMini = _facBuildConcepto(pago, cred);
   $('mbd').innerHTML =
     '<div style="text-align:center;padding:10px 0 16px">'
     +'<div style="width:56px;height:56px;border-radius:50%;background:var(--greens);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">'
@@ -82,6 +83,10 @@ function ofrecerRecibo(pago, cred){
     +'<div style="font-family:var(--fd);font-weight:900;font-size:26px;color:var(--green)">'+fmt(pago.monto)+'</div>'
     +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">'+cred.cli+' · '+pago.id+'</div>'
     +'<div style="font-size:11px;color:var(--ink3);margin-top:2px">'+pago.fecha+(pago.referencia?' · Ref: #'+pago.referencia:'')+'</div>'
+    +'<div style="margin:14px auto 6px;max-width:340px;background:rgba(74,107,255,.08);border:1px solid rgba(74,107,255,.22);border-radius:10px;padding:10px 14px;text-align:left">'
+      +'<div style="font-size:9.5px;letter-spacing:1px;color:var(--p1);font-weight:800;text-transform:uppercase;margin-bottom:4px">Concepto</div>'
+      +'<div style="font-size:12.5px;font-weight:700;color:var(--ink);line-height:1.4">'+conceptoMini+'</div>'
+    +'</div>'
     +'<div style="display:flex;gap:8px;justify-content:center;margin-top:18px">'
     +'<button class="btn btn-g btn-sm" onclick="closeM()">Cerrar</button>'
     +'<button class="btn btn-g btn-sm" onclick="closeM();abrirWhatsAppRecibo('+JSON.stringify(pago).replace(/"/g,"&quot;")+')" style="background:#25D366;color:#fff;border:none"> WhatsApp</button>'
@@ -95,6 +100,7 @@ function ofrecerRecibo(pago, cred){
 function imprimirRecibo(pago, cred){
   var empresa = ($('cfg_empresa')&&$('cfg_empresa').value) || 'Pagasi';
   var fecha = new Date(pago.fecha+'T12:00:00').toLocaleDateString('es-VE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  var conceptoRecibo = _facBuildConcepto(pago, cred);
   var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
     +'<title>Recibo '+pago.id+'</title>'
     +'<style>'
@@ -123,6 +129,7 @@ function imprimirRecibo(pago, cred){
     +'</div>'
     +'<div class="body">'
     +'<div class="monto"><div class="label">Monto recibido</div><div class="valor">'+fmt(pago.monto)+'</div></div>'
+    +'<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:12px 14px;margin-bottom:14px"><div style="font-size:9.5px;letter-spacing:1px;color:#2563EB;font-weight:700;text-transform:uppercase;margin-bottom:4px">Concepto</div><div style="font-size:13px;font-weight:700;color:#111;line-height:1.45">'+conceptoRecibo+'</div></div>'
     +'<div class="row"><span class="k">Cliente</span><span class="v">'+pago.cli+'</span></div>'
     +'<div class="row"><span class="k">Crédito</span><span class="v">'+pago.cred+'</span></div>'
     +'<div class="row"><span class="k">Vehículo</span><span class="v">'+(cred.modelo||'—')+'</span></div>'
@@ -143,16 +150,20 @@ function imprimirRecibo(pago, cred){
 function abrirWhatsAppRecibo(pago){
   var empresa = ($('cfg_empresa')&&$('cfg_empresa').value) || 'Pagasi';
   var cl = S.clientes.find(function(c){ return c.nombre===pago.cli; })||{};
+  var cred = (S.creds||[]).find(function(x){ return x.id===pago.cred; });
   var tel = (cl.tel||'').replace(/\D/g,'');
-  var texto = ' *Comprobante de Pago — '+empresa+'*\n\n'
-    +' *Recibo:* '+pago.id+'\n'
-    +' *Cliente:* '+pago.cli+'\n'
-    +' *Monto:* '+fmt(pago.monto)+'\n'
-    +' *Fecha:* '+pago.fecha+'\n'
-    +' *Método:* '+(pago.metodo||'—')+'\n'
-    +(pago.referencia?' *Referencia:* #'+pago.referencia+'\n':'')
+  var concepto = _facBuildConcepto(pago, cred);
+  var texto = '*Comprobante de Pago — '+empresa+'*\n\n'
+    +'*Recibo:* '+pago.id+'\n'
+    +'*Cliente:* '+pago.cli+'\n'
+    +'*Concepto:* '+concepto+'\n'
+    +'*Monto recibido:* '+fmt(pago.monto)+'\n'
+    +'*Fecha:* '+pago.fecha+'\n'
+    +'*Método:* '+(pago.metodo||'—')+'\n'
+    +(pago.referencia?'*Referencia:* #'+pago.referencia+'\n':'')
+    +(cred?'*Cuotas pagadas:* '+(cred.pagado||'—')+' / '+(cred.totalCuotas||cred.plazo*2||'—')+'\n':'')
     +'\n_Gracias por su pago puntual_';
-  var url = 'https://wa.me/'+(tel||'')+( tel?'':'')+'?text='+encodeURIComponent(texto);
+  var url = 'https://wa.me/'+(tel||'')+'?text='+encodeURIComponent(texto);
   window.open(url,'_blank');
 }
 
@@ -257,6 +268,106 @@ function _facSiguienteNumeroControl(){
 // Busca la factura asociada a un pago (si existe y no está anulada)
 function _facGetByPagoId(pagoId){
   return (S.facturas||[]).find(function(f){ return f.pagoId === pagoId; });
+}
+
+// ════════════════════════════════════════════════════════════════
+// Smart Concepto Builder — detecta inicial / cuota / parcial / multi
+// Genera la descripción del pago para Factura SENIAT, Recibo y WhatsApp
+// ════════════════════════════════════════════════════════════════
+function _facFmtUsd(n){
+  var v = parseFloat(n) || 0;
+  return '$' + v.toFixed(2);
+}
+
+function _facBuildConcepto(pago, cred){
+  if(!pago) return 'Pago';
+  var modelo = (cred && cred.modelo) || '';
+  var credId = (pago.cred || (cred && cred.id) || '');
+  var suffix = (modelo ? ' — Moto ' + modelo : '') + (credId ? ' — Crédito ' + credId : '');
+
+  // 1) Pago inicial de la moto
+  var conceptoStr = (pago.concepto || '');
+  if(pago.esInicial || pago.tipoOperacion === 'inicial_credito' || conceptoStr.indexOf('Inicial · ') === 0){
+    return 'Pago inicial' + suffix;
+  }
+
+  // 2) Liquidación anticipada
+  if(pago.tipo === 'liquidacion' || pago.referencia === 'LIQ-ANT'){
+    return 'Liquidación anticipada' + suffix;
+  }
+
+  // 3) Cuota regular — calcular qué cuota(s) cubre este pago
+  var cuotaBase = parseFloat((cred && (cred.cuotaQ || cred.cuota)) || 0);
+  if(cuotaBase <= 0){
+    return 'Pago de cuota' + suffix;
+  }
+
+  // Todos los pagos confirmados del crédito (sin la inicial ni este), ordenados por fecha+id
+  var allPagos = (typeof S !== 'undefined' && Array.isArray(S.pagos)) ? S.pagos.filter(function(x){
+    return x && !x.eliminado && x.cred === credId
+        && x.estado === 'confirmado'
+        && !x.esInicial
+        && x.tipoOperacion !== 'inicial_credito';
+  }) : [];
+  allPagos.sort(function(a,b){
+    var fa = String((a.fecha||'')) + '_' + String(a.id||'');
+    var fb = String((b.fecha||'')) + '_' + String(b.id||'');
+    return fa < fb ? -1 : fa > fb ? 1 : 0;
+  });
+
+  // Suma acumulada de pagos confirmados ANTES de este pago
+  var prevSum = 0;
+  for(var i = 0; i < allPagos.length; i++){
+    if(String(allPagos[i].id) === String(pago.id)) break;
+    prevSum += parseFloat(allPagos[i].monto) || 0;
+  }
+  var monto = parseFloat(pago.monto) || 0;
+  var newSum = prevSum + monto;
+  var eps = 0.005;
+
+  var completadasAntes  = Math.floor((prevSum + eps) / cuotaBase);
+  var completadasDespues = Math.floor((newSum  + eps) / cuotaBase);
+  var saldoAnterior = Math.max(0, prevSum - completadasAntes * cuotaBase);
+  var nuevoSaldo    = Math.max(0, newSum  - completadasDespues * cuotaBase);
+  var cuotaEnCurso  = completadasAntes + 1;
+
+  // A) Pago parcial — no completa ninguna cuota
+  if(completadasDespues === completadasAntes){
+    var totalAbonado = saldoAnterior + monto;
+    return 'Cuota parcial · Cuota Nº ' + cuotaEnCurso
+         + ' (' + _facFmtUsd(totalAbonado) + ' de ' + _facFmtUsd(cuotaBase) + ')'
+         + suffix;
+  }
+
+  // B) Completa una o más cuotas — construir descripción detallada
+  var cuotasCompletadas = completadasDespues - completadasAntes;
+  var partes = [];
+
+  // ¿Venía con saldo pendiente de una cuota anterior?
+  if(saldoAnterior > eps){
+    // Este pago termina de saldar la cuota en curso
+    partes.push('Saldo Cuota Nº ' + cuotaEnCurso + ' (' + _facFmtUsd(cuotaBase - saldoAnterior) + ')');
+    cuotaEnCurso++;
+    cuotasCompletadas--;
+  }
+
+  // Cuotas pagadas completas a partir de ahí
+  if(cuotasCompletadas === 1){
+    partes.push('Cuota Nº ' + cuotaEnCurso);
+  } else if(cuotasCompletadas > 1){
+    partes.push('Cuotas Nº ' + cuotaEnCurso + ' a Nº ' + (cuotaEnCurso + cuotasCompletadas - 1));
+  }
+
+  // Parcial sobre la siguiente cuota
+  if(nuevoSaldo > eps){
+    partes.push('parcial Cuota Nº ' + (completadasDespues + 1)
+              + ' (' + _facFmtUsd(nuevoSaldo) + ' de ' + _facFmtUsd(cuotaBase) + ')');
+  }
+
+  if(!partes.length){
+    return 'Cuota Nº ' + (completadasAntes + 1) + suffix;
+  }
+  return partes.join(' + ') + suffix;
 }
 
 // Helper: convierte número a letras (para factura SENIAT)
@@ -396,7 +507,7 @@ function abrirGenerarFactura(pagoId){
     + '</div>'
     + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin:14px 0 8px">DETALLE DE LA OPERACIÓN</div>'
     + '<div class="fgr c1" style="gap:10px">'
-    + '<div class="fg"><label>Concepto / Descripción</label><textarea class="fi" id="fac_concepto" rows="2" style="resize:vertical">Pago de cuota — Crédito '+(p.cred||'')+(cred?' / '+cred.modelo:'')+'</textarea></div>'
+    + '<div class="fg"><label>Concepto / Descripción</label><textarea class="fi" id="fac_concepto" rows="3" style="resize:vertical">'+_facBuildConcepto(p, cred)+'</textarea><div style="font-size:10.5px;color:var(--ink3);margin-top:5px">Detecta automáticamente si es inicial, cuota completa, parcial o multi-cuota. Editable.</div></div>'
     + '</div>'
     + '<div class="fgr" style="gap:10px;margin-top:10px">'
     + '<div class="fg"><label>Subtotal</label><div style="font-family:var(--fd);font-weight:700;font-size:14px;padding:6px 0">'+fmt(p.monto||0)+'</div></div>'
@@ -444,7 +555,7 @@ function crearFactura(pagoId){
       tel: ($('fac_cli_tel')&&$('fac_cli_tel').value)||'',
       direccion: ($('fac_cli_dir')&&$('fac_cli_dir').value)||''
     },
-    concepto: ($('fac_concepto')&&$('fac_concepto').value)||'Pago de cuota',
+    concepto: (($('fac_concepto')&&$('fac_concepto').value)||'').trim() || _facBuildConcepto(p, (S.creds||[]).find(function(x){ return x.id === p.cred; })),
     subtotal: p.monto||0,
     iva: 0,
     total: p.monto||0,

@@ -674,22 +674,53 @@ try {
 } catch(_cfgErr) { window._planesExtra = window._planesExtra || []; }
 
 
+// CATÁLOGO actualizado al 27/05/2026 — 41 motos en 3 sedes
+// Fuente: "Actualizacion de Precios.xlsx" (EK Bello Monte, Boleita, Toro Sabana Grande)
 const CATALOGO = [
-  {id:1,modelo:'NEW HORSE 150',precio:1320.00},
-  {id:2,modelo:'EK XPRESS 150',precio:1090.00},
-  {id:3,modelo:'EK XPRESS II 150',precio:1126.00},
-  {id:4,modelo:'EK XPRESS 200S',precio:1360.00},
-  {id:5,modelo:'EK XPRESS 150 LITE',precio:1020.00},
-  {id:6,modelo:'NEW OWEN II 150',precio:1255.00},
-  {id:7,modelo:'OWEN 200S',precio:1550.00},
-  {id:8,modelo:'RK 200',precio:1750.00},
-  {id:9,modelo:'RK 250',precio:2075.00},
-  {id:10,modelo:'TX 250 GS',precio:2599.00},
-  {id:11,modelo:'MATRIX 150 LITE',precio:1290.00},
-  {id:12,modelo:'MATRIX 150',precio:1499.00},
-  {id:13,modelo:'NEW OUTLOOK 175',precio:2450.00},
-  {id:14,modelo:'OUTLOOK XL PALETA',precio:4851.00},
-  {id:15,modelo:'ATLAS 200HD',precio:4600.00},
+  // ─── EK Bello Monte (17) ────────────────────────────────────
+  {id:1,  sede:'EK Bello Monte',     modelo:'NEW HORSE 150',       precio:1320.00},
+  {id:2,  sede:'EK Bello Monte',     modelo:'EK XPRESS 150',       precio:1099.00},
+  {id:3,  sede:'EK Bello Monte',     modelo:'EK XPRESS II 150',    precio:1126.00},
+  {id:4,  sede:'EK Bello Monte',     modelo:'EK XPRESS 200S',      precio:1360.00},
+  {id:5,  sede:'EK Bello Monte',     modelo:'EK XPRESS 150 LITE',  precio:1020.00},
+  {id:6,  sede:'EK Bello Monte',     modelo:'NEW OWEN II 150',     precio:1265.00},
+  {id:7,  sede:'EK Bello Monte',     modelo:'OWEN 200S',           precio:1550.00},
+  {id:8,  sede:'EK Bello Monte',     modelo:'RK 200',              precio:1750.00},
+  {id:9,  sede:'EK Bello Monte',     modelo:'RK 250',              precio:2075.00},
+  {id:10, sede:'EK Bello Monte',     modelo:'TX 250 GS',           precio:2650.00},
+  {id:11, sede:'EK Bello Monte',     modelo:'MATRIX 150 LITE',     precio:1290.00},
+  {id:12, sede:'EK Bello Monte',     modelo:'MATRIX 150',          precio:1550.00},
+  {id:13, sede:'EK Bello Monte',     modelo:'NEW OUTLOOK 175',     precio:2450.00},
+  {id:14, sede:'EK Bello Monte',     modelo:'OUTLOOK XL PALETA',   precio:4851.00},
+  {id:15, sede:'EK Bello Monte',     modelo:'ATLAS 200HD',         precio:4600.00},
+  {id:16, sede:'EK Bello Monte',     modelo:'OWEN 200S AMARILLO',  precio:1500.00},
+  {id:17, sede:'EK Bello Monte',     modelo:'ARSEN',               precio:1950.00},
+  // ─── Boleita (9) ────────────────────────────────────────────
+  {id:18, sede:'Boleita',            modelo:'LECHUZA I',           precio:1700.00},
+  {id:19, sede:'Boleita',            modelo:'LECHUZA II',          precio:1900.00},
+  {id:20, sede:'Boleita',            modelo:'CUERVO',              precio:1149.00},
+  {id:21, sede:'Boleita',            modelo:'CANARIO',             precio:1190.00},
+  {id:22, sede:'Boleita',            modelo:'FÉNIX 150',           precio:1450.00},
+  {id:23, sede:'Boleita',            modelo:'FÉNIX 200',           precio:1590.00},
+  {id:24, sede:'Boleita',            modelo:'ÁGUILA',              precio:980.00},
+  {id:25, sede:'Boleita',            modelo:'CÓNDOR',              precio:1190.00},
+  {id:26, sede:'Boleita',            modelo:'TUCÁN II',            precio:1239.00},
+  // ─── Toro Sabana Grande (15) ────────────────────────────────
+  {id:27, sede:'Toro Sabana Grande', modelo:'JAGUAR 150',          precio:1090.00},
+  {id:28, sede:'Toro Sabana Grande', modelo:'TRX150 RAYO',         precio:1050.00},
+  {id:29, sede:'Toro Sabana Grande', modelo:'TRX150 PALETA',       precio:1070.00},
+  {id:30, sede:'Toro Sabana Grande', modelo:'LEÓN 200',            precio:1320.00},
+  {id:31, sede:'Toro Sabana Grande', modelo:'REX 150',             precio:1520.00},
+  {id:32, sede:'Toro Sabana Grande', modelo:'REX 250',             precio:2090.00},
+  {id:33, sede:'Toro Sabana Grande', modelo:'REX 250 MT',          precio:2100.00},
+  {id:34, sede:'Toro Sabana Grande', modelo:'R3X',                 precio:2590.00},
+  {id:35, sede:'Toro Sabana Grande', modelo:'MOKA',                precio:1295.00},
+  {id:36, sede:'Toro Sabana Grande', modelo:'FOX',                 precio:1850.00},
+  {id:37, sede:'Toro Sabana Grande', modelo:'POWER',               precio:1880.00},
+  {id:38, sede:'Toro Sabana Grande', modelo:'TANK III',            precio:2500.00},
+  {id:39, sede:'Toro Sabana Grande', modelo:'TANK',                precio:1920.00},
+  {id:40, sede:'Toro Sabana Grande', modelo:'CAPPUCINO',           precio:1890.00},
+  {id:41, sede:'Toro Sabana Grande', modelo:'TYPHOON',             precio:1690.00}
 ];
 
 // Calculos financieros y helpers de planes movidos a logic/financiero.js.

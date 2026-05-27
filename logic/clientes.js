@@ -40,7 +40,12 @@ function clienteBadgesHTML(c){
   var estados=getClienteEstados(c).estados;
   if(!estados.length) estados=['lead'];
   var labels={lead:'Lead',activo:'Activo',mora:'En mora',completado:'Completado'};
-  return estados.map(function(s){ return '<span class="bdg '+sbg(s)+'">'+labels[s]+'</span>'; }).join(' ');
+  var html = estados.map(function(s){ return '<span class="bdg '+sbg(s)+'">'+labels[s]+'</span>'; }).join(' ');
+  // Badge especial para leads que llegan desde la web pública
+  if(c && c.origen === 'web'){
+    html += ' <span class="bdg" style="background:rgba(37,99,235,.14);color:#2563EB;border:1px solid rgba(37,99,235,.30);font-weight:800;letter-spacing:.04em;text-transform:uppercase;font-size:9.5px;">◆ Lead web</span>';
+  }
+  return html;
 }
 function renderClienteList(q=''){
   const estadoFiltro = S.clienteEstadoFiltro || 'todos';
