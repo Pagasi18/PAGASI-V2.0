@@ -76,6 +76,29 @@ function _wzDocLabel(id){ return (_wzDocDefs[id]&&_wzDocDefs[id].label)||id; }
 // SISTEMA LIBRE DE DOCUMENTOS — compartido por wizard y tarjeta cliente
 // ══════════════════════════════════════════════════════════════════
 
+// ── Abrir un documento pidiendo la URL fresca al Storage de V2 (Opción C de migración) ──
+// Usa el path guardado para regenerar la URL en el bucket actual. Cae a la URL guardada si falla.
+function _abrirDocFresco(path, urlVieja){
+  // Documentos locales (data: o local://) se abren directo con su url guardada
+  if(!path || path.indexOf('local://')===0 || (urlVieja||'').indexOf('data:')===0){
+    if(urlVieja) window.open(urlVieja, '_blank', 'noopener');
+    return;
+  }
+  if(typeof storage === 'undefined' || !storage || typeof storage.ref !== 'function'){
+    if(urlVieja) window.open(urlVieja, '_blank', 'noopener');
+    return;
+  }
+  // Abrir una pestaña inmediatamente (evita bloqueo de pop-ups) y luego redirigir
+  var win = window.open('', '_blank', 'noopener');
+  storage.ref().child(path).getDownloadURL().then(function(url){
+    if(win) win.location = url; else window.open(url, '_blank', 'noopener');
+  }).catch(function(){
+    // Si falla (archivo no está en V2 o error), usar la url vieja como respaldo
+    if(win){ if(urlVieja) win.location = urlVieja; else win.close(); }
+    else if(urlVieja) window.open(urlVieja, '_blank', 'noopener');
+  });
+}
+
 // ── HTML del bloque en la tarjeta de cliente ──
 function _docLibreClienteHtml(c){
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
@@ -97,7 +120,7 @@ function _docLibreClienteHtml(c){
         + '<div style="font-weight:700;color:var(--ink);font-size:12px">' + esc(d.label||d.name||'Documento') + badge + '</div>'
         + '<div class="tds" style="font-size:10px">' + esc(d.name||'Archivo') + (d.size?' · '+Math.round(d.size/1024)+'KB':'') + (d.uploadedAt?' · '+fmtFechaHora(d.uploadedAt):'') + '</div>'
         + '</div>'
-        + (d.url ? '<a class="btn btn-xs btn-g" href="'+d.url+'" target="_blank" rel="noopener" download="'+(d.name||'').replace(/"/g,'&quot;')+'">Abrir</a>' : '')
+        + (d.url || d.path ? '<button class="btn btn-xs btn-g" onclick="_abrirDocFresco(\''+String(d.path||'').replace(/'/g,"\\'")+'\',\''+String(d.url||'').replace(/'/g,"\\'")+'\')">Abrir</button>' : '')
         + '<button class="btn btn-xs btn-d" onclick="_cliDocDelete(\''+cliId+'\',\''+d.id+'\')">✕</button>'
         + '</div>';
     }).join('');
@@ -157,7 +180,7 @@ function _docLibreWizardHtml(){
             + '<div style="font-size:16px">📄</div>'
             + '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--ink)">'+esc(d.label||d.name||'Documento')+'</div>'
             + '<div style="font-size:10px;color:var(--ink3)">'+esc(d.name||'Archivo')+(d.size?' · '+Math.round(d.size/1024)+'KB':'')+'</div></div>'
-            + (d.url?'<a href="'+d.url+'" target="_blank" style="font-size:11px;color:var(--p1);font-weight:700">Abrir</a>':'')
+            + (d.url||d.path?'<button onclick="_abrirDocFresco(\''+String(d.path||'').replace(/'/g,"\\'")+'\',\''+String(d.url||'').replace(/'/g,"\\'")+'\')" style="font-size:11px;color:var(--p1);font-weight:700;background:none;border:none;cursor:pointer;padding:0">Abrir</button>':'')
             + '</div>';
         }).join('')
       + '</div>';
@@ -226,7 +249,7 @@ function _docLibreWizardRefreshList(){
       + '<div style="font-size:16px">📄</div>'
       + '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--ink)">'+esc(d.label||d.name||'Documento')+'</div>'
       + '<div style="font-size:10px;color:var(--ink3)">'+esc(d.name||'Archivo')+(d.size?' · '+Math.round(d.size/1024)+'KB':'')+'</div></div>'
-      + (d.url?'<a href="'+d.url+'" target="_blank" style="font-size:11px;color:var(--p1);font-weight:700">Abrir</a>':'')
+      + (d.url||d.path?'<button onclick="_abrirDocFresco(\''+String(d.path||'').replace(/'/g,"\\'")+'\',\''+String(d.url||'').replace(/'/g,"\\'")+'\')" style="font-size:11px;color:var(--p1);font-weight:700;background:none;border:none;cursor:pointer;padding:0">Abrir</button>':'')
       + '</div>';
   }).join('');
 }
