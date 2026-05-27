@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
-<head><!-- PAGASI-BUILD-20260516-v9 -->
+<head><!-- PAGASI-BUILD-REDISENO-LIMPIO-26MAY -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
@@ -18,7 +18,7 @@
 
 
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Nunito+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/pagasi.css?v=20260526-clean">
+<link rel="stylesheet" href="assets/pagasi.css?v=20260526-forms">
 <script charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
@@ -44,7 +44,7 @@
     </div>
     <button class="login-btn" onclick="doLogin()">Ingresar →</button>
     <div class="login-err" id="login-err">Usuario o contraseña incorrectos</div>
-    <div class="login-footer">Pagasi · Sistema interno · v18.0<br><span id="login-mode" style="font-size:9px;opacity:0.5">Firebase Auth</span></div>
+    <div class="login-footer">Pagasi · Sistema interno · v18.0<br><span id="login-mode" style="font-size:9px;opacity:0.5">Firebase Auth</span><br><span style="display:inline-block;margin-top:6px;font-size:9px;font-weight:800;color:#2563EB;background:rgba(37,99,235,0.1);padding:3px 9px;border-radius:20px;letter-spacing:0.5px">✓ REDISEÑO LIMPIO 26-MAY</span></div>
   </div>
 </div>
 
@@ -175,18 +175,18 @@
 <!-- ── MOBILE BOTTOM NAV BAR ── -->
 <div id="mob-bottom-bar">
   <button class="mbb-btn on" id="mbb-dash" onclick="nav('dash');mbbSelect('dash')">
-    <span class="mbb-ic">DB</span>
+    <span class="mbb-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></span>
     <span>Inicio</span>
   </button>
   <button class="mbb-btn" id="mbb-clientes" onclick="nav('clientes');mbbSelect('clientes')">
-    <span class="mbb-ic">CLI</span>
+    <span class="mbb-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/><path d="M16 3.5a3 3 0 0 1 0 6"/><path d="M21 20v-1a5 5 0 0 0-3-4.5"/></svg></span>
     <span>Clientes</span>
   </button>
   <div class="mbb-add">
     <button onclick="openAddCred()" title="Nueva Solicitud">＋</button>
   </div>
   <button class="mbb-btn" id="mbb-creditos" onclick="nav('creditos');mbbSelect('creditos')">
-    <span class="mbb-ic">FIN</span>
+    <span class="mbb-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h3"/></svg></span>
     <span>Créditos</span>
   </button>
   <button class="mbb-btn" id="mbb-more" onclick="openMobileMenu()">
