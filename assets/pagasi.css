@@ -1511,9 +1511,10 @@ tbody tr:hover td {
 .cf-kpi.is-r .cf-kpi-v{color:var(--red)}
 .cf-kpi.is-a .cf-kpi-v{color:var(--amber)}
 
-.cf-tabs{display:flex;gap:2px;padding:4px;background:var(--surf2);border-radius:10px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none}
+.cf-tabs{display:flex;gap:2px;padding:4px;background:var(--surf2);border-radius:10px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;position:relative;background-image:linear-gradient(to right,var(--surf2),var(--surf2)),linear-gradient(to right,var(--surf2),var(--surf2)),linear-gradient(to right,rgba(0,0,0,.10),rgba(0,0,0,0)),linear-gradient(to left,rgba(0,0,0,.10),rgba(0,0,0,0));background-position:left center,right center,left center,right center;background-repeat:no-repeat;background-size:20px 100%,20px 100%,12px 100%,12px 100%;background-attachment:local,local,scroll,scroll}
 .cf-tabs::-webkit-scrollbar{display:none}
-.cf-tab{flex-shrink:0;border:none;background:transparent;color:var(--ink3);font-weight:700;font-size:12px;padding:8px 14px;border-radius:7px;cursor:pointer;transition:.15s ease;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.cf-tabs::after{content:"";flex:0 0 4px}
+.cf-tab{flex-shrink:0;border:none;background:transparent;color:var(--ink3);font-weight:700;font-size:12px;padding:8px 10px;border-radius:7px;cursor:pointer;transition:.15s ease;white-space:nowrap;display:flex;align-items:center;gap:5px}
 .cf-tab:hover{color:var(--ink2)}
 .cf-tab.is-active{background:var(--surf);color:var(--ink);box-shadow:0 1px 3px rgba(15,23,42,.08)}
 .cf-tab-count{background:var(--ink3);color:var(--surf);font-size:9.5px;font-weight:900;padding:1px 6px;border-radius:999px;min-width:16px;text-align:center}
