@@ -491,27 +491,30 @@ function motoSvg(modelo, cat){
 }
 
 // Mapping modelo → archivo de imagen real (en assets/motos/)
+// Keys normalizadas (lowercase, sin espacios extras) para evitar problemas de case
 const MOTO_IMG = {
-  'New Horse 150':       'assets/motos/new-horse-150.jpg',
-  'EK Xpress 150':       'assets/motos/ek-xpress-150.jpg',
-  'EK Xpress II 150':    'assets/motos/ek-xpress-ii-150.jpg',
-  'EK Xpress 200S':      'assets/motos/ek-xpress-200s.jpg',
-  'EK Xpress 150 Lite':  'assets/motos/ek-xpress-150-lite.jpg',
-  'New Owen II 150':     'assets/motos/new-owen-ii-150.jpg',
-  'Owen 200S':           'assets/motos/owen-200s.jpg',
-  'Owen 200S Amarillo':  'assets/motos/owen-200s-amarillo.jpg',
-  'RK 200':              'assets/motos/rk-200.jpg',
-  'RK 250':              'assets/motos/rk-250.jpg',
-  'TX 250 GS':           'assets/motos/tx-250-gs.jpg',
-  'Matrix 150':          'assets/motos/matrix-150.png',
-  'Matrix 150 Lite':     'assets/motos/matrix-150-lite.jpg',
-  'New Outlook 175':     'assets/motos/new-outlook-175.jpg',
-  'Outlook XL Paleta':   'assets/motos/outlook-xl-paleta.jpg',
-  'Atlas 200HD':         'assets/motos/atlas-200hd.jpg',
-  'Arsen':               'assets/motos/arsen.png'
+  'new horse 150':       'assets/motos/new-horse-150.jpg',
+  'ek xpress 150':       'assets/motos/ek-xpress-150.jpg',
+  'ek xpress ii 150':    'assets/motos/ek-xpress-ii-150.jpg',
+  'ek xpress 200s':      'assets/motos/ek-xpress-200s.jpg',
+  'ek xpress 150 lite':  'assets/motos/ek-xpress-150-lite.jpg',
+  'new owen ii 150':     'assets/motos/new-owen-ii-150.jpg',
+  'owen 200s':           'assets/motos/owen-200s.jpg',
+  'owen 200s amarillo':  'assets/motos/owen-200s-amarillo.jpg',
+  'rk 200':              'assets/motos/rk-200.jpg',
+  'rk 250':              'assets/motos/rk-250.jpg',
+  'tx 250 gs':           'assets/motos/tx-250-gs.jpg',
+  'matrix 150':          'assets/motos/matrix-150.png',
+  'matrix 150 lite':     'assets/motos/matrix-150-lite.jpg',
+  'new outlook 175':     'assets/motos/new-outlook-175.jpg',
+  'outlook xl paleta':   'assets/motos/outlook-xl-paleta.jpg',
+  'atlas 200hd':         'assets/motos/atlas-200hd.jpg',
+  'arsen':               'assets/motos/arsen.png'
 };
 function motoImgFor(modelo){
-  return MOTO_IMG[modelo] || '';
+  if(!modelo) return '';
+  var k = String(modelo).toLowerCase().replace(/\s+/g,' ').trim();
+  return MOTO_IMG[k] || '';
 }
 
 function renderMotos(sedeFilter){
