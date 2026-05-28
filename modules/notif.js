@@ -24,7 +24,7 @@ PG.notif = function(){
     var btn=$('notif-send-btn');
     if(btn) btn.onclick=function(){ enviarNotificaciones(); };
     var tipoSel=$('notif-tipo');
-    if(tipoSel) tipoSel.onchange=function(){ actualizarPreviewNotif(); actualizarTipoDesc(); };
+    if(tipoSel) tipoSel.onchange=function(){ setNotifTipo(this.value); };
     var destSel=$('notif-dest');
     if(destSel) destSel.onchange=function(){ actualizarPreviewNotif(); };
     if(typeof nxAcUpdateHint==='function') nxAcUpdateHint();
@@ -40,6 +40,7 @@ PG.notif = function(){
     .nf2{display:grid;grid-template-columns:1fr;gap:14px}
     .nf2-cfg{background:#fff;border:1px solid var(--rim);border-radius:14px;padding:16px 18px;display:grid;grid-template-columns:1.4fr 1fr;gap:18px;align-items:start}
     @media(max-width:860px){.nf2-cfg{grid-template-columns:1fr}}
+    .nf2-cfg.nf2-cfg-solo{grid-template-columns:1fr;max-width:640px}
     .nf2-cfg-section{display:flex;flex-direction:column;gap:10px;min-width:0}
     .nf2-label{font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;gap:7px}
     .nf2-label::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--p1);display:inline-block}
@@ -121,27 +122,10 @@ PG.notif = function(){
 
   <div class="nf2">
 
-    <!-- ░░░ CONFIG: grupo + plantilla en UNA fila ░░░ -->
-    <div class="nf2-cfg">
+    <!-- ░░░ CONFIG: SOLO mensaje. El grupo se infiere automáticamente. ░░░ -->
+    <div class="nf2-cfg nf2-cfg-solo">
       <div class="nf2-cfg-section">
-        <div class="nf2-label">1 · ¿A quién le escribes?</div>
-        <div class="nf2-grp" id="notif-dest-quick">
-          <button type="button" class="nf2-grp-chip nx-seg is-active" data-dest="leads" onclick="setNotifDestQuick('leads')">Leads <span class="nf2-n nx-seg-count" id="nx-c-leads">0</span></button>
-          <button type="button" class="nf2-grp-chip nx-seg" data-dest="activos" onclick="setNotifDestQuick('activos')">Activos <span class="nf2-n nx-seg-count" id="nx-c-activos">0</span></button>
-          <button type="button" class="nf2-grp-chip nx-seg" data-dest="proximas" onclick="setNotifDestQuick('proximas')">Cuota próxima <span class="nf2-n nx-seg-count" id="nx-c-proximas">0</span></button>
-          <button type="button" class="nf2-grp-chip nx-seg" data-dest="mora" onclick="setNotifDestQuick('mora')">En mora <span class="nf2-n nx-seg-count" id="nx-c-mora">0</span></button>
-        </div>
-        <select class="fs" id="notif-dest" style="display:none">
-          <option value="leads">Leads sin cuenta activa</option>
-          <option value="activos">Clientes activos con cuenta</option>
-          <option value="proximas">Clientes con cuota esta semana</option>
-          <option value="mora">Clientes en mora</option>
-          <option value="especifico">Cliente específico</option>
-        </select>
-      </div>
-
-      <div class="nf2-cfg-section">
-        <div class="nf2-label">2 · ¿Qué mensaje?</div>
+        <div class="nf2-label">Mensaje a enviar</div>
         <div class="nf2-sel">
           <select id="notif-tipo" onchange="setNotifTipo(this.value)">
             <optgroup label="Bienvenida">
@@ -169,9 +153,24 @@ PG.notif = function(){
         </div>
         <div id="notif-tipo-desc" class="nf2-desc">Selecciona una plantilla para ver su descripción.</div>
         <div id="notif-custom-wrap" class="nf2-custom" style="display:none">
-          <div class="nf2-custom-vars">Variables: <code>{nombre}</code> <code>{cuota}</code> <code>{mora}</code> <code>{modelo}</code> <code>{cuenta}</code> <code>{empresa}</code> <code>{saldo}</code> <code>{cuotaNum}</code> <code>{totalCuotas}</code> <code>{fechaProx}</code></div>
+          <div class="nf2-custom-vars">Variables: <code>{nombre}</code> <code>{cuota}</code> <code>{mora}</code> <code>{modelo}</code> <code>{cuenta}</code> <code>{empresa}</code> <code>{cuotaNum}</code> <code>{totalCuotas}</code> <code>{fechaProx}</code></div>
           <textarea class="fta" id="notif-msg" rows="3" placeholder="Estimado/a {nombre}, le recordamos su próxima cuota de {cuota} con fecha {fechaProx}..."></textarea>
         </div>
+      </div>
+      <!-- select de destino oculto, lo setea setNotifTipo automáticamente -->
+      <select class="fs" id="notif-dest" style="display:none">
+        <option value="leads">Leads sin cuenta activa</option>
+        <option value="activos">Clientes activos con cuenta</option>
+        <option value="proximas">Clientes con cuota esta semana</option>
+        <option value="mora">Clientes en mora</option>
+        <option value="especifico">Cliente específico</option>
+      </select>
+      <!-- chips ocultos para compatibilidad con código viejo que lee data-dest -->
+      <div id="notif-dest-quick" style="display:none">
+        <button type="button" data-dest="leads" class="nx-seg"><span class="nx-seg-count" id="nx-c-leads">0</span></button>
+        <button type="button" data-dest="activos" class="nx-seg"><span class="nx-seg-count" id="nx-c-activos">0</span></button>
+        <button type="button" data-dest="proximas" class="nx-seg"><span class="nx-seg-count" id="nx-c-proximas">0</span></button>
+        <button type="button" data-dest="mora" class="nx-seg"><span class="nx-seg-count" id="nx-c-mora">0</span></button>
       </div>
     </div>
 

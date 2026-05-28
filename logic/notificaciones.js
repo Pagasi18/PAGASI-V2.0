@@ -102,6 +102,36 @@ function setNotifTipo(tipo){
     var names={lead_bienvenida:'Bienvenida Lead',bienvenida_activo:'Cliente activo',cuota:'Recordatorio cuota',confirmado:'Pago recibido',cuenta:'Estado de cuenta',mora:'Aviso de mora',mora_grave:'Mora urgente',acuerdo:'Acuerdo de pago',liquidacion:'Liquidación',vencimiento:'Vencimiento',custom:'Personalizado'};
     counter.textContent = names[tipo] || 'Selecciona una';
   }
+  // Auto-deducir el grupo destinatario según la plantilla
+  var mapaDest = {
+    lead_bienvenida: 'leads',
+    bienvenida_activo: 'activos',
+    cuota: 'proximas',
+    confirmado: 'activos',
+    cuenta: 'activos',
+    mora: 'mora',
+    mora_grave: 'mora',
+    acuerdo: 'mora',
+    liquidacion: 'activos',
+    vencimiento: 'activos',
+    custom: 'activos'
+  };
+  var destAuto = mapaDest[tipo] || 'activos';
+  var destSel = $('notif-dest');
+  // Solo cambiamos si NO hay una elección de cliente específico ya en curso
+  var clientePicked = $('notif-cliente-sel-id');
+  var hayPicked = clientePicked && clientePicked.value;
+  if(destSel && !hayPicked){
+    destSel.value = destAuto;
+    if(typeof nxAcUnpick === 'function') nxAcUnpick(true);
+    if(typeof _nxAcScope !== 'undefined') _nxAcScope = 'group';
+    if(typeof nxAcUpdateHint === 'function') nxAcUpdateHint();
+    if(typeof nxAcGetClientsForScope === 'function' && typeof nxAcRender === 'function'){
+      _nxAcResults = nxAcGetClientsForScope();
+      nxAcRender();
+    }
+    if(typeof actualizarContadoresNotif === 'function') actualizarContadoresNotif();
+  }
   actualizarTipoDesc();
   actualizarPreviewNotif();
 }
@@ -129,15 +159,15 @@ function actualizarTipoDesc(){
   var descs={
     lead_bienvenida:'Mensaje formal de bienvenida para leads que dejaron sus datos. Presenta la empresa y anuncia el contacto de un asesor.',
     bienvenida_activo:'Mensaje de bienvenida para clientes ya activos con datos de su plan de cuotas.',
-    mora:'Notifica el atraso con datos completos: cuenta, cuota N°, días de mora, saldo pendiente y fecha de vencimiento.',
-    mora_grave:'Aviso de carácter urgente para cuentas con mora prolongada. Menciona inicio de proceso de recuperación si no regulariza.',
-    cuota:'Recordatorio corto y comercial por WhatsApp, sin saldo pendiente ni texto administrativo.',
-    confirmado:'Confirma la recepción del pago, actualiza el saldo pendiente y comunica la próxima fecha de vencimiento.',
-    cuenta:'Estado de cuenta completo: cuotas pagadas, restantes, porcentaje avanzado, saldo, mora y fecha fin de contrato.',
+    mora:'Notifica el atraso con datos de cuenta, cuota N°, días de mora y fecha de vencimiento.',
+    mora_grave:'Aviso urgente para cuentas con mora prolongada. Menciona inicio de proceso de recuperación.',
+    cuota:'Recordatorio corto con el monto y fecha de la próxima cuota del cliente.',
+    confirmado:'Confirma la recepción del pago y comunica la próxima fecha de vencimiento.',
+    cuenta:'Estado de cuenta: cuotas pagadas, restantes, porcentaje avanzado, mora y fecha fin de contrato.',
     acuerdo:'Formaliza por escrito el acuerdo de pago acordado verbalmente con el cliente.',
-    liquidacion:'Ofrece al cliente la posibilidad de liquidar anticipadamente con información del saldo total.',
+    liquidacion:'Ofrece al cliente la posibilidad de liquidar anticipadamente su contrato.',
     vencimiento:'Alerta cuando el contrato se acerca a su fecha final con cuotas pendientes.',
-    custom:'Redacte su propio mensaje. Variables disponibles: {nombre} {cuota} {mora} {modelo} {cuenta} {empresa} {saldo} {cuotaNum} {totalCuotas} {fechaProx}'
+    custom:'Redacte su propio mensaje. Variables: {nombre} {cuota} {mora} {modelo} {cuenta} {empresa} {cuotaNum} {totalCuotas} {fechaProx}'
   };
   if(desc) desc.textContent=descs[tipo]||descs.custom;
   if(customWrap) customWrap.style.display=(tipo==='custom')?'block':'none';
@@ -231,6 +261,17 @@ function nxAcGetAllClients(){
     if(c.eliminado) return;
     var creds = (typeof getCreditosCliente==='function') ? getCreditosCliente(c) : [];
     var cr = creds.find(function(x){ return x.estado==='activo'||x.estado==='mora'; });
+    // Calcular días hasta la próxima cuota si está activo
+    var diasProx = null;
+    if(cr && cr.fecha){
+      try {
+        var cuotasPag = (typeof getCreditoCuotasPagadas==='function') ? getCreditoCuotasPagadas(cr) : (cr.pagado||0);
+        var inicio = new Date(cr.fecha);
+        var siguiente = new Date(inicio.getTime() + ((cuotasPag+1) * 15 * 24 * 60 * 60 * 1000));
+        var hoy = new Date(); hoy.setHours(0,0,0,0);
+        diasProx = Math.ceil((siguiente - hoy) / (24*60*60*1000));
+      } catch(e){ diasProx = null; }
+    }
     out.push({
       id: c.id,
       nombre: c.nombre || '',
@@ -239,7 +280,8 @@ function nxAcGetAllClients(){
       cuenta: cr ? cr.id : '',
       isActivo: !!cr,
       modelo: cr ? cr.modelo : '',
-      mora: cr ? (cr.mora||0) : 0
+      mora: cr ? (cr.mora||0) : 0,
+      diasProxCuota: diasProx
     });
   });
   return out;
@@ -346,13 +388,28 @@ function nxAcRender(){
     else if(!c.isActivo) meta.push('Lead');
     if(c.tel) meta.push(c.tel);
     else meta.push('sin teléfono');
-    if(c.mora>0) meta.push(c.mora+'d mora');
+    // Badge de días: mora si hay, sino días hasta próxima cuota
+    var diasBadge = '';
+    if(c.mora>0){
+      diasBadge = '<span style="background:#FCEBEB;color:#E8335A;font-size:10px;font-weight:800;padding:3px 8px;border-radius:50px;border:1px solid #F5C9D2;flex-shrink:0;letter-spacing:.02em;line-height:1.3" title="Días de mora">'+c.mora+'d mora</span>';
+    } else if(c.isActivo && c.diasProxCuota!=null){
+      var d = c.diasProxCuota;
+      var col, bgc, txt;
+      if(d < 0){ col='#E8335A'; bgc='#FCEBEB'; txt=Math.abs(d)+'d venc.'; }
+      else if(d === 0){ col='#BA7517'; bgc='#FAEEDA'; txt='vence hoy'; }
+      else if(d <= 3){ col='#BA7517'; bgc='#FAEEDA'; txt='en '+d+'d'; }
+      else if(d <= 7){ col='#2563EB'; bgc='#E6F1FB'; txt='en '+d+'d'; }
+      else { col='#00B876'; bgc='#E1F5EE'; txt='en '+d+'d'; }
+      diasBadge = '<span style="background:'+bgc+';color:'+col+';font-size:10px;font-weight:800;padding:3px 8px;border-radius:50px;border:1px solid '+col+'33;flex-shrink:0;letter-spacing:.02em;line-height:1.3" title="Días para próxima cuota">'+txt+'</span>';
+    }
     return '<div class="nx-ac-item" data-id="'+esc(c.id)+'" data-idx="'+idx+'" onclick="nxAcPick(\''+esc(c.id)+'\')" title="Click para enviar solo a este cliente">'
       + '<div class="nx-ac-avatar" style="'+(c.isActivo?'':'background:var(--ink3)')+'">'+esc(initials(c.nombre))+'</div>'
       + '<div class="nx-ac-body">'
       + '<div class="nx-ac-name">'+esc(c.nombre||'Sin nombre')+'</div>'
       + '<div class="nx-ac-meta">'+esc(meta.join(' · '))+'</div>'
-      + '</div></div>';
+      + '</div>'
+      + diasBadge
+      + '</div>';
   }
   var idxCounter = 0;
   if(activos.length && leads.length){
@@ -597,7 +654,6 @@ function buildMensajeNotif(tipo, d){
     'Cuotas rest. : '+cuotasRest,
     'Cuota quinc. : '+cuota,
     fechaProx ? 'Vence el : '+fechaProx : '',
-    saldoPend > 0 ? 'Saldo pend. : '+fmt(saldoPend) : '',
     totalPagado>0 ? 'Total pag. : '+fmt(totalPagado) : '',
     fechaVencFin ? 'Fin contrato : '+fechaVencFin : '',
     mora > 0 ? 'Dias de mora : '+mora+' dia'+(mora!==1?'s':'') : '',
@@ -642,12 +698,14 @@ function buildMensajeNotif(tipo, d){
 
   if(tipo==='cuota'){
     return [
-      'Hola ' + nombre + ' ',
+      'Hola ' + nombre + ',',
       '',
-      'Te escribimos para recordarte tu cuota de la moto ️',
-      fechaProx ? 'Tu próxima fecha es el ' + fechaProx + '.' : 'Estamos atentos para ayudarte con tu pago.',
+      'Te recordamos tu próxima cuota de la moto:',
+      cuota ? '• Monto: ' + cuota : '',
+      fechaProx ? '• Fecha: ' + fechaProx : '',
+      cuotaNum && totalCuotas ? '• Cuota N°: ' + cuotaNum + ' de ' + totalCuotas : '',
       '',
-      'Escríbenos y la resolvemos rápido.',
+      'Escríbenos por aquí y la resolvemos rápido.',
       '',
       empresa.toUpperCase()
     ].filter(Boolean).join('\n');
@@ -750,11 +808,11 @@ function buildMensajeNotif(tipo, d){
       '',
       'Estimado/a '+nombre+':',
       '',
-      'Le informamos que su cuenta N° '+cred+' califica para una liquidacion anticipada de su saldo pendiente.',
+      'Le informamos que su cuenta N° '+cred+' califica para una liquidacion anticipada de su contrato.',
       '',
       bloqueHeader,
       '',
-      'Si desea cancelar el saldo total de '+fmt(saldoPend)+' antes del '+fechaVencFin+', comuniquese con nuestra oficina para recibir informacion sobre descuentos y condiciones especiales disponibles para usted.',
+      'Si desea cancelar su contrato anticipadamente antes del '+fechaVencFin+', comuniquese con nuestra oficina para recibir informacion sobre el monto a liquidar, descuentos y condiciones especiales disponibles para usted.',
       '',
       'Esta es una excelente oportunidad para liberarse de su compromiso antes de tiempo.',
       '',
@@ -772,7 +830,7 @@ function buildMensajeNotif(tipo, d){
       '',
       bloqueHeader,
       '',
-      'Tiene pendientes '+cuotasRest+' cuota'+(cuotasRest!==1?'s':'')+' por un total de '+fmt(saldoPend)+'. Le solicitamos asegurarse de mantener sus pagos al dia para completar su plan exitosamente.',
+      'Tiene pendientes '+cuotasRest+' cuota'+(cuotasRest!==1?'s':'')+' para completar su plan. Le solicitamos mantener sus pagos al dia para finalizar exitosamente su contrato.',
       '',
       'Para cualquier consulta, comuniquese con nuestra oficina.',
       '',
