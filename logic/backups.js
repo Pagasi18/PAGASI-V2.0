@@ -50,75 +50,148 @@ function exportarBackupJSON(){
   });
 }
 
+// ════════════════════════════════════════════════════════════════════════
+// IMPORTAR BACKUP — versión corregida
+// Arregla: escrituras silenciosas, sin batch, IDs nulos y errores ocultos.
+// ════════════════════════════════════════════════════════════════════════
 function importarBackupJSON(input){
-  var file=input.files&&input.files[0];
-  if(!file){return;}
-  var reader=new FileReader();
-  reader.onload=function(e){
+  var file = input.files && input.files[0];
+  if(!file){ return; }
+
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var data;
     try{
-      var data=JSON.parse(e.target.result);
-      if(!data.version||!data.clientes){
-        toast('Archivo inválido — no parece un backup de Pagasi','error');return;
-      }
-      var resumen = ' Esto reemplazará TODOS los datos actuales con el backup.\n\n'
-        + 'Clientes: '+(data.clientes||[]).length+'\n'
-        + 'Créditos: '+(data.creds||[]).length+'\n'
-        + 'Pagos: '+(data.pagos||[]).length+'\n'
-        + 'Motos: '+(data.motos||[]).length+'\n'
-        + 'Concesionarios: '+(data.concesionarios||[]).length+'\n'
-        + 'Tareas: '+(data.tareas||[]).length+'\n'
-        + (data.config ? 'Config: '+Object.keys(data.config).join(', ')+'\n' : '')
-        + '\n¿Continuar?';
-      if(!confirm(resumen)){input.value='';return;}
-
-      // Aplicar en memoria
-      S.clientes          = data.clientes          || [];
-      S.creds             = data.creds             || [];
-      S.pagos             = data.pagos             || [];
-      S.egresos           = data.egresos           || [];
-      S.movimientos       = data.movimientos       || [];
-      S.motos             = data.motos             || [];
-      S.concesionarios    = data.concesionarios    || [];
-      S.cuentasPendientes = data.cuentasPendientes || [];
-      S.facturas          = data.facturas          || [];
-      S.tareas            = data.tareas            || [];
-
-      // Guardar en Firebase si está conectado
-      if(db){
-        showLoader('Restaurando backup...','Guardando datos en Firebase');
-        var ops=[];
-        S.clientes.forEach(function(o){ops.push(DB.saveCliente(o)||Promise.resolve());});
-        S.creds.forEach(function(o){ops.push(DB.saveCred&&DB.saveCred(o)||Promise.resolve());});
-        S.pagos.forEach(function(o){ops.push(DB.savePago(o)||Promise.resolve());});
-        S.egresos.forEach(function(o){ops.push(DB.saveEgreso(o)||Promise.resolve());});
-        S.movimientos.forEach(function(o){ops.push(DB.saveMovimiento(o)||Promise.resolve());});
-        S.motos.forEach(function(o){ops.push(DB.saveMoto(o)||Promise.resolve());});
-        S.concesionarios.forEach(function(o){ops.push(DB.saveConcesionario&&DB.saveConcesionario(o)||Promise.resolve());});
-        S.cuentasPendientes.forEach(function(o){ops.push(DB.saveCuentaPendiente&&DB.saveCuentaPendiente(o)||Promise.resolve());});
-        S.facturas.forEach(function(o){ops.push(DB.saveFactura&&DB.saveFactura(o)||Promise.resolve());});
-        S.tareas.forEach(function(o){ops.push(DB.saveTarea&&DB.saveTarea(o)||Promise.resolve());});
-        // Restaurar config docs
-        if(data.config && db){
-          Object.keys(data.config).forEach(function(k){
-            if(data.config[k]) ops.push(db.collection('config').doc(k).set(data.config[k],{merge:true}));
-          });
-        }
-        // Restaurar usuarios (no sobreescribe auth, solo datos de perfil)
-        if(data.usuarios && data.usuarios.length && db){
-          data.usuarios.forEach(function(u){
-            if(u.uid) ops.push(db.collection('usuarios').doc(u.uid).set(u,{merge:true}));
-          });
-        }
-        Promise.all(ops.filter(Boolean)).then(function(){
-          hideLoader();nav(S.page);
-          toast('✓ Backup restaurado — '+S.clientes.length+' clientes, '+S.creds.length+' créditos, '+S.concesionarios.length+' concesionarios','success');
-        }).catch(function(err){hideLoader();toast('Error parcial al guardar: '+err.message,'error');});
-      } else {
-        nav(S.page);toast('✓ Backup cargado en memoria (sin Firebase)','success');
-      }
-    } catch(err){
+      data = JSON.parse(e.target.result);
+    }catch(err){
       toast('Error leyendo archivo: '+err.message,'error');
+      input.value=''; return;
     }
+    if(!data.version || !data.clientes){
+      toast('Archivo inválido — no parece un backup de Pagasi','error');
+      input.value=''; return;
+    }
+
+    var resumen = '⚠️ Esto REEMPLAZA todos los datos actuales con el backup.\n\n'
+      + 'Clientes: '+(data.clientes||[]).length+'\n'
+      + 'Créditos: '+(data.creds||[]).length+'\n'
+      + 'Pagos: '+(data.pagos||[]).length+'\n'
+      + 'Movimientos: '+(data.movimientos||[]).length+'\n'
+      + 'Egresos: '+(data.egresos||[]).length+'\n'
+      + 'Motos: '+(data.motos||[]).length+'\n'
+      + 'Concesionarios: '+(data.concesionarios||[]).length+'\n'
+      + 'Facturas: '+(data.facturas||[]).length+'\n'
+      + 'Tareas: '+(data.tareas||[]).length+'\n'
+      + (data.config ? 'Config: '+Object.keys(data.config).join(', ')+'\n' : '')
+      + '\n¿Continuar?';
+    if(!confirm(resumen)){ input.value=''; return; }
+
+    // ── 1) Cargar en memoria ──────────────────────────────────────────────
+    S.clientes          = data.clientes          || [];
+    S.creds             = data.creds             || [];
+    S.pagos             = data.pagos             || [];
+    S.egresos           = data.egresos           || [];
+    S.movimientos       = data.movimientos       || [];
+    S.motos             = data.motos             || [];
+    S.concesionarios    = data.concesionarios    || [];
+    S.cuentasPendientes = data.cuentasPendientes || [];
+    S.facturas          = data.facturas          || [];
+    S.tareas            = data.tareas            || [];
+
+    if(!db){
+      nav(S.page);
+      toast('✓ Backup cargado en memoria (sin Firebase)','success');
+      input.value=''; return;
+    }
+
+    // ── 2) Pausar listeners en vivo para que NO sobre-escriban ────────────
+    try{ if(typeof stopRealtime==='function') stopRealtime(); }catch(e){}
+
+    // ── 3) Colección → docId ──────────────────────────────────────────────
+    var idDe = function(o){ return o && o.id; };
+    var planes = [
+      { col:'clientes',          arr:S.clientes,          id:idDe },
+      { col:'creditos',          arr:S.creds,             id:idDe },
+      { col:'pagos',             arr:S.pagos,             id:idDe },
+      { col:'egresos',           arr:S.egresos,           id:idDe },
+      { col:'movimientos',       arr:S.movimientos,       id:idDe },
+      { col:'motos',             arr:S.motos,             id:idDe },
+      { col:'concesionarios',    arr:S.concesionarios,    id:idDe },
+      { col:'cuentasPendientes', arr:S.cuentasPendientes, id:idDe },
+      { col:'facturas',          arr:S.facturas,          id:idDe },
+      { col:'tareas',            arr:S.tareas,            id:idDe }
+    ];
+
+    // ── 4) Lista plana de operaciones {col, docId, data} ──────────────────
+    var ops = [];
+    var saltados = 0;
+    planes.forEach(function(p){
+      (p.arr||[]).forEach(function(o){
+        var raw = p.id(o);
+        if(raw === null || raw === undefined || raw === ''){ saltados++; return; }
+        var docId = String(raw);
+        if(docId.indexOf('/') !== -1 || docId === '.' || docId === '..'){ saltados++; return; }
+        ops.push({ col:p.col, docId:docId, data:clean(o) });
+      });
+    });
+    var usuarios = (data.usuarios||[]).filter(function(u){ return u && u.uid; });
+    var configKeys = data.config ? Object.keys(data.config).filter(function(k){ return data.config[k]; }) : [];
+
+    var totalDocs = ops.length + usuarios.length + configKeys.length;
+    showLoader('Restaurando backup...', 'Subiendo '+totalDocs+' documentos a Firebase');
+
+    // ── 5) Escribir en LOTES (batch) de 450 (límite Firestore = 500) ──────
+    var LOTE = 450;
+    function correrLotes(){
+      var batches = [];
+      for(var i=0; i<ops.length; i+=LOTE){
+        var slice = ops.slice(i, i+LOTE);
+        var b = db.batch();
+        slice.forEach(function(op){
+          b.set(db.collection(op.col).doc(op.docId), op.data, {merge:false});
+        });
+        batches.push(b);
+      }
+      if(usuarios.length || configKeys.length){
+        var bx = db.batch();
+        usuarios.forEach(function(u){
+          bx.set(db.collection('usuarios').doc(String(u.uid)), clean(u), {merge:true});
+        });
+        configKeys.forEach(function(k){
+          bx.set(db.collection('config').doc(k), data.config[k], {merge:true});
+        });
+        batches.push(bx);
+      }
+      var idx = 0;
+      function siguiente(){
+        if(idx >= batches.length){ return Promise.resolve(); }
+        var b = batches[idx++];
+        return b.commit().then(function(){
+          showLoader('Restaurando backup...', 'Lote '+idx+'/'+batches.length+' guardado');
+          return siguiente();
+        });
+      }
+      return siguiente();
+    }
+
+    correrLotes().then(function(){
+      try{ if(typeof startRealtime==='function') startRealtime(); }catch(e){}
+      return DB.load();
+    }).then(function(){
+      hideLoader();
+      nav(S.page);
+      var msg = '✓ Backup restaurado — '+S.clientes.length+' clientes, '
+              + S.creds.length+' créditos, '+S.concesionarios.length+' concesionarios';
+      if(saltados>0) msg += ' ('+saltados+' registros sin ID válido omitidos)';
+      toast(msg, 'success');
+    }).catch(function(err){
+      hideLoader();
+      try{ if(typeof startRealtime==='function') startRealtime(); }catch(e){}
+      console.error('IMPORT BACKUP FALLÓ:', err);
+      toast('❌ Falló la restauración: '+(err && (err.code||err.message) || err)
+            +'  — revisa la consola (F12)', 'error');
+    });
+
     input.value='';
   };
   reader.readAsText(file);
