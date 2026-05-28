@@ -13,11 +13,25 @@ var FIREBASE_CONFIG = {
   appId: '1:951911859002:web:1eb8f0af7bcbd508474603'
 };
 
-// ─── COTILLÓN / CONFETTI (canvas puro, sin libs externas) ───
-function dispararCotillon(){
-  // Crear canvas overlay
-  var existing = document.getElementById('cotillon-canvas');
-  if(existing) existing.remove();
+// ─── COTILLÓN / CONFETTI (canvas + card centrada cerrable) ───
+function dispararCotillon(nombre){
+  cerrarCotillon();
+  // Inject animation styles
+  if(!document.getElementById('cotillon-styles')){
+    var s = document.createElement('style');
+    s.id = 'cotillon-styles';
+    s.textContent = '@keyframes cotIn{0%{transform:translate(-50%,-50%) scale(.7);opacity:0}55%{transform:translate(-50%,-50%) scale(1.05);opacity:1}100%{transform:translate(-50%,-50%) scale(1)}}@keyframes cotBackdrop{0%{opacity:0}100%{opacity:1}}@keyframes cotCake{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-6px) rotate(2deg)}}@keyframes cotShine{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}';
+    document.head.appendChild(s);
+  }
+
+  // Backdrop oscuro
+  var backdrop = document.createElement('div');
+  backdrop.id = 'cotillon-backdrop';
+  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:99998;animation:cotBackdrop .4s ease forwards';
+  backdrop.onclick = cerrarCotillon;
+  document.body.appendChild(backdrop);
+
+  // Canvas confetti
   var canvas = document.createElement('canvas');
   canvas.id = 'cotillon-canvas';
   canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:99999';
@@ -25,94 +39,265 @@ function dispararCotillon(){
   canvas.height = window.innerHeight;
   document.body.appendChild(canvas);
   var ctx = canvas.getContext('2d');
-  var colors = ['#EC4899','#F97316','#FACC15','#22C55E','#3B82F6','#A855F7','#EF4444','#06B6D4'];
+  var colors = ['#EC4899','#F97316','#FACC15','#22C55E','#3B82F6','#A855F7','#EF4444','#06B6D4','#FB923C','#84CC16'];
   var partis = [];
-  // Disparar 4 ráfagas desde diferentes puntos
   function rafaga(originX, originY, vx0, vy0, cantidad){
     for(var i=0;i<cantidad;i++){
       partis.push({
         x: originX, y: originY,
         vx: vx0 + (Math.random()-.5)*4,
         vy: vy0 + (Math.random()-.5)*3 - 2,
-        size: 6 + Math.random()*6,
+        size: 6 + Math.random()*8,
         color: colors[Math.floor(Math.random()*colors.length)],
         rot: Math.random()*Math.PI*2,
         vrot: (Math.random()-.5)*.3,
-        shape: Math.random() > .5 ? 'sq' : 'cr',
+        shape: ['sq','cr','st'][Math.floor(Math.random()*3)],
         life: 1
       });
     }
   }
-  rafaga(canvas.width*.15, canvas.height*.7, 4, -8, 80);
-  rafaga(canvas.width*.85, canvas.height*.7, -4, -8, 80);
-  setTimeout(function(){ rafaga(canvas.width*.5, canvas.height*.85, 0, -10, 100); }, 350);
-  setTimeout(function(){ rafaga(canvas.width*.3, canvas.height*.6, 2, -7, 60); }, 700);
-  setTimeout(function(){ rafaga(canvas.width*.7, canvas.height*.6, -2, -7, 60); }, 800);
+  rafaga(canvas.width*.15, canvas.height*.75, 5, -10, 100);
+  rafaga(canvas.width*.85, canvas.height*.75, -5, -10, 100);
+  setTimeout(function(){ rafaga(canvas.width*.5, canvas.height*.9, 0, -12, 120); }, 300);
+  setTimeout(function(){ rafaga(canvas.width*.3, canvas.height*.65, 2, -8, 70); }, 700);
+  setTimeout(function(){ rafaga(canvas.width*.7, canvas.height*.65, -2, -8, 70); }, 800);
 
-  // Mensaje "FELIZ CUMPLEAÑOS"
-  var msgDiv = document.createElement('div');
-  msgDiv.innerHTML = '<div style="font-size:64px;font-weight:900;color:#fff;-webkit-text-stroke:2px #EC4899;text-shadow:0 8px 24px rgba(236,72,153,.55),0 2px 4px rgba(0,0,0,.2);letter-spacing:-2px;text-align:center;animation:cotillonScale .6s cubic-bezier(.34,1.56,.64,1)">🎉 ¡FELIZ CUMPLEAÑOS! 🎂</div><div style="font-size:18px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.4);margin-top:12px;font-weight:600;text-align:center">Que tengas un día increíble 🎈</div>';
-  msgDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100000;pointer-events:none;text-align:center;animation:cotillonFade 4s ease forwards';
-  // Inject animation styles
-  if(!document.getElementById('cotillon-styles')){
-    var s = document.createElement('style');
-    s.id = 'cotillon-styles';
-    s.textContent = '@keyframes cotillonScale{0%{transform:scale(.5);opacity:0}50%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}@keyframes cotillonFade{0%{opacity:0}10%{opacity:1}80%{opacity:1}100%{opacity:0}}';
-    document.head.appendChild(s);
-  }
-  document.body.appendChild(msgDiv);
-  setTimeout(function(){ if(msgDiv.parentNode) msgDiv.parentNode.removeChild(msgDiv); }, 4500);
+  // Card centrada con mensaje
+  var who = nombre || (typeof S !== 'undefined' && S.currentUser && S.currentUser.nombre) || '';
+  var primerNombre = who ? who.split(' ')[0] : '';
+  var card = document.createElement('div');
+  card.id = 'cotillon-card';
+  card.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100000;background:linear-gradient(145deg,#FFF7ED 0%,#FCE7F3 50%,#F3E8FF 100%);border-radius:32px;padding:0;width:90%;max-width:520px;box-shadow:0 30px 80px rgba(236,72,153,.32),0 0 0 1px rgba(255,255,255,.6);animation:cotIn .6s cubic-bezier(.34,1.56,.64,1) forwards;overflow:hidden';
+  card.innerHTML = ''
+    +'<div style="position:relative;padding:48px 32px 40px;text-align:center;overflow:hidden">'
+      +'<div style="position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.7) 50%,transparent 70%);animation:cotShine 2.5s ease-in-out infinite;pointer-events:none"></div>'
+      +'<button onclick="cerrarCotillon()" style="position:absolute;top:14px;right:14px;width:34px;height:34px;border:none;background:rgba(255,255,255,.7);border-radius:50%;cursor:pointer;font-size:18px;font-weight:700;color:#831843;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);box-shadow:0 4px 12px rgba(0,0,0,.08);z-index:2" aria-label="Cerrar">×</button>'
+      +'<div style="font-size:82px;line-height:1;margin-bottom:14px;animation:cotCake 2s ease-in-out infinite">🎂</div>'
+      +'<div style="font-size:11px;font-weight:800;letter-spacing:.32em;text-transform:uppercase;color:#BE185D;margin-bottom:10px">Cumpleaños</div>'
+      +'<div style="font-size:34px;font-weight:900;color:#831843;letter-spacing:-1.2px;line-height:1.05;margin-bottom:8px">¡Feliz cumpleaños'+(primerNombre?', '+primerNombre:'')+'!</div>'
+      +'<div style="font-size:14.5px;color:#9D174D;font-weight:500;line-height:1.55;max-width:380px;margin:0 auto 22px">Que este nuevo año te traiga muchos cobros puntuales, clientes satisfechos y motos vendidas. Todo el equipo Pagasi te desea lo mejor.</div>'
+      +'<button onclick="cerrarCotillon()" style="background:linear-gradient(135deg,#EC4899,#BE185D);color:#fff;border:none;padding:13px 32px;border-radius:50px;font-weight:800;font-size:14px;cursor:pointer;letter-spacing:.02em;box-shadow:0 8px 22px rgba(236,72,153,.42);transition:transform .15s">¡Gracias, a trabajar!</button>'
+    +'</div>';
+  document.body.appendChild(card);
 
   // Animar partículas
   var gravity = 0.18, drag = 0.992;
   var startTs = Date.now();
+  function drawStar(cx, cy, size){
+    ctx.beginPath();
+    for(var i=0;i<5;i++){
+      var ang = (Math.PI*2*i)/5 - Math.PI/2;
+      var ang2 = ang + Math.PI/5;
+      ctx.lineTo(cx + Math.cos(ang)*size, cy + Math.sin(ang)*size);
+      ctx.lineTo(cx + Math.cos(ang2)*size*.5, cy + Math.sin(ang2)*size*.5);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
   function frame(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
     var alive = 0;
-    for(var p of partis){
+    for(var i=0;i<partis.length;i++){
+      var p = partis[i];
       if(p.life <= 0) continue;
       alive++;
       p.vx *= drag; p.vy = p.vy*drag + gravity;
       p.x += p.vx; p.y += p.vy;
       p.rot += p.vrot;
       var elapsed = (Date.now() - startTs) / 1000;
-      p.life = Math.max(0, 1 - elapsed/5);
+      p.life = Math.max(0, 1 - elapsed/6);
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rot);
       ctx.globalAlpha = p.life;
       ctx.fillStyle = p.color;
-      if(p.shape === 'sq'){
-        ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
-      } else {
-        ctx.beginPath();
-        ctx.arc(0, 0, p.size/2, 0, Math.PI*2);
-        ctx.fill();
-      }
+      if(p.shape === 'sq'){ ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size); }
+      else if(p.shape === 'st'){ drawStar(0, 0, p.size/2); }
+      else { ctx.beginPath(); ctx.arc(0, 0, p.size/2, 0, Math.PI*2); ctx.fill(); }
       ctx.restore();
     }
-    if(alive > 0 && (Date.now() - startTs) < 6000){
+    if(document.getElementById('cotillon-canvas') && alive > 0 && (Date.now() - startTs) < 8000){
       requestAnimationFrame(frame);
     } else {
       if(canvas.parentNode) canvas.parentNode.removeChild(canvas);
     }
   }
   requestAnimationFrame(frame);
+
+  // Listener para Escape cierra el card
+  document.addEventListener('keydown', _cotillonEsc);
+}
+
+function _cotillonEsc(e){
+  if(e.key === 'Escape') cerrarCotillon();
+}
+
+function cerrarCotillon(){
+  ['cotillon-card','cotillon-backdrop','cotillon-canvas'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el && el.parentNode) el.parentNode.removeChild(el);
+  });
+  document.removeEventListener('keydown', _cotillonEsc);
+}
+
+// ─── EDITAR MI PERFIL (cumpleaños, nombre, teléfono) ───
+function profProfileChanged(){
+  var btn = document.getElementById('prof-save-btn');
+  if(btn) btn.style.display = 'inline-flex';
+}
+
+async function guardarMiPerfil(){
+  if(!S.currentUser || !S.currentUser.uid){
+    if(typeof toast==='function') toast('No estás logueado','error');
+    return;
+  }
+  var btn = document.getElementById('prof-save-btn');
+  var nombre = (document.getElementById('prof-nombre')||{}).value || '';
+  var cumple = (document.getElementById('prof-cumple')||{}).value || '';
+  var tel = (document.getElementById('prof-tel')||{}).value || '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Guardando…'; }
+
+  var update = {
+    nombre: nombre.trim(),
+    cumpleanos: cumple.trim(),
+    tel: tel.trim(),
+    actualizadoEn: new Date().toISOString()
+  };
+
+  try {
+    if(db){
+      await db.collection('usuarios').doc(S.currentUser.uid).set(update, {merge:true});
+    }
+    // Actualizar estado local también
+    Object.assign(S.currentUser, update);
+    // Actualizar sidebar si cambió el nombre
+    if(typeof updateSidebarFooter==='function') updateSidebarFooter();
+    if(typeof toast==='function') toast('✓ Perfil actualizado','success');
+    if(btn){ btn.style.display='none'; btn.disabled=false; btn.textContent='Guardar cambios'; }
+  } catch(e){
+    console.error('Error guardando perfil:', e);
+    if(typeof toast==='function') toast('Error: '+(e.message||e),'error');
+    if(btn){ btn.disabled=false; btn.textContent='Guardar cambios'; }
+  }
 }
 
 // ─── ROTAR TIP DEL DÍA manualmente ───
 function dashTipNext(){
   try {
     if(typeof PG === 'undefined' || !PG.dash) return;
-    // Forzar un tip aleatorio diferente al actual
     var key = '_tipOverride';
     var prev = window[key] || 0;
     var next = prev;
     while(next === prev) next = Math.floor(Math.random()*31);
     window[key] = next;
-    // Re-render
     if(typeof nav === 'function') nav('dash');
   } catch(e){}
+}
+
+// ─── TABS del card diario ───
+function dashDailyTab(t){
+  ['tip','chiste','dato','noticia'].forEach(function(k){
+    var btn = document.querySelector('.dly-tab[data-tab="'+k+'"]');
+    var pane = document.getElementById('dly-tab-'+k);
+    if(btn){
+      btn.classList.toggle('is-active', k === t);
+      btn.style.color = k === t ? 'var(--ink)' : 'var(--ink3)';
+      btn.style.fontWeight = k === t ? '800' : '700';
+      btn.style.borderBottomColor = k === t ? 'var(--p1)' : 'transparent';
+    }
+    if(pane) pane.style.display = k === t ? 'block' : 'none';
+  });
+  // Si es la primera vez que abren la tab, cargar contenido
+  if(t === 'chiste' || t === 'dato' || t === 'noticia'){
+    var key = '_dlyLoaded_'+t;
+    if(!window[key]){
+      window[key] = true;
+      dashDailyLoad(t, false);
+    }
+  }
+}
+
+// ─── CARGAR contenido del día desde APIs públicas ───
+async function dashDailyLoad(tipo, force){
+  var hoyKey = new Date().toISOString().slice(0,10);  // YYYY-MM-DD
+  var cacheKey = 'pgsDaily_'+tipo+'_'+hoyKey;
+  var textEl = document.getElementById('dly-'+tipo+'-text');
+  if(!textEl) return;
+
+  // Si NO force y hay cache de hoy, usarlo
+  if(!force){
+    try {
+      var cached = localStorage.getItem(cacheKey);
+      if(cached){ textEl.textContent = cached; return; }
+    } catch(e){}
+  }
+
+  textEl.textContent = 'Cargando…';
+
+  try {
+    var resultado = '';
+    if(tipo === 'chiste'){
+      // JokeAPI — multilenguaje, español, sin política/racismo
+      var r = await fetch('https://v2.jokeapi.dev/joke/Any?lang=es&type=single&blacklistFlags=nsfw,racist,sexist,political,religious,explicit');
+      var d = await r.json();
+      if(d.joke){ resultado = d.joke; }
+      else if(d.setup && d.delivery){ resultado = d.setup + ' — ' + d.delivery; }
+      else throw new Error('Sin chiste disponible');
+    }
+    else if(tipo === 'dato'){
+      // Useless Facts (inglés) → traducir o usar curated. Por ahora español curado + inglés.
+      var r = await fetch('https://uselessfacts.jsph.pl/api/v2/facts/random?language=en');
+      var d = await r.json();
+      if(d.text){
+        // Pequeño set de datos en español como fallback
+        var datosES = [
+          'El motor más pequeño jamás fabricado para una motocicleta tiene apenas 0.4 cc y cabe en una mano.',
+          'La primera motocicleta del mundo (1885) era de madera y solo alcanzaba 11 km/h.',
+          'Las motos representan el 70% del tráfico en muchas ciudades del sudeste asiático.',
+          'Los neumáticos de moto duran en promedio entre 12,000 y 25,000 km.',
+          'Una moto típica tiene más de 2,000 piezas distintas.',
+          'El récord de velocidad en moto es 605.7 km/h (Top 1 Ack Attack, 2010).',
+          'En Venezuela hay aproximadamente 4 millones de motos circulando.',
+          'Un motor de 4 tiempos completa el ciclo de combustión cada 720° de giro del cigüeñal.',
+          'La marca Honda fabrica más motos al año que cualquier otra: ~20 millones.',
+          'El motociclista promedio recorre 8,000 km al año en países urbanos.'
+        ];
+        resultado = datosES[Math.floor(Math.random()*datosES.length)];
+      } else throw new Error('Sin dato');
+    }
+    else if(tipo === 'noticia'){
+      // RSS de Google News para Venezuela vía rss2json (gratis, sin key)
+      var rssUrl = encodeURIComponent('https://news.google.com/rss?hl=es-419&gl=VE&ceid=VE:es-419');
+      var r = await fetch('https://api.rss2json.com/v1/api.json?rss_url='+rssUrl+'&count=5');
+      var d = await r.json();
+      if(d.items && d.items.length){
+        // Mostrar 3 titulares con link
+        var items = d.items.slice(0,3);
+        textEl.innerHTML = items.map(function(it){
+          var title = (it.title||'').replace(/<[^>]*>/g,'').slice(0,140);
+          var src = (it.author||'').slice(0,30);
+          return '<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--rim);last:border:none">'
+            +'<a href="'+(it.link||'#')+'" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:none;font-weight:700;line-height:1.35;display:block">'+title+'</a>'
+            +(src?'<div style="font-size:10.5px;color:var(--ink3);margin-top:3px">'+src+'</div>':'')
+          +'</div>';
+        }).join('');
+        try { localStorage.setItem(cacheKey, textEl.innerHTML); } catch(e){}
+        return;
+      } else throw new Error('Sin noticias');
+    }
+
+    textEl.textContent = resultado;
+    try { localStorage.setItem(cacheKey, resultado); } catch(e){}
+  } catch(err) {
+    console.warn('[daily-'+tipo+'] falla red:', err);
+    // Fallbacks locales
+    var fallbacks = {
+      chiste: '¿Por qué los programadores prefieren motos? Porque tienen "throw" y "catch" en cada curva.',
+      dato: 'Las motocicletas pueden inclinarse hasta 55° en una curva sin perder estabilidad si el motociclista lo hace correctamente.',
+      noticia: 'No se pudo cargar noticias en este momento. Verifica tu conexión a internet.'
+    };
+    textEl.textContent = fallbacks[tipo] || 'No disponible';
+  }
 }
 
 // ── Notas de Firestore (consola → Firestore → Reglas): ──────
@@ -2020,6 +2205,26 @@ function showAdminProfile() {
       + _profKpi('Solicitudes creadas', solCreadas, 'var(--amber)', 'SOL')
       + _profKpi('Clientes atendidos', misClientes, 'var(--green)', 'CLI')
       + _profKpi('Créditos activos', credsActivos, 'var(--p1)', 'ACT')
+    + '</div>'
+
+    // ── Mi información editable ──
+    + '<div class="card" style="margin-bottom:14px;padding:18px 20px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
+        + '<div><div style="font-size:14px;font-weight:800;color:var(--ink);letter-spacing:-.3px">Mi información</div>'
+        + '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">Datos que puedes editar tú mismo</div></div>'
+        + '<button id="prof-save-btn" class="btn btn-p btn-sm" onclick="guardarMiPerfil()" style="display:none">Guardar cambios</button>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">'
+        + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Nombre completo</label>'
+        +   '<input class="fi" id="prof-nombre" type="text" value="'+(user.nombre||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="Tu nombre completo"></div>'
+        + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Cumpleaños</label>'
+        +   '<input class="fi" id="prof-cumple" type="date" value="'+(user.cumpleanos||user.fechaNacimiento||'')+'" oninput="profProfileChanged()">'
+        +   '<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;line-height:1.4">Aparecerá en el dashboard cuando se acerque la fecha. El día que cumplas se lanzará un cotillón.</div></div>'
+        + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Teléfono</label>'
+        +   '<input class="fi" id="prof-tel" type="tel" value="'+(user.tel||user.telefono||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="+58 414 ..."></div>'
+        + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Email (no editable)</label>'
+        +   '<input class="fi" type="email" value="'+email+'" disabled style="background:var(--surf2);color:var(--ink3)"></div>'
+      + '</div>'
     + '</div>'
 
     // Chart: cobros últimas 12 semanas
