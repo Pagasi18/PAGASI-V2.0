@@ -622,14 +622,18 @@ function dispararCotillon(nombre, esTeammate, genero){
     tag:      '#1E40AF', titulo:'#1E3A8A', subtitulo:'#1D4ED8',
     closeCol: '#1E3A8A',
     btn:      'linear-gradient(135deg,#3B82F6,#1D4ED8)',
-    btnShadow:'0 8px 22px rgba(59,130,246,.42)'
+    btnShadow:'0 8px 22px rgba(59,130,246,.42)',
+    // Filtro para tintar el logo Pagasi de azul (original es violeta)
+    logoFilter:'brightness(0) saturate(100%) invert(20%) sepia(96%) saturate(2300%) hue-rotate(217deg) brightness(95%) contrast(98%) drop-shadow(0 6px 14px rgba(0,0,0,.18))'
   } : {
     bgCard:   'linear-gradient(145deg,#FFF7ED 0%,#FCE7F3 50%,#F3E8FF 100%)',
     shadow:   '0 30px 80px rgba(236,72,153,.32),0 0 0 1px rgba(255,255,255,.6)',
     tag:      '#BE185D', titulo:'#831843', subtitulo:'#9D174D',
     closeCol: '#831843',
     btn:      'linear-gradient(135deg,#EC4899,#BE185D)',
-    btnShadow:'0 8px 22px rgba(236,72,153,.42)'
+    btnShadow:'0 8px 22px rgba(236,72,153,.42)',
+    // Filtro para tintar el logo de rosa fuerte
+    logoFilter:'brightness(0) saturate(100%) invert(24%) sepia(92%) saturate(3500%) hue-rotate(316deg) brightness(94%) contrast(96%) drop-shadow(0 6px 14px rgba(0,0,0,.15))'
   };
 
   // Backdrop oscuro
@@ -692,9 +696,9 @@ function dispararCotillon(nombre, esTeammate, genero){
   var card = document.createElement('div');
   card.id = 'cotillon-card';
   card.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100000;background:'+palette.bgCard+';border-radius:32px;padding:0;width:90%;max-width:520px;box-shadow:'+palette.shadow+';animation:cotIn .6s cubic-bezier(.34,1.56,.64,1) forwards;overflow:hidden';
-  // Logo Pagasi (caballito/pegaso) en lugar de torta
+  // Logo Pagasi (caballito/pegaso) en lugar de torta — tintado según género
   var logoHTML = _logoSrc
-    ? '<div style="margin-bottom:14px;animation:cotCake 2s ease-in-out infinite;display:flex;justify-content:center"><img src="'+_logoSrc+'" alt="Pagasi" style="width:96px;height:auto;filter:drop-shadow(0 6px 14px rgba(0,0,0,.18))"></div>'
+    ? '<div style="margin-bottom:14px;animation:cotCake 2s ease-in-out infinite;display:flex;justify-content:center"><img src="'+_logoSrc+'" alt="Pagasi" style="width:96px;height:auto;filter:'+palette.logoFilter+'"></div>'
     : '<div style="font-size:82px;line-height:1;margin-bottom:14px;animation:cotCake 2s ease-in-out infinite">🐎</div>';
   card.innerHTML = ''
     +'<div style="position:relative;padding:48px 32px 40px;text-align:center;overflow:hidden">'
@@ -823,7 +827,7 @@ function _mostrarBienvenidaPerfil(faltantes, lsKey){
   var _logoEl = document.querySelector('.sb-logo img');
   var _logoSrc = (_logoEl && _logoEl.src) ? _logoEl.src : '';
   var logoHTML = _logoSrc
-    ? '<img src="'+_logoSrc+'" alt="Pagasi" style="width:64px;height:auto;margin:0 auto 14px;display:block;filter:drop-shadow(0 4px 10px rgba(0,0,0,.12))">'
+    ? '<img src="'+_logoSrc+'" alt="Pagasi" style="width:64px;height:auto;margin:0 auto 14px;display:block;filter:brightness(0) saturate(100%) invert(20%) sepia(96%) saturate(2300%) hue-rotate(217deg) brightness(95%) contrast(98%) drop-shadow(0 4px 10px rgba(0,0,0,.12))">'
     : '<div style="font-size:48px;text-align:center;margin-bottom:14px">🐎</div>';
 
   // Lista de faltantes
