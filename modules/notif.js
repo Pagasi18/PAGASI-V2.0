@@ -38,12 +38,12 @@ PG.notif = function(){
   // CSS limpio y compacto
   var styles = `<style>
     .nf2{display:grid;grid-template-columns:1fr;gap:14px}
-    /* Wrapper de config + preview lado a lado */
-    .nf2-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:14px;align-items:stretch}
-    @media(max-width:980px){.nf2-top{grid-template-columns:1fr}}
-    .nf2-cfg{background:#fff;border:1px solid var(--rim);border-radius:14px;padding:16px 18px;display:grid;grid-template-columns:1.4fr 1fr;gap:18px;align-items:start}
-    @media(max-width:860px){.nf2-cfg{grid-template-columns:1fr}}
-    .nf2-cfg.nf2-cfg-solo{grid-template-columns:1fr;max-width:none;height:100%}
+    /* Wrapper de 3 columnas iguales: config | lista | preview */
+    .nf2-top{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:stretch}
+    @media(max-width:1180px){.nf2-top{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:760px){.nf2-top{grid-template-columns:1fr}}
+    .nf2-cfg{background:#fff;border:1px solid var(--rim);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:14px;min-height:520px}
+    .nf2-cfg.nf2-cfg-solo{height:100%}
     .nf2-cfg-section{display:flex;flex-direction:column;gap:10px;min-width:0}
     .nf2-label{font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;gap:7px}
     .nf2-label::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--p1);display:inline-block}
@@ -60,7 +60,7 @@ PG.notif = function(){
     .nf2-sel optgroup{font-weight:800;color:var(--ink3);font-style:normal}
     .nf2-desc{font-size:11.5px;color:var(--ink3);padding:8px 12px;background:rgba(37,99,235,.06);border-left:3px solid var(--p1);border-radius:8px;line-height:1.5;min-height:18px}
     .nf2-body{display:flex;flex-direction:column;gap:14px}
-    .nf2-list{background:#fff;border:1px solid var(--rim);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;height:520px}
+    .nf2-list{background:#fff;border:1px solid var(--rim);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;height:520px;min-height:520px}
     .nf2-list-head{padding:12px 16px;background:linear-gradient(180deg,#FAFBFF,#F5F7FF);border-bottom:1px solid var(--rim);display:flex;justify-content:space-between;align-items:center;gap:10px}
     .nf2-list-t{font-size:13px;font-weight:800;color:var(--ink);letter-spacing:-.2px}
     .nf2-list-c{background:var(--p1);color:#fff;padding:3px 10px;border-radius:50px;font-size:11px;font-weight:800;letter-spacing:.04em}
@@ -81,7 +81,7 @@ PG.notif = function(){
     .nf2-list-foot a{color:var(--p1);font-weight:700;cursor:pointer;text-decoration:none}
     .nf2-list-foot a:hover{text-decoration:underline}
 
-    .nf2-prev{background:#fff;border:1px solid var(--rim);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:240px;height:100%}
+    .nf2-prev{background:#fff;border:1px solid var(--rim);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:520px;height:100%}
     .nf2-prev-h{padding:12px 16px;background:linear-gradient(180deg,#FAFBFF,#F5F7FF);border-bottom:1px solid var(--rim)}
     .nf2-prev-t{font-size:13px;font-weight:800;color:var(--ink);letter-spacing:-.2px}
     .nf2-prev-s{font-size:10.5px;color:var(--ink3);margin-top:2px;font-weight:600}
@@ -124,7 +124,7 @@ PG.notif = function(){
 
   <div class="nf2">
 
-    <!-- ░░░ TOP: config (izquierda) + preview (derecha) ░░░ -->
+    <!-- ░░░ 3 COLUMNAS IGUALES: Mensaje · Lista · Vista previa ░░░ -->
     <div class="nf2-top">
 
     <!-- ░░░ CONFIG: SOLO mensaje. El grupo se infiere automáticamente. ░░░ -->
@@ -179,11 +179,30 @@ PG.notif = function(){
       </div>
     </div>
 
-      <!-- PREVIEW (derecha del config) -->
+      <!-- COLUMNA 2: LISTA -->
+      <div class="nf2-list">
+        <div class="nf2-list-head">
+          <div class="nf2-list-t" id="nx-ac-list-title">Destinatarios</div>
+          <span class="nf2-list-c" id="nx-ac-list-count">0</span>
+        </div>
+        <div class="nf2-search">
+          <span class="nf2-search-i nx-ac-icon">⌕</span>
+          <input type="text" class="nx-ac-input" id="nx-ac-input" placeholder="Buscar por nombre, cédula, teléfono..." autocomplete="off" oninput="nxAcFilter()" onkeydown="nxAcKey(event)">
+        </div>
+        <div id="nx-ac-selected-wrap"></div>
+        <div class="nf2-list-scroll nx-ac-list" id="nx-ac-list" style="position:static !important;display:block !important;border:none !important;background:transparent !important;box-shadow:none !important;max-height:none !important;"></div>
+        <div class="nf2-list-foot" id="nx-ac-hint">Click en un cliente para enviarle solo a él</div>
+        <input type="hidden" id="notif-cliente-sel-id" value="">
+        <select id="notif-cliente-sel" style="display:none"></select>
+        <button type="button" id="nx-ac-modeswitch" onclick="nxAcToggleScope()" style="display:none">Ver todos</button>
+        <button type="button" class="nx-ac-clear" id="nx-ac-clear" onclick="nxAcClearInput()" style="display:none">×</button>
+      </div>
+
+      <!-- COLUMNA 3: PREVIEW -->
       <div class="nf2-prev">
         <div class="nf2-prev-h">
-          <div class="nf2-prev-t">Vista previa del mensaje</div>
-          <div class="nf2-prev-s">Así lo verá el cliente en WhatsApp</div>
+          <div class="nf2-prev-t">Vista previa</div>
+          <div class="nf2-prev-s">Así lo verá el cliente</div>
         </div>
         <div class="nf2-prev-wa">
           <div class="nf2-prev-bw">
@@ -195,29 +214,6 @@ PG.notif = function(){
 
     </div> <!-- /nf2-top -->
 
-    <!-- ░░░ BODY: solo lista ░░░ -->
-    <div class="nf2-body">
-
-      <!-- LISTA -->
-      <div class="nf2-list">
-        <div class="nf2-list-head">
-          <div class="nf2-list-t" id="nx-ac-list-title">Destinatarios</div>
-          <span class="nf2-list-c" id="nx-ac-list-count">0</span>
-        </div>
-        <div class="nf2-search">
-          <span class="nf2-search-i nx-ac-icon">⌕</span>
-          <input type="text" class="nx-ac-input" id="nx-ac-input" placeholder="Buscar por nombre, cédula, teléfono o crédito..." autocomplete="off" oninput="nxAcFilter()" onkeydown="nxAcKey(event)">
-        </div>
-        <div id="nx-ac-selected-wrap"></div>
-        <div class="nf2-list-scroll nx-ac-list" id="nx-ac-list" style="position:static !important;display:block !important;border:none !important;background:transparent !important;box-shadow:none !important;max-height:none !important;"></div>
-        <div class="nf2-list-foot" id="nx-ac-hint">Ordenados por urgencia · Click en uno para enviar solo a ese</div>
-        <input type="hidden" id="notif-cliente-sel-id" value="">
-        <select id="notif-cliente-sel" style="display:none"></select>
-        <button type="button" id="nx-ac-modeswitch" onclick="nxAcToggleScope()" style="display:none">Ver todos</button>
-        <button type="button" class="nx-ac-clear" id="nx-ac-clear" onclick="nxAcClearInput()" style="display:none">×</button>
-      </div>
-
-    </div>
 
     <!-- ░░░ BOTÓN ENVÍO ░░░ -->
     <div class="nf2-send">
