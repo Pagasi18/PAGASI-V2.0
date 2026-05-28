@@ -149,7 +149,9 @@ function _renderConcSwitcher(){
   }
   var u = S.currentUser || {};
   var asignados = u.concesionarios || [];
-  var esAdminPuro = (u.rol === 'Administrador' || u.rol === 'Gerente') && asignados.length === 0;
+  // El Administrador SIEMPRE puede ver "Todos" (aunque tenga sedes asignadas).
+  // El Gerente sólo cuando no tiene sedes específicas. Los empleados nunca.
+  var esAdminPuro = (u.rol === 'Administrador') || (u.rol === 'Gerente' && asignados.length === 0);
   // Si tiene UNA sola sede asignada → mostrar como info estática (sin opción de cambiar)
   if(asignados.length === 1 && !esAdminPuro){
     var sedeUnica = _concGetById(asignados[0]);
