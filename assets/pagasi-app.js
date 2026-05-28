@@ -237,33 +237,29 @@ async function dashDailyLoad(tipo, force){
   try {
     var resultado = '';
     if(tipo === 'chiste'){
-      // JokeAPI — multilenguaje, español, sin política/racismo
-      var r = await fetch('https://v2.jokeapi.dev/joke/Any?lang=es&type=single&blacklistFlags=nsfw,racist,sexist,political,religious,explicit');
-      var d = await r.json();
-      if(d.joke){ resultado = d.joke; }
-      else if(d.setup && d.delivery){ resultado = d.setup + ' — ' + d.delivery; }
-      else throw new Error('Sin chiste disponible');
+      // Intenta JokeAPI en español primero
+      try {
+        var r = await fetch('https://v2.jokeapi.dev/joke/Any?lang=es&type=single&blacklistFlags=nsfw,racist,sexist,political,religious,explicit');
+        var d = await r.json();
+        if(d.joke){ resultado = d.joke; }
+        else if(d.setup && d.delivery){ resultado = d.setup + ' — ' + d.delivery; }
+        else throw new Error('Sin chiste de API');
+      } catch(_e){
+        // Fallback: chistes locales (siempre funciona)
+        var pool = (typeof WT_CHISTES !== 'undefined') ? WT_CHISTES : [
+          '¿Cuál es el animal más antiguo? La cebra, porque está en blanco y negro.',
+          '¿Por qué los pájaros vuelan al sur en invierno? Porque está muy lejos para ir caminando.'
+        ];
+        resultado = pool[Math.floor(Math.random()*pool.length)];
+      }
     }
     else if(tipo === 'dato'){
-      // Useless Facts (inglés) → traducir o usar curated. Por ahora español curado + inglés.
-      var r = await fetch('https://uselessfacts.jsph.pl/api/v2/facts/random?language=en');
-      var d = await r.json();
-      if(d.text){
-        // Pequeño set de datos en español como fallback
-        var datosES = [
-          'El motor más pequeño jamás fabricado para una motocicleta tiene apenas 0.4 cc y cabe en una mano.',
-          'La primera motocicleta del mundo (1885) era de madera y solo alcanzaba 11 km/h.',
-          'Las motos representan el 70% del tráfico en muchas ciudades del sudeste asiático.',
-          'Los neumáticos de moto duran en promedio entre 12,000 y 25,000 km.',
-          'Una moto típica tiene más de 2,000 piezas distintas.',
-          'El récord de velocidad en moto es 605.7 km/h (Top 1 Ack Attack, 2010).',
-          'En Venezuela hay aproximadamente 4 millones de motos circulando.',
-          'Un motor de 4 tiempos completa el ciclo de combustión cada 720° de giro del cigüeñal.',
-          'La marca Honda fabrica más motos al año que cualquier otra: ~20 millones.',
-          'El motociclista promedio recorre 8,000 km al año en países urbanos.'
-        ];
-        resultado = datosES[Math.floor(Math.random()*datosES.length)];
-      } else throw new Error('Sin dato');
+      // Usar primero la lista local en español (calidad asegurada)
+      var pool = (typeof WT_DATOS !== 'undefined') ? WT_DATOS : [
+        'Una moto típica tiene más de 2,000 piezas distintas.',
+        'En Venezuela hay aproximadamente 4 millones de motos circulando.'
+      ];
+      resultado = pool[Math.floor(Math.random()*pool.length)];
     }
     else if(tipo === 'noticia'){
       // Múltiples fuentes de noticias con fallback automático

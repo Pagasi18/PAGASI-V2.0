@@ -11,7 +11,17 @@ var _wtDragId=null;
 
 function wtEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
 
-// ─── DAILY CARD para Centro de trabajo (Tip/Chiste/Dato/Noticia) ───
+// ─── DAILY CARD para Centro de trabajo (Noticias/Tip/Chiste/Dato) ───
+// Inyectar fonts de Google Fonts una sola vez
+(function _injectFunFonts(){
+  if(document.getElementById('wt-fun-fonts')) return;
+  var link = document.createElement('link');
+  link.id = 'wt-fun-fonts';
+  link.rel = 'stylesheet';
+  link.href = 'https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Lora:ital,wght@0,500;0,700;1,500&family=Bricolage+Grotesque:wght@600;800&display=swap';
+  document.head.appendChild(link);
+})();
+
 var WT_TIPS = [
   '"Lo que se mide, se mejora." Revisa tu cartera vencida cada lunes a primera hora.',
   'Una moto se entrega tres veces: en el lote, en el contrato, y en la primera cuota a tiempo.',
@@ -43,7 +53,111 @@ var WT_TIPS = [
   'No vendas crédito al primero que entra. Vende al que califica. La mora arruina más negocios que la falta de clientes.',
   '"Hay que pensar en grande, pero empezar pequeño." Cobra una cuota completa antes de pensar en 100.',
   'Cada lunes es nueva oportunidad. Empieza con la lista de morosos del viernes, no con emails.',
-  'Celebra los logros chiquitos del equipo. 10 cobros perfectos en una semana merecen reconocimiento.'
+  'Celebra los logros chiquitos del equipo. 10 cobros perfectos en una semana merecen reconocimiento.',
+  '"El mejor momento para plantar un árbol fue hace 20 años. El segundo mejor momento es ahora." Lo mismo aplica para llamar al cliente moroso.',
+  'Un cliente que protesta es un cliente que aún confía. El silencio es la verdadera señal de que se fue.',
+  '"No puedes manejar lo que no mides." Peter Drucker. ¿Cuánto vendió cada vendedor el mes pasado? ¿Lo sabes de memoria?',
+  'Sonríe al contestar el teléfono. Aunque no te vean, se escucha en la voz. Probado en estudios de telemarketing.',
+  'La mejor hora para cobrar por WhatsApp es entre 10am y 12pm martes a jueves. Los lunes están ocupados, viernes ya gastaron la quincena.',
+  'Un cliente promedio cancela 6.4 cuotas. Si recibes cobros mientras escribes cuotas, estás ganando. Si no, perdiendo.',
+  'No prometas lo que no puedes cumplir. "Entrega mañana" cuando no llega, vale menos que decir "entrega en 3 días" y cumplir.',
+  'El asesor que conoce su producto al detalle cierra el doble. Estudia ficha técnica de cada moto que vendes.',
+  '"Si quieres ir rápido, ve solo. Si quieres llegar lejos, ve acompañado." Cobranza es equipo, no juego individual.',
+  'Reúnete con tu equipo 15 minutos cada lunes. Repasen morosos, oportunidades y plan de la semana. Eso solo cambia el resultado.',
+  'Un cobro a tiempo evita 3 cobros tarde. Llama el día 1, no el día 5.',
+  '"Donde no hay dinero, todo se arregla con dinero. Donde hay dinero, todo se arregla con tiempo." Sé paciente con clientes nuevos.',
+  'La empatía vende. Antes de presionar por la cuota, pregunta "¿cómo estás?". Cambia toda la conversación.',
+  'Tu palabra es tu mayor activo. Si dijiste "te llamo el viernes a las 3", llama exactamente a esa hora.',
+  'Un email con falta ortográfica cuesta credibilidad. Revisa dos veces antes de enviar mensajes a clientes.',
+  '"El éxito es la suma de pequeños esfuerzos repetidos día tras día." 10 llamadas hoy son mejores que 100 mañana.',
+  'Sé el primero en saludar a tus colegas en la mañana. La actitud se contagia, y tú quieres que se contagie la buena.',
+  'Conoce los nombres de los hijos de tus mejores 10 clientes. Pequeño detalle, gigante diferencia.',
+  'El que pierde el cliente no es siempre quien lo atendió mal. A veces es quien NO le dio seguimiento después.',
+  'No discutas con un cliente molesto. Escucha. Anota. Resuelve. Las 3 en ese orden.',
+  'Un "gracias" sincero vale más que tres "perfecto" automáticos. Personaliza tus mensajes.',
+  '"Si lo puedes soñar, lo puedes hacer." Walt Disney. Empezó con un ratón animado, tú puedes con una flota de motos.',
+  'Cada problema es una oportunidad disfrazada. Cuando un cliente reclama, ahí está tu chance de fidelizarlo de por vida.',
+  'No prestes plata personal al cliente, ni siquiera "por esta vez". Mezclar plata y amistad nunca termina bien.',
+  'Aprende a decir "no" con elegancia. "Entiendo tu situación, pero no podemos hacer esa excepción ahora" es perfecto.',
+  '"El cliente promedio escucha 7 veces el mensaje antes de actuar." No te canses de recordarle su cuota.',
+  'Un buen vendedor hace cita, no espera que llamen. Pregunta "¿prefiere viernes a las 3 o sábado a las 10?".',
+  'Lleva un cuaderno de aprendizajes. Anota cada situación nueva con cliente. En 1 año tendrás tu propio manual.',
+  'El silencio en la negociación es oro. Después de dar tu precio, no hables más. El primero que habla, pierde.',
+  '"Tu trabajo va a llenar gran parte de tu vida. La única forma de estar verdaderamente satisfecho es hacer lo que crees es un gran trabajo." Steve Jobs.',
+  'Un email se responde en 24h, un WhatsApp en 2h, una llamada al instante. Conoce las expectativas de cada canal.'
+];
+
+// ─── Chistes locales en español (fallback de JokeAPI) ──────────
+var WT_CHISTES = [
+  '¿Cuál es el animal más antiguo? La cebra, porque está en blanco y negro.',
+  '¿Por qué los pájaros vuelan al sur en invierno? Porque está muy lejos para ir caminando.',
+  '¿Qué le dice un techo a otro techo? Techo de menos.',
+  '¿Cuál es la fruta más divertida? La naranja, porque siempre está partiéndose.',
+  'Un programador va al supermercado, su esposa le dice: "compra leche, y si hay huevos, trae 6". Volvió con 6 cartones de leche.',
+  '¿Por qué los buzos siempre se tiran de espaldas? Porque si se tiran de frente, caen en el bote.',
+  'Mi mujer me dijo que dejara de actuar como flamenco, así que tuve que poner el pie en el suelo.',
+  '¿Cuál es la diferencia entre un Lamborghini y una mujer enojada? Que del Lamborghini sí me puedo bajar.',
+  '¿Qué hace un perro con un taladro? Taladrando.',
+  'Doctor, doctor, ¿me va a doler? — Solo cuando vea la factura.',
+  '¿Sabes cuántos psicólogos hacen falta para cambiar una bombilla? Solo uno, pero la bombilla tiene que querer cambiar.',
+  'Mi jefe me dijo: "vístete para el trabajo que quieres, no para el que tienes". Así que ahora me visto de Batman.',
+  '¿Por qué los esqueletos no pelean entre sí? Porque no tienen agallas.',
+  'No confío en las escaleras. Siempre están tramando algo.',
+  '¿Qué hace una abeja en el gimnasio? Zum-ba.',
+  'Llamo a la compañía eléctrica y me dicen: "su factura está iluminada". Le contesto: pues yo a oscuras.',
+  '¿Cómo se llama el campeón mundial de buceo japonés? Tokofondo.',
+  'Mi terapeuta me dijo que el secreto para una vida feliz es el ejercicio. Le pregunté: "¿cardio?". Me dijo: "no, ignorarlo a uno".',
+  '¿Qué le dice un jaguar a otro jaguar? Jaguar you?',
+  'No soy vago, estoy en modo ahorro de energía.',
+  'Si la vida te da limones, vende motos. Es más rentable.',
+  '¿Qué le dice un semáforo a otro semáforo? No me mires que me estoy cambiando.',
+  'El optimista dice: "el vaso está medio lleno". El pesimista: "medio vacío". El ingeniero: "el vaso es el doble de grande de lo necesario".',
+  '¿Cómo se llama el primo gordo de Bruce Lee? Brus-quito.',
+  'Mi mamá me dijo: "todo lo que quieras lo puedes lograr". Le dije: "quiero dormir". Me sacó a barrer.',
+  '¿Qué hace una vaca cuando sale el sol? Sombra.',
+  '¿Cuál es el último animal en entrar al Arca de Noé? El del-fin.',
+  'Estoy a dieta. Comí ensalada de pollo. La ensalada era el pollo.',
+  '¿Qué hace un pez? Nada.',
+  'No fumo, no bebo, no salgo. Mi médula ósea está fresca para los cobros del lunes.'
+];
+
+// ─── Datos curiosos locales en español ──────────────────────────
+var WT_DATOS = [
+  'El motor más pequeño jamás fabricado para una motocicleta tiene apenas 0.4 cc y cabe en una mano.',
+  'La primera motocicleta del mundo (1885) era de madera y solo alcanzaba 11 km/h.',
+  'Las motos representan el 70% del tráfico en muchas ciudades del sudeste asiático.',
+  'Los neumáticos de moto duran en promedio entre 12,000 y 25,000 km, dependiendo del estilo de manejo.',
+  'Una moto típica tiene más de 2,000 piezas distintas, organizadas en 36 sistemas mecánicos.',
+  'El récord de velocidad en moto es 605.7 km/h, logrado por el Top 1 Ack Attack en 2010.',
+  'En Venezuela hay aproximadamente 4 millones de motos circulando.',
+  'Un motor de 4 tiempos completa el ciclo de combustión cada 720° de giro del cigüeñal.',
+  'Honda fabrica más motos al año que cualquier otra marca: aproximadamente 20 millones de unidades.',
+  'El motociclista promedio recorre 8,000 km al año en países urbanos.',
+  'Las motocicletas pueden inclinarse hasta 55° en una curva sin perder estabilidad si el motociclista lo hace correctamente.',
+  'En 1907 se realizó la primera carrera Isle of Man TT, considerada hoy la más peligrosa del mundo.',
+  'Una moto consume entre 3 y 5 veces menos combustible que un auto del mismo nivel de potencia.',
+  'El cuerpo humano puede resistir hasta 9 G de fuerza durante una aceleración. Una MotoGP genera hasta 1.5 G al frenar.',
+  'El "Wheelie" más largo registrado duró 307 km, en una sola rueda continua. Lo hizo Yasuyuki Kudo en Japón.',
+  'La motocicleta más cara del mundo cuesta 11 millones de dólares: la Neiman Marcus Limited Edition Fighter.',
+  'Un buen casco para moto debe absorber hasta 250 G de impacto sin transferirlos al cráneo.',
+  'En Tailandia es legal viajar 4 personas en una moto, incluyendo bebés.',
+  'Vietnam tiene más motos per cápita que cualquier país del mundo: 1 moto por cada 2 personas.',
+  'El emoji de motocicleta 🏍 fue agregado a Unicode en 2015 como parte de la actualización 8.0.',
+  'El término "biker" (motociclista) se acuñó en EE.UU. en la década de 1950, popularizado por la película The Wild One.',
+  'La marca Harley-Davidson registró el sonido distintivo de sus motores como marca registrada en 1994.',
+  'Las motos eléctricas modernas pueden generar el 100% de su torque desde 0 rpm, algo imposible en motores de combustión.',
+  'En 2026 se espera que las motos eléctricas representen el 35% del mercado en Latinoamérica.',
+  'La palabra "moto" viene del francés "motocyclette", acuñada en 1894.',
+  'Una moto promedio pierde el 30% de su valor en los primeros 12 meses tras la compra.',
+  'El uso del casco reduce las muertes por accidente de moto en un 42%, según la OMS.',
+  'En Caracas, hay aproximadamente 1.5 motos por cada auto en circulación.',
+  'El primer GPS para motocicleta fue lanzado por Garmin en 2003. Antes, los motociclistas dependían de mapas en papel.',
+  'La sensación de "viento en la cara" libera dopamina y endorfinas, similar a la sensación de correr o nadar.',
+  'Una moto típica de 150cc puede recorrer hasta 50 km con un litro de gasolina.',
+  'Los frenos ABS reducen los accidentes en moto en un 31%, según un estudio europeo.',
+  'En el siglo XIX existían motos de vapor antes que las de gasolina. Fracasaron por ser demasiado pesadas.',
+  'El motor V-twin (forma de V) fue inventado por Indian Motorcycle en 1907.',
+  'La cuesta más empinada subida por una moto comercial fue de 41.7% de pendiente.'
 ];
 
 function _wtInitialsName(n){
@@ -63,51 +177,81 @@ function _wtParseCumple(v){
 
 function wtCumplesHTML(){
   var hoyM = new Date().getMonth()+1, hoyD = new Date().getDate();
+  var hoyDate = new Date(); hoyDate.setHours(0,0,0,0);
+
   var cumplesEsteMes = (S.usuarios||[]).filter(function(u){
     if(!u || u.eliminado) return false;
     var c = _wtParseCumple(u.cumpleanos || u.fechaNacimiento || u.bday);
     return c && c.mes === hoyM;
   }).map(function(u){
     var c = _wtParseCumple(u.cumpleanos || u.fechaNacimiento || u.bday);
-    return {nom:u.nombre||u.email||'Usuario', dia:c.dia, esHoy:c.dia===hoyD};
-  }).sort(function(a,b){ return a.dia - b.dia; });
+    var diasFalt = c.dia - hoyD;
+    if(diasFalt < 0) diasFalt = 365; // ya pasó este mes, ordenar al final
+    return {nom:u.nombre||u.email||'Usuario', dia:c.dia, esHoy:c.dia===hoyD, diasFalt:diasFalt, yaPaso:c.dia<hoyD};
+  }).sort(function(a,b){ return a.diasFalt - b.diasFalt; });
   var cumplesHoy = cumplesEsteMes.filter(function(u){return u.esHoy;});
   var mes = new Date().toLocaleDateString('es-VE',{month:'long'});
+  var FONT_FUN = '"Caveat","Bricolage Grotesque",sans-serif';
+  var confettiPattern = "background-image:radial-gradient(circle at 20% 20%,#FBCFE822 6px,transparent 7px),radial-gradient(circle at 80% 30%,#A7F3D022 5px,transparent 6px),radial-gradient(circle at 50% 70%,#FEF08A22 7px,transparent 8px),radial-gradient(circle at 10% 80%,#BFDBFE22 6px,transparent 7px),radial-gradient(circle at 90% 85%,#FBCFE822 5px,transparent 6px);background-size:200px 200px";
 
   if(cumplesEsteMes.length === 0){
-    return '<div style="padding:24px 22px;background:#fff;border:1px solid var(--rim);border-radius:18px;height:100%;display:flex;flex-direction:column">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
-        +'<div><div style="font-size:14px;font-weight:800;color:var(--ink);letter-spacing:-.3px">Cumpleaños</div>'
-        +'<div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:capitalize;margin-top:2px">'+mes+'</div></div>'
-        +'<span style="background:var(--gs);color:var(--p1);padding:3px 9px;border-radius:50px;font-size:10.5px;font-weight:800">0</span>'
+    return '<div style="position:relative;padding:22px;background:linear-gradient(160deg,#FFF9F4 0%,#FDF2F8 100%);border:1px solid rgba(236,72,153,.18);border-radius:20px;height:100%;display:flex;flex-direction:column;overflow:hidden;'+confettiPattern+'">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;position:relative;z-index:1">'
+        +'<div><div style="font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#BE185D">Cumpleaños</div>'
+        +'<div style="font-size:22px;font-weight:800;color:var(--ink);text-transform:capitalize;margin-top:2px;font-family:'+FONT_FUN+'">'+mes+'</div></div>'
+        +'<span style="background:#FCE7F3;color:#BE185D;padding:4px 11px;border-radius:50px;font-size:11px;font-weight:800;border:1px solid rgba(236,72,153,.22)">0</span>'
       +'</div>'
-      +'<div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;color:var(--ink3);font-size:12.5px;line-height:1.55">'
-        +'Nadie cumple este mes.<br><span style="font-size:11px">Pide a los empleados que llenen su fecha de cumpleaños en su perfil.</span>'
+      +'<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--ink3);position:relative;z-index:1">'
+        +'<div style="font-size:48px;line-height:1;margin-bottom:14px;opacity:.42">🎂</div>'
+        +'<div style="font-size:14px;line-height:1.5;font-weight:600;color:var(--ink2);max-width:240px">Este mes no hay cumpleaños registrados</div>'
+        +'<div style="font-size:11.5px;line-height:1.55;margin-top:8px;color:var(--ink3);max-width:280px">Pide al equipo que llene su fecha de cumpleaños desde "Mi Perfil"</div>'
       +'</div>'
     +'</div>';
   }
 
   var rows = cumplesEsteMes.map(function(u){
-    var bg = u.esHoy ? 'linear-gradient(135deg,#FCE7F3 0%,#FBCFE8 100%)' : 'var(--surf2)';
-    var border = u.esHoy ? '#F9A8D4' : 'var(--rim)';
-    var avatar = u.esHoy ? '#EC4899' : 'var(--p1)';
-    var diaCol = u.esHoy ? '#BE185D' : 'var(--ink3)';
-    var diaTxt = u.esHoy ? 'HOY' : 'día '+u.dia;
-    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:'+bg+';border:1px solid '+border+';border-radius:10px">'
-      +'<div style="width:34px;height:34px;border-radius:50%;background:'+avatar+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11.5px">'+_wtInitialsName(u.nom)+'</div>'
-      +'<div style="flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+wtEsc(u.nom)+'</div>'
-      +'<div style="font-family:var(--fd);font-weight:800;font-size:11.5px;letter-spacing:.04em;color:'+diaCol+'">'+diaTxt+'</div>'
+    var bg, border, avatar, diaCol, diaTxt, badge;
+    if(u.esHoy){
+      bg = 'linear-gradient(135deg,#FCE7F3 0%,#FBCFE8 50%,#F9A8D4 100%)';
+      border = '#EC4899';
+      avatar = 'linear-gradient(135deg,#EC4899,#BE185D)';
+      diaCol = '#831843';
+      diaTxt = 'HOY';
+      badge = '<span style="background:#fff;color:#BE185D;padding:3px 9px;border-radius:50px;font-size:9.5px;font-weight:900;letter-spacing:.1em;animation:cakePulse 1.8s ease-in-out infinite">🎉 ¡HOY!</span>';
+    } else if(u.yaPaso){
+      bg = '#F8FAFC';
+      border = 'var(--rim)';
+      avatar = 'var(--ink4)';
+      diaCol = 'var(--ink3)';
+      diaTxt = 'pasó';
+      badge = '<span style="color:var(--ink3);font-family:var(--fd);font-weight:700;font-size:11px">día '+u.dia+'</span>';
+    } else {
+      bg = 'rgba(255,255,255,.7)';
+      border = 'rgba(236,72,153,.20)';
+      avatar = 'linear-gradient(135deg,#F472B6,#A855F7)';
+      diaCol = '#BE185D';
+      diaTxt = 'en '+u.diasFalt+'d';
+      badge = '<span style="color:#BE185D;font-family:var(--fd);font-weight:800;font-size:11px">'+(u.diasFalt===1?'mañana':'en '+u.diasFalt+' días')+'</span>';
+    }
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:'+bg+';border:1.5px solid '+border+';border-radius:12px;'+(u.esHoy?'box-shadow:0 6px 18px rgba(236,72,153,.22)':'')+';transition:transform .15s">'
+      +'<div style="width:36px;height:36px;border-radius:50%;background:'+avatar+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;box-shadow:0 4px 8px rgba(0,0,0,.08)">'+_wtInitialsName(u.nom)+'</div>'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:13.5px;font-weight:700;color:'+diaCol+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.2px">'+wtEsc(u.nom)+'</div>'
+        +'<div style="font-size:10.5px;color:var(--ink3);font-weight:500;margin-top:1px">'+new Date(new Date().getFullYear(),hoyM-1,u.dia).toLocaleDateString('es-VE',{day:'numeric',month:'long'})+'</div>'
+      +'</div>'
+      +badge
     +'</div>';
   }).join('');
 
-  return '<div style="padding:18px 22px;background:#fff;border:1px solid var(--rim);border-radius:18px;height:100%;display:flex;flex-direction:column">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
-      +'<div><div style="font-size:14px;font-weight:800;color:var(--ink);letter-spacing:-.3px">Cumpleaños</div>'
-      +'<div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:capitalize;margin-top:2px">'+mes+'</div></div>'
-      +'<span style="background:var(--gs);color:var(--p1);padding:3px 9px;border-radius:50px;font-size:10.5px;font-weight:800">'+cumplesEsteMes.length+'</span>'
+  return '<div style="position:relative;padding:22px;background:linear-gradient(160deg,#FFF9F4 0%,#FDF2F8 100%);border:1px solid rgba(236,72,153,.18);border-radius:20px;height:100%;display:flex;flex-direction:column;overflow:hidden;'+confettiPattern+'">'
+    +'<style>@keyframes cakePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}</style>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;position:relative;z-index:1">'
+      +'<div><div style="font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#BE185D">Cumpleaños</div>'
+      +'<div style="font-size:22px;font-weight:800;color:var(--ink);text-transform:capitalize;margin-top:2px;font-family:'+FONT_FUN+'">'+mes+'</div></div>'
+      +'<span style="background:#FCE7F3;color:#BE185D;padding:4px 11px;border-radius:50px;font-size:11px;font-weight:800;border:1px solid rgba(236,72,153,.22)">'+cumplesEsteMes.length+'</span>'
     +'</div>'
-    +'<div style="display:flex;flex-direction:column;gap:7px;flex:1;overflow-y:auto">'+rows+'</div>'
-    +(cumplesHoy.length ? '<button onclick="dispararCotillon()" style="margin-top:12px;width:100%;background:linear-gradient(135deg,#EC4899,#BE185D);color:#fff;border:none;padding:11px;border-radius:11px;font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.04em;box-shadow:0 6px 16px rgba(236,72,153,.32)">Lanzar cotillón</button>' : '')
+    +'<div style="display:flex;flex-direction:column;gap:8px;flex:1;overflow-y:auto;position:relative;z-index:1">'+rows+'</div>'
+    +(cumplesHoy.length ? '<button onclick="dispararCotillon()" style="margin-top:14px;width:100%;background:linear-gradient(135deg,#EC4899 0%,#BE185D 100%);color:#fff;border:none;padding:13px;border-radius:13px;font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.04em;box-shadow:0 8px 22px rgba(236,72,153,.42);position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px">🎊 Lanzar cotillón ahora</button>' : '')
   +'</div>';
 }
 
@@ -124,42 +268,48 @@ function wtDailyCardHTML(){
   var tipHoy = WT_TIPS[tipIdx % WT_TIPS.length];
   var hoyStr = new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long'});
 
+  // Fonts divertidos
+  var FONT_TIP = '"Caveat","Bricolage Grotesque",-apple-system,sans-serif';
+  var FONT_CHISTE = '"Caveat",cursive';
+  var FONT_DATO = '"Lora",Georgia,serif';
+  var FONT_NOTICIA = '"Bricolage Grotesque","Inter",sans-serif';
+
   return ''
     +'<div class="wt-daily-card" style="background:#fff;border:1px solid var(--rim);border-radius:18px;overflow:hidden;box-shadow:0 4px 18px rgba(37,99,235,.05);height:100%;display:flex;flex-direction:column">'
     +'<div style="display:flex;border-bottom:1px solid var(--rim);background:var(--surf2)">'
-      +'<button class="dly-tab is-active" data-tab="tip" onclick="dashDailyTab(\'tip\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--ink);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid var(--p1)">Tip del día</button>'
+      +'<button class="dly-tab is-active" data-tab="noticia" onclick="dashDailyTab(\'noticia\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--ink);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid #DC2626">Noticias</button>'
+      +'<button class="dly-tab" data-tab="tip" onclick="dashDailyTab(\'tip\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink3);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid transparent">Tip del día</button>'
       +'<button class="dly-tab" data-tab="chiste" onclick="dashDailyTab(\'chiste\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink3);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid transparent">Chiste</button>'
       +'<button class="dly-tab" data-tab="dato" onclick="dashDailyTab(\'dato\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink3);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid transparent">Dato curioso</button>'
-      +'<button class="dly-tab" data-tab="noticia" onclick="dashDailyTab(\'noticia\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink3);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid transparent">Noticias</button>'
     +'</div>'
-    +'<div style="padding:32px 36px 28px;min-height:200px;position:relative">'
+    +'<div style="padding:32px 36px 28px;min-height:230px;position:relative;flex:1">'
+
+      // NOTICIAS — primera tab
+      +'<div id="dly-tab-noticia" class="dly-content" style="display:block">'
+        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#DC2626;margin-bottom:14px;font-family:'+FONT_NOTICIA+'">Noticias del día · '+hoyStr+'</div>'
+        +'<div id="dly-noticia-text" style="font-size:16px;line-height:1.5;color:var(--ink);font-family:'+FONT_NOTICIA+';font-weight:500">Cargando noticias…</div>'
+        +'<button onclick="dashDailyLoad(\'noticia\',true)" style="position:absolute;bottom:18px;right:24px;background:#DC2626;color:#fff;border:none;padding:9px 18px;border-radius:50px;cursor:pointer;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(220,38,38,.28)">Refrescar →</button>'
+      +'</div>'
 
       // TIP
-      +'<div id="dly-tab-tip" class="dly-content" style="display:block;">'
-        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--p1);margin-bottom:14px">'+hoyStr+'</div>'
-        +'<div id="dly-tip-text" style="font-size:24px;line-height:1.4;color:var(--ink);font-weight:600;letter-spacing:-.3px;padding-right:120px">'+wtEsc(tipHoy)+'</div>'
+      +'<div id="dly-tab-tip" class="dly-content" style="display:none">'
+        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--p1);margin-bottom:14px;font-family:'+FONT_NOTICIA+'">Tip del día · '+hoyStr+'</div>'
+        +'<div id="dly-tip-text" style="font-size:30px;line-height:1.32;color:var(--ink);font-weight:700;font-family:'+FONT_TIP+';letter-spacing:-.2px;padding-right:140px">'+wtEsc(tipHoy)+'</div>'
         +'<button onclick="dashTipNext()" style="position:absolute;bottom:18px;right:24px;background:var(--p1);color:#fff;border:none;padding:9px 18px;border-radius:50px;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:.02em;box-shadow:0 4px 12px rgba(37,99,235,.28)">Otro tip →</button>'
       +'</div>'
 
       // CHISTE
       +'<div id="dly-tab-chiste" class="dly-content" style="display:none">'
-        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#F97316;margin-bottom:14px">Chiste del día</div>'
-        +'<div id="dly-chiste-text" style="font-size:22px;line-height:1.45;color:var(--ink);font-weight:500;letter-spacing:-.2px;padding-right:120px">Cargando chiste…</div>'
+        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#F97316;margin-bottom:14px;font-family:'+FONT_NOTICIA+'">Chiste del día</div>'
+        +'<div id="dly-chiste-text" style="font-size:30px;line-height:1.32;color:var(--ink);font-weight:600;font-family:'+FONT_CHISTE+';padding-right:140px">Cargando chiste…</div>'
         +'<button onclick="dashDailyLoad(\'chiste\',true)" style="position:absolute;bottom:18px;right:24px;background:#F97316;color:#fff;border:none;padding:9px 18px;border-radius:50px;cursor:pointer;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(249,115,22,.28)">Otro chiste →</button>'
       +'</div>'
 
       // DATO
       +'<div id="dly-tab-dato" class="dly-content" style="display:none">'
-        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#16A34A;margin-bottom:14px">Dato curioso</div>'
-        +'<div id="dly-dato-text" style="font-size:22px;line-height:1.45;color:var(--ink);font-weight:500;letter-spacing:-.2px;padding-right:120px">Cargando dato…</div>'
+        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#16A34A;margin-bottom:14px;font-family:'+FONT_NOTICIA+'">¿Sabías que…?</div>'
+        +'<div id="dly-dato-text" style="font-size:22px;line-height:1.5;color:var(--ink);font-weight:500;font-family:'+FONT_DATO+';font-style:italic;padding-right:140px">Cargando dato…</div>'
         +'<button onclick="dashDailyLoad(\'dato\',true)" style="position:absolute;bottom:18px;right:24px;background:#16A34A;color:#fff;border:none;padding:9px 18px;border-radius:50px;cursor:pointer;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(22,163,74,.28)">Otro dato →</button>'
-      +'</div>'
-
-      // NOTICIAS
-      +'<div id="dly-tab-noticia" class="dly-content" style="display:none">'
-        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#DC2626;margin-bottom:14px">Noticias del día</div>'
-        +'<div id="dly-noticia-text" style="font-size:15.5px;line-height:1.5;color:var(--ink)">Cargando noticias…</div>'
-        +'<button onclick="dashDailyLoad(\'noticia\',true)" style="position:absolute;bottom:18px;right:24px;background:#DC2626;color:#fff;border:none;padding:9px 18px;border-radius:50px;cursor:pointer;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(220,38,38,.28)">Refrescar →</button>'
       +'</div>'
 
     +'</div>'
