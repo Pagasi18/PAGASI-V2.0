@@ -354,7 +354,7 @@ function _dbSilent(fn){
       var msg = e.message||'';
       if(msg.includes('transport') || msg.includes('WebChannel') || msg.includes('network') || e.code==='unavailable'){
         console.warn('DB write pending/offline:', msg);
-        if(typeof toast==='function') toast('Sin conexi�n estable: Firebase intentar� sincronizar el cambio.','info');
+        if(typeof toast==='function') toast('Sin conexión estable: Firebase intentará sincronizar el cambio.','info');
         return false;
       }
       console.warn('DB write error:', msg);
