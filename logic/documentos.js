@@ -76,26 +76,80 @@ function _wzDocLabel(id){ return (_wzDocDefs[id]&&_wzDocDefs[id].label)||id; }
 // SISTEMA LIBRE DE DOCUMENTOS — compartido por wizard y tarjeta cliente
 // ══════════════════════════════════════════════════════════════════
 
-// ── Abrir un documento pidiendo la URL fresca al Storage de V2 (Opción C de migración) ──
+// ── Abrir un documento pidiendo la URL fresca al Storage de V2 ──
 // Usa el path guardado para regenerar la URL en el bucket actual. Cae a la URL guardada si falla.
 function _abrirDocFresco(path, urlVieja){
-  // Documentos locales (data: o local://) se abren directo con su url guardada
+  // HTML del loader que aparece mientras carga
+  var LOADER_HTML = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cargando documento...</title>'
+    + '<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#F8FAFC;color:#334155}'
+    + '.box{text-align:center;padding:32px;background:#fff;border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,.08);max-width:340px}'
+    + '.spinner{width:42px;height:42px;border:3px solid #E2E8F0;border-top-color:#2563EB;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}'
+    + '@keyframes spin{to{transform:rotate(360deg)}}'
+    + '.lbl{font-size:14px;font-weight:600}.sub{font-size:11.5px;color:#64748B;margin-top:6px}</style></head>'
+    + '<body><div class="box"><div class="spinner"></div><div class="lbl">Cargando documento…</div><div class="sub">Obteniendo URL desde Firebase Storage</div></div></body></html>';
+
+  function showError(win, mensaje, detalle){
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Error</title>'
+      + '<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#FEF2F2;color:#1F2937}'
+      + '.box{text-align:center;padding:36px;background:#fff;border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,.08);max-width:480px}'
+      + 'h2{color:#DC2626;margin:0 0 12px;font-size:18px}p{margin:8px 0;font-size:13px;line-height:1.55}'
+      + '.det{margin-top:18px;padding:12px;background:#F8FAFC;border-radius:8px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#64748B;word-break:break-all;text-align:left}'
+      + '</style></head><body><div class="box">'
+      + '<h2>No se pudo abrir el documento</h2>'
+      + '<p>'+mensaje+'</p>'
+      + '<div class="det">'+detalle+'</div>'
+      + '<p style="font-size:11.5px;color:#94A3B8;margin-top:16px">Verifica las reglas de Firebase Storage y que el archivo exista.</p>'
+      + '</div></body></html>';
+    if(win && !win.closed){ try{ win.document.open(); win.document.write(html); win.document.close(); }catch(e){} }
+  }
+
+  function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+
+  // Caso 1: documentos locales (data: o local://) — abrir directo
   if(!path || path.indexOf('local://')===0 || (urlVieja||'').indexOf('data:')===0){
-    if(urlVieja) window.open(urlVieja, '_blank', 'noopener');
+    if(urlVieja){
+      var w1 = window.open(urlVieja, '_blank');
+      if(!w1){ alert('Tu navegador bloqueó el popup. Habilita popups para este sitio.'); }
+    } else {
+      alert('Este documento no tiene URL guardada ni archivo en Storage.');
+    }
     return;
   }
+
+  // Caso 2: no hay Storage disponible — fallback a urlVieja
   if(typeof storage === 'undefined' || !storage || typeof storage.ref !== 'function'){
-    if(urlVieja) window.open(urlVieja, '_blank', 'noopener');
+    if(urlVieja){ window.open(urlVieja, '_blank'); }
+    else { alert('Firebase Storage no está cargado. Recarga la página.'); }
     return;
   }
-  // Abrir una pestaña inmediatamente (evita bloqueo de pop-ups) y luego redirigir
-  var win = window.open('', '_blank', 'noopener');
+
+  // Caso 3: pedimos la URL fresca a Storage
+  // Abrir ventana ANTES de la promesa (evita pop-up blocker)
+  var win = window.open('', '_blank');
+  if(win){
+    try { win.document.open(); win.document.write(LOADER_HTML); win.document.close(); } catch(e){}
+  }
+
   storage.ref().child(path).getDownloadURL().then(function(url){
-    if(win) win.location = url; else window.open(url, '_blank', 'noopener');
-  }).catch(function(){
-    // Si falla (archivo no está en V2 o error), usar la url vieja como respaldo
-    if(win){ if(urlVieja) win.location = urlVieja; else win.close(); }
-    else if(urlVieja) window.open(urlVieja, '_blank', 'noopener');
+    if(win && !win.closed){ win.location.replace(url); }
+    else { window.open(url, '_blank'); }
+  }).catch(function(err){
+    console.warn('[Storage] getDownloadURL falló para', path, err);
+    // Plan B: intentar la URL vieja guardada
+    if(urlVieja){
+      if(win && !win.closed){ win.location.replace(urlVieja); }
+      else { window.open(urlVieja, '_blank'); }
+      return;
+    }
+    // Plan C: mostrar error claro
+    var code = err && err.code ? err.code : 'unknown';
+    var msg = err && err.message ? err.message : String(err);
+    var mensaje = code === 'storage/object-not-found'
+        ? 'El archivo no existe en Firebase Storage.'
+        : code === 'storage/unauthorized'
+        ? 'No tienes permisos para acceder a este archivo. Revisa las reglas de Storage.'
+        : 'Hubo un error al obtener el archivo.';
+    showError(win, mensaje, '<strong>Path:</strong> '+escapeHtml(path)+'<br><br><strong>Code:</strong> '+escapeHtml(code)+'<br><strong>Detalle:</strong> '+escapeHtml(msg));
   });
 }
 

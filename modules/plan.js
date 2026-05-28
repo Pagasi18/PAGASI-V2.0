@@ -159,19 +159,8 @@ PG.plan = function(){
     ]
   )}
 
-  <!-- PLANES (cards arriba) -->
+  <!-- CATÁLOGO como TABLA (ahora arriba — protagonista) -->
   <div class="card" style="margin-bottom:14px">
-    <div class="ch">
-      <div><div class="ct">Planes Financieros</div><div class="cs">${todosPlanes.length} plan${todosPlanes.length!==1?'es':''} activo${todosPlanes.length!==1?'s':''}</div></div>
-      <button class="btn btn-p btn-sm" onclick="openAddPlan()">＋ Nuevo Plan</button>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:12px">
-      ${planesHTML}
-    </div>
-  </div>
-
-  <!-- CATÁLOGO como TABLA -->
-  <div class="card">
     <div class="ch">
       <div>
         <div class="ct">Catálogo de Motocicletas</div>
@@ -213,6 +202,17 @@ PG.plan = function(){
         + '<tbody>' + rows + '</tbody>'
       + '</table></div>'
     }
+  </div>
+
+  <!-- PLANES (cards abajo) -->
+  <div class="card">
+    <div class="ch">
+      <div><div class="ct">Planes Financieros</div><div class="cs">${todosPlanes.length} plan${todosPlanes.length!==1?'es':''} activo${todosPlanes.length!==1?'s':''}</div></div>
+      <button class="btn btn-p btn-sm" onclick="openAddPlan()">＋ Nuevo Plan</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:12px">
+      ${planesHTML}
+    </div>
   </div>
 
   </div>`;
