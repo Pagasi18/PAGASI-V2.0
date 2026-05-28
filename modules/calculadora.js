@@ -353,11 +353,13 @@ function calcRender(){
   if(cont) cont.innerHTML = html;
 
   // ─── Insight: brecha BCV ↔ Binance ───
+  // Fórmula venezolana: (paralelo - oficial) / paralelo
+  // Representa cuánto el oficial está por debajo del paralelo
   var insightHtml = '';
   if(bcv > 1 && bin > 1){
-    var brecha = ((bin - bcv) / bcv) * 100;
-    var col = brecha > 10 ? '#E8335A' : (brecha > 5 ? '#BA7517' : '#15803D');
-    var bg = brecha > 10 ? 'rgba(232,51,90,.08)' : (brecha > 5 ? 'rgba(186,117,23,.08)' : 'rgba(21,128,61,.08)');
+    var brecha = ((bin - bcv) / bin) * 100;
+    var col = brecha > 30 ? '#E8335A' : (brecha > 15 ? '#BA7517' : '#15803D');
+    var bg = brecha > 30 ? 'rgba(232,51,90,.08)' : (brecha > 15 ? 'rgba(186,117,23,.08)' : 'rgba(21,128,61,.08)');
     insightHtml += '<div class="calc-insight" style="background:'+bg+'">'
       + '<span class="calc-insight-lbl">Brecha oficial → paralelo</span>'
       + '<span class="calc-insight-val" style="color:'+col+'">'+(brecha>=0?'+':'')+brecha.toFixed(1)+'%</span>'

@@ -362,7 +362,7 @@ PG.dash = function(){
       <!-- Footer: Brecha BCV↔Binance -->
       <div style="margin-top:10px;padding:7px 10px;background:var(--surf2);border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-size:10.5px">
         <span style="color:var(--ink3);font-weight:700">Brecha oficial → paralelo</span>
-        <span id="dash-tasa-spread" style="color:var(--ink);font-weight:800;font-family:var(--fd)">${(window._tasaBinance>1&&window._tasaBsGlobal>1)?('+'+(((window._tasaBinance-window._tasaBsGlobal)/window._tasaBsGlobal*100).toFixed(1))+'%'):'—'}</span>
+        <span id="dash-tasa-spread" style="color:var(--ink);font-weight:800;font-family:var(--fd)">${(window._tasaBinance>1&&window._tasaBsGlobal>1)?('+'+(((window._tasaBinance-window._tasaBsGlobal)/window._tasaBinance*100).toFixed(1))+'%'):'—'}</span>
       </div>
     </div>
   </div>

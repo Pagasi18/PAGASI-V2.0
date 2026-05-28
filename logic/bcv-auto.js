@@ -348,9 +348,11 @@ function _bcvActualizarUI(){
     var b1 = _bcvAutoTasa || window._tasaBsGlobal || 0;
     var b2 = _binanceTasa || window._tasaBinance || 0;
     if(b1 > 1 && b2 > 1){
-      var pct = ((b2 - b1) / b1) * 100;
+      // Brecha cambiaria venezolana: (paralelo - oficial) / paralelo
+      // Representa cuánto está el oficial por debajo del paralelo (uso común en VE)
+      var pct = ((b2 - b1) / b2) * 100;
       dashSpread.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
-      dashSpread.style.color = pct > 10 ? '#E8335A' : (pct > 5 ? '#BA7517' : '#8B5CF6');
+      dashSpread.style.color = pct > 30 ? '#E8335A' : (pct > 15 ? '#BA7517' : '#15803D');
     } else {
       dashSpread.textContent = '—';
     }

@@ -2226,7 +2226,7 @@ function renderSidebar(){
     var grposEmp = [
       {label:'Mi Trabajo', keys:['dash','centro']},
       {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
-      {label:'Operaciones',keys:['cobranza','contratos','notif']},
+      {label:'Operaciones',keys:['cobranza','contratos','notif','calculadora']},
       {label:'Análisis', keys:['reportes','cuentas','comisiones']},
       {label:'Sistema', keys:['plan','config','scores','users']},
     ];
@@ -2269,7 +2269,8 @@ function renderSidebar(){
       +'<span style="font-size:16px;font-weight:900;line-height:1">＋</span><span>Nueva Solicitud</span></button>'
       +'</div>'
       +'<div class="sb-grp"><div class="sb-lbl">Mi Trabajo</div>'
-      +'<button type="button" class="si" data-nav="motos" onclick="nav(\'motos\')"><span class="sic nav-ic">'+pgNavIcon('motos')+'</span><span>Calculadora</span></button>'
+      +'<button type="button" class="si" data-nav="motos" onclick="nav(\'motos\')"><span class="sic nav-ic">'+pgNavIcon('motos')+'</span><span>Motos</span></button>'
+      +'<button type="button" class="si" data-nav="calculadora" onclick="nav(\'calculadora\')"><span class="sic nav-ic">'+pgNavIcon('calculadora')+'</span><span>Calculadora</span></button>'
       +'<button type="button" class="si" data-nav="clientes" onclick="nav(\'clientes\')"><span class="sic nav-ic">'+pgNavIcon('clientes')+'</span><span>Clientes</span></button>'
       +'<button type="button" class="si" data-nav="creditos" onclick="nav(\'creditos\')"><span class="sic nav-ic">'+pgNavIcon('creditos')+'</span><span>Solicitudes</span></button>'
       +'</div>'
@@ -2284,7 +2285,7 @@ function renderSidebar(){
   var grupos = [
     {label:'Principal', keys:['dash','centro']},
     {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
-    {label:'Operaciones',keys:['cobranza','contratos','notif','aprobaciones']},
+    {label:'Operaciones',keys:['cobranza','contratos','notif','calculadora','aprobaciones']},
     {label:'Análisis', keys:['reportes','cuentas','comisiones']},
     {label:'Sistema', keys:['plan','config','concesionarios','scores','users']},
   ];
