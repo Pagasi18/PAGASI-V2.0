@@ -57,50 +57,54 @@ h2.head{font-size:clamp(34px,4vw,52px);font-weight:800;letter-spacing:-2px;line-
 #mob a:hover{color:var(--p);}
 .mob-x{position:absolute;top:20px;right:20px;font-size:24px;background:none;color:var(--ink-3);}
 
-/* HERO — 2 columnas con moto destacada */
-.hero{min-height:calc(100svh - 64px);display:flex;align-items:center;justify-content:center;padding:90px 48px 60px;position:relative;overflow:hidden;}
-.hero-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 1200px 700px at 50% 30%,rgba(37,99,235,.08) 0%,transparent 65%);}
-.hero-dots{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(37,99,235,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.04) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse 80% 70% at 50% 45%,#000 10%,transparent 100%);}
-.hero-inner{position:relative;z-index:2;max-width:1280px;margin:0 auto;display:grid;grid-template-columns:1.05fr .95fr;gap:64px;align-items:center;animation:fadeUp .85s var(--ease) both;}
-.hero-left{text-align:left;}
-.hero-right{position:relative;display:flex;align-items:center;justify-content:center;}
-.hero-pill{display:inline-flex;align-items:center;gap:8px;background:var(--off);border:1px solid rgba(37,99,235,.15);border-radius:50px;padding:7px 16px;font-size:12px;font-weight:600;color:var(--p);margin-bottom:22px;}
+/* HERO — Centrado, foto flotante atrás con rotación */
+.hero{min-height:calc(100svh - 64px);display:flex;align-items:center;justify-content:center;padding:100px 32px 70px;position:relative;overflow:hidden;}
+.hero-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 1100px 700px at 50% 35%,rgba(37,99,235,.10) 0%,transparent 65%);z-index:0;}
+.hero-dots{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(37,99,235,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.04) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 80% 75% at 50% 50%,#000 10%,transparent 100%);z-index:0;}
+
+/* Foto rotativa atrás (centro, opacidad sutil) */
+.hero-bg-photo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(80vw,950px);height:auto;z-index:1;opacity:.10;pointer-events:none;filter:blur(.5px) saturate(.9);}
+.hero-bg-photo.is-active{animation:photoSwap .9s ease;}
+@keyframes photoSwap {
+  0%   {opacity:0; transform:translate(-50%,-50%) scale(1.08);}
+  100% {opacity:.10; transform:translate(-50%,-50%) scale(1);}
+}
+
+.hero-inner{position:relative;z-index:3;max-width:920px;margin:0 auto;text-align:center;animation:fadeUp .85s var(--ease) both;}
+
+.hero-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.85);border:1px solid rgba(37,99,235,.18);border-radius:50px;padding:8px 18px;font-size:12px;font-weight:700;color:var(--p);margin-bottom:30px;backdrop-filter:blur(8px);box-shadow:0 4px 14px rgba(37,99,235,.06);}
 .pdot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
-h1{font-size:clamp(42px,5.6vw,76px);font-weight:800;letter-spacing:-3px;line-height:.98;color:var(--ink);margin-bottom:22px;}
-h1 i{font-style:normal;color:var(--p);}
-.hero-desc{font-size:clamp(15.5px,1.3vw,18px);color:var(--ink-3);line-height:1.6;letter-spacing:-.01em;max-width:520px;margin:0 0 32px;}
+
+h1{font-size:clamp(48px,7vw,90px);font-weight:800;letter-spacing:-3.5px;line-height:.96;color:var(--ink);margin-bottom:28px;}
+h1 i{font-style:normal;color:var(--p);font-weight:900;}
+h1 .ln{display:block;}
+
+.hero-desc{font-size:clamp(16px,1.4vw,19px);color:var(--ink-3);line-height:1.65;letter-spacing:-.01em;max-width:560px;margin:0 auto 38px;}
 .hero-desc b{color:var(--ink);font-weight:700;}
-.hero-actions{display:flex;gap:11px;flex-wrap:wrap;margin-bottom:38px;}
-.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line);padding-top:24px;max-width:480px;}
-.hero-stat{padding:0 16px 0 0;}
-.hero-stat:not(:last-child){border-right:1px solid var(--line);}
-.hero-stat:not(:first-child){padding-left:16px;}
-.hero-stat-n{font-size:26px;font-weight:800;letter-spacing:-1px;color:var(--ink);line-height:1;margin-bottom:4px;}
-.hero-stat-n .accent{color:var(--p);}
-.hero-stat-l{font-size:11px;color:var(--ink-4);font-weight:600;letter-spacing:.02em;line-height:1.35;}
 
-/* Hero foto principal — moto destacada */
-.hero-photo{position:relative;width:100%;max-width:540px;}
-.hero-photo-bg{position:absolute;inset:-30px;background:radial-gradient(ellipse 70% 70% at 50% 60%,rgba(37,99,235,.18) 0%,transparent 65%);filter:blur(40px);z-index:0;}
-.hero-photo-card{position:relative;background:linear-gradient(160deg,#FAFBFF 0%,#EFF3FF 100%);border-radius:32px;border:1px solid rgba(37,99,235,.12);padding:30px;box-shadow:0 40px 80px -30px rgba(37,99,235,.22);z-index:1;}
-.hero-photo-card img{display:block;width:100%;height:auto;object-fit:contain;filter:drop-shadow(0 20px 30px rgba(0,0,0,.18));}
-.hero-photo-badge{position:absolute;top:18px;left:18px;background:#00C853;color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:6px 12px;border-radius:50px;box-shadow:0 6px 16px rgba(0,200,83,.32);z-index:2;}
-.hero-photo-price{position:absolute;bottom:18px;right:18px;background:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 12px 26px rgba(0,0,0,.10);text-align:right;z-index:2;}
-.hero-photo-price-lbl{font-size:9.5px;font-weight:700;color:var(--ink-4);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;}
-.hero-photo-price-val{font-size:18px;font-weight:800;color:var(--p);letter-spacing:-.5px;line-height:1;}
-.hero-photo-price-sub{font-size:9.5px;color:var(--ink-4);font-weight:500;margin-top:2px;}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:48px;}
 
-.hero-sedes{display:flex;align-items:center;justify-content:flex-start;gap:24px;flex-wrap:wrap;color:var(--ink-4);font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-top:28px;}
+/* Trust badges — 3 promesas debajo de los CTA */
+.hero-trust{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;max-width:680px;margin:0 auto 32px;padding:24px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+.hero-trust-item{text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.hero-trust-ico{width:38px;height:38px;border-radius:11px;background:var(--p-xs);display:flex;align-items:center;justify-content:center;color:var(--p);}
+.hero-trust-ico svg{width:20px;height:20px;}
+.hero-trust-t{font-size:13px;font-weight:800;color:var(--ink);letter-spacing:-.2px;}
+.hero-trust-s{font-size:11.5px;color:var(--ink-4);font-weight:500;}
+
+.hero-sedes{display:flex;align-items:center;justify-content:center;gap:22px;flex-wrap:wrap;color:var(--ink-4);font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;}
 .hero-sedes span{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);}
 .hero-sedes span::before{content:'';width:5px;height:5px;background:var(--p);border-radius:50%;}
 
-@media(max-width:980px){
-  .hero-inner{grid-template-columns:1fr;gap:48px;text-align:center;}
-  .hero-left{text-align:center;}
-  .hero-desc{margin:0 auto 32px;}
-  .hero-actions{justify-content:center;}
-  .hero-stats{margin:0 auto;}
-  .hero-sedes{justify-content:center;}
+/* Indicador del carrusel */
+.hero-dots-carousel{display:flex;justify-content:center;gap:7px;margin-top:18px;position:relative;z-index:3;}
+.hero-dot{width:24px;height:3px;border-radius:2px;background:var(--line-p);transition:background .3s,width .3s;cursor:pointer;border:none;padding:0;}
+.hero-dot.is-active{background:var(--p);width:40px;}
+
+@media(max-width:768px){
+  .hero{padding:80px 22px 50px;}
+  .hero-trust{grid-template-columns:1fr;gap:16px;padding:18px 0;}
+  .hero-bg-photo{width:120vw;opacity:.07;}
 }
 
 /* FEATURED MOTO SHOWCASE — sección de moto destacada */
@@ -486,69 +490,105 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
 </nav>
 <section class="hero" id="inicio">
   <div class="hero-glow"></div><div class="hero-dots"></div>
+
+  <!-- Foto rotativa atrás -->
+  <img id="heroBgPhoto" class="hero-bg-photo" src="assets/motos/rk-200.jpg" alt="">
+
   <div class="hero-inner">
-    <div class="hero-left">
-      <div class="hero-pill"><span class="pdot"></span>Disponible en todo Venezuela</div>
-      <h1>Tu moto.<br><i>En cuotas.</i><br>Ya.</h1>
-      <p class="hero-desc"><b>Aprobación en 24 horas. Entrega inmediata.</b><br>El camino más simple para tener la moto que necesitas, con cuotas que entiendes y sin sorpresas.</p>
-      <div class="hero-actions">
-        <a href="catalogo.html" class="btn btn-p">Ver catálogo →</a>
-        <a href="solicitar.html" class="btn btn-s">Solicitar ahora</a>
-      </div>
+    <div class="hero-pill"><span class="pdot"></span>100% transparente · Sin letra chica</div>
 
-      <!-- Stats de confianza -->
-      <div class="hero-stats">
-        <div class="hero-stat">
-          <div class="hero-stat-n"><span class="accent">+40</span></div>
-          <div class="hero-stat-l">Modelos en catálogo</div>
-        </div>
-        <div class="hero-stat">
-          <div class="hero-stat-n"><span class="accent">3</span></div>
-          <div class="hero-stat-l">Sedes activas en Caracas</div>
-        </div>
-        <div class="hero-stat">
-          <div class="hero-stat-n"><span class="accent">24h</span></div>
-          <div class="hero-stat-l">Aprobación garantizada</div>
-        </div>
-      </div>
+    <h1>
+      <span class="ln">Sin trámites.</span>
+      <span class="ln"><i>Sin sorpresas.</i></span>
+      <span class="ln">Sin letra chica.</span>
+    </h1>
 
-      <div class="hero-sedes">
-        <span>EK Bello Monte</span>
-        <span>Boleita</span>
-        <span>Toro Sabana Grande</span>
+    <p class="hero-desc">Tu moto en cuotas <b>honestas</b>, con la inicial que sí podés pagar.<br>Aprobación en <b>24 horas</b> y entrega inmediata en cualquiera de nuestras 3 sedes.</p>
+
+    <div class="hero-actions">
+      <a href="catalogo.html" class="btn btn-p">Ver catálogo →</a>
+      <a href="solicitar.html" class="btn btn-s">Solicitar ahora</a>
+    </div>
+
+    <!-- Trust badges: 3 promesas -->
+    <div class="hero-trust">
+      <div class="hero-trust-item">
+        <div class="hero-trust-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="9,12 11,14 16,9"/></svg></div>
+        <div class="hero-trust-t">Cuotas claras</div>
+        <div class="hero-trust-s">Pagás lo que te dijimos</div>
+      </div>
+      <div class="hero-trust-item">
+        <div class="hero-trust-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg></div>
+        <div class="hero-trust-t">Aprobación 24h</div>
+        <div class="hero-trust-s">Hoy aplicás, mañana firmás</div>
+      </div>
+      <div class="hero-trust-item">
+        <div class="hero-trust-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <div class="hero-trust-t">Cero burocracia</div>
+        <div class="hero-trust-s">Solo cédula y referencia</div>
       </div>
     </div>
 
-    <div class="hero-right">
-      <div class="hero-photo">
-        <div class="hero-photo-bg"></div>
-        <div class="hero-photo-card">
-          <div class="hero-photo-badge">★ Más vendida</div>
-          <img src="assets/motos/new-horse-150.jpg" alt="New Horse 150" loading="eager">
-          <div class="hero-photo-price">
-            <div class="hero-photo-price-lbl">Desde</div>
-            <div class="hero-photo-price-val">$110 / quincena</div>
-            <div class="hero-photo-price-sub">con $594 inicial</div>
-          </div>
-        </div>
-      </div>
+    <div class="hero-sedes">
+      <span>EK Bello Monte</span>
+      <span>Boleita</span>
+      <span>Toro Sabana Grande</span>
+    </div>
+
+    <!-- Indicador del carrusel -->
+    <div class="hero-dots-carousel" id="heroDotsCarousel">
+      <button class="hero-dot is-active" data-i="0" title="RK 200"></button>
+      <button class="hero-dot" data-i="1" title="EK Xpress II 150"></button>
+      <button class="hero-dot" data-i="2" title="Owen 200S"></button>
+      <button class="hero-dot" data-i="3" title="TX 250 GS"></button>
     </div>
   </div>
 </section>
+
+<script>
+// ─── Carrusel de fotos del hero (rotación cada 4.5s) ───
+(function heroCarousel(){
+  var photos = [
+    'assets/motos/rk-200.jpg',
+    'assets/motos/ek-xpress-ii-150.jpg',
+    'assets/motos/owen-200s.jpg',
+    'assets/motos/tx-250-gs.jpg'
+  ];
+  var idx = 0;
+  var img = document.getElementById('heroBgPhoto');
+  var dotsEl = document.getElementById('heroDotsCarousel');
+  if(!img || !dotsEl) return;
+  var dots = dotsEl.querySelectorAll('.hero-dot');
+  var timer = null;
+  function setActive(i){
+    idx = (i+photos.length) % photos.length;
+    img.src = photos[idx];
+    img.classList.remove('is-active');
+    void img.offsetWidth; // reset animation
+    img.classList.add('is-active');
+    dots.forEach(function(d,j){ d.classList.toggle('is-active', j===idx); });
+  }
+  function next(){ setActive(idx+1); }
+  function start(){ stop(); timer = setInterval(next, 4500); }
+  function stop(){ if(timer) clearInterval(timer); timer=null; }
+  dots.forEach(function(d){ d.addEventListener('click', function(){ setActive(+this.dataset.i); start(); }); });
+  start();
+})();
+</script>
 
 <!-- FEATURED MOTO SHOWCASE -->
 <section class="featured-sec" id="featured">
   <div class="featured-wrap">
     <div class="reveal">
-      <div class="featured-tag">Moto del mes</div>
-      <h2 class="featured-h">Una moto. Cuotas claras. Cero burocracia.</h2>
-      <p class="featured-s">Empieza a manejar este mes pagando solo la mitad inicial. El resto en cuotas quincenales fijas.</p>
+      <div class="featured-tag">Moto destacada</div>
+      <h2 class="featured-h">Sin sorpresas. Sin cargos ocultos.</h2>
+      <p class="featured-s">La cuota que ves es la que pagás. Cero intereses moratorios escondidos, cero comisiones de mantenimiento, cero letra chica. Acá no hay trampas — solo una moto y un plan que sí podés cumplir.</p>
     </div>
 
     <div class="featured-card reveal">
       <div class="featured-photo">
         <div class="featured-photo-shine"></div>
-        <img src="assets/moto-temp.jpg" alt="Moto destacada">
+        <img src="assets/motos/ek-xpress-150.jpg" alt="EK Xpress 150">
       </div>
       <div class="featured-info">
         <div class="featured-info-tag">Stock disponible</div>
