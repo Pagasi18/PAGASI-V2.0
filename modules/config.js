@@ -332,23 +332,45 @@ function cfgLoadLogs(force){
   if(typeof DB === 'undefined' || !DB.getLogs){ return; }
   var cont = document.getElementById('logs-container');
   if(cont) cont.innerHTML = '<div style="padding:32px;text-align:center;color:var(--ink3);font-size:12.5px">Cargando bitácora…</div>';
+  // Asegurar que los usuarios estén cargados ANTES de poblar el filtro
+  var pUsuarios = Promise.resolve();
+  try {
+    var needUsuarios = !(typeof _usersCache !== 'undefined' && _usersCache && _usersCache.length);
+    if(needUsuarios && DB.getUsuarios){
+      pUsuarios = DB.getUsuarios().then(function(arr){
+        if(typeof _usersCache !== 'undefined') _usersCache = Array.isArray(arr)?arr:[];
+        if(S && (!S._wtUsers || !S._wtUsers.length)) S._wtUsers = Array.isArray(arr)?arr:[];
+      }).catch(function(){});
+    }
+  } catch(e){}
+  // Ejecutar logs DESPUÉS de que los usuarios estén cargados para poblar el filtro
+  pUsuarios.then(function(){
   DB.getLogs(500).then(function(arr){
     _logsCache = Array.isArray(arr) ? arr : [];
     _logsLoaded = true;
-    // Poblar dropdown de usuarios
+    // Poblar dropdown de usuarios: union de logs + usuarios del sistema
     var userSel = document.getElementById('logs-filtro-usuario');
     if(userSel){
       var names = {};
       _logsCache.forEach(function(l){ if(l.userName) names[l.userName] = true; });
+      // Sumar también los usuarios del sistema aunque no tengan logs todavía
+      try {
+        var lista = (typeof _usersCache !== 'undefined' && _usersCache && _usersCache.length) ? _usersCache : (S._wtUsers||[]);
+        lista.forEach(function(u){ if(u && u.nombre) names[u.nombre] = true; else if(u && u.email) names[u.email] = true; });
+      } catch(e){}
+      // Preservar selección actual del dropdown
+      var prevSel = userSel.value;
       var html = '<option value="">Todos los usuarios</option>';
       Object.keys(names).sort().forEach(function(n){ html += '<option value="'+n.replace(/"/g,'&quot;')+'">'+n+'</option>'; });
       userSel.innerHTML = html;
+      if(prevSel) userSel.value = prevSel;
     }
     cfgRenderLogs();
   }).catch(function(e){
     console.warn('cargar logs:', e);
     if(cont) cont.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:12.5px">Error al cargar bitácora: '+(e.message||e)+'</div>';
   });
+  }); // /pUsuarios.then
 }
 
 function cfgRefreshLogs(){ _logsLoaded = false; cfgLoadLogs(true); }
@@ -374,7 +396,15 @@ function cfgRenderLogs(){
       'mostrando los '+Math.min(filt.length,500)+' más recientes</span>';
   }
   if(!filt.length){
-    cont.innerHTML = '<div style="padding:48px 24px;text-align:center;color:var(--ink3);font-size:12.5px">Sin eventos registrados con esos filtros.</div>';
+    // Mensaje inteligente: si el cache base también está vacío, sugerir revisar reglas
+    var msgVacio = _logsCache.length === 0
+      ? '<div style="padding:48px 24px;text-align:center;color:var(--ink3);font-size:13px;line-height:1.6">'
+        +'<div style="font-size:32px;margin-bottom:12px;opacity:.5">📋</div>'
+        +'<div style="font-weight:700;color:var(--ink2);margin-bottom:6px">Aún no hay eventos registrados</div>'
+        +'<div style="max-width:380px;margin:0 auto;font-size:11.5px">Verificá que las reglas de Firestore permitan escritura en la colección <code style="background:var(--surf2);padding:1px 6px;border-radius:4px">logs/{id}</code>. Después hacé alguna acción (registrar un pago, editar un cliente) y el evento aparecerá acá.</div>'
+        +'</div>'
+      : '<div style="padding:48px 24px;text-align:center;color:var(--ink3);font-size:12.5px">Sin eventos que coincidan con los filtros aplicados.</div>';
+    cont.innerHTML = msgVacio;
     return;
   }
   var html = '';
@@ -450,35 +480,117 @@ function cfgRenderLogs(){
     });
     return parts.join(' · ');
   }
+  // ── AGRUPAR POR DÍA ──
+  function _dayKey(ts){ try { var d=new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); } catch(e){ return 'sin-fecha'; } }
+  function _dayLabel(key){
+    if(key === 'sin-fecha') return 'Sin fecha';
+    var hoy = new Date(); var hoyK = hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
+    var ayer = new Date(hoy.getTime()-86400000); var ayerK = ayer.getFullYear()+'-'+String(ayer.getMonth()+1).padStart(2,'0')+'-'+String(ayer.getDate()).padStart(2,'0');
+    if(key === hoyK) return 'Hoy';
+    if(key === ayerK) return 'Ayer';
+    try {
+      var parts = key.split('-');
+      var d = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, parseInt(parts[2],10));
+      return d.toLocaleDateString('es-VE', {weekday:'long', day:'numeric', month:'long'});
+    } catch(e){ return key; }
+  }
+  function _fmtHora(ts){
+    try { var d = new Date(ts); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+    catch(e){ return ''; }
+  }
+
+  // Agrupar
+  var grupos = {};
+  var ordenDias = [];
   filt.forEach(function(l){
-    var actCol = colMap[l.action] || '#6B7280';
-    var lbl = labelMap[l.action] || l.action;
-    var det = fmtDetalle(l.detalle);
-    var target = l.target ? ' <code style="background:var(--surf2);padding:1px 6px;border-radius:4px;font-size:10.5px;color:var(--ink2);vertical-align:middle">'+esc(l.target)+'</code>' : '';
-    var uc = userColor(l.userName);
-    var inits = userInitials(l.userName);
+    var k = _dayKey(l.timestamp);
+    if(!grupos[k]){ grupos[k] = []; ordenDias.push(k); }
+    grupos[k].push(l);
+  });
+  // Días ordenados: más recientes arriba
+  ordenDias.sort(function(a,b){ return b.localeCompare(a); });
+
+  // Renderizar día por día
+  ordenDias.forEach(function(diaKey, idx){
+    var eventos = grupos[diaKey];
+    var label = _dayLabel(diaKey);
+    var esHoy = idx === 0 && label === 'Hoy';
+    // Días expandidos por default: solo HOY. Los demás colapsados.
+    // Si hay filtros activos (módulo o usuario), expandir todos para que el usuario vea sin clicks.
+    var hayFiltros = fMod || fUser;
+    var expanded = esHoy || hayFiltros;
+    var diaId = 'logs-dia-'+diaKey;
+
+    // Header del día (sticky, clickeable para expandir/colapsar)
     html +=
-      '<div style="display:flex;align-items:flex-start;gap:11px;padding:11px 14px;border-bottom:1px solid var(--rim);background:#fff">'
-        // Avatar circular con color del usuario
-        +'<div style="width:34px;height:34px;border-radius:50%;background:'+uc.bg+';color:'+uc.col+';display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11.5px;flex-shrink:0;border:1.5px solid '+uc.col+'40;letter-spacing:.3px" title="'+esc(l.userName)+'">'+esc(inits)+'</div>'
-        +'<div style="flex:1;min-width:0">'
-          +'<div style="font-size:13px;line-height:1.5;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
-            // Chip de usuario con color
-            +'<span style="background:'+uc.bg+';color:'+uc.col+';font-weight:800;font-size:12px;padding:2px 10px;border-radius:50px;letter-spacing:-.01em">'+esc(l.userName)+'</span>'
-            // Chip de acción con su propio color
-            +'<span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink2);font-weight:600">'
-              +'<span style="width:7px;height:7px;border-radius:50%;background:'+actCol+';flex-shrink:0"></span>'
-              +esc(lbl)
-            +'</span>'
-            +target
-          +'</div>'
-          +(det ? '<div style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.5;padding-left:2px">'+esc(det)+'</div>' : '')
+      '<div style="position:sticky;top:0;z-index:2;background:linear-gradient(180deg,#FAFBFF,#F3F5FA);'
+        +'padding:9px 14px;border-bottom:1px solid var(--rim);'
+        +'display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;user-select:none"'
+        +'onclick="cfgLogsToggleDia(\''+diaKey+'\')" data-dia="'+diaKey+'">'
+        +'<div style="display:flex;align-items:center;gap:9px">'
+          +'<span style="font-size:11px;color:var(--ink3);font-weight:700;width:14px;display:inline-block;text-align:center;transition:transform .2s;transform:rotate('+(expanded?'90':'0')+'deg)" class="logs-dia-caret">▶</span>'
+          +'<span style="font-size:12.5px;font-weight:800;color:var(--ink);text-transform:capitalize;letter-spacing:-.2px">'+label+'</span>'
+          +'<span style="font-size:10px;font-weight:700;color:var(--ink3);background:var(--surf2);padding:2px 8px;border-radius:50px">'+eventos.length+' evento'+(eventos.length!==1?'s':'')+'</span>'
         +'</div>'
-        +'<div style="font-size:11px;color:var(--ink3);font-weight:600;white-space:nowrap;flex-shrink:0;font-family:var(--fd);margin-top:3px">'+fmtTime(l.timestamp)+'</div>'
+        // Mini avatares de usuarios únicos del día
+        +(function(){
+          var uniq = {};
+          eventos.forEach(function(e){ if(!uniq[e.userName]) uniq[e.userName] = userColor(e.userName); });
+          var arr = Object.keys(uniq).slice(0,6);
+          if(!arr.length) return '';
+          return '<div style="display:flex;align-items:center;gap:-4px">'+arr.map(function(name,i){
+            var c = uniq[name];
+            return '<span style="width:22px;height:22px;border-radius:50%;background:'+c.bg+';color:'+c.col+';display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:9.5px;border:2px solid #fff;margin-left:'+(i===0?'0':'-7px')+';position:relative;z-index:'+(10-i)+'" title="'+esc(name)+'">'+esc(userInitials(name))+'</span>';
+          }).join('')+(Object.keys(uniq).length>6?'<span style="margin-left:6px;font-size:10.5px;color:var(--ink3);font-weight:700">+'+(Object.keys(uniq).length-6)+'</span>':'')+'</div>';
+        })()
       +'</div>';
+
+    // Eventos del día
+    html += '<div id="'+diaId+'" class="logs-dia-body" style="display:'+(expanded?'block':'none')+'">';
+    eventos.forEach(function(l){
+      var actCol = colMap[l.action] || '#6B7280';
+      var lbl = labelMap[l.action] || l.action;
+      var det = fmtDetalle(l.detalle);
+      var target = l.target ? ' <code style="background:var(--surf2);padding:1px 6px;border-radius:4px;font-size:10.5px;color:var(--ink2);vertical-align:middle">'+esc(l.target)+'</code>' : '';
+      var uc = userColor(l.userName);
+      var inits = userInitials(l.userName);
+      html +=
+        '<div style="display:flex;align-items:flex-start;gap:11px;padding:10px 14px;border-bottom:1px solid var(--rim);background:#fff">'
+          +'<div style="width:34px;height:34px;border-radius:50%;background:'+uc.bg+';color:'+uc.col+';display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11.5px;flex-shrink:0;border:1.5px solid '+uc.col+'40;letter-spacing:.3px" title="'+esc(l.userName)+'">'+esc(inits)+'</div>'
+          +'<div style="flex:1;min-width:0">'
+            +'<div style="font-size:13px;line-height:1.5;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+              +'<span style="background:'+uc.bg+';color:'+uc.col+';font-weight:800;font-size:12px;padding:2px 10px;border-radius:50px;letter-spacing:-.01em">'+esc(l.userName)+'</span>'
+              +'<span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink2);font-weight:600">'
+                +'<span style="width:7px;height:7px;border-radius:50%;background:'+actCol+';flex-shrink:0"></span>'
+                +esc(lbl)
+              +'</span>'
+              +target
+            +'</div>'
+            +(det ? '<div style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.5;padding-left:2px">'+esc(det)+'</div>' : '')
+          +'</div>'
+          +'<div style="font-size:11.5px;color:var(--ink3);font-weight:700;white-space:nowrap;flex-shrink:0;font-family:var(--fd);margin-top:3px">'+_fmtHora(l.timestamp)+'</div>'
+        +'</div>';
+    });
+    html += '</div>';
   });
   cont.innerHTML = html;
 }
+
+// Expandir/colapsar día en la bitácora
+function cfgLogsToggleDia(diaKey){
+  var body = document.getElementById('logs-dia-'+diaKey);
+  if(!body) return;
+  var head = document.querySelector('[data-dia="'+diaKey+'"]');
+  var caret = head ? head.querySelector('.logs-dia-caret') : null;
+  if(body.style.display === 'none'){
+    body.style.display = 'block';
+    if(caret) caret.style.transform = 'rotate(90deg)';
+  } else {
+    body.style.display = 'none';
+    if(caret) caret.style.transform = 'rotate(0deg)';
+  }
+}
+window.cfgLogsToggleDia = cfgLogsToggleDia;
 
 function cfgExportarLogs(){
   var fMod = (document.getElementById('logs-filtro-modulo')||{}).value || '';
