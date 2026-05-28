@@ -400,7 +400,17 @@ function abrirGenerarFactura(pagoId){
   if(!p){ toast('Pago no encontrado','error'); return; }
   if(_facGetByPagoId(p.id)){ toast('Este pago ya tiene factura emitida','warning'); return; }
   var cred = (S.creds||[]).find(function(x){ return x.id === p.cred; });
-  var cliente = (S.clientes||[]).find(function(x){ return x.nombre === p.cli; });
+  // Buscar el cliente para autocompletar sus datos en la factura.
+  // 1) por el clienteId/cliId guardado en el crédito (lo más confiable);
+  // 2) si no, por nombre (sin distinguir mayúsculas ni espacios sobrantes).
+  var _cliRef = cred && (cred.clienteId || cred.cliId);
+  var cliente = (_cliRef!=null && String(_cliRef)!=='')
+    ? (S.clientes||[]).find(function(x){ return String(x.id) === String(_cliRef); })
+    : null;
+  if(!cliente){
+    var _nm = String(p.cli||'').trim().toLowerCase();
+    cliente = (S.clientes||[]).find(function(x){ return String(x.nombre||'').trim().toLowerCase() === _nm; });
+  }
   var emp = getEmpresa();
   var nextNum = _facSiguienteNumeroFactura();
   var nextCtrl = _facSiguienteNumeroControl();
@@ -426,10 +436,10 @@ function abrirGenerarFactura(pagoId){
     + '</div>'
     + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin:14px 0 8px">DATOS DEL CLIENTE</div>'
     + '<div class="fgr" style="gap:10px">'
-    + '<div class="fg"><label>Nombre / Razón Social</label><input class="fi" id="fac_cli_nom" value="'+(p.cli||'')+'"></div>'
-    + '<div class="fg"><label>C.I. / RIF</label><input class="fi" id="fac_cli_ci" value="'+((cliente&&cliente.ci)||'')+'"></div>'
-    + '<div class="fg"><label>Teléfono</label><input class="fi" id="fac_cli_tel" value="'+((cliente&&cliente.telefono)||'')+'"></div>'
-    + '<div class="fg" style="grid-column:1/-1"><label>Dirección</label><input class="fi" id="fac_cli_dir" value="'+((cliente&&(cliente.dir_det||cliente.ciudad_res||cliente.ciudad))||'')+'"></div>'
+    + '<div class="fg"><label>Nombre / Razón Social</label><input class="fi" id="fac_cli_nom" value="'+(p.cli||(cliente&&cliente.nombre)||'')+'"></div>'
+    + '<div class="fg"><label>C.I. / RIF</label><input class="fi" id="fac_cli_ci" value="'+((cliente&&(cliente.cedula||cliente.rif))||'')+'"></div>'
+    + '<div class="fg"><label>Teléfono</label><input class="fi" id="fac_cli_tel" value="'+((cliente&&(cliente.tel||cliente.wa))||'')+'"></div>'
+    + '<div class="fg" style="grid-column:1/-1"><label>Dirección</label><input class="fi" id="fac_cli_dir" value="'+((cliente&&(cliente.dir||cliente.ciudad))||'')+'"></div>'
     + '</div>'
     + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin:14px 0 8px">DETALLE DE LA OPERACIÓN</div>'
     + '<div class="fgr c1" style="gap:10px">'
