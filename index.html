@@ -114,18 +114,15 @@ h2.head{font-size:clamp(34px,4vw,52px);font-weight:800;letter-spacing:-2px;line-
 }
 @keyframes haloPulse{0%,100%{opacity:.85;transform:translate(-50%,-50%) scale(1);}50%{opacity:1;transform:translate(-50%,-50%) scale(1.06);}}
 
-/* Plataforma: contenedor relativo + altura fija para anclar la sombra */
+/* Plataforma: contenedor flex column con moto encima de la sombra */
 .hero-bike-platform{
   position:relative;z-index:2;
-  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
-  height:280px;  /* altura fija para que la sombra sepa donde va */
+  display:flex;flex-direction:column;align-items:center;
   margin:0 0 14px;
 }
 .hero-bike img{
   position:relative;z-index:3;
-  display:block;width:auto;height:100%;max-width:100%;
-  object-fit:contain;
-  object-position:center bottom;
+  display:block;width:auto;max-width:100%;height:auto;max-height:260px;
   transition:opacity .25s, transform .8s var(--ease);
   animation:bikeRoll 1.6s ease-in-out infinite;
 }
@@ -134,16 +131,15 @@ h2.head{font-size:clamp(34px,4vw,52px);font-weight:800;letter-spacing:-2px;line-
   50%{transform:translateX(4px);}
 }
 .hero-bike img.bg-processing{opacity:0;}
-/* Asfalto: position:absolute pegado al BOTTOM del platform (= donde están las ruedas) */
+/* Asfalto: directamente debajo del img (tight-cropped) — sin gap */
 .hero-bike-floor{
-  position:absolute;
-  left:50%;bottom:-6px;transform:translateX(-50%);
-  z-index:4;  /* encima del img para tapar el "vuelo" */
-  width:62%;height:22px;
+  position:relative;z-index:2;
+  margin-top:-8px;
+  width:68%;height:18px;
   background:radial-gradient(ellipse at center,
-    rgba(0,2,15,.95) 0%,
-    rgba(0,2,15,.70) 22%,
-    rgba(0,2,15,.32) 48%,
+    rgba(0,2,15,.92) 0%,
+    rgba(0,2,15,.65) 22%,
+    rgba(0,2,15,.30) 48%,
     rgba(0,2,15,.10) 70%,
     transparent 85%);
   filter:blur(3px);
@@ -1262,6 +1258,7 @@ document.querySelectorAll('.reveal').forEach(function(el){obs.observe(el);});
         ctx.drawImage(img, 0, 0);
         var data = ctx.getImageData(0, 0, canvas.width, canvas.height);
         var px = data.data;
+        var W = canvas.width, H = canvas.height;
         // Pixels con RGB > 235 → fondo blanco, hacer transparente
         for(var i = 0; i < px.length; i += 4){
           var r = px[i], g = px[i+1], b = px[i+2];
@@ -1275,7 +1272,34 @@ document.querySelectorAll('.reveal').forEach(function(el){obs.observe(el);});
           }
         }
         ctx.putImageData(data, 0, 0);
-        targetImg.src = canvas.toDataURL('image/png');
+
+        // ─── TIGHT CROP: encontrar bounding box de pixels NO transparentes ───
+        var minX = W, minY = H, maxX = 0, maxY = 0;
+        for(var y = 0; y < H; y++){
+          for(var x = 0; x < W; x++){
+            var alpha = px[(y * W + x) * 4 + 3];
+            if(alpha > 30){  // pixel "visible"
+              if(x < minX) minX = x;
+              if(x > maxX) maxX = x;
+              if(y < minY) minY = y;
+              if(y > maxY) maxY = y;
+            }
+          }
+        }
+        // Si hay contenido visible, recortar a ese bbox
+        if(maxX > minX && maxY > minY){
+          var pad = 4;  // pequeño aire alrededor
+          var cx = Math.max(0, minX - pad);
+          var cy = Math.max(0, minY - pad);
+          var cw = Math.min(W - cx, (maxX - minX) + pad * 2);
+          var ch = Math.min(H - cy, (maxY - minY) + pad * 2);
+          var crop = document.createElement('canvas');
+          crop.width = cw; crop.height = ch;
+          crop.getContext('2d').drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch);
+          targetImg.src = crop.toDataURL('image/png');
+        } else {
+          targetImg.src = canvas.toDataURL('image/png');
+        }
         targetImg.classList.remove('bg-processing');
       } catch(e){
         console.warn('No se pudo procesar:', e);
