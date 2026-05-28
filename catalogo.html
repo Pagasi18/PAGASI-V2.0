@@ -364,10 +364,9 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
 .sede-chip.is-active .sede-n{background:rgba(255,255,255,.20);color:#fff;}
 
 /* MOTO SVG ILLUSTRATION (overrides .mcard-img svg{display:none}) */
-.mcard-img-svg{position:relative;background:linear-gradient(180deg,#1E293B 0%,#0F172A 100%)!important;overflow:hidden!important;}
-.mcard-img-svg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 40%,rgba(0,0,0,.55) 100%);pointer-events:none;z-index:1;}
-.mcard-img-svg .moto-photo{display:block!important;width:100%!important;height:100%!important;object-fit:cover!important;padding:0!important;transition:transform .55s var(--ease),filter .35s var(--ease);}
-.mcard:hover .mcard-img-svg .moto-photo{transform:scale(1.08);filter:brightness(1.05) saturate(1.1);}
+.mcard-img-svg{position:relative;background:linear-gradient(180deg,#FFFFFF 0%,#F1F5F9 100%)!important;overflow:hidden!important;}
+.mcard-img-svg .moto-photo{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important;padding:18px!important;transition:transform .55s var(--ease);}
+.mcard:hover .mcard-img-svg .moto-photo{transform:scale(1.06);}
 .mcard-img-svg .mlabel,.mcard-img-svg .sede-pin{z-index:2;}
 .sede-pin{position:absolute;bottom:12px;right:12px;background:rgba(10,10,15,.78);color:#fff;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:6px 11px;border-radius:50px;backdrop-filter:blur(6px);}
 
@@ -484,30 +483,11 @@ function fmtUSD(n){
   return '$' + Math.round(parseFloat(n)||0).toLocaleString('en-US');
 }
 
-// ─── Fotos por categoría (Unsplash) — fácil de reemplazar con fotos reales después ───
-const FOTOS_MOTO = {
-  sport:    'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=900&q=85&auto=format&fit=crop',
-  trail:    'https://images.unsplash.com/photo-1568708890029-3affe5b3ea38?w=900&q=85&auto=format&fit=crop',
-  scooter:  'https://images.unsplash.com/photo-1517816743773-6e0fd518b4a6?w=900&q=85&auto=format&fit=crop',
-  touring:  'https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=900&q=85&auto=format&fit=crop',
-  urbana:   'https://images.unsplash.com/photo-1611241443322-b5d8d7e1edd5?w=900&q=85&auto=format&fit=crop',
-  carga:    'https://images.unsplash.com/photo-1606889464198-fcb18894cf50?w=900&q=85&auto=format&fit=crop'
-};
-
-function categoriaPorCat(catStr, modelo){
-  var s = ((catStr||'') + ' ' + (modelo||'')).toLowerCase();
-  if(s.indexOf('scooter') >= 0 || s.indexOf('moka') >= 0 || s.indexOf('cappucino') >= 0) return 'scooter';
-  if(s.indexOf('aventura') >= 0 || s.indexOf('adventure') >= 0 || s.indexOf('enduro') >= 0 || s.indexOf('trail') >= 0 || s.indexOf('tank') >= 0 || s.indexOf('gs') >= 0 || s.indexOf('lechuza') >= 0) return 'trail';
-  if(s.indexOf('carga pesada') >= 0 || s.indexOf('atlas') >= 0 || s.indexOf('xl') >= 0) return 'carga';
-  if(s.indexOf('touring') >= 0 || s.indexOf('outlook') >= 0 || s.indexOf('custom') >= 0) return 'touring';
-  if(s.indexOf('sport') >= 0 || s.indexOf('deportiva') >= 0 || s.indexOf('racing') >= 0 || s.indexOf('naked') >= 0 || s.indexOf('rx') >= 0 || s.indexOf('rk') >= 0 || s.indexOf('r3x') >= 0 || s.indexOf('typhoon') >= 0 || s.indexOf('fénix') >= 0 || s.indexOf('fox') >= 0 || s.indexOf('power') >= 0 || s.indexOf('arsen') >= 0) return 'sport';
-  return 'urbana';
-}
+// ─── Foto temporal (la misma para todas las motos hasta tener fotos individuales) ───
+const FOTO_TEMP = 'assets/moto-temp.jpg';
 
 function motoSvg(modelo, cat){
-  var categoria = categoriaPorCat(cat, modelo);
-  var foto = FOTOS_MOTO[categoria] || FOTOS_MOTO.urbana;
-  return `<img src="${foto}" alt="${modelo}" class="moto-photo" loading="lazy" onerror="this.onerror=null;this.src='${FOTOS_MOTO.urbana}'">`;
+  return `<img src="${FOTO_TEMP}" alt="${modelo}" class="moto-photo" loading="lazy">`;
 }
 
 function renderMotos(sedeFilter){

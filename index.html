@@ -57,54 +57,74 @@ h2.head{font-size:clamp(34px,4vw,52px);font-weight:800;letter-spacing:-2px;line-
 #mob a:hover{color:var(--p);}
 .mob-x{position:absolute;top:20px;right:20px;font-size:24px;background:none;color:var(--ink-3);}
 
-/* HERO */
-.hero{min-height:100svh;display:flex;align-items:center;padding:120px 48px 80px;position:relative;overflow:hidden;}
-.hero-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 1000px 700px at 75% 30%,rgba(37,99,235,.10) 0%,transparent 70%);}
-.hero-dots{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(37,99,235,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.04) 1px,transparent 1px);background-size:72px 72px;mask-image:radial-gradient(ellipse 80% 70% at 30% 40%,#000 10%,transparent 100%);}
-.hero-wrap{position:relative;z-index:2;max-width:1240px;width:100%;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;animation:fadeUp .85s var(--ease) both;}
-.hero-left{max-width:560px;}
-.hero-pill{display:inline-flex;align-items:center;gap:8px;background:var(--off);border:1px solid rgba(37,99,235,.15);border-radius:50px;padding:7px 18px;font-size:12.5px;font-weight:600;color:var(--p);margin-bottom:30px;}
+/* HERO — minimalista centrado */
+.hero{min-height:calc(100svh - 64px);display:flex;align-items:center;justify-content:center;padding:80px 48px 60px;position:relative;overflow:hidden;}
+.hero-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 1200px 700px at 50% 30%,rgba(37,99,235,.08) 0%,transparent 65%);}
+.hero-dots{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(37,99,235,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.04) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse 80% 70% at 50% 45%,#000 10%,transparent 100%);}
+.hero-inner{position:relative;z-index:2;max-width:880px;margin:0 auto;text-align:center;animation:fadeUp .85s var(--ease) both;}
+.hero-pill{display:inline-flex;align-items:center;gap:8px;background:var(--off);border:1px solid rgba(37,99,235,.15);border-radius:50px;padding:8px 18px;font-size:12.5px;font-weight:600;color:var(--p);margin-bottom:32px;}
 .pdot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
-h1{font-size:clamp(46px,6.5vw,82px);font-weight:800;letter-spacing:-3.5px;line-height:.96;color:var(--ink);margin-bottom:26px;}
+h1{font-size:clamp(54px,8vw,104px);font-weight:800;letter-spacing:-4.5px;line-height:.94;color:var(--ink);margin-bottom:28px;}
 h1 i{font-style:normal;color:var(--p);}
-.hero-desc{font-size:clamp(16px,1.5vw,18px);color:var(--ink-3);line-height:1.65;letter-spacing:-.01em;max-width:500px;margin:0 0 36px;}
-.hero-desc b{color:var(--ink);font-weight:600;}
-.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:48px;}
-.hero-brands{display:flex;align-items:center;gap:14px;color:var(--ink-4);font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;}
-.hero-brands::before{content:'';flex:0 0 24px;height:1px;background:var(--ink-4);}
-.hero-brands b{color:var(--ink-2);font-weight:800;letter-spacing:.06em;}
+.hero-desc{font-size:clamp(17px,1.6vw,20px);color:var(--ink-3);line-height:1.6;letter-spacing:-.01em;max-width:540px;margin:0 auto 42px;}
+.hero-desc b{color:var(--ink);font-weight:700;}
+.hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:52px;}
+.hero-sedes{display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap;color:var(--ink-4);font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;}
+.hero-sedes span{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);}
+.hero-sedes span::before{content:'';width:5px;height:5px;background:var(--p);border-radius:50%;}
 
-/* Hero photo column */
-.hero-photo-wrap{position:relative;aspect-ratio:5/6;max-height:600px;width:100%;}
-.hero-photo{position:absolute;inset:0;border-radius:32px;overflow:hidden;background:linear-gradient(180deg,#1E293B 0%,#0F172A 100%);box-shadow:0 40px 80px -20px rgba(37,99,235,.25),0 10px 30px rgba(0,0,0,.08);}
-.hero-photo img{width:100%;height:100%;object-fit:cover;display:block;transform:scale(1.02);}
-.hero-photo::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 50%,rgba(15,23,42,.55) 100%);}
-.hero-badge-tl{position:absolute;top:24px;left:24px;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);padding:10px 18px;border-radius:50px;display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:var(--ink);z-index:2;box-shadow:0 8px 24px rgba(0,0,0,.12);}
-.hero-badge-tl .dot{width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
-.hero-price-card{position:absolute;bottom:24px;left:24px;right:24px;z-index:2;background:rgba(255,255,255,.97);backdrop-filter:blur(16px);border-radius:20px;padding:20px 22px;display:flex;align-items:center;gap:18px;box-shadow:0 20px 50px rgba(0,0,0,.18);}
-.hero-price-card-info{flex:1;min-width:0;}
-.hero-price-card-lbl{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);margin-bottom:4px;}
-.hero-price-card-title{font-size:15px;font-weight:800;color:var(--ink);letter-spacing:-.3px;line-height:1.2;margin-bottom:3px;}
-.hero-price-card-sub{font-size:11.5px;color:var(--ink-3);font-weight:500;}
-.hero-price-card-price{text-align:right;flex-shrink:0;}
-.hero-price-card-price-v{font-size:24px;font-weight:800;color:var(--p);letter-spacing:-.6px;line-height:1;}
-.hero-price-card-price-l{font-size:10.5px;color:var(--ink-4);font-weight:600;margin-top:3px;}
+/* FEATURED MOTO SHOWCASE — sección de moto destacada */
+.featured-sec{padding:80px 48px 100px;position:relative;background:var(--white);}
+.featured-wrap{max-width:1280px;margin:0 auto;}
+.featured-tag{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--p);margin-bottom:14px;}
+.featured-tag::before{content:'';width:24px;height:2px;background:var(--p);border-radius:2px;}
+.featured-h{font-size:clamp(34px,4vw,52px);font-weight:800;letter-spacing:-2px;line-height:1.05;color:var(--ink);margin-bottom:14px;max-width:680px;}
+.featured-s{font-size:17px;color:var(--ink-3);line-height:1.65;max-width:480px;margin-bottom:52px;}
 
-.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);margin-top:90px;border:1px solid var(--line);border-radius:var(--rl);background:var(--white);box-shadow:0 2px 24px rgba(0,0,0,.04);overflow:hidden;max-width:1160px;margin-left:auto;margin-right:auto;}
-.kpi-item{padding:28px 20px;text-align:center;border-right:1px solid var(--line);}
+.featured-card{position:relative;background:linear-gradient(135deg,#FAFBFF 0%,#EFF3FF 100%);border-radius:32px;border:1px solid rgba(37,99,235,.10);padding:0;overflow:hidden;display:grid;grid-template-columns:1.1fr .9fr;gap:0;box-shadow:0 30px 80px -30px rgba(37,99,235,.18);}
+.featured-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 600px 400px at 100% 100%,rgba(37,99,235,.10) 0%,transparent 60%);pointer-events:none;}
+
+.featured-photo{position:relative;height:100%;min-height:460px;display:flex;align-items:center;justify-content:center;padding:40px;background:linear-gradient(180deg,#fff 0%,#F4F8FF 100%);}
+.featured-photo img{max-width:100%;max-height:480px;width:auto;height:auto;object-fit:contain;display:block;filter:drop-shadow(0 30px 40px rgba(0,0,0,.15));}
+.featured-photo-shine{position:absolute;width:120%;height:60px;background:radial-gradient(ellipse 50% 80% at 50% 50%,rgba(37,99,235,.10) 0%,transparent 70%);bottom:8%;left:-10%;}
+
+.featured-info{padding:56px 48px;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1;}
+.featured-info-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(0,200,83,.10);color:#00C853;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;padding:5px 11px;border-radius:50px;margin-bottom:18px;width:fit-content;}
+.featured-info-tag::before{content:'';width:6px;height:6px;background:#00C853;border-radius:50%;}
+.featured-name{font-size:34px;font-weight:800;letter-spacing:-1.4px;color:var(--ink);margin-bottom:6px;line-height:1.05;}
+.featured-spec{font-size:13px;color:var(--ink-4);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:32px;}
+.featured-pricing{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:28px;}
+.featured-pricing-item{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px;}
+.featured-pricing-item.highlight{background:var(--p);color:#fff;border-color:var(--p);box-shadow:0 12px 32px rgba(37,99,235,.32);}
+.featured-pricing-lbl{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);margin-bottom:7px;}
+.featured-pricing-item.highlight .featured-pricing-lbl{color:rgba(255,255,255,.7);}
+.featured-pricing-val{font-size:28px;font-weight:800;letter-spacing:-1px;color:var(--ink);line-height:1;}
+.featured-pricing-item.highlight .featured-pricing-val{color:#fff;}
+.featured-pricing-sub{font-size:11px;color:var(--ink-4);font-weight:600;margin-top:5px;}
+.featured-pricing-item.highlight .featured-pricing-sub{color:rgba(255,255,255,.7);}
+.featured-actions{display:flex;gap:10px;flex-wrap:wrap;}
+.featured-feats{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;}
+.featured-feat{display:inline-flex;align-items:center;gap:6px;background:rgba(37,99,235,.05);border:1px solid rgba(37,99,235,.12);color:var(--p);font-size:11.5px;font-weight:700;padding:6px 11px;border-radius:50px;}
+.featured-feat::before{content:'✓';font-size:11px;}
+
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);margin-top:60px;border:1px solid var(--line);border-radius:var(--rxl);background:var(--white);box-shadow:0 2px 24px rgba(0,0,0,.04);overflow:hidden;}
+.kpi-item{padding:30px 22px;text-align:center;border-right:1px solid var(--line);position:relative;transition:background .3s var(--ease);}
 .kpi-item:last-child{border-right:none;}
-.kpi-n{font-size:clamp(28px,3.5vw,40px);font-weight:800;letter-spacing:-1.5px;color:var(--p);line-height:1;margin-bottom:6px;}
-.kpi-l{font-size:12px;color:var(--ink-4);font-weight:500;}
+.kpi-item:hover{background:var(--off);}
+.kpi-n{font-size:clamp(32px,3.8vw,44px);font-weight:800;letter-spacing:-1.8px;color:var(--p);line-height:1;margin-bottom:8px;}
+.kpi-l{font-size:12px;color:var(--ink-4);font-weight:600;letter-spacing:.04em;}
 .divl{height:1px;background:var(--line);}
 
-@media(max-width:920px){
-  .hero-wrap{grid-template-columns:1fr;gap:48px;text-align:center;}
-  .hero-left{margin:0 auto;}
-  .hero-desc{margin-left:auto;margin-right:auto;}
-  .hero-actions{justify-content:center;}
-  .hero-brands{justify-content:center;}
-  .hero-brands::before{display:none;}
-  .hero-photo-wrap{max-height:480px;aspect-ratio:6/5;}
+@media(max-width:980px){
+  .featured-card{grid-template-columns:1fr;}
+  .featured-photo{min-height:340px;padding:32px;}
+  .featured-photo img{max-height:300px;}
+  .featured-info{padding:36px 32px;}
+}
+@media(max-width:600px){
+  .hero-sedes{gap:14px;font-size:10px;}
+  .featured-pricing{grid-template-columns:1fr;}
+  .featured-name{font-size:26px;}
 }
 
 /* STEPS */
@@ -436,49 +456,73 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
 </nav>
 <section class="hero" id="inicio">
   <div class="hero-glow"></div><div class="hero-dots"></div>
-  <div class="hero-wrap">
-    <div class="hero-left">
-      <div class="hero-pill"><span class="pdot"></span>Disponible en todo Venezuela</div>
-      <h1>Tu moto.<br><i>En cuotas.</i><br>Ya.</h1>
-      <p class="hero-desc"><b>Aprobación en 24 horas. Entrega inmediata.</b><br>El camino más simple para tener la moto que necesitas, con cuotas que entiendes y sin sorpresas.</p>
-      <div class="hero-actions">
-        <a href="catalogo.html" class="btn btn-p">Ver catálogo →</a>
-        <a href="solicitar.html" class="btn btn-s">Solicitar ahora</a>
-      </div>
-      <div class="hero-brands">
-        <span>Distribuimos</span>
-        <b>EK Bello Monte</b>
-        <span>·</span>
-        <b>Boleita</b>
-        <span>·</span>
-        <b>Toro Sabana Grande</b>
-      </div>
+  <div class="hero-inner">
+    <div class="hero-pill"><span class="pdot"></span>Disponible en todo Venezuela</div>
+    <h1>Tu moto.<br><i>En cuotas.</i><br>Ya.</h1>
+    <p class="hero-desc"><b>Aprobación en 24 horas. Entrega inmediata.</b><br>El camino más simple para tener la moto que necesitas, con cuotas que entiendes y sin sorpresas.</p>
+    <div class="hero-actions">
+      <a href="catalogo.html" class="btn btn-p">Ver catálogo →</a>
+      <a href="solicitar.html" class="btn btn-s">Solicitar ahora</a>
+    </div>
+    <div class="hero-sedes">
+      <span>EK Bello Monte</span>
+      <span>Boleita</span>
+      <span>Toro Sabana Grande</span>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURED MOTO SHOWCASE -->
+<section class="featured-sec" id="featured">
+  <div class="featured-wrap">
+    <div class="reveal">
+      <div class="featured-tag">Moto del mes</div>
+      <h2 class="featured-h">Una moto. Cuotas claras. Cero burocracia.</h2>
+      <p class="featured-s">Empieza a manejar este mes pagando solo la mitad inicial. El resto en cuotas quincenales fijas.</p>
     </div>
 
-    <div class="hero-photo-wrap reveal">
-      <div class="hero-photo">
-        <img src="https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=1200&q=85&auto=format&fit=crop" alt="Moto destacada Pagasi" loading="eager">
-        <div class="hero-badge-tl"><span class="dot"></span> 41 modelos disponibles</div>
-        <div class="hero-price-card">
-          <div class="hero-price-card-info">
-            <div class="hero-price-card-lbl">Desde</div>
-            <div class="hero-price-card-title">Moto urbana 150cc</div>
-            <div class="hero-price-card-sub">Inicial 50% · 12 meses · Entrega ese día</div>
+    <div class="featured-card reveal">
+      <div class="featured-photo">
+        <div class="featured-photo-shine"></div>
+        <img src="assets/moto-temp.jpg" alt="Moto destacada">
+      </div>
+      <div class="featured-info">
+        <div class="featured-info-tag">Stock disponible</div>
+        <h3 class="featured-name">EK Xpress 150</h3>
+        <div class="featured-spec">150cc · Urbana · Entrega en 24h</div>
+
+        <div class="featured-pricing">
+          <div class="featured-pricing-item">
+            <div class="featured-pricing-lbl">Precio</div>
+            <div class="featured-pricing-val">$1,099</div>
+            <div class="featured-pricing-sub">Contado total</div>
           </div>
-          <div class="hero-price-card-price">
-            <div class="hero-price-card-price-v">$87</div>
-            <div class="hero-price-card-price-l">por mes</div>
+          <div class="featured-pricing-item highlight">
+            <div class="featured-pricing-lbl">Cuota mensual</div>
+            <div class="featured-pricing-val">$94</div>
+            <div class="featured-pricing-sub">12 meses · 50% inicial</div>
           </div>
+        </div>
+
+        <div class="featured-feats">
+          <span class="featured-feat">Garantía oficial</span>
+          <span class="featured-feat">Entrega inmediata</span>
+          <span class="featured-feat">Aprobación en 24h</span>
+        </div>
+
+        <div class="featured-actions" style="margin-top:28px">
+          <a href="solicitar.html?moto=2" class="btn btn-p" style="flex:1;justify-content:center">Solicitar esta moto</a>
+          <a href="catalogo.html" class="btn btn-s">Ver todas</a>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="kpi-strip" style="position:relative;z-index:2;">
-    <div class="kpi-item"><div class="kpi-n">41</div><div class="kpi-l">Modelos disponibles</div></div>
-    <div class="kpi-item"><div class="kpi-n">24h</div><div class="kpi-l">Aprobación</div></div>
-    <div class="kpi-item"><div class="kpi-n">3</div><div class="kpi-l">Sedes en Caracas</div></div>
-    <div class="kpi-item"><div class="kpi-n">100%</div><div class="kpi-l">Proceso digital</div></div>
+    <div class="kpi-strip">
+      <div class="kpi-item"><div class="kpi-n">41</div><div class="kpi-l">Modelos disponibles</div></div>
+      <div class="kpi-item"><div class="kpi-n">24h</div><div class="kpi-l">Aprobación</div></div>
+      <div class="kpi-item"><div class="kpi-n">3</div><div class="kpi-l">Sedes en Caracas</div></div>
+      <div class="kpi-item"><div class="kpi-n">100%</div><div class="kpi-l">Proceso digital</div></div>
+    </div>
   </div>
 </section>
 <div class="divl"></div>
