@@ -1408,6 +1408,8 @@ function flushRealtimeRender(){
 
 function _aplicarConcesionarioActivoRealtime(){
   try{
+    // El Administrador siempre trabaja con "Todos" por defecto: no forzar sede en tiempo real.
+    if(typeof isAdminUser==='function' && isAdminUser()) return;
     var conc = S.concesionarios || [];
     var savedConc = localStorage.getItem('concesionarioActivo');
     if(savedConc && conc.find(function(c){return c.id === savedConc;})) S.concesionarioActivo = savedConc;
@@ -1666,7 +1668,7 @@ var DB = {
       // Solo restauramos el concesionario guardado si el usuario tiene sedes específicas
       // asignadas (no es admin total). Esto evita que el admin se quede pegado en una sede.
       try{
-        var esAdminPuro = !S.currentUser || !(S.currentUser.concesionarios||[]).length;
+        var esAdminPuro = (typeof isAdminUser==='function' && isAdminUser()) || !S.currentUser || !(S.currentUser.concesionarios||[]).length;
         if(esAdminPuro){
           S.concesionarioActivo = null;
           try{ localStorage.removeItem('concesionarioActivo'); }catch(e){}
@@ -1678,8 +1680,9 @@ var DB = {
         }
       }catch(e){}
       // Si el usuario tiene UNA sola sede asignada, forzarla como activa (no permitir "Todos")
+      // EXCEPCIÓN: el Administrador siempre puede quedarse en "Todos".
       try{
-        if(S.currentUser){
+        if(S.currentUser && !(typeof isAdminUser==='function' && isAdminUser())){
           var asignados = S.currentUser.concesionarios || [];
           if(asignados.length === 1){
             S.concesionarioActivo = asignados[0];
@@ -2148,7 +2151,9 @@ function _attachCurrentUserListener(uid){
       // Auto-set sede activa si tiene 1 sola asignada
       try{
         var _asgn = S.currentUser.concesionarios || [];
-        if(_asgn.length === 1){
+        if((typeof isAdminUser==='function' && isAdminUser())){
+          /* Administrador: se queda en "Todos", no se fuerza sede */
+        } else if(_asgn.length === 1){
           S.concesionarioActivo = _asgn[0];
           try{ localStorage.setItem('concesionarioActivo', _asgn[0]); }catch(e){}
         } else if(_asgn.length > 1 && _asgn.indexOf(S.concesionarioActivo) === -1){
