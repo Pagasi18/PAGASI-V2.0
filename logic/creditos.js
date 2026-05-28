@@ -536,8 +536,17 @@ function _wzCliSearch(){
   var q = (inp.value||'').toLowerCase().trim();
   // Normalizar: quitar puntos, guiones, espacios, V/E (para que cédulas se busquen libremente)
   var qNorm = q.replace(/[.\-\s]/g,'').replace(/^[ve]/,'');
-  var list = (S.clientes||[]).filter(function(c){ return c && !c.eliminado; });
-  // Si no hay texto, mostrar primeros 8
+  // Ordenar TODA la lista por fecha de creación DESC (más recientes primero)
+  var list = (S.clientes||[]).filter(function(c){ return c && !c.eliminado; })
+    .slice().sort(function(a,b){
+      var fa = a.creado || a.editadoEn || '';
+      var fb = b.creado || b.editadoEn || '';
+      if(!fa && !fb) return 0;
+      if(!fa) return 1;
+      if(!fb) return -1;
+      return fb < fa ? -1 : fb > fa ? 1 : 0;
+    });
+  // Si no hay texto, mostrar primeros 8 (más recientes)
   var resultados;
   if(!q){
     resultados = list.slice(0, 8);
@@ -556,13 +565,33 @@ function _wzCliSearch(){
       + (q ? 'Sin resultados — el cliente se creará como nuevo' : 'Sin clientes registrados')
       + '</div>';
   } else {
+    // Helper para fecha relativa
+    function fechaRel(s){
+      if(!s) return '';
+      try {
+        var d = new Date(s);
+        if(isNaN(d.getTime())) return '';
+        var diff = Math.floor((Date.now() - d.getTime()) / 86400000);
+        if(diff <= 0) return 'hoy';
+        if(diff === 1) return 'ayer';
+        if(diff < 7) return diff+'d';
+        if(diff < 30) return Math.floor(diff/7)+'sem';
+        if(diff < 365) return Math.floor(diff/30)+'mes';
+        return Math.floor(diff/365)+'a';
+      } catch(e){ return ''; }
+    }
     dd.innerHTML = resultados.map(function(c){
       var nombreEsc = (c.nombre||'(sin nombre)').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+      var esLeadWeb = c.origen === 'web';
+      var bg = esLeadWeb ? 'background:rgba(37,99,235,.06);border-left:3px solid var(--p1)' : 'background:none';
+      var leadBadge = esLeadWeb ? '<span style="background:rgba(37,99,235,.14);color:var(--p1);font-size:9px;font-weight:800;padding:2px 7px;border-radius:50px;margin-left:6px;letter-spacing:.04em;text-transform:uppercase;border:1px solid rgba(37,99,235,.25)">Lead web</span>' : '';
+      var rel = fechaRel(c.creado);
+      var fechaTag = rel ? '<span style="font-size:10px;color:var(--ink3);font-weight:600;margin-left:auto;font-family:var(--fd)">'+rel+'</span>' : '';
       return '<button type="button" onmousedown="event.preventDefault();_wzCliPick(\''+String(c.id).replace(/'/g,'')+'\')" '
-        + 'style="display:block;width:100%;text-align:left;padding:9px 12px;background:none;border:none;border-bottom:1px solid var(--rim2);cursor:pointer;font-family:var(--f)" '
-        + 'onmouseover="this.style.background=\'var(--gs)\'" onmouseout="this.style.background=\'none\'">'
-        + '<div style="font-size:13px;font-weight:700;color:var(--ink)">'+nombreEsc+'</div>'
-        + '<div style="font-size:11px;color:var(--ink3);margin-top:1px">C.I.: '+(c.cedula||'—')+(c.tel?' · '+c.tel:'')+(c.ciudad?' · '+c.ciudad:'')+'</div>'
+        + 'style="display:block;width:100%;text-align:left;padding:9px 12px;'+bg+';border:none;border-bottom:1px solid var(--rim2);cursor:pointer;font-family:var(--f);transition:background .15s" '
+        + 'onmouseover="this.style.background=\''+(esLeadWeb?'rgba(37,99,235,.12)':'var(--gs)')+'\'" onmouseout="this.style.background=\''+(esLeadWeb?'rgba(37,99,235,.06)':'none')+'\'">'
+        + '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:700;color:var(--ink)">'+nombreEsc+'</span>'+leadBadge+fechaTag+'</div>'
+        + '<div style="font-size:11px;color:var(--ink3);margin-top:2px">C.I.: '+(c.cedula||'—')+(c.tel?' · '+c.tel:'')+(c.ciudad?' · '+c.ciudad:'')+'</div>'
         + '</button>';
     }).join('');
   }

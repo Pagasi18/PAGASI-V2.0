@@ -127,8 +127,19 @@ function renderClienteList(q=''){
       }catch(_e){}
     }
 
-    return `<tr onclick="verCliente('${c.id}')" style="cursor:pointer">
-      <td class="tdm" style="white-space:nowrap">${c.nombre}${c.premium?` <span style="color:var(--amber)">★</span>`:''}</td>
+    // Estilo fila: azul claro para TODOS los leads (sin crédito activo ni historial)
+    var estadosCli = getClienteEstados(c).estados || [];
+    var esLead = estadosCli.indexOf('lead') >= 0;
+    var esLeadWeb = c.origen === 'web';
+    var rowStyle = 'cursor:pointer;' + (esLead
+      ? 'background:linear-gradient(90deg,rgba(37,99,235,.07) 0%,rgba(37,99,235,.03) 100%);border-left:3px solid var(--p1);'
+      : '');
+    var leadDot = esLeadWeb
+      ? ' <span title="Lead web — vino desde el formulario público" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--p1);box-shadow:0 0 0 3px rgba(37,99,235,.15);margin-left:6px;vertical-align:middle"></span>'
+      : (esLead ? ' <span title="Lead — sin crédito activo aún" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(37,99,235,.5);margin-left:6px;vertical-align:middle"></span>' : '');
+
+    return `<tr onclick="verCliente('${c.id}')" style="${rowStyle}">
+      <td class="tdm" style="white-space:nowrap">${c.nombre}${c.premium?` <span style="color:var(--amber)">★</span>`:''}${leadDot}</td>
       <td class="tds">${c.cedula||'—'}</td>
       <td>${fechaCell}</td>
       <td><div class="tdm">${c.tel||'—'}</div><div class="tds">${c.ciudad||'—'}</div></td>
