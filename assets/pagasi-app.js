@@ -13,6 +13,359 @@ var FIREBASE_CONFIG = {
   appId: '1:951911859002:web:1eb8f0af7bcbd508474603'
 };
 
+// ════════════════════════════════════════════════════════════════
+// PUSH NOTIFICATIONS del navegador — recordatorios automáticos
+// ════════════════════════════════════════════════════════════════
+function pushNotifSupported(){
+  return ('Notification' in window) && typeof Notification.requestPermission === 'function';
+}
+
+function pushNotifState(){
+  if(!pushNotifSupported()) return 'no-soportado';
+  return Notification.permission; // 'default' | 'granted' | 'denied'
+}
+
+async function pushNotifRequest(){
+  if(!pushNotifSupported()){
+    if(typeof toast==='function') toast('Tu navegador no soporta notificaciones','error');
+    return false;
+  }
+  try {
+    var perm = await Notification.requestPermission();
+    if(perm === 'granted'){
+      if(typeof toast==='function') toast('✓ Notificaciones activadas','success');
+      try { localStorage.setItem('pgsPushEnabled','1'); } catch(e){}
+      // Notificación de prueba
+      pushNotifShow('Pagasi activado', 'Recibirás recordatorios de cobros y leads nuevos.', 'check');
+      // Iniciar el watcher periódico
+      pushNotifIniciarWatcher();
+      return true;
+    } else {
+      if(typeof toast==='function') toast('Permiso de notificaciones denegado','warn');
+      return false;
+    }
+  } catch(e){
+    console.error('Push permission error:', e);
+    return false;
+  }
+}
+
+function pushNotifShow(titulo, body, tag){
+  if(pushNotifState() !== 'granted') return null;
+  try {
+    var n = new Notification(titulo, {
+      body: body,
+      icon: '/PAGASI-V2.0/assets/pagasi-favicon.png',  // GitHub Pages path
+      badge: '/PAGASI-V2.0/assets/pagasi-favicon.png',
+      tag: tag || 'pagasi-' + Date.now(),
+      requireInteraction: false,
+      silent: false
+    });
+    n.onclick = function(){
+      window.focus();
+      n.close();
+    };
+    return n;
+  } catch(e){
+    console.warn('Push notif show error:', e);
+    return null;
+  }
+}
+
+// Mantiene registro de cosas ya notificadas hoy para no spamear
+function _pushNotifWasShown(key){
+  try {
+    var hoy = new Date().toISOString().slice(0,10);
+    var raw = localStorage.getItem('pgsPushLog_'+hoy) || '[]';
+    var arr = JSON.parse(raw);
+    return arr.indexOf(key) >= 0;
+  } catch(e){ return false; }
+}
+function _pushNotifMark(key){
+  try {
+    var hoy = new Date().toISOString().slice(0,10);
+    var raw = localStorage.getItem('pgsPushLog_'+hoy) || '[]';
+    var arr = JSON.parse(raw);
+    if(arr.indexOf(key) < 0){ arr.push(key); localStorage.setItem('pgsPushLog_'+hoy, JSON.stringify(arr)); }
+  } catch(e){}
+}
+
+function pushNotifChequearAhora(){
+  if(pushNotifState() !== 'granted') return;
+  if(!S || !S.creds) return;
+  try {
+    // 1) Cuotas vencidas (mora > 0)
+    var vencidas = (S.creds||[]).filter(function(c){
+      return !c.eliminado && c.estado === 'activo' && (parseInt(c.mora,10)||0) > 0;
+    });
+    var graves = vencidas.filter(function(c){ return (parseInt(c.mora,10)||0) > 30; });
+    if(graves.length > 0 && !_pushNotifWasShown('mora-grave-'+graves.length)){
+      pushNotifShow(
+        '⚠ ' + graves.length + ' clientes con mora grave',
+        graves.length + ' clientes tienen +30 días de atraso. Revisa cobranza.',
+        'mora-grave'
+      );
+      _pushNotifMark('mora-grave-'+graves.length);
+    }
+
+    // 2) Cuotas que vencen HOY o mañana
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var manana = new Date(hoy); manana.setDate(hoy.getDate()+1);
+    var venceProx = 0;
+    (S.creds||[]).forEach(function(c){
+      if(c.eliminado || c.estado !== 'activo' || !c.fecha) return;
+      var inicio = new Date(c.fecha);
+      var siguiente = new Date(inicio.getTime() + (((c.pagado||0)+1) * 15 * 24 * 60 * 60 * 1000));
+      siguiente.setHours(0,0,0,0);
+      if(siguiente.getTime() === hoy.getTime() || siguiente.getTime() === manana.getTime()){
+        venceProx++;
+      }
+    });
+    if(venceProx > 0 && !_pushNotifWasShown('vence-prox-'+venceProx)){
+      pushNotifShow(
+        '⏰ ' + venceProx + ' cuotas vencen hoy/mañana',
+        'Revisa el módulo de cobranza para llamar antes de la fecha.',
+        'vence-prox'
+      );
+      _pushNotifMark('vence-prox-'+venceProx);
+    }
+
+    // 3) Leads web nuevos sin atender
+    var leadsWeb = (S.clientes||[]).filter(function(cl){
+      if(cl.eliminado) return false;
+      if(cl.origen !== 'web') return false;
+      // Sin crédito asociado todavía
+      var tieneCred = (S.creds||[]).some(function(cr){ return cr.cliId === cl.id || cr.cli === cl.nombre; });
+      return !tieneCred;
+    });
+    if(leadsWeb.length > 0 && !_pushNotifWasShown('leads-web-'+leadsWeb.length)){
+      pushNotifShow(
+        '🎯 ' + leadsWeb.length + ' lead' + (leadsWeb.length!==1?'s':'') + ' web sin atender',
+        'Tienes nuevos clientes que llenaron el formulario. Contáctalos antes de que se enfríen.',
+        'leads-web'
+      );
+      _pushNotifMark('leads-web-'+leadsWeb.length);
+    }
+  } catch(e){ console.warn('pushNotifChequear error:', e); }
+}
+
+var _pushNotifTimer = null;
+function pushNotifIniciarWatcher(){
+  if(_pushNotifTimer) clearInterval(_pushNotifTimer);
+  // Chequear al inicio + cada 30 min
+  setTimeout(pushNotifChequearAhora, 5000);
+  _pushNotifTimer = setInterval(pushNotifChequearAhora, 30 * 60 * 1000);
+}
+
+// ════════════════════════════════════════════════════════════════
+// REPORTE MENSUAL POR EMAIL — generador + apertura mailto
+// ════════════════════════════════════════════════════════════════
+function generarReporteMensual(){
+  if(!S || !S.creds) return null;
+  var hoy = new Date();
+  var mesAct = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0');
+  var mesAnt = new Date(hoy.getFullYear(), hoy.getMonth()-1, 1);
+  var mesAntK = mesAnt.getFullYear() + '-' + String(mesAnt.getMonth()+1).padStart(2,'0');
+
+  // Pagos confirmados
+  var pagosConf = (S.pagos||[]).filter(function(p){ return !p.eliminado && p.estado === 'confirmado'; });
+  var pagosMesAct = pagosConf.filter(function(p){ return p.fecha && p.fecha.startsWith(mesAct); });
+  var pagosMesAnt = pagosConf.filter(function(p){ return p.fecha && p.fecha.startsWith(mesAntK); });
+
+  var cobradoMesAct = pagosMesAct.reduce(function(a,p){ return a + (parseFloat(p.monto)||0); }, 0);
+  var cobradoMesAnt = pagosMesAnt.reduce(function(a,p){ return a + (parseFloat(p.monto)||0); }, 0);
+  var pctCrec = cobradoMesAnt > 0 ? Math.round((cobradoMesAct - cobradoMesAnt) / cobradoMesAnt * 100) : (cobradoMesAct > 0 ? 100 : 0);
+
+  // Cartera
+  var cartera = (S.creds||[]).filter(function(c){ return !c.eliminado && c.estado === 'activo'; })
+    .reduce(function(a,c){
+      var tot = (parseFloat(c.cuotaQ||c.cuota||0) * (c.totalCuotas || (c.plazo||0)*2));
+      var pag = (parseFloat(c.cuotaQ||c.cuota||0) * (parseInt(c.pagado,10)||0));
+      return a + Math.max(0, tot - pag);
+    }, 0);
+
+  // Créditos activos
+  var creditosActivos = (S.creds||[]).filter(function(c){ return !c.eliminado && c.estado === 'activo'; }).length;
+  var creditosNuevos = (S.creds||[]).filter(function(c){
+    if(c.eliminado) return false;
+    var f = c.fecha || c.creadoEn;
+    return f && String(f).startsWith(mesAct);
+  }).length;
+
+  // Mora
+  var enMora = (S.creds||[]).filter(function(c){
+    return !c.eliminado && c.estado === 'activo' && (parseInt(c.mora,10)||0) > 0;
+  });
+  var moraGraves = enMora.filter(function(c){ return (parseInt(c.mora,10)||0) > 30; }).length;
+
+  // Top cobradores
+  var topCobradoresMap = {};
+  pagosMesAct.forEach(function(p){
+    var cob = p.cobrador || p.realizadoPor || 'Sin asignar';
+    if(!topCobradoresMap[cob]) topCobradoresMap[cob] = {nombre:cob, total:0, count:0};
+    topCobradoresMap[cob].total += parseFloat(p.monto)||0;
+    topCobradoresMap[cob].count++;
+  });
+  var topCobradores = Object.values(topCobradoresMap).sort(function(a,b){ return b.total - a.total; }).slice(0,5);
+
+  // Nuevos clientes del mes
+  var clientesNuevos = (S.clientes||[]).filter(function(cl){
+    if(cl.eliminado) return false;
+    return cl.creado && String(cl.creado).startsWith(mesAct);
+  }).length;
+  var leadsWeb = (S.clientes||[]).filter(function(cl){
+    if(cl.eliminado) return false;
+    if(cl.origen !== 'web') return false;
+    return cl.creado && String(cl.creado).startsWith(mesAct);
+  }).length;
+
+  var mesNombre = hoy.toLocaleDateString('es-VE',{month:'long',year:'numeric'});
+  var fmtUsd = function(n){ return '$' + (Math.round(n)||0).toLocaleString('en-US'); };
+
+  return {
+    mes: mesNombre,
+    cobradoMesAct: cobradoMesAct,
+    cobradoMesAnt: cobradoMesAnt,
+    pctCrec: pctCrec,
+    cartera: cartera,
+    creditosActivos: creditosActivos,
+    creditosNuevos: creditosNuevos,
+    enMora: enMora.length,
+    moraGraves: moraGraves,
+    topCobradores: topCobradores,
+    clientesNuevos: clientesNuevos,
+    leadsWeb: leadsWeb,
+    pagosCount: pagosMesAct.length,
+    fmtUsd: fmtUsd
+  };
+}
+
+function reporteMensualHtml(){
+  var r = generarReporteMensual();
+  if(!r) return '<p>No hay datos para generar reporte.</p>';
+  var emp = (typeof getEmpresa==='function') ? getEmpresa() : {nombre:'Pagasi'};
+  var topRows = r.topCobradores.length
+    ? r.topCobradores.map(function(c,i){
+        return '<tr><td style="padding:8px 10px;border:1px solid #e5e7eb">'+(i+1)+'</td>'
+          +'<td style="padding:8px 10px;border:1px solid #e5e7eb;font-weight:700">'+c.nombre+'</td>'
+          +'<td style="padding:8px 10px;border:1px solid #e5e7eb;text-align:right;font-family:monospace;color:#16a34a;font-weight:700">'+r.fmtUsd(c.total)+'</td>'
+          +'<td style="padding:8px 10px;border:1px solid #e5e7eb;text-align:right;color:#6b7280">'+c.count+'</td></tr>';
+      }).join('')
+    : '<tr><td colspan="4" style="padding:14px;text-align:center;color:#6b7280">Sin cobros este mes</td></tr>';
+
+  return ''
+    +'<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;max-width:680px;margin:0 auto;color:#1f2937;background:#fff">'
+    // Header
+    +'<div style="background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;padding:32px 36px;border-radius:14px 14px 0 0">'
+      +'<div style="font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;opacity:.85;margin-bottom:6px">Reporte mensual</div>'
+      +'<h1 style="font-size:30px;font-weight:900;margin:0;letter-spacing:-1px;text-transform:capitalize">'+r.mes+'</h1>'
+      +'<div style="font-size:13px;opacity:.85;margin-top:8px">'+(emp.nombre||'Pagasi')+' · Generado el '+new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'})+'</div>'
+    +'</div>'
+
+    // Métricas principales
+    +'<div style="padding:32px 36px;background:#fff;border:1px solid #e5e7eb;border-top:none">'
+      +'<h2 style="font-size:16px;font-weight:800;color:#111;margin:0 0 18px">Resumen financiero</h2>'
+      +'<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px">'
+        +'<div style="flex:1;min-width:140px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Cobrado este mes</div><div style="font-size:24px;font-weight:900;color:#16a34a">'+r.fmtUsd(r.cobradoMesAct)+'</div><div style="font-size:11px;color:#16a34a;margin-top:3px">'+r.pagosCount+' pagos · '+(r.pctCrec>=0?'+':'')+r.pctCrec+'% vs mes anterior</div></div>'
+        +'<div style="flex:1;min-width:140px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#2563EB;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Cartera activa</div><div style="font-size:24px;font-weight:900;color:#2563EB">'+r.fmtUsd(r.cartera)+'</div><div style="font-size:11px;color:#2563EB;margin-top:3px">'+r.creditosActivos+' créditos activos</div></div>'
+        +'<div style="flex:1;min-width:140px;background:'+(r.enMora>0?'#fef2f2':'#f9fafb')+';border:1px solid '+(r.enMora>0?'#fecaca':'#e5e7eb')+';border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:'+(r.enMora>0?'#dc2626':'#6b7280')+';text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">En mora</div><div style="font-size:24px;font-weight:900;color:'+(r.enMora>0?'#dc2626':'#6b7280')+'">'+r.enMora+'</div><div style="font-size:11px;color:'+(r.enMora>0?'#dc2626':'#6b7280')+';margin-top:3px">'+r.moraGraves+' graves (+30d)</div></div>'
+      +'</div>'
+
+      +'<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:28px">'
+        +'<div style="flex:1;min-width:140px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Créditos nuevos</div><div style="font-size:22px;font-weight:900;color:#111">'+r.creditosNuevos+'</div><div style="font-size:11px;color:#6b7280;margin-top:3px">otorgados este mes</div></div>'
+        +'<div style="flex:1;min-width:140px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px"><div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Clientes nuevos</div><div style="font-size:22px;font-weight:900;color:#111">'+r.clientesNuevos+'</div><div style="font-size:11px;color:#6b7280;margin-top:3px">'+r.leadsWeb+' vinieron por la web</div></div>'
+      +'</div>'
+
+      // Top cobradores
+      +'<h2 style="font-size:16px;font-weight:800;color:#111;margin:0 0 14px">Top cobradores</h2>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px">'
+        +'<thead><tr style="background:#f9fafb"><th style="padding:9px 10px;border:1px solid #e5e7eb;text-align:left;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em">#</th><th style="padding:9px 10px;border:1px solid #e5e7eb;text-align:left;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em">Cobrador</th><th style="padding:9px 10px;border:1px solid #e5e7eb;text-align:right;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em">Cobrado</th><th style="padding:9px 10px;border:1px solid #e5e7eb;text-align:right;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em"># Pagos</th></tr></thead>'
+        +'<tbody>'+topRows+'</tbody>'
+      +'</table>'
+
+      +'<div style="background:#f9fafb;border-radius:10px;padding:14px;font-size:11.5px;color:#6b7280;line-height:1.6;margin-top:20px">'
+        +'<strong style="color:#111">Notas:</strong> Este reporte se generó automáticamente desde el admin de Pagasi. Los datos reflejan el estado actual de la base de datos.'
+      +'</div>'
+    +'</div>'
+
+    +'<div style="padding:18px 36px;text-align:center;color:#9ca3af;font-size:11px">'+
+      (emp.nombre||'Pagasi')+' · '+new Date().toLocaleDateString('es-VE')+'</div>'
+  +'</div>';
+}
+
+function reporteMensualAbrir(){
+  var win = window.open('', '_blank');
+  if(!win){ if(typeof toast==='function') toast('Habilita popups para ver el reporte','error'); return; }
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte mensual</title></head><body style="background:#f3f4f6;padding:24px 0;margin:0">'
+    +reporteMensualHtml()
+    +'<div style="max-width:680px;margin:18px auto 0;text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;font-family:-apple-system,sans-serif">'
+      +'<button onclick="window.print()" style="background:#2563EB;color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px">Imprimir / PDF</button>'
+      +'<button onclick="window.close()" style="background:#fff;color:#374151;border:1px solid #d1d5db;padding:12px 24px;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px">Cerrar</button>'
+    +'</div>'
+    +'</body></html>';
+  win.document.write(html);
+  win.document.close();
+}
+
+function reporteMensualEnviarEmail(){
+  var r = generarReporteMensual();
+  if(!r){ if(typeof toast==='function') toast('Sin datos para reporte','error'); return; }
+  var emp = (typeof getEmpresa==='function') ? getEmpresa() : {nombre:'Pagasi',email:''};
+  var emailDest = prompt('¿A qué email enviar el reporte de '+r.mes+'?', emp.email || '');
+  if(!emailDest) return;
+
+  var subject = 'Reporte mensual Pagasi — ' + r.mes;
+  var body = '═══════════════════════════════════════\n'
+    + 'REPORTE MENSUAL · ' + r.mes.toUpperCase() + '\n'
+    + (emp.nombre || 'Pagasi') + '\n'
+    + '═══════════════════════════════════════\n\n'
+    + 'RESUMEN FINANCIERO\n'
+    + '──────────────────\n'
+    + 'Cobrado este mes:    ' + r.fmtUsd(r.cobradoMesAct) + ' (' + r.pagosCount + ' pagos)\n'
+    + 'Mes anterior:        ' + r.fmtUsd(r.cobradoMesAnt) + '\n'
+    + 'Crecimiento:         ' + (r.pctCrec>=0?'+':'') + r.pctCrec + '%\n'
+    + 'Cartera activa:      ' + r.fmtUsd(r.cartera) + '\n'
+    + 'Créditos activos:    ' + r.creditosActivos + '\n\n'
+    + 'COBRANZA\n'
+    + '────────\n'
+    + 'Clientes en mora:    ' + r.enMora + '\n'
+    + 'Mora grave (+30d):   ' + r.moraGraves + '\n\n'
+    + 'CRECIMIENTO\n'
+    + '───────────\n'
+    + 'Créditos nuevos:     ' + r.creditosNuevos + '\n'
+    + 'Clientes nuevos:     ' + r.clientesNuevos + '\n'
+    + 'Leads web:           ' + r.leadsWeb + '\n\n'
+    + 'TOP COBRADORES\n'
+    + '──────────────\n'
+    + (r.topCobradores.length
+        ? r.topCobradores.map(function(c,i){ return (i+1) + '. ' + c.nombre + ' — ' + r.fmtUsd(c.total) + ' (' + c.count + ' pagos)'; }).join('\n')
+        : 'Sin cobros este mes')
+    + '\n\n'
+    + '───────────────────────────────────────\n'
+    + 'Generado: ' + new Date().toLocaleString('es-VE') + '\n'
+    + 'Sistema: Pagasi V2 · https://pagasi.io';
+
+  var mailto = 'mailto:' + encodeURIComponent(emailDest)
+    + '?subject=' + encodeURIComponent(subject)
+    + '&body=' + encodeURIComponent(body);
+  window.location.href = mailto;
+}
+
+// Auto-iniciar watcher si ya tenía permiso de antes
+(function _pushNotifAutoInit(){
+  try {
+    if(pushNotifState() === 'granted'){
+      // Esperar a que S esté cargado
+      var checkS = setInterval(function(){
+        if(S && S.creds && S.clientes){
+          clearInterval(checkS);
+          pushNotifIniciarWatcher();
+        }
+      }, 1500);
+    }
+  } catch(e){}
+})();
+
 // ─── COTILLÓN / CONFETTI (canvas + card centrada cerrable) ───
 function dispararCotillon(nombre){
   cerrarCotillon();
@@ -184,14 +537,19 @@ async function guardarMiPerfil(){
 // ─── ROTAR TIP DEL DÍA manualmente ───
 function dashTipNext(){
   try {
-    if(typeof PG === 'undefined' || !PG.dash) return;
-    var key = '_tipOverride';
-    var prev = window[key] || 0;
+    // Cambiar el tip directamente en el DOM sin re-navegar
+    var pool = (typeof WT_TIPS !== 'undefined' && WT_TIPS.length) ? WT_TIPS : null;
+    if(!pool) return;
+    var prev = window._tipOverride;
     var next = prev;
-    while(next === prev) next = Math.floor(Math.random()*31);
-    window[key] = next;
-    if(typeof nav === 'function') nav('dash');
-  } catch(e){}
+    var safety = 0;
+    while((next === prev || next === undefined) && safety++ < 30){
+      next = Math.floor(Math.random()*pool.length);
+    }
+    window._tipOverride = next;
+    var tipEl = document.getElementById('dly-tip-text');
+    if(tipEl) tipEl.textContent = pool[next % pool.length];
+  } catch(e){ console.warn('dashTipNext:', e); }
 }
 
 // ─── TABS del card diario ───
@@ -228,7 +586,12 @@ async function dashDailyLoad(tipo, force){
   if(!force){
     try {
       var cached = localStorage.getItem(cacheKey);
-      if(cached){ textEl.textContent = cached; return; }
+      if(cached){
+        // Noticias se renderiza como HTML (tiene links), el resto como texto
+        if(tipo === 'noticia'){ textEl.innerHTML = cached; }
+        else { textEl.textContent = cached; }
+        return;
+      }
     } catch(e){}
   }
 
@@ -237,29 +600,52 @@ async function dashDailyLoad(tipo, force){
   try {
     var resultado = '';
     if(tipo === 'chiste'){
-      // Intenta JokeAPI en español primero
-      try {
-        var r = await fetch('https://v2.jokeapi.dev/joke/Any?lang=es&type=single&blacklistFlags=nsfw,racist,sexist,political,religious,explicit');
-        var d = await r.json();
-        if(d.joke){ resultado = d.joke; }
-        else if(d.setup && d.delivery){ resultado = d.setup + ' — ' + d.delivery; }
-        else throw new Error('Sin chiste de API');
-      } catch(_e){
-        // Fallback: chistes locales (siempre funciona)
-        var pool = (typeof WT_CHISTES !== 'undefined') ? WT_CHISTES : [
-          '¿Cuál es el animal más antiguo? La cebra, porque está en blanco y negro.',
-          '¿Por qué los pájaros vuelan al sur en invierno? Porque está muy lejos para ir caminando.'
-        ];
-        resultado = pool[Math.floor(Math.random()*pool.length)];
+      // 50% del tiempo usa local (variedad asegurada) y 50% API
+      var pool = (typeof WT_CHISTES !== 'undefined' && WT_CHISTES.length) ? WT_CHISTES : null;
+      var usarApi = Math.random() < 0.5;
+      if(usarApi){
+        try {
+          var r = await fetch('https://v2.jokeapi.dev/joke/Any?lang=es&type=single&blacklistFlags=nsfw,racist,sexist,political,religious,explicit');
+          var d = await r.json();
+          if(d.joke){ resultado = d.joke; }
+          else if(d.setup && d.delivery){ resultado = d.setup + ' — ' + d.delivery; }
+          else throw new Error('API sin chiste');
+        } catch(_e){
+          if(pool) resultado = pool[Math.floor(Math.random()*pool.length)];
+          else throw _e;
+        }
+      } else {
+        // Pool local: garantiza nuevo chiste evitando repetir el anterior
+        if(pool){
+          var prevChiste = localStorage.getItem(cacheKey) || '';
+          var idx = Math.floor(Math.random()*pool.length);
+          var safety = 0;
+          while(pool[idx] === prevChiste && safety++ < 20){
+            idx = Math.floor(Math.random()*pool.length);
+          }
+          resultado = pool[idx];
+        } else {
+          // Sin pool local — fallback a API
+          var r = await fetch('https://v2.jokeapi.dev/joke/Any?lang=es&type=single&blacklistFlags=nsfw,racist,sexist,political,religious,explicit');
+          var d = await r.json();
+          resultado = d.joke || (d.setup + ' — ' + d.delivery);
+        }
       }
     }
     else if(tipo === 'dato'){
-      // Usar primero la lista local en español (calidad asegurada)
-      var pool = (typeof WT_DATOS !== 'undefined') ? WT_DATOS : [
-        'Una moto típica tiene más de 2,000 piezas distintas.',
-        'En Venezuela hay aproximadamente 4 millones de motos circulando.'
-      ];
-      resultado = pool[Math.floor(Math.random()*pool.length)];
+      var pool = (typeof WT_DATOS !== 'undefined' && WT_DATOS.length) ? WT_DATOS : null;
+      if(pool){
+        // Evitar repetir el dato anterior
+        var prevDato = localStorage.getItem(cacheKey) || '';
+        var idx = Math.floor(Math.random()*pool.length);
+        var safety = 0;
+        while(pool[idx] === prevDato && safety++ < 20){
+          idx = Math.floor(Math.random()*pool.length);
+        }
+        resultado = pool[idx];
+      } else {
+        throw new Error('No hay datos locales');
+      }
     }
     else if(tipo === 'noticia'){
       // Múltiples fuentes de noticias con fallback automático

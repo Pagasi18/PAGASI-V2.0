@@ -180,6 +180,8 @@ PG.reportes = function(){
     'Finanzas',
     '<b>'+fmt(totalIngresos)+'</b> ingresos · <b>'+fmt(totalEgresos)+'</b> egresos · Utilidad: <b>'+fmt(utilidad)+'</b> · Cartera: <b>'+fmt(cartera)+'</b>',
     [
+      {label:'📧 Enviar reporte mensual', onclick:'reporteMensualEnviarEmail()'},
+      {label:'📄 Ver reporte mensual', onclick:'reporteMensualAbrir()'},
       {label:'↻ Actualizar', onclick:"nav('reportes')"},
       {label:'＋ Registrar Egreso', onclick:'openAddEgreso()', primary:true}
     ]

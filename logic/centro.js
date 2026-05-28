@@ -391,6 +391,18 @@ function wtHTML(){
     '<b>'+st.total+'</b> activas · <b style="color:var(--red)">'+st.vencidas+'</b> vencidas · <b style="color:var(--amber)">'+st.proceso+'</b> en proceso',
     [{label:'+ Nueva tarea',onclick:'openWtTask()',primary:true}]);
 
+  // ─── BANNER push notifications (solo si NO está activado) ────────
+  if(typeof pushNotifSupported==='function' && pushNotifSupported() && pushNotifState()==='default'){
+    html+='<div style="background:linear-gradient(135deg,#EFF6FF 0%,#DBEAFE 100%);border:1px solid rgba(37,99,235,.20);border-radius:14px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
+      +'<div style="width:42px;height:42px;background:var(--p1);color:#fff;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+        +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>'
+      +'</div>'
+      +'<div style="flex:1;min-width:200px"><div style="font-size:13.5px;font-weight:800;color:var(--ink);letter-spacing:-.2px">Activa notificaciones del navegador</div>'
+      +'<div style="font-size:11.5px;color:var(--ink2);margin-top:3px;line-height:1.45">Te avisaremos cuando lleguen leads nuevos, haya cuotas vencidas o clientes con mora grave. Aunque no tengas el admin abierto.</div></div>'
+      +'<button onclick="pushNotifRequest()" class="btn btn-p btn-sm" style="white-space:nowrap">Activar</button>'
+    +'</div>';
+  }
+
   // ─── CARD DEL DÍA + CUMPLEAÑOS ──────────────────────────────────
   html+=wtTopRowHTML();
   // Pre-cargar contenido de las 4 fuentes al renderizar
