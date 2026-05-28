@@ -445,15 +445,74 @@ function abrirGenerarFactura(pagoId){
     + '<div class="fgr c1" style="gap:10px">'
     + '<div class="fg"><label>Concepto / Descripción</label><textarea class="fi" id="fac_concepto" rows="2" style="resize:vertical">Pago de '+(_facCuotasDePago(p,cred)||'cuota')+' — Crédito '+(p.cred||'')+(cred?' / '+cred.modelo:'')+'</textarea></div>'
     + '</div>'
-    + '<div class="fgr" style="gap:10px;margin-top:10px">'
-    + '<div class="fg"><label>Subtotal</label><div style="font-family:var(--fd);font-weight:700;font-size:14px;padding:6px 0">'+fmt(p.monto||0)+'</div></div>'
-    + '<div class="fg"><label>IVA (no aplica)</label><div style="font-family:var(--fd);font-size:13px;padding:6px 0;color:var(--ink3)">$0.00</div></div>'
-    + '<div class="fg"><label style="color:var(--green);font-weight:700">TOTAL</label><div style="font-family:var(--fd);font-weight:800;font-size:18px;color:var(--green);padding:6px 0">'+fmt(p.monto||0)+'</div></div>'
+    + '<div style="margin-top:10px;border-top:1px solid var(--rim);padding-top:10px">'
+    +   '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0">'
+    +     '<span style="font-size:12px;color:var(--ink3);font-weight:700">Base imponible (Subtotal)</span>'
+    +     '<span id="fac_sub_disp" style="font-family:var(--fd);font-weight:700;font-size:13.5px">'+fmt(p.monto||0)+'</span>'
+    +   '</div>'
+    +   '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;gap:10px">'
+    +     '<div style="display:flex;align-items:center;gap:9px">'
+    +       '<button type="button" class="tgl on" id="fac_iva_tgl" onclick="this.classList.toggle(\'on\');_facRecalcImpuestos()"></button>'
+    +       '<span style="font-size:12.5px;font-weight:700">IVA <span id="fac_iva_rate" style="color:var(--ink3);font-weight:600"></span></span>'
+    +       '<span id="fac_iva_lbl" style="font-size:10px;font-weight:800;color:var(--green)">Aplica</span>'
+    +     '</div>'
+    +     '<span id="fac_iva_disp" style="font-family:var(--fd);font-weight:700;font-size:13.5px">$0.00</span>'
+    +   '</div>'
+    +   '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;gap:10px">'
+    +     '<div style="display:flex;align-items:center;gap:9px">'
+    +       '<button type="button" class="tgl" id="fac_igtf_tgl" onclick="this.classList.toggle(\'on\');_facRecalcImpuestos()"></button>'
+    +       '<span style="font-size:12.5px;font-weight:700">IGTF <span id="fac_igtf_rate" style="color:var(--ink3);font-weight:600"></span></span>'
+    +       '<span id="fac_igtf_lbl" style="font-size:10px;font-weight:800;color:var(--ink3)">No aplica</span>'
+    +     '</div>'
+    +     '<span id="fac_igtf_disp" style="font-family:var(--fd);font-weight:700;font-size:13.5px">$0.00</span>'
+    +   '</div>'
+    +   '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0 2px;border-top:2px solid var(--ln);margin-top:6px">'
+    +     '<span style="color:var(--green);font-weight:800;font-size:14px">TOTAL</span>'
+    +     '<span id="fac_total_disp" style="font-family:var(--fd);font-weight:900;font-size:18px;color:var(--green)">'+fmt(p.monto||0)+'</span>'
+    +   '</div>'
+    +   '<input type="hidden" id="fac_monto_base" value="'+(p.monto||0)+'">'
     + '</div>';
   $('mft').innerHTML =
     '<button class="btn btn-g" onclick="abrirDetallePago(\''+p.id+'\')">Cancelar</button>'
     + '<button class="btn btn-p" onclick="crearFactura(\''+p.id+'\')">Crear Factura</button>';
   $('ov').style.display='flex';
+  if(typeof _facRecalcImpuestos==='function') _facRecalcImpuestos();
+}
+
+// Tasas de IVA / IGTF tomadas de la config fiscal del sistema (con respaldo 16% / 3%).
+function _facImpRates(){
+  var iv = (typeof _libroSeniatCfg!=='undefined') ? parseFloat(_libroSeniatCfg.ivaAlicuota) : NaN;
+  var ig = (typeof _libroSeniatCfg!=='undefined') ? parseFloat(_libroSeniatCfg.igtfAlicuota) : NaN;
+  return { iva: (iv>0?iv:16), igtf: (ig>0?ig:3) };
+}
+// Desglose de impuestos para la factura. Misma convención que el sistema:
+// el monto pagado YA INCLUYE el IVA (se extrae la base); el IGTF es adicional.
+// SOLO LECTURA — no toca créditos, pagos ni cuotas.
+function _facCalcImpuestos(monto, ivaOn, igtfOn){
+  monto = parseFloat(monto)||0;
+  var r = _facImpRates();
+  var aliv = ivaOn ? r.iva : 0;
+  var base = (aliv>0) ? (monto/(1+aliv/100)) : monto;
+  var iva = ivaOn ? (monto - base) : 0;
+  var igtf = igtfOn ? (monto * r.igtf/100) : 0;
+  return { base: base, iva: iva, igtf: igtf, total: monto + igtf, ivaRate: r.iva, igtfRate: r.igtf };
+}
+// Recalcula y refresca lo que se ve en el formulario al mover los toggles.
+function _facRecalcImpuestos(){
+  if(typeof $!=='function') return;
+  var mEl = $('fac_monto_base'); if(!mEl) return;
+  var monto = parseFloat(mEl.value)||0;
+  var ivaOn  = $('fac_iva_tgl')  ? $('fac_iva_tgl').classList.contains('on')  : true;
+  var igtfOn = $('fac_igtf_tgl') ? $('fac_igtf_tgl').classList.contains('on') : false;
+  var d = _facCalcImpuestos(monto, ivaOn, igtfOn);
+  if($('fac_iva_rate'))   $('fac_iva_rate').textContent   = '('+d.ivaRate+'%)';
+  if($('fac_igtf_rate'))  $('fac_igtf_rate').textContent  = '('+d.igtfRate+'%)';
+  if($('fac_sub_disp'))   $('fac_sub_disp').textContent   = fmt(d.base);
+  if($('fac_iva_disp'))   $('fac_iva_disp').textContent   = fmt(d.iva);
+  if($('fac_igtf_disp'))  $('fac_igtf_disp').textContent  = fmt(d.igtf);
+  if($('fac_total_disp')) $('fac_total_disp').textContent = fmt(d.total);
+  if($('fac_iva_lbl')){  $('fac_iva_lbl').textContent  = ivaOn?'Aplica':'No aplica';  $('fac_iva_lbl').style.color  = ivaOn?'var(--green)':'var(--ink3)'; }
+  if($('fac_igtf_lbl')){ $('fac_igtf_lbl').textContent = igtfOn?'Aplica':'No aplica'; $('fac_igtf_lbl').style.color = igtfOn?'var(--green)':'var(--ink3)'; }
 }
 
 // Crea la factura (luego de revisar el form)
@@ -470,6 +529,10 @@ function crearFactura(pagoId){
   var dupC = (S.facturas||[]).find(function(f){ return f.numeroControl === control; });
   if(dupC){ toast('El N° de control '+control+' ya está usado','error'); return; }
   var emp = getEmpresa();
+  // Leer interruptores de IVA / IGTF del formulario y calcular el desglose
+  var _ivaOn  = $('fac_iva_tgl')  ? $('fac_iva_tgl').classList.contains('on')  : true;
+  var _igtfOn = $('fac_igtf_tgl') ? $('fac_igtf_tgl').classList.contains('on') : false;
+  var _imp = _facCalcImpuestos(p.monto||0, _ivaOn, _igtfOn);
   var fac = {
     id: 'FAC-'+Date.now(),
     numero: numero,
@@ -492,9 +555,14 @@ function crearFactura(pagoId){
       direccion: ($('fac_cli_dir')&&$('fac_cli_dir').value)||''
     },
     concepto: ($('fac_concepto')&&$('fac_concepto').value)||'Pago de cuota',
-    subtotal: p.monto||0,
-    iva: 0,
-    total: p.monto||0,
+    subtotal: _imp.base,
+    iva: _imp.iva,
+    igtf: _imp.igtf,
+    ivaAplica: _ivaOn,
+    igtfAplica: _igtfOn,
+    ivaRate: _imp.ivaRate,
+    igtfRate: _imp.igtfRate,
+    total: _imp.total,
     metodo: p.metodo||'',
     referencia: p.referencia||'',
     anulada: false
@@ -547,7 +615,8 @@ function abrirVerFactura(facId){
     + '<div style="display:flex;justify-content:flex-end;margin-top:10px">'
     + '<div style="min-width:240px">'
     + '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Subtotal:</span><span style="font-family:var(--fd)">'+fmt(fac.subtotal)+'</span></div>'
-    + '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink3)"><span>IVA (no aplica):</span><span style="font-family:var(--fd)">'+fmt(fac.iva||0)+'</span></div>'
+    + '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink3)"><span>IVA '+(fac.ivaAplica?('('+(fac.ivaRate||16)+'%)'):'(no aplica)')+':</span><span style="font-family:var(--fd)">'+fmt(fac.iva||0)+'</span></div>'
+    + ((fac.igtfAplica||((fac.igtf||0)>0))?'<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--ink3)"><span>IGTF ('+(fac.igtfRate||3)+'%):</span><span style="font-family:var(--fd)">'+fmt(fac.igtf||0)+'</span></div>':'')
     + '<div style="display:flex;justify-content:space-between;font-size:15px;padding:6px 0;font-weight:800;border-top:2px solid var(--ln);margin-top:5px"><span>TOTAL:</span><span style="font-family:var(--fd);color:var(--green)">'+fmt(fac.total)+'</span></div>'
     + '</div></div>'
     + '<div style="font-size:10px;color:var(--ink3);text-align:center;margin-top:14px;padding-top:10px;border-top:1px dashed var(--ln);font-style:italic">Son: '+_numeroALetras(fac.total)+'</div>'
@@ -639,7 +708,8 @@ function imprimirFactura(facId, formato){
       + '<div style="border-top:1px dashed #000;padding-top:2mm;margin-bottom:3mm;font-size:10px">'+fac.concepto+'</div>'
       + '<div style="border-top:1px dashed #000;padding-top:2mm;font-size:10px">'
       + '<div style="display:flex;justify-content:space-between"><span>Subtotal:</span><span>$'+parseFloat(fac.subtotal).toFixed(2)+'</span></div>'
-      + '<div style="display:flex;justify-content:space-between;color:#666"><span>IVA:</span><span>$'+parseFloat(fac.iva||0).toFixed(2)+'</span></div>'
+      + '<div style="display:flex;justify-content:space-between;color:#666"><span>IVA '+(fac.ivaAplica?('('+(fac.ivaRate||16)+'%)'):'(no aplica)')+':</span><span>$'+parseFloat(fac.iva||0).toFixed(2)+'</span></div>'
+      + ((fac.igtfAplica||((fac.igtf||0)>0))?'<div style="display:flex;justify-content:space-between;color:#666"><span>IGTF ('+(fac.igtfRate||3)+'%):</span><span>$'+parseFloat(fac.igtf||0).toFixed(2)+'</span></div>':'')
       + '<div style="display:flex;justify-content:space-between;font-weight:900;font-size:12px;border-top:1px solid #000;padding-top:1mm;margin-top:1mm"><span>TOTAL:</span><span>$'+parseFloat(fac.total).toFixed(2)+'</span></div>'
       + (totalBs ? '<div style="display:flex;justify-content:space-between;font-size:9px;color:#666"><span>Total Bs:</span><span>'+totalBs+'</span></div>' : '')
       + '</div>'
@@ -686,7 +756,8 @@ function imprimirFactura(facId, formato){
       + '</td><td style="vertical-align:top;text-align:right;width:200px">'
       + '<table style="width:100%;border-collapse:collapse">'
       + '<tr><td style="text-align:left;padding:3px 8px">Subtotal:</td><td style="text-align:right;padding:3px 8px;font-family:monospace">$'+parseFloat(fac.subtotal).toFixed(2)+'</td></tr>'
-      + '<tr><td style="text-align:left;padding:3px 8px;color:#666">IVA (no aplica):</td><td style="text-align:right;padding:3px 8px;font-family:monospace;color:#666">$'+parseFloat(fac.iva||0).toFixed(2)+'</td></tr>'
+      + '<tr><td style="text-align:left;padding:3px 8px;color:#666">IVA '+(fac.ivaAplica?('('+(fac.ivaRate||16)+'%)'):'(no aplica)')+':</td><td style="text-align:right;padding:3px 8px;font-family:monospace;color:#666">$'+parseFloat(fac.iva||0).toFixed(2)+'</td></tr>'
+      + ((fac.igtfAplica||((fac.igtf||0)>0))?'<tr><td style="text-align:left;padding:3px 8px;color:#666">IGTF ('+(fac.igtfRate||3)+'%):</td><td style="text-align:right;padding:3px 8px;font-family:monospace;color:#666">$'+parseFloat(fac.igtf||0).toFixed(2)+'</td></tr>':'')
       + '<tr style="border-top:2px solid #1a1a1a"><td style="text-align:left;padding:6px 8px;font-weight:900;font-size:'+headSize+'">TOTAL:</td><td style="text-align:right;padding:6px 8px;font-family:monospace;font-weight:900;font-size:'+headSize+'">$'+parseFloat(fac.total).toFixed(2)+'</td></tr>'
       + (totalBs ? '<tr><td style="text-align:left;padding:3px 8px;color:#666;font-size:9.5px">Total en Bs:</td><td style="text-align:right;padding:3px 8px;font-family:monospace;color:#666;font-size:9.5px">'+totalBs+'</td></tr>' : '')
       + '</table></td></tr></table>'
