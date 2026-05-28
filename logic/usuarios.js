@@ -1568,7 +1568,9 @@ if (auth) {
               Object.assign(data, needsUpdate);
             }
           }
-          S.currentUser = {
+          // Copiamos PRIMERO todos los campos del doc (cumpleanos, tel, genero, instagram, facebook, etc.)
+          // y después sobre-escribimos los críticos con defaults seguros.
+          S.currentUser = Object.assign({}, data, {
             uid: user.uid,
             email: user.email,
             nombre: data.nombre || user.displayName || user.email,
@@ -1576,7 +1578,7 @@ if (auth) {
             permisos: data.permisos || ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','conta','plan','config','users','perm_delete'],
             concesionarios: data.concesionarios || [],
             comisiones: data.comisiones || null
-          };
+          });
           var sbUn = document.querySelector('.sb-un');
           if (sbUn) sbUn.textContent = S.currentUser.nombre;
           var sbAv = document.querySelector('.sb-av');
@@ -1587,6 +1589,8 @@ if (auth) {
           if(typeof _attachCurrentUserListener === 'function') _attachCurrentUserListener(user.uid);
           // ── Log de inicio de sesión ──
           if(typeof logActividad === 'function') logActividad('login','auth',user.uid,{rol:S.currentUser.rol});
+          // ── Bienvenida: si el perfil está incompleto, pedir datos ──
+          if(typeof chequearPerfilIncompleto === 'function') chequearPerfilIncompleto();
         }).catch(function(){
           S.currentUser = { uid: user.uid, email: user.email, nombre: user.email, rol: 'Administrador', permisos: ['perm_delete'] };
         }).finally(function(){

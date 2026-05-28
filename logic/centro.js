@@ -188,7 +188,7 @@ function wtCumplesHTML(){
     var c = _wtParseCumple(u.cumpleanos || u.fechaNacimiento || u.bday);
     var diasFalt = c.dia - hoyD;
     if(diasFalt < 0) diasFalt = 365; // ya pasó este mes, ordenar al final
-    return {nom:u.nombre||u.email||'Usuario', dia:c.dia, esHoy:c.dia===hoyD, diasFalt:diasFalt, yaPaso:c.dia<hoyD};
+    return {nom:u.nombre||u.email||'Usuario', dia:c.dia, esHoy:c.dia===hoyD, diasFalt:diasFalt, yaPaso:c.dia<hoyD, genero:(u.genero||'')};
   }).sort(function(a,b){ return a.diasFalt - b.diasFalt; });
   var cumplesHoy = cumplesEsteMes.filter(function(u){return u.esHoy;});
   var mes = new Date().toLocaleDateString('es-VE',{month:'long'});
@@ -252,7 +252,7 @@ function wtCumplesHTML(){
       +'<span style="background:#FCE7F3;color:#BE185D;padding:4px 11px;border-radius:50px;font-size:11px;font-weight:800;border:1px solid rgba(236,72,153,.22)">'+cumplesEsteMes.length+'</span>'
     +'</div>'
     +'<div style="display:flex;flex-direction:column;gap:8px;flex:1;overflow-y:auto;position:relative;z-index:1">'+rows+'</div>'
-    +(cumplesHoy.length ? '<button onclick="dispararCotillon()" style="margin-top:14px;width:100%;background:linear-gradient(135deg,#EC4899 0%,#BE185D 100%);color:#fff;border:none;padding:13px;border-radius:13px;font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.04em;box-shadow:0 8px 22px rgba(236,72,153,.42);position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px">🎊 Lanzar cotillón ahora</button>' : '')
+    +(cumplesHoy.length ? '<button onclick="dispararCotillon('+(cumplesHoy.length===1?'\''+wtEsc(cumplesHoy[0].nom)+'\',false,\''+wtEsc((cumplesHoy[0].genero)||'')+'\'':'')+')" style="margin-top:14px;width:100%;background:linear-gradient(135deg,#EC4899 0%,#BE185D 100%);color:#fff;border:none;padding:13px;border-radius:13px;font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.04em;box-shadow:0 8px 22px rgba(236,72,153,.42);position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px">🎊 Lanzar cotillón ahora</button>' : '')
   +'</div>';
 }
 
@@ -432,7 +432,9 @@ function wtHTML(){
             ? nombres[0]
             : (nombres.slice(0,-1).join(', ') + ' y ' + nombres[nombres.length-1]);
           var esYo = S.currentUser && cumpleHoy.some(function(u){ return u.uid === S.currentUser.uid; });
-          setTimeout(function(){ dispararCotillon(nombre, !esYo); }, 600);
+          // Si es UN solo cumpleañero, usar su género para el color
+          var genero = (cumpleHoy.length===1) ? (cumpleHoy[0].genero||'') : '';
+          setTimeout(function(){ dispararCotillon(nombre, !esYo, genero); }, 600);
         }
       }
     } catch(e){ console.warn('cotillon trigger:', e); }

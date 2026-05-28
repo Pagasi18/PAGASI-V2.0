@@ -599,7 +599,7 @@ function reporteMensualEnviarEmail(){
 })();
 
 // ─── COTILLÓN / CONFETTI (canvas + card centrada cerrable) ───
-function dispararCotillon(nombre, esTeammate){
+function dispararCotillon(nombre, esTeammate, genero){
   cerrarCotillon();
   // Inject animation styles
   if(!document.getElementById('cotillon-styles')){
@@ -608,6 +608,29 @@ function dispararCotillon(nombre, esTeammate){
     s.textContent = '@keyframes cotIn{0%{transform:translate(-50%,-50%) scale(.7);opacity:0}55%{transform:translate(-50%,-50%) scale(1.05);opacity:1}100%{transform:translate(-50%,-50%) scale(1)}}@keyframes cotBackdrop{0%{opacity:0}100%{opacity:1}}@keyframes cotCake{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-6px) rotate(2deg)}}@keyframes cotShine{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}';
     document.head.appendChild(s);
   }
+  // Tomar el logo Pagasi del sidebar (mismo base64 que ya está cargado)
+  var _logoEl = document.querySelector('.sb-logo img');
+  var _logoSrc = (_logoEl && _logoEl.src) ? _logoEl.src : '';
+  // Paleta de colores según género
+  var g = String(genero||'').toLowerCase();
+  var isMale = (g === 'm' || g === 'masculino' || g === 'hombre');
+  var isFemale = (g === 'f' || g === 'femenino' || g === 'mujer');
+  // Default = rosado (neutral), si es hombre → azul
+  var palette = isMale ? {
+    bgCard:   'linear-gradient(145deg,#F0F9FF 0%,#DBEAFE 50%,#E0E7FF 100%)',
+    shadow:   '0 30px 80px rgba(59,130,246,.32),0 0 0 1px rgba(255,255,255,.6)',
+    tag:      '#1E40AF', titulo:'#1E3A8A', subtitulo:'#1D4ED8',
+    closeCol: '#1E3A8A',
+    btn:      'linear-gradient(135deg,#3B82F6,#1D4ED8)',
+    btnShadow:'0 8px 22px rgba(59,130,246,.42)'
+  } : {
+    bgCard:   'linear-gradient(145deg,#FFF7ED 0%,#FCE7F3 50%,#F3E8FF 100%)',
+    shadow:   '0 30px 80px rgba(236,72,153,.32),0 0 0 1px rgba(255,255,255,.6)',
+    tag:      '#BE185D', titulo:'#831843', subtitulo:'#9D174D',
+    closeCol: '#831843',
+    btn:      'linear-gradient(135deg,#EC4899,#BE185D)',
+    btnShadow:'0 8px 22px rgba(236,72,153,.42)'
+  };
 
   // Backdrop oscuro
   var backdrop = document.createElement('div');
@@ -649,7 +672,10 @@ function dispararCotillon(nombre, esTeammate){
 
   // Card centrada con mensaje
   var who = nombre || (typeof S !== 'undefined' && S.currentUser && S.currentUser.nombre) || '';
-  var primerNombre = who ? who.split(' ')[0] : '';
+  // Capitalizar primer nombre por si lo guardaron en minúsculas
+  function _cap(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1).toLowerCase() : s; }
+  var primerNombre = who ? _cap(who.split(' ')[0]) : '';
+  who = who.split(/\s+/).map(_cap).join(' ');
   // Si es cumpleaños de un COMPAÑERO (no del usuario logueado), cambia el copy
   var _tagline, _titulo, _subtitulo, _btnTxt;
   if(esTeammate){
@@ -665,16 +691,20 @@ function dispararCotillon(nombre, esTeammate){
   }
   var card = document.createElement('div');
   card.id = 'cotillon-card';
-  card.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100000;background:linear-gradient(145deg,#FFF7ED 0%,#FCE7F3 50%,#F3E8FF 100%);border-radius:32px;padding:0;width:90%;max-width:520px;box-shadow:0 30px 80px rgba(236,72,153,.32),0 0 0 1px rgba(255,255,255,.6);animation:cotIn .6s cubic-bezier(.34,1.56,.64,1) forwards;overflow:hidden';
+  card.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100000;background:'+palette.bgCard+';border-radius:32px;padding:0;width:90%;max-width:520px;box-shadow:'+palette.shadow+';animation:cotIn .6s cubic-bezier(.34,1.56,.64,1) forwards;overflow:hidden';
+  // Logo Pagasi (caballito/pegaso) en lugar de torta
+  var logoHTML = _logoSrc
+    ? '<div style="margin-bottom:14px;animation:cotCake 2s ease-in-out infinite;display:flex;justify-content:center"><img src="'+_logoSrc+'" alt="Pagasi" style="width:96px;height:auto;filter:drop-shadow(0 6px 14px rgba(0,0,0,.18))"></div>'
+    : '<div style="font-size:82px;line-height:1;margin-bottom:14px;animation:cotCake 2s ease-in-out infinite">🐎</div>';
   card.innerHTML = ''
     +'<div style="position:relative;padding:48px 32px 40px;text-align:center;overflow:hidden">'
       +'<div style="position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.7) 50%,transparent 70%);animation:cotShine 2.5s ease-in-out infinite;pointer-events:none"></div>'
-      +'<button onclick="cerrarCotillon()" style="position:absolute;top:14px;right:14px;width:34px;height:34px;border:none;background:rgba(255,255,255,.7);border-radius:50%;cursor:pointer;font-size:18px;font-weight:700;color:#831843;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);box-shadow:0 4px 12px rgba(0,0,0,.08);z-index:2" aria-label="Cerrar">×</button>'
-      +'<div style="font-size:82px;line-height:1;margin-bottom:14px;animation:cotCake 2s ease-in-out infinite">🎂</div>'
-      +'<div style="font-size:11px;font-weight:800;letter-spacing:.32em;text-transform:uppercase;color:#BE185D;margin-bottom:10px">'+_tagline+'</div>'
-      +'<div style="font-size:32px;font-weight:900;color:#831843;letter-spacing:-1.2px;line-height:1.1;margin-bottom:8px">'+_titulo+'</div>'
-      +'<div style="font-size:14.5px;color:#9D174D;font-weight:500;line-height:1.55;max-width:380px;margin:0 auto 22px">'+_subtitulo+'</div>'
-      +'<button onclick="cerrarCotillon()" style="background:linear-gradient(135deg,#EC4899,#BE185D);color:#fff;border:none;padding:13px 32px;border-radius:50px;font-weight:800;font-size:14px;cursor:pointer;letter-spacing:.02em;box-shadow:0 8px 22px rgba(236,72,153,.42);transition:transform .15s">'+_btnTxt+'</button>'
+      +'<button onclick="cerrarCotillon()" style="position:absolute;top:14px;right:14px;width:34px;height:34px;border:none;background:rgba(255,255,255,.7);border-radius:50%;cursor:pointer;font-size:18px;font-weight:700;color:'+palette.closeCol+';display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);box-shadow:0 4px 12px rgba(0,0,0,.08);z-index:2" aria-label="Cerrar">×</button>'
+      +logoHTML
+      +'<div style="font-size:11px;font-weight:800;letter-spacing:.32em;text-transform:uppercase;color:'+palette.tag+';margin-bottom:10px">'+_tagline+'</div>'
+      +'<div style="font-size:32px;font-weight:900;color:'+palette.titulo+';letter-spacing:-1.2px;line-height:1.1;margin-bottom:8px">'+_titulo+'</div>'
+      +'<div style="font-size:14.5px;color:'+palette.subtitulo+';font-weight:500;line-height:1.55;max-width:380px;margin:0 auto 22px">'+_subtitulo+'</div>'
+      +'<button onclick="cerrarCotillon()" style="background:'+palette.btn+';color:#fff;border:none;padding:13px 32px;border-radius:50px;font-weight:800;font-size:14px;cursor:pointer;letter-spacing:.02em;box-shadow:'+palette.btnShadow+';transition:transform .15s">'+_btnTxt+'</button>'
     +'</div>';
   document.body.appendChild(card);
 
@@ -744,6 +774,101 @@ function profProfileChanged(){
   if(btn) btn.style.display = 'inline-flex';
 }
 
+// ─── BIENVENIDA: pide datos si el perfil está incompleto ───
+function chequearPerfilIncompleto(){
+  try {
+    if(!S.currentUser || !S.currentUser.uid) return;
+    var u = S.currentUser;
+    // Campos que consideramos "imprescindibles" para que el perfil esté completo
+    var faltantes = [];
+    if(!u.tel && !u.telefono) faltantes.push('Teléfono');
+    if(!u.cumpleanos && !u.fechaNacimiento) faltantes.push('Cumpleaños');
+    if(!u.genero) faltantes.push('Género');
+    if(!u.instagram) faltantes.push('Instagram');
+    if(!u.facebook) faltantes.push('Facebook');
+    if(!faltantes.length) return; // perfil completo, no molestamos
+    // Anti-spam: no mostrar más de una vez por día por usuario
+    var hoy = new Date().toISOString().slice(0,10);
+    var lsKey = '_perfilNagDismissed_'+u.uid+'_'+hoy;
+    try { if(localStorage.getItem(lsKey)) return; } catch(e){}
+    // Construir y mostrar el modal de bienvenida
+    setTimeout(function(){ _mostrarBienvenidaPerfil(faltantes, lsKey); }, 1200);
+  } catch(e){ console.warn('chequearPerfilIncompleto:', e); }
+}
+
+function _mostrarBienvenidaPerfil(faltantes, lsKey){
+  if(document.getElementById('welcome-perfil-card')) return;
+  // Inyectar estilos si no existen
+  if(!document.getElementById('welcome-perfil-styles')){
+    var s = document.createElement('style');
+    s.id = 'welcome-perfil-styles';
+    s.textContent = '@keyframes wpIn{0%{transform:translate(-50%,-50%) scale(.9);opacity:0}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}@keyframes wpBack{0%{opacity:0}100%{opacity:1}}';
+    document.head.appendChild(s);
+  }
+  var nombre = (S.currentUser && S.currentUser.nombre) ? S.currentUser.nombre.split(' ')[0] : '';
+  function _cap(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1).toLowerCase() : s; }
+  nombre = _cap(nombre||'');
+
+  // Backdrop
+  var backdrop = document.createElement('div');
+  backdrop.id = 'welcome-perfil-backdrop';
+  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:99998;animation:wpBack .3s ease forwards';
+  document.body.appendChild(backdrop);
+
+  // Logo Pagasi
+  var _logoEl = document.querySelector('.sb-logo img');
+  var _logoSrc = (_logoEl && _logoEl.src) ? _logoEl.src : '';
+  var logoHTML = _logoSrc
+    ? '<img src="'+_logoSrc+'" alt="Pagasi" style="width:64px;height:auto;margin:0 auto 14px;display:block;filter:drop-shadow(0 4px 10px rgba(0,0,0,.12))">'
+    : '<div style="font-size:48px;text-align:center;margin-bottom:14px">🐎</div>';
+
+  // Lista de faltantes
+  var faltantesList = faltantes.map(function(f){
+    return '<li style="display:flex;align-items:center;gap:9px;padding:7px 0;color:var(--ink2);font-size:13px;font-weight:600"><span style="width:6px;height:6px;border-radius:50%;background:var(--p1);flex-shrink:0"></span>'+f+'</li>';
+  }).join('');
+
+  var card = document.createElement('div');
+  card.id = 'welcome-perfil-card';
+  card.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100000;background:#fff;border-radius:24px;padding:0;width:90%;max-width:480px;box-shadow:0 30px 80px rgba(37,99,235,.25),0 0 0 1px rgba(255,255,255,.6);animation:wpIn .4s cubic-bezier(.34,1.56,.64,1) forwards;overflow:hidden';
+  card.innerHTML = ''
+    +'<div style="position:relative;padding:36px 32px 28px;background:linear-gradient(180deg,#F0F9FF 0%,#fff 100%)">'
+      +logoHTML
+      +'<div style="font-size:11px;font-weight:800;letter-spacing:.32em;text-transform:uppercase;color:var(--p1);text-align:center;margin-bottom:8px">¡Bienvenid@'+(nombre?', '+nombre:'')+'!</div>'
+      +'<div style="font-size:22px;font-weight:900;color:var(--ink);text-align:center;letter-spacing:-.6px;line-height:1.2;margin-bottom:10px">Completá tu perfil</div>'
+      +'<div style="font-size:13px;color:var(--ink3);text-align:center;line-height:1.55;max-width:340px;margin:0 auto 18px">Para que el equipo pueda contactarte y celebrar tu cumpleaños, agregá estos datos a tu perfil:</div>'
+      +'<ul style="list-style:none;padding:0;margin:0 0 22px;background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:10px 16px">'+faltantesList+'</ul>'
+      +'<div style="display:flex;gap:9px">'
+        +'<button onclick="_cerrarBienvenidaPerfil()" style="flex:1;background:var(--surf2);color:var(--ink2);border:1.5px solid var(--rim);font-family:inherit;font-weight:700;font-size:13.5px;padding:12px 0;border-radius:12px;cursor:pointer;transition:.15s">Después</button>'
+        +'<button onclick="_abrirPerfilDesdeBienvenida()" style="flex:1.4;background:linear-gradient(135deg,var(--p1),var(--p2));color:#fff;border:none;font-family:inherit;font-weight:800;font-size:13.5px;padding:12px 0;border-radius:12px;cursor:pointer;box-shadow:0 6px 18px rgba(37,99,235,.28);transition:.15s">Completar ahora →</button>'
+      +'</div>'
+      +'<div style="text-align:center;font-size:10.5px;color:var(--ink4);margin-top:14px">No te molestaremos hasta mañana</div>'
+    +'</div>';
+  document.body.appendChild(card);
+
+  // Cerrar al hacer click en el backdrop
+  backdrop.onclick = function(){ _cerrarBienvenidaPerfil(); };
+  // Guardar la clave para marcar como visto
+  window._welcomePerfilLSKey = lsKey;
+}
+
+function _cerrarBienvenidaPerfil(){
+  var b = document.getElementById('welcome-perfil-backdrop');
+  var c = document.getElementById('welcome-perfil-card');
+  if(b) b.remove();
+  if(c) c.remove();
+  // Marcar como dismissed para hoy
+  try { if(window._welcomePerfilLSKey) localStorage.setItem(window._welcomePerfilLSKey,'1'); } catch(e){}
+}
+
+function _abrirPerfilDesdeBienvenida(){
+  _cerrarBienvenidaPerfil();
+  // Abrir overlay de Mi Perfil
+  if(typeof showAdminProfile === 'function') showAdminProfile();
+}
+window.chequearPerfilIncompleto = chequearPerfilIncompleto;
+window._cerrarBienvenidaPerfil = _cerrarBienvenidaPerfil;
+window._abrirPerfilDesdeBienvenida = _abrirPerfilDesdeBienvenida;
+
 async function guardarMiPerfil(){
   if(!S.currentUser || !S.currentUser.uid){
     if(typeof toast==='function') toast('No estás logueado','error');
@@ -753,12 +878,18 @@ async function guardarMiPerfil(){
   var nombre = (document.getElementById('prof-nombre')||{}).value || '';
   var cumple = (document.getElementById('prof-cumple')||{}).value || '';
   var tel = (document.getElementById('prof-tel')||{}).value || '';
+  var genero = (document.getElementById('prof-genero')||{}).value || '';
+  var instagram = (document.getElementById('prof-instagram')||{}).value || '';
+  var facebook = (document.getElementById('prof-facebook')||{}).value || '';
   if(btn){ btn.disabled = true; btn.textContent = 'Guardando…'; }
 
   var update = {
     nombre: nombre.trim(),
     cumpleanos: cumple.trim(),
     tel: tel.trim(),
+    genero: genero.trim(),
+    instagram: instagram.trim().replace(/^@/,''), // normalizar sin @
+    facebook: facebook.trim(),
     actualizadoEn: new Date().toISOString()
   };
   console.log('[Mi Perfil] Guardando:', S.currentUser.uid, update);
@@ -2973,12 +3104,23 @@ function showAdminProfile() {
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">'
         + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Nombre completo</label>'
         +   '<input class="fi" id="prof-nombre" type="text" value="'+(user.nombre||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="Tu nombre completo"></div>'
+        + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Género</label>'
+        +   '<select class="fs" id="prof-genero" onchange="profProfileChanged()">'
+        +     '<option value=""'+(!user.genero?' selected':'')+'>— Selecciona —</option>'
+        +     '<option value="M"'+(user.genero==='M'?' selected':'')+'>Masculino</option>'
+        +     '<option value="F"'+(user.genero==='F'?' selected':'')+'>Femenino</option>'
+        +   '</select>'
+        +   '<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;line-height:1.4">Personaliza el color del cumpleaños.</div></div>'
         + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Cumpleaños</label>'
         +   '<input class="fi" id="prof-cumple" type="date" value="'+(user.cumpleanos||user.fechaNacimiento||'')+'" oninput="profProfileChanged()">'
-        +   '<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;line-height:1.4">Aparecerá en el dashboard cuando se acerque la fecha. El día que cumplas se lanzará un cotillón.</div></div>'
+        +   '<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;line-height:1.4">El día que cumplas se lanzará un cotillón con el logo Pagasi.</div></div>'
         + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Teléfono</label>'
         +   '<input class="fi" id="prof-tel" type="tel" value="'+(user.tel||user.telefono||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="+58 414 ..."></div>'
-        + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Email (no editable)</label>'
+        + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Instagram</label>'
+        +   '<input class="fi" id="prof-instagram" type="text" value="'+(user.instagram||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="@tuusuario"></div>'
+        + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Facebook</label>'
+        +   '<input class="fi" id="prof-facebook" type="text" value="'+(user.facebook||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="usuario o URL"></div>'
+        + '<div class="fg" style="grid-column:1 / -1"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Email (no editable)</label>'
         +   '<input class="fi" type="email" value="'+email+'" disabled style="background:var(--surf2);color:var(--ink3)"></div>'
       + '</div>'
     + '</div>'
