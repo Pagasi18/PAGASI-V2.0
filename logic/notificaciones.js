@@ -374,6 +374,22 @@ function nxAcRender(){
     }
     return;
   }
+  // Ordenar por urgencia: morosos primero (más días de mora arriba),
+  // luego activos por días hasta próxima cuota ascendente (los más cercanos arriba),
+  // por último los leads / sin crédito.
+  function _nxSortKey(c){
+    if(c.mora > 0) return [0, -c.mora]; // morosos: orden por mora desc (más mora arriba)
+    if(c.isActivo){
+      var d = (c.diasProxCuota == null) ? 99999 : c.diasProxCuota;
+      return [1, d]; // activos: vencidos primero, luego más cercanos
+    }
+    return [2, 0]; // leads / sin crédito
+  }
+  _nxAcResults.sort(function(a,b){
+    var ka = _nxSortKey(a), kb = _nxSortKey(b);
+    if(ka[0] !== kb[0]) return ka[0] - kb[0];
+    return ka[1] - kb[1];
+  });
   var activos = _nxAcResults.filter(function(c){ return c.isActivo; });
   var leads = _nxAcResults.filter(function(c){ return !c.isActivo; });
   var html = '';
@@ -930,4 +946,5 @@ function enviarNotificaciones(){
   if(window._notifHistorial.length>100) window._notifHistorial=window._notifHistorial.slice(0,100);
   guardarHistorialNotificaciones();
   renderHistorialNotificaciones();
+  if(typeof logActividad==='function') logActividad('notif_enviada','notif',tipo,{canal:canal, dest:dest, cantidad:destinatarios.length});
 }

@@ -761,33 +761,53 @@ async function guardarMiPerfil(){
     tel: tel.trim(),
     actualizadoEn: new Date().toISOString()
   };
+  console.log('[Mi Perfil] Guardando:', S.currentUser.uid, update);
+
+  if(!db){
+    if(typeof toast==='function') toast('Firebase no inicializado — no se puede guardar','error');
+    if(btn){ btn.disabled=false; btn.textContent='Guardar cambios'; }
+    return;
+  }
 
   try {
-    if(db){
-      await db.collection('usuarios').doc(S.currentUser.uid).set(update, {merge:true});
+    // 1) Escribir a Firestore con merge
+    await db.collection('usuarios').doc(S.currentUser.uid).set(update, {merge:true});
+    // 2) Re-leer para verificar que se persistió correctamente
+    var verifyDoc = await db.collection('usuarios').doc(S.currentUser.uid).get();
+    var saved = verifyDoc.exists ? (verifyDoc.data()||{}) : {};
+    console.log('[Mi Perfil] Persistido en Firestore:', saved);
+    if(saved.cumpleanos !== update.cumpleanos){
+      console.warn('[Mi Perfil] WARNING: cumpleanos guardado difiere del enviado', {enviado:update.cumpleanos, leido:saved.cumpleanos});
     }
-    // Actualizar estado local también
-    Object.assign(S.currentUser, update);
-    // Sincronizar caché de usuarios para que la card de cumpleaños refleje cambios al instante
+    // 3) Actualizar estado local
+    Object.assign(S.currentUser, saved); // usar lo que efectivamente quedó en Firestore
+    // 4) Sincronizar caché de usuarios
     try {
+      var uid = S.currentUser.uid;
+      var fullObj = Object.assign({uid:uid, email:S.currentUser.email||''}, saved);
       if(typeof _usersCache !== 'undefined' && Array.isArray(_usersCache)){
-        var idx = _usersCache.findIndex(function(u){ return u && u.uid === S.currentUser.uid; });
-        if(idx >= 0) Object.assign(_usersCache[idx], update);
-        else _usersCache.push(Object.assign({uid:S.currentUser.uid, email:S.currentUser.email||''}, update));
+        var idx = _usersCache.findIndex(function(u){ return u && u.uid === uid; });
+        if(idx >= 0) Object.assign(_usersCache[idx], fullObj);
+        else _usersCache.push(fullObj);
       }
       if(S._wtUsers && Array.isArray(S._wtUsers)){
-        var idx2 = S._wtUsers.findIndex(function(u){ return u && u.uid === S.currentUser.uid; });
-        if(idx2 >= 0) Object.assign(S._wtUsers[idx2], update);
-        else S._wtUsers.push(Object.assign({uid:S.currentUser.uid, email:S.currentUser.email||''}, update));
+        var idx2 = S._wtUsers.findIndex(function(u){ return u && u.uid === uid; });
+        if(idx2 >= 0) Object.assign(S._wtUsers[idx2], fullObj);
+        else S._wtUsers.push(fullObj);
       }
     } catch(e){ console.warn('cache sync miPerfil:', e); }
-    // Actualizar sidebar si cambió el nombre
+    // 5) Sidebar + log
     if(typeof updateSidebarFooter==='function') updateSidebarFooter();
-    if(typeof toast==='function') toast('✓ Perfil actualizado','success');
+    if(typeof logActividad==='function') logActividad('perfil_editado','perfil',S.currentUser.uid,{nombre:update.nombre,cumpleanos:update.cumpleanos});
+    // 6) Re-render Centro si está abierto, para que aparezca en Mayo al instante
+    if(S.page === 'centro' && typeof nav === 'function'){ try { nav('centro'); } catch(e){} }
+    if(typeof toast==='function') toast('✓ Perfil guardado'+ (update.cumpleanos?' · cumple '+update.cumpleanos:''),'success');
     if(btn){ btn.style.display='none'; btn.disabled=false; btn.textContent='Guardar cambios'; }
   } catch(e){
-    console.error('Error guardando perfil:', e);
-    if(typeof toast==='function') toast('Error: '+(e.message||e),'error');
+    console.error('[Mi Perfil] Error guardando:', e);
+    var msg = (e && e.message) || String(e);
+    if(/permission|insufficient/i.test(msg)) msg = 'Permiso denegado en Firestore. Pídele al administrador revisar las reglas de usuarios/{uid}.';
+    if(typeof toast==='function') toast('Error: '+msg,'error');
     if(btn){ btn.disabled=false; btn.textContent='Guardar cambios'; }
   }
 }
@@ -1574,6 +1594,42 @@ DB.saveTarea = function(o){ if(!db)return Promise.resolve(false); return _dbSile
 DB.delTarea = function(id){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('tareas').doc(String(id)).delete(); }); };
 DB.getTareas = function(){ if(!db) return Promise.resolve([]); return db.collection('tareas').get().then(function(s){return s.docs.map(function(d){return Object.assign({id:d.id},d.data());});}); };
 
+// ══════════════════════════════════════════
+// AUDIT LOG / BITÁCORA DE ACTIVIDADES
+// ══════════════════════════════════════════
+// Colección 'logs' en Firestore. Cada doc: {id, timestamp, uid, userName, userEmail, action, modulo, target, detalle, ip?}
+DB.saveLog = function(o){ if(!db) return Promise.resolve(false); return _dbSilent(function(){ return db.collection('logs').doc(String(o.id)).set(clean(o)); }); };
+DB.getLogs = function(limite){
+  if(!db) return Promise.resolve([]);
+  var q = db.collection('logs').orderBy('timestamp','desc');
+  if(limite) q = q.limit(limite);
+  return q.get().then(function(s){ return s.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); }); }).catch(function(e){ console.warn('getLogs:', e); return []; });
+};
+
+// Helper global: registra una actividad. Fire-and-forget — no bloquea la UI.
+// Acciones recomendadas: login, logout, cliente_creado, cliente_editado, cliente_eliminado,
+//   credito_creado, credito_editado, credito_eliminado, pago_registrado, pago_eliminado,
+//   egreso_registrado, egreso_eliminado, usuario_creado, usuario_editado, usuario_eliminado,
+//   perfil_editado, config_actualizada, sede_creada, contrato_firmado, notif_enviada, tarea_creada.
+function logActividad(action, modulo, target, detalle){
+  try {
+    if(!db || !S || !S.currentUser) return; // no logueado, no log
+    var id = 'LOG-' + Date.now() + '-' + Math.floor(Math.random()*9999);
+    var doc = {
+      id: id,
+      timestamp: new Date().toISOString(),
+      uid: S.currentUser.uid || '',
+      userName: S.currentUser.nombre || S.currentUser.email || 'Desconocido',
+      userEmail: S.currentUser.email || '',
+      action: String(action||'desconocido'),
+      modulo: String(modulo||'sistema'),
+      target: target ? String(target) : '',
+      detalle: detalle && typeof detalle === 'object' ? detalle : (detalle ? {nota:String(detalle)} : null)
+    };
+    DB.saveLog(doc);
+  } catch(e){ console.warn('logActividad:', e); }
+}
+window.logActividad = logActividad;
 
 // ── Lista de módulos disponibles ──
 var MODULOS = [
@@ -3073,6 +3129,8 @@ function cambiarPasswordPerfil() {
 }
 
 function doLogout() {
+  // Log antes de cerrar (mientras S.currentUser aún existe)
+  try { if(typeof logActividad === 'function') logActividad('logout','auth',(S.currentUser&&S.currentUser.uid)||'',null); } catch(e){}
   // Cerrar perfil overlay si está abierto
   var overlay = document.getElementById('profile-overlay');
   if (overlay) overlay.style.display = 'none';

@@ -1814,6 +1814,7 @@ function _cliGuardar(){
     S.clientes.push(obj);
   }
   DB.saveCliente(obj);
+  if(typeof logActividad==='function') logActividad(idx>=0?'cliente_editado':'cliente_creado','clientes',String(obj.id),{nombre:obj.nombre, cedula:obj.cedula||'', estado:obj.estado});
   _wzClose();
   nav('clientes');
   toast(idx>=0?'Cliente actualizado':'Cliente registrado','success');
@@ -1830,7 +1831,7 @@ function delCliente(id){
   if(!requireDeletePermission()) return;
   const c=S.clientes.find(x=>x.id===id);if(!c)return;
   if(S.creds.some(cr=>cr.cli===c.nombre&&cr.estado==='activo')){toast('No puedes eliminar un cliente con crédito activo','error');return;}
-  confirmarEliminacion({titulo:'Eliminar Cliente',descripcion:'¿Eliminar a '+c.nombre+'?',onConfirm:function(audit){Object.assign(c,audit);DB.saveCliente(c);nav('clientes');toast('Cliente eliminado','info');}});
+  confirmarEliminacion({titulo:'Eliminar Cliente',descripcion:'¿Eliminar a '+c.nombre+'?',onConfirm:function(audit){Object.assign(c,audit);DB.saveCliente(c);if(typeof logActividad==='function') logActividad('cliente_eliminado','clientes',String(c.id),{nombre:c.nombre});nav('clientes');toast('Cliente eliminado','info');}});
 }
 
 function restaurarCliente(id){

@@ -88,6 +88,7 @@ function openAddPago(preCredId){
     };
     S.pagos.push(newPago);
     DB.savePago(newPago);
+    if(typeof logActividad==='function') logActividad('pago_registrado','pagos',newPago.id,{cliente:cred.cli, credito:credId, monto:monto, metodo:newPago.metodo});
     // Crear movimiento en Cuentas — usar nombre exacto de la cuenta seleccionada
     var pagoMetodo=($('p_forma')&&$('p_forma').value)||'';
     // Si no hay cuenta seleccionada pero hay cuentas configuradas, usar la primera

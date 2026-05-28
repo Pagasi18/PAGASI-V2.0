@@ -1227,6 +1227,7 @@ function editarUsuario(uid){
         }
       } : { activo: false };
       DB.updateUsuario(uid,{rol:rol,permisos:permisos,comisiones:comNueva,concesionarios:concesAsig});
+      if(typeof logActividad==='function') logActividad('usuario_editado','users',uid,{rol:rol, permisos:permisos.length});
       // Mantener cache local sincronizado para que la UI refleje los cambios al instante.
       try{
         if(typeof _usersCache !== 'undefined' && Array.isArray(_usersCache)){
@@ -1260,6 +1261,7 @@ function confirmarEliminarUsuario(uid,nombre){
     +'</div>';
   S.saveFn=function(){
     DB.deleteUsuario(uid);
+    if(typeof logActividad==='function') logActividad('usuario_eliminado','users',uid,{nombre:nombre});
     closeM(); nav('users'); toast('Usuario eliminado','info'); return true;
   };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-d" onclick="saveM()">Sí, eliminar</button>';
@@ -1583,6 +1585,8 @@ if (auth) {
           // ── Listener en tiempo real sobre el documento del usuario actual ──
           // Si el admin cambia rol o permisos desde otra sesión, se reflejan al instante.
           if(typeof _attachCurrentUserListener === 'function') _attachCurrentUserListener(user.uid);
+          // ── Log de inicio de sesión ──
+          if(typeof logActividad === 'function') logActividad('login','auth',user.uid,{rol:S.currentUser.rol});
         }).catch(function(){
           S.currentUser = { uid: user.uid, email: user.email, nombre: user.email, rol: 'Administrador', permisos: ['perm_delete'] };
         }).finally(function(){

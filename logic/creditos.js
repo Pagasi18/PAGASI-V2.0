@@ -1922,6 +1922,7 @@ function _wzGuardar(){
   };
   S.creds.push(newCred);
   DB.saveCred(newCred);
+  if(typeof logActividad==='function') logActividad('credito_creado','creditos',newCred.id,{cliente:newCred.cli, modelo:newCred.modelo||'', total:newCred.total||newCred.fin||0});
 
   // Marcar moto como financiada o crearla desde catálogo
   if(WZ.motoInvId){
@@ -2222,6 +2223,7 @@ function ejecutarDelCred(audit){
   var modo = (window._cancelCredModo==='completo') ? 'completo' : 'mantener';
   var ci = S.creds.findIndex(function(x){return x.id===credId;});
   if(ci>=0){
+    if(typeof logActividad==='function') logActividad('credito_eliminado','creditos',credId,{cliente:S.creds[ci].cli, modo:modo, razon:(audit&&audit.eliminadoRazon)||''});
     S.creds[ci].estado='cancelado';
     S.creds[ci].canceladoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
     S.creds[ci].canceladoEn = new Date().toISOString();

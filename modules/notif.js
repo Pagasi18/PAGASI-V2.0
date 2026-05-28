@@ -56,9 +56,8 @@ PG.notif = function(){
     .nf2-sel select:focus{border-color:var(--p1);box-shadow:0 0 0 3px rgba(37,99,235,.10)}
     .nf2-sel optgroup{font-weight:800;color:var(--ink3);font-style:normal}
     .nf2-desc{font-size:11.5px;color:var(--ink3);padding:8px 12px;background:rgba(37,99,235,.06);border-left:3px solid var(--p1);border-radius:8px;line-height:1.5;min-height:18px}
-    .nf2-body{display:grid;grid-template-columns:1.7fr 1fr;gap:14px;align-items:start}
-    @media(max-width:980px){.nf2-body{grid-template-columns:1fr}}
-    .nf2-list{background:#fff;border:1px solid var(--rim);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;height:460px}
+    .nf2-body{display:flex;flex-direction:column;gap:14px}
+    .nf2-list{background:#fff;border:1px solid var(--rim);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;height:520px}
     .nf2-list-head{padding:12px 16px;background:linear-gradient(180deg,#FAFBFF,#F5F7FF);border-bottom:1px solid var(--rim);display:flex;justify-content:space-between;align-items:center;gap:10px}
     .nf2-list-t{font-size:13px;font-weight:800;color:var(--ink);letter-spacing:-.2px}
     .nf2-list-c{background:var(--p1);color:#fff;padding:3px 10px;border-radius:50px;font-size:11px;font-weight:800;letter-spacing:.04em}
@@ -79,7 +78,7 @@ PG.notif = function(){
     .nf2-list-foot a{color:var(--p1);font-weight:700;cursor:pointer;text-decoration:none}
     .nf2-list-foot a:hover{text-decoration:underline}
 
-    .nf2-prev{background:#fff;border:1px solid var(--rim);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;height:460px}
+    .nf2-prev{background:#fff;border:1px solid var(--rim);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;max-height:280px}
     .nf2-prev-h{padding:12px 16px;background:linear-gradient(180deg,#FAFBFF,#F5F7FF);border-bottom:1px solid var(--rim)}
     .nf2-prev-t{font-size:13px;font-weight:800;color:var(--ink);letter-spacing:-.2px}
     .nf2-prev-s{font-size:10.5px;color:var(--ink3);margin-top:2px;font-weight:600}
@@ -174,10 +173,24 @@ PG.notif = function(){
       </div>
     </div>
 
-    <!-- ░░░ BODY: lista ancha + preview ░░░ -->
+    <!-- ░░░ BODY: preview ARRIBA, lista debajo ░░░ -->
     <div class="nf2-body">
 
-      <!-- LISTA -->
+      <!-- PREVIEW (arriba) -->
+      <div class="nf2-prev">
+        <div class="nf2-prev-h">
+          <div class="nf2-prev-t">Vista previa del mensaje</div>
+          <div class="nf2-prev-s">Así lo verá el cliente en WhatsApp</div>
+        </div>
+        <div class="nf2-prev-wa">
+          <div class="nf2-prev-bw">
+            <div id="notif-preview" class="nf2-prev-bubble" style="display:none"></div>
+            <div id="notif-preview-empty" class="nf2-prev-empty">Selecciona plantilla y destinatario</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LISTA (abajo) -->
       <div class="nf2-list">
         <div class="nf2-list-head">
           <div class="nf2-list-t" id="nx-ac-list-title">Destinatarios</div>
@@ -189,25 +202,11 @@ PG.notif = function(){
         </div>
         <div id="nx-ac-selected-wrap"></div>
         <div class="nf2-list-scroll nx-ac-list" id="nx-ac-list" style="position:static !important;display:block !important;border:none !important;background:transparent !important;box-shadow:none !important;max-height:none !important;"></div>
-        <div class="nf2-list-foot" id="nx-ac-hint">Click en un cliente para enviar solo a ese · sin click envía a todo el grupo</div>
+        <div class="nf2-list-foot" id="nx-ac-hint">Ordenados por urgencia · Click en uno para enviar solo a ese</div>
         <input type="hidden" id="notif-cliente-sel-id" value="">
         <select id="notif-cliente-sel" style="display:none"></select>
         <button type="button" id="nx-ac-modeswitch" onclick="nxAcToggleScope()" style="display:none">Ver todos</button>
         <button type="button" class="nx-ac-clear" id="nx-ac-clear" onclick="nxAcClearInput()" style="display:none">×</button>
-      </div>
-
-      <!-- PREVIEW -->
-      <div class="nf2-prev">
-        <div class="nf2-prev-h">
-          <div class="nf2-prev-t">Vista previa</div>
-          <div class="nf2-prev-s">Así lo verá el cliente</div>
-        </div>
-        <div class="nf2-prev-wa">
-          <div class="nf2-prev-bw">
-            <div id="notif-preview" class="nf2-prev-bubble" style="display:none"></div>
-            <div id="notif-preview-empty" class="nf2-prev-empty">Selecciona plantilla y destinatario</div>
-          </div>
-        </div>
       </div>
 
     </div>

@@ -102,7 +102,7 @@ function guardarEmpresa(){
   var data = {nombre, rif, ciudad, tel, email, direccion, representante, repCI, updated: new Date().toISOString()};
   if(db){
     db.collection('config').doc('empresa').set(data)
-      .then(function(){ toast('Empresa guardada — se reflejará en contratos y reportes','success'); })
+      .then(function(){ toast('Empresa guardada — se reflejará en contratos y reportes','success'); if(typeof logActividad==='function') logActividad('config_actualizada','config','empresa',{nombre:nombre}); })
       .catch(function(e){ toast('Error: '+e.message,'error'); });
   } else {
     toast('Empresa guardada (local)','success');
@@ -132,7 +132,7 @@ function guardarPlan(){
   try{ localStorage.setItem('pagasi_config_plan', JSON.stringify(data)); }catch(_e){}
   if(db){
     db.collection('config').doc('plan').set(data)
-      .then(function(){ toast('Plan financiero guardado','success'); nav('config'); })
+      .then(function(){ toast('Plan financiero guardado','success'); if(typeof logActividad==='function') logActividad('config_actualizada','config','plan',{tasa:tasa,plazo:plazo,inicial:inicial}); nav('config'); })
       .catch(function(e){ toast('Error: '+e.message,'error'); });
   } else {
     toast('Plan guardado (local)','success'); nav('config');

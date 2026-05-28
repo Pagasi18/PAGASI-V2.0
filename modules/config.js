@@ -282,10 +282,216 @@ service cloud.firestore {
         <div id="audit-resultado" style="margin-top:12px"></div>
         <div id="audit-completo-resultado" style="margin-top:12px"></div>
       </div>
+
+      <!-- Bitácora de Actividad -->
+      <div class="card" style="grid-column:1 / -1">
+        <div class="ch">
+          <div>
+            <div class="ct">Bitácora de actividad</div>
+            <div class="cs">Registro de eventos del sistema: inicios de sesión, créditos, pagos, gastos, ediciones, etc.</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="logs-filtro-modulo" onchange="cfgRenderLogs()" style="font-family:inherit;font-size:12px;font-weight:700;padding:6px 10px;border:1.5px solid var(--rim);border-radius:8px;background:#fff;cursor:pointer">
+              <option value="">Todos los módulos</option>
+              <option value="auth">Sesiones</option>
+              <option value="clientes">Clientes</option>
+              <option value="creditos">Créditos</option>
+              <option value="pagos">Pagos</option>
+              <option value="egresos">Egresos</option>
+              <option value="users">Usuarios</option>
+              <option value="notif">Notificaciones</option>
+              <option value="config">Configuración</option>
+              <option value="perfil">Perfil</option>
+            </select>
+            <select id="logs-filtro-usuario" onchange="cfgRenderLogs()" style="font-family:inherit;font-size:12px;font-weight:700;padding:6px 10px;border:1.5px solid var(--rim);border-radius:8px;background:#fff;cursor:pointer">
+              <option value="">Todos los usuarios</option>
+            </select>
+            <button class="btn btn-g btn-sm" onclick="cfgRefreshLogs()">↻ Actualizar</button>
+            <button class="btn btn-g btn-sm" onclick="cfgExportarLogs()">↓ Exportar CSV</button>
+          </div>
+        </div>
+        <div id="logs-stats" style="display:flex;gap:8px;margin:10px 0;font-size:11.5px;color:var(--ink3);font-weight:600"></div>
+        <div id="logs-container" style="max-height:540px;overflow-y:auto;border:1px solid var(--rim);border-radius:10px;background:var(--surf)">
+          <div style="padding:32px;text-align:center;color:var(--ink3);font-size:12.5px">Cargando bitácora…</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
   </div>`;};
+
+// ══════════════════════════════════════════════════════
+// BITÁCORA DE ACTIVIDAD
+// ══════════════════════════════════════════════════════
+var _logsCache = [];
+var _logsLoaded = false;
+
+function cfgLoadLogs(force){
+  if(_logsLoaded && !force) { cfgRenderLogs(); return; }
+  if(typeof DB === 'undefined' || !DB.getLogs){ return; }
+  var cont = document.getElementById('logs-container');
+  if(cont) cont.innerHTML = '<div style="padding:32px;text-align:center;color:var(--ink3);font-size:12.5px">Cargando bitácora…</div>';
+  DB.getLogs(500).then(function(arr){
+    _logsCache = Array.isArray(arr) ? arr : [];
+    _logsLoaded = true;
+    // Poblar dropdown de usuarios
+    var userSel = document.getElementById('logs-filtro-usuario');
+    if(userSel){
+      var names = {};
+      _logsCache.forEach(function(l){ if(l.userName) names[l.userName] = true; });
+      var html = '<option value="">Todos los usuarios</option>';
+      Object.keys(names).sort().forEach(function(n){ html += '<option value="'+n.replace(/"/g,'&quot;')+'">'+n+'</option>'; });
+      userSel.innerHTML = html;
+    }
+    cfgRenderLogs();
+  }).catch(function(e){
+    console.warn('cargar logs:', e);
+    if(cont) cont.innerHTML = '<div style="padding:32px;text-align:center;color:var(--red);font-size:12.5px">Error al cargar bitácora: '+(e.message||e)+'</div>';
+  });
+}
+
+function cfgRefreshLogs(){ _logsLoaded = false; cfgLoadLogs(true); }
+
+function cfgRenderLogs(){
+  var cont = document.getElementById('logs-container');
+  if(!cont) return;
+  var fMod = (document.getElementById('logs-filtro-modulo')||{}).value || '';
+  var fUser = (document.getElementById('logs-filtro-usuario')||{}).value || '';
+  var filt = _logsCache.filter(function(l){
+    if(fMod && l.modulo !== fMod) return false;
+    if(fUser && l.userName !== fUser) return false;
+    return true;
+  });
+  // Stats
+  var stats = document.getElementById('logs-stats');
+  if(stats){
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var deHoy = filt.filter(function(l){ try { return new Date(l.timestamp) >= hoy; } catch(e){ return false; }}).length;
+    stats.innerHTML =
+      '<span style="background:var(--gs);padding:5px 11px;border-radius:50px"><b>'+filt.length+'</b> eventos · '+
+      '<b style="color:var(--p1)">'+deHoy+'</b> de hoy · '+
+      'mostrando los '+Math.min(filt.length,500)+' más recientes</span>';
+  }
+  if(!filt.length){
+    cont.innerHTML = '<div style="padding:48px 24px;text-align:center;color:var(--ink3);font-size:12.5px">Sin eventos registrados con esos filtros.</div>';
+    return;
+  }
+  var html = '';
+  var colMap = {
+    login:'#2563EB', logout:'#6B7280',
+    cliente_creado:'#00B876', cliente_editado:'#2563EB', cliente_eliminado:'#E8335A',
+    credito_creado:'#00B876', credito_editado:'#2563EB', credito_eliminado:'#E8335A',
+    pago_registrado:'#00B876', pago_eliminado:'#E8335A',
+    egreso_registrado:'#E8335A', egreso_eliminado:'#6B7280',
+    usuario_creado:'#00B876', usuario_editado:'#2563EB', usuario_eliminado:'#E8335A',
+    perfil_editado:'#2563EB',
+    config_actualizada:'#BA7517',
+    notif_enviada:'#25D366'
+  };
+  var labelMap = {
+    login:'inició sesión', logout:'cerró sesión',
+    cliente_creado:'creó un cliente', cliente_editado:'editó un cliente', cliente_eliminado:'eliminó un cliente',
+    credito_creado:'creó un crédito', credito_editado:'editó un crédito', credito_eliminado:'eliminó un crédito',
+    pago_registrado:'registró un pago', pago_eliminado:'eliminó un pago',
+    egreso_registrado:'registró un gasto', egreso_eliminado:'eliminó un gasto',
+    usuario_creado:'creó un usuario', usuario_editado:'editó un usuario', usuario_eliminado:'eliminó un usuario',
+    perfil_editado:'editó su perfil',
+    config_actualizada:'actualizó la configuración',
+    notif_enviada:'envió una notificación'
+  };
+  function esc(s){ return String(s||'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+  function fmtTime(ts){
+    try {
+      var d = new Date(ts);
+      var hoy = new Date(); hoy.setHours(0,0,0,0);
+      var ayer = new Date(hoy.getTime() - 86400000);
+      var dDia = new Date(d); dDia.setHours(0,0,0,0);
+      var hh = String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+      if(dDia.getTime() === hoy.getTime()) return 'Hoy ' + hh;
+      if(dDia.getTime() === ayer.getTime()) return 'Ayer ' + hh;
+      return d.toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit'}) + ' ' + hh;
+    } catch(e){ return ts; }
+  }
+  function fmtDetalle(d){
+    if(!d) return '';
+    if(typeof d === 'string') return d;
+    var parts = [];
+    Object.keys(d).forEach(function(k){
+      var v = d[k];
+      if(v === null || v === undefined || v === '') return;
+      parts.push(k+': '+v);
+    });
+    return parts.join(' · ');
+  }
+  filt.forEach(function(l){
+    var col = colMap[l.action] || '#6B7280';
+    var lbl = labelMap[l.action] || l.action;
+    var det = fmtDetalle(l.detalle);
+    var target = l.target ? ' <code style="background:var(--surf2);padding:1px 6px;border-radius:4px;font-size:10.5px;color:var(--ink2)">'+esc(l.target)+'</code>' : '';
+    html +=
+      '<div style="display:flex;align-items:flex-start;gap:11px;padding:11px 14px;border-bottom:1px solid var(--rim);background:#fff">'
+        +'<div style="width:9px;height:9px;border-radius:50%;background:'+col+';flex-shrink:0;margin-top:6px"></div>'
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:13px;line-height:1.45;color:var(--ink)">'
+            +'<b>'+esc(l.userName)+'</b> '
+            +'<span style="color:var(--ink2)">'+esc(lbl)+'</span>'
+            +target
+          +'</div>'
+          +(det ? '<div style="font-size:11px;color:var(--ink3);margin-top:3px;line-height:1.5">'+esc(det)+'</div>' : '')
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--ink3);font-weight:600;white-space:nowrap;flex-shrink:0;font-family:var(--fd)">'+fmtTime(l.timestamp)+'</div>'
+      +'</div>';
+  });
+  cont.innerHTML = html;
+}
+
+function cfgExportarLogs(){
+  var fMod = (document.getElementById('logs-filtro-modulo')||{}).value || '';
+  var fUser = (document.getElementById('logs-filtro-usuario')||{}).value || '';
+  var filt = _logsCache.filter(function(l){
+    if(fMod && l.modulo !== fMod) return false;
+    if(fUser && l.userName !== fUser) return false;
+    return true;
+  });
+  function csvCell(s){ s=String(s==null?'':s); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+  var rows = [['Fecha/hora','Usuario','Email','Acción','Módulo','Target','Detalle']];
+  filt.forEach(function(l){
+    var det = l.detalle ? (typeof l.detalle === 'string' ? l.detalle : JSON.stringify(l.detalle)) : '';
+    rows.push([l.timestamp, l.userName||'', l.userEmail||'', l.action||'', l.modulo||'', l.target||'', det]);
+  });
+  var csv = rows.map(function(r){ return r.map(csvCell).join(','); }).join('\n');
+  var blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'pagasi-bitacora-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Auto-cargar logs cuando el tab Sistema esté visible. Como cada cambio de tab
+// hace un nav('config') completo, basta con detectar tras cada render si el
+// pane de sistema está activo.
+(function _autoLoadLogsObserver(){
+  if(typeof window === 'undefined') return;
+  if(window._logsObsInstalled) return;
+  window._logsObsInstalled = true;
+  // Cada vez que cambia el DOM (re-renders de config), revisar
+  var checkTimer = null;
+  var mo = new MutationObserver(function(){
+    clearTimeout(checkTimer);
+    checkTimer = setTimeout(function(){
+      var pane = document.getElementById('cfg-tab-sistema');
+      var cont = document.getElementById('logs-container');
+      if(pane && pane.style.display !== 'none' && cont && !cont.dataset.loaded){
+        cont.dataset.loaded = '1';
+        cfgLoadLogs(false);
+      }
+    }, 150);
+  });
+  if(document.body) mo.observe(document.body,{childList:true,subtree:true});
+  else document.addEventListener('DOMContentLoaded', function(){ mo.observe(document.body,{childList:true,subtree:true}); });
+})();
 
 
 // ══════════════════════════════════════════════════════

@@ -31,6 +31,7 @@ function openAddEgreso(){
     var newEg={id:newId,concepto:conc,monto:monto,fecha:($('eg_fecha')&&$('eg_fecha').value)||hoyLocalISO(),categoria:($('eg_cat')&&$('eg_cat').value)||'otros',forma:($('eg_forma')&&$('eg_forma').value)||'',notas:($('eg_notas')&&$('eg_notas').value)||'',eliminado:false};
     S.egresos.push(newEg);
     DB.saveEgreso(newEg);
+    if(typeof logActividad==='function') logActividad('egreso_registrado','egresos',String(newId),{concepto:conc, monto:monto, categoria:newEg.categoria});
 
     // Crear movimiento de SALIDA en la cuenta seleccionada
     var cuentaSalida=($('eg_forma')&&$('eg_forma').value)||'';
