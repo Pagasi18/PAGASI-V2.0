@@ -2484,7 +2484,7 @@ function nav(p){
   }
   S.page=p;
   S.clienteFiltro='';
-  window._pages={}; // reset pagination on module change
+  if(window._pgKeep){ window._pgKeep=false; } else { window._pages={}; } // reset pagination on module change (preserve when navigating pages)
   if(p !== 'cuentas') window._cuentasDetalle = null; // reset account detail view
   document.querySelectorAll('.si').forEach(e=>e.classList.remove('on'));
   document.querySelectorAll('.si[data-nav]').forEach(e=>{if(e.dataset.nav===p)e.classList.add('on');});
