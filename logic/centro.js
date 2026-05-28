@@ -308,6 +308,7 @@ function wtToday(){ return hoyLocalISO(); }
 function wtDateAdd(days){ var d=new Date(); d.setDate(d.getDate()+days); return fechaLocalISO(d); }
 function wtUserName(){ return (S.currentUser&&(S.currentUser.nombre||S.currentUser.email||S.currentUser.uid))||'Administrador'; }
 function wtIsMine(t){ if(isAdminUser()) return true; var me=(S.currentUser&&S.currentUser.email)||wtUserName(); var ass=String(t.asignadoEmail||t.asignadoA||'').toLowerCase(); var meL=me.toLowerCase(); return !ass||ass===meL||ass.indexOf(meL)>=0||meL.indexOf(ass)>=0; }
+function wtIsMineStrict(t){ var meEmail=String((S.currentUser&&S.currentUser.email)||'').toLowerCase(); var meName=String(wtUserName()||'').toLowerCase(); var assE=String(t.asignadoEmail||'').toLowerCase(); var assN=String(t.asignadoA||'').toLowerCase(); if(!assE&&!assN) return true; if(assE&&meEmail&&assE===meEmail) return true; if(assN&&meName&&assN===meName) return true; return false; }
 
 function wtDemoTasks(){ var me=wtUserName(); return [
   {id:'WT-DEMO-1',titulo:'Llamar leads aprobados de hoy',descripcion:'Contactar a los clientes aprobados y empujarlos a reservar la moto con inicial.',asignadoA:me,fecha:wtToday(),prioridad:'alta',estado:'pendiente',tipo:'Seguimiento',checklist:[{txt:'Revisar leads aprobados',done:true},{txt:'Enviar WhatsApp de aprobación rápida',done:false},{txt:'Agendar visita o cierre',done:false}],comentarios:[{user:'Sistema',fecha:new Date().toISOString(),txt:'Tarea sugerida para comenzar el día.'}],createdAt:new Date().toISOString()},
@@ -355,7 +356,11 @@ function wtFiltered(){
 
 function wtMaybeNotify(){
   if(WT_NOTIFIED) return;
-  var st=wtStats(); var total=st.hoy+st.vencidas;
+  var today=wtToday();
+  var mine=(S.tareas||[]).filter(function(t){ return !t.eliminado&&!t.archivado&&wtIsMineStrict(t); });
+  var hoy=mine.filter(function(t){ return t.estado!=='completada'&&(t.fecha===today||!t.fecha); }).length;
+  var venc=mine.filter(function(t){ return t.estado!=='completada'&&t.fecha&&t.fecha<today; }).length;
+  var total=hoy+venc;
   if(!total) return;
   WT_NOTIFIED=true;
   setTimeout(function(){ if(typeof toast==='function') toast('Tienes '+total+' tarea(s) pendientes en Centro de trabajo','info'); },350);
