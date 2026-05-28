@@ -175,7 +175,8 @@ PG.dash = function(){
     return null;
   }
   var hoyM = new Date().getMonth()+1, hoyD = new Date().getDate();
-  var cumplesEsteMes = (S.usuarios||[]).filter(function(u){
+  var _bdaySrc = (typeof _usersCache!=='undefined' && _usersCache && _usersCache.length) ? _usersCache : (S._wtUsers||S.usuarios||[]);
+  var cumplesEsteMes = _bdaySrc.filter(function(u){
     if(!u || u.eliminado) return false;
     var c = _parseCumple(u.cumpleanos || u.fechaNacimiento || u.bday);
     return c && c.mes === hoyM;

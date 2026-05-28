@@ -179,7 +179,8 @@ function wtCumplesHTML(){
   var hoyM = new Date().getMonth()+1, hoyD = new Date().getDate();
   var hoyDate = new Date(); hoyDate.setHours(0,0,0,0);
 
-  var cumplesEsteMes = (S.usuarios||[]).filter(function(u){
+  var _bdaySrc = (typeof _usersCache!=='undefined' && _usersCache && _usersCache.length) ? _usersCache : (S._wtUsers||S.usuarios||[]);
+  var cumplesEsteMes = _bdaySrc.filter(function(u){
     if(!u || u.eliminado) return false;
     var c = _wtParseCumple(u.cumpleanos || u.fechaNacimiento || u.bday);
     return c && c.mes === hoyM;
@@ -405,25 +406,36 @@ function wtHTML(){
       setTimeout(function(){ dashDailyLoad('dato', false); }, 500);
       setTimeout(function(){ dashDailyLoad('noticia', false); }, 800);
     }
-    // Cotillón si es cumpleaños del usuario
+    // Cotillón si HOY es cumpleaños de alguien del equipo (usuario logueado o compañero)
     try {
-      var u = S.currentUser || {};
-      var cumple = u.cumpleanos || u.fechaNacimiento;
-      if(cumple){
-        var s = String(cumple).replace(/\//g,'-');
-        var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-        if(m){
-          var mes = parseInt(m[2],10), dia = parseInt(m[3],10);
-          var hoy = new Date();
-          if(mes === hoy.getMonth()+1 && dia === hoy.getDate()){
-            if(typeof dispararCotillon === 'function' && !window._cotillonShown){
-              window._cotillonShown = true;
-              setTimeout(function(){ dispararCotillon(u.nombre||''); }, 600);
-            }
-          }
+      var _hoy = new Date();
+      var _hoyKey = _hoy.getFullYear()+'-'+(_hoy.getMonth()+1)+'-'+_hoy.getDate();
+      var _src = (typeof _usersCache!=='undefined' && _usersCache && _usersCache.length) ? _usersCache : (S._wtUsers||[]);
+      // Incluir también al usuario logueado por si aún no está en el caché
+      var _todos = _src.slice();
+      if(S.currentUser && !_todos.find(function(x){return x && x.uid===S.currentUser.uid;})) _todos.push(S.currentUser);
+      var cumpleHoy = _todos.filter(function(u){
+        if(!u || u.eliminado) return false;
+        var c = _wtParseCumple(u.cumpleanos || u.fechaNacimiento || u.bday);
+        return c && c.mes === (_hoy.getMonth()+1) && c.dia === _hoy.getDate();
+      });
+      if(cumpleHoy.length && typeof dispararCotillon === 'function'){
+        // Evitar repetir cotillón en la misma sesión Y una vez por día por usuario cumpleañero
+        var lsKey = '_cotillonShown_'+_hoyKey;
+        var yaShown = false;
+        try { yaShown = !!localStorage.getItem(lsKey); } catch(e){}
+        if(!window._cotillonShown && !yaShown){
+          window._cotillonShown = true;
+          try { localStorage.setItem(lsKey,'1'); } catch(e){}
+          var nombres = cumpleHoy.map(function(u){return u.nombre||u.email||'Compañero/a';});
+          var nombre = nombres.length === 1
+            ? nombres[0]
+            : (nombres.slice(0,-1).join(', ') + ' y ' + nombres[nombres.length-1]);
+          var esYo = S.currentUser && cumpleHoy.some(function(u){ return u.uid === S.currentUser.uid; });
+          setTimeout(function(){ dispararCotillon(nombre, !esYo); }, 600);
         }
       }
-    } catch(e){}
+    } catch(e){ console.warn('cotillon trigger:', e); }
   }, 100);
   if(st.hoy+st.vencidas>0){
     html+='<div style="background:#FFF6E5;border:1px solid #FAEEDA;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:18px">'
@@ -578,6 +590,8 @@ function wtLoadUsers(){
       DB.getUsuarios().then(function(u){
         S._wtUsers=Array.isArray(u)?u:[];
         if(typeof _usersCache!=='undefined') _usersCache=S._wtUsers;
+        // Re-renderizar centro para reflejar cumpleaños del equipo si estamos ahí
+        if(S.page==='centro' && typeof nav==='function'){ try { nav('centro'); } catch(e){} }
       }).catch(function(){});
     }
   }

@@ -599,7 +599,7 @@ function reporteMensualEnviarEmail(){
 })();
 
 // ─── COTILLÓN / CONFETTI (canvas + card centrada cerrable) ───
-function dispararCotillon(nombre){
+function dispararCotillon(nombre, esTeammate){
   cerrarCotillon();
   // Inject animation styles
   if(!document.getElementById('cotillon-styles')){
@@ -650,6 +650,19 @@ function dispararCotillon(nombre){
   // Card centrada con mensaje
   var who = nombre || (typeof S !== 'undefined' && S.currentUser && S.currentUser.nombre) || '';
   var primerNombre = who ? who.split(' ')[0] : '';
+  // Si es cumpleaños de un COMPAÑERO (no del usuario logueado), cambia el copy
+  var _tagline, _titulo, _subtitulo, _btnTxt;
+  if(esTeammate){
+    _tagline = 'Cumpleaños del equipo';
+    _titulo = '¡Hoy cumple años '+(who||'tu compañero/a')+'!';
+    _subtitulo = 'No olvides felicitar a '+(primerNombre||'tu compañero/a')+'. Un mensaje rápido por WhatsApp hace el día.';
+    _btnTxt = '¡A celebrar!';
+  } else {
+    _tagline = 'Cumpleaños';
+    _titulo = '¡Feliz cumpleaños'+(primerNombre?', '+primerNombre:'')+'!';
+    _subtitulo = 'Que este nuevo año te traiga muchos cobros puntuales, clientes satisfechos y motos vendidas. Todo el equipo Pagasi te desea lo mejor.';
+    _btnTxt = '¡Gracias, a trabajar!';
+  }
   var card = document.createElement('div');
   card.id = 'cotillon-card';
   card.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100000;background:linear-gradient(145deg,#FFF7ED 0%,#FCE7F3 50%,#F3E8FF 100%);border-radius:32px;padding:0;width:90%;max-width:520px;box-shadow:0 30px 80px rgba(236,72,153,.32),0 0 0 1px rgba(255,255,255,.6);animation:cotIn .6s cubic-bezier(.34,1.56,.64,1) forwards;overflow:hidden';
@@ -658,10 +671,10 @@ function dispararCotillon(nombre){
       +'<div style="position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.7) 50%,transparent 70%);animation:cotShine 2.5s ease-in-out infinite;pointer-events:none"></div>'
       +'<button onclick="cerrarCotillon()" style="position:absolute;top:14px;right:14px;width:34px;height:34px;border:none;background:rgba(255,255,255,.7);border-radius:50%;cursor:pointer;font-size:18px;font-weight:700;color:#831843;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);box-shadow:0 4px 12px rgba(0,0,0,.08);z-index:2" aria-label="Cerrar">×</button>'
       +'<div style="font-size:82px;line-height:1;margin-bottom:14px;animation:cotCake 2s ease-in-out infinite">🎂</div>'
-      +'<div style="font-size:11px;font-weight:800;letter-spacing:.32em;text-transform:uppercase;color:#BE185D;margin-bottom:10px">Cumpleaños</div>'
-      +'<div style="font-size:34px;font-weight:900;color:#831843;letter-spacing:-1.2px;line-height:1.05;margin-bottom:8px">¡Feliz cumpleaños'+(primerNombre?', '+primerNombre:'')+'!</div>'
-      +'<div style="font-size:14.5px;color:#9D174D;font-weight:500;line-height:1.55;max-width:380px;margin:0 auto 22px">Que este nuevo año te traiga muchos cobros puntuales, clientes satisfechos y motos vendidas. Todo el equipo Pagasi te desea lo mejor.</div>'
-      +'<button onclick="cerrarCotillon()" style="background:linear-gradient(135deg,#EC4899,#BE185D);color:#fff;border:none;padding:13px 32px;border-radius:50px;font-weight:800;font-size:14px;cursor:pointer;letter-spacing:.02em;box-shadow:0 8px 22px rgba(236,72,153,.42);transition:transform .15s">¡Gracias, a trabajar!</button>'
+      +'<div style="font-size:11px;font-weight:800;letter-spacing:.32em;text-transform:uppercase;color:#BE185D;margin-bottom:10px">'+_tagline+'</div>'
+      +'<div style="font-size:32px;font-weight:900;color:#831843;letter-spacing:-1.2px;line-height:1.1;margin-bottom:8px">'+_titulo+'</div>'
+      +'<div style="font-size:14.5px;color:#9D174D;font-weight:500;line-height:1.55;max-width:380px;margin:0 auto 22px">'+_subtitulo+'</div>'
+      +'<button onclick="cerrarCotillon()" style="background:linear-gradient(135deg,#EC4899,#BE185D);color:#fff;border:none;padding:13px 32px;border-radius:50px;font-weight:800;font-size:14px;cursor:pointer;letter-spacing:.02em;box-shadow:0 8px 22px rgba(236,72,153,.42);transition:transform .15s">'+_btnTxt+'</button>'
     +'</div>';
   document.body.appendChild(card);
 
@@ -755,6 +768,19 @@ async function guardarMiPerfil(){
     }
     // Actualizar estado local también
     Object.assign(S.currentUser, update);
+    // Sincronizar caché de usuarios para que la card de cumpleaños refleje cambios al instante
+    try {
+      if(typeof _usersCache !== 'undefined' && Array.isArray(_usersCache)){
+        var idx = _usersCache.findIndex(function(u){ return u && u.uid === S.currentUser.uid; });
+        if(idx >= 0) Object.assign(_usersCache[idx], update);
+        else _usersCache.push(Object.assign({uid:S.currentUser.uid, email:S.currentUser.email||''}, update));
+      }
+      if(S._wtUsers && Array.isArray(S._wtUsers)){
+        var idx2 = S._wtUsers.findIndex(function(u){ return u && u.uid === S.currentUser.uid; });
+        if(idx2 >= 0) Object.assign(S._wtUsers[idx2], update);
+        else S._wtUsers.push(Object.assign({uid:S.currentUser.uid, email:S.currentUser.email||''}, update));
+      }
+    } catch(e){ console.warn('cache sync miPerfil:', e); }
     // Actualizar sidebar si cambió el nombre
     if(typeof updateSidebarFooter==='function') updateSidebarFooter();
     if(typeof toast==='function') toast('✓ Perfil actualizado','success');
