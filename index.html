@@ -93,14 +93,15 @@ h2.head{font-size:clamp(34px,4vw,52px);font-weight:800;letter-spacing:-2px;line-
   background:radial-gradient(circle,rgba(37,99,235,.18) 0%,transparent 65%);
   pointer-events:none;z-index:0;
 }
-/* La moto en multiply elimina el blanco de la imagen contra el azul del stage */
+/* La moto procesada con canvas (fondo blanco removido en runtime) */
 .hero-bike img{
   position:relative;z-index:2;
   display:block;width:100%;height:auto;max-height:400px;
   object-fit:contain;
-  mix-blend-mode:multiply;
   filter:drop-shadow(0 22px 30px rgba(0,40,120,.22));
+  transition:opacity .25s;
 }
+.hero-bike img.bg-processing{opacity:0;}
 /* Plataforma de sombra debajo de la moto */
 .hero-bike-stage .platform{
   position:absolute;
@@ -998,5 +999,54 @@ function openMob(){document.getElementById('mob').classList.add('open');}
 function closeMob(){document.getElementById('mob').classList.remove('open');}
 var obs=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting)e.target.classList.add('v');});},{threshold:.1});
 document.querySelectorAll('.reveal').forEach(function(el){obs.observe(el);});
+</script>
+<script>
+// ─── Eliminar fondo blanco de la moto destacada del hero (en runtime) ───
+(function removeWhiteBgFromHeroBike(){
+  var heroImg = document.querySelector('.hero-bike img');
+  if(!heroImg) return;
+
+  function processImage(src){
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function(){
+      try {
+        var canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        var data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var px = data.data;
+        // Recorrer cada pixel. Si es blanco/casi blanco → alpha 0 (transparente)
+        // Tolerancia: pixels con R,G,B > 235 son considerados "fondo blanco"
+        for(var i = 0; i < px.length; i += 4){
+          var r = px[i], g = px[i+1], b = px[i+2];
+          if(r > 235 && g > 235 && b > 235){
+            // Fade gradual cerca del borde para un look más natural
+            var brightness = (r + g + b) / 3;
+            if(brightness > 248){
+              px[i+3] = 0; // totalmente transparente
+            } else {
+              // semi-transparente para suavizar bordes
+              px[i+3] = Math.max(0, (brightness - 235) * 12);
+            }
+          }
+        }
+        ctx.putImageData(data, 0, 0);
+        heroImg.src = canvas.toDataURL('image/png');
+        heroImg.classList.remove('bg-processing');
+      } catch(e){
+        console.warn('No se pudo procesar el fondo:', e);
+        heroImg.classList.remove('bg-processing');
+      }
+    };
+    img.onerror = function(){ heroImg.classList.remove('bg-processing'); };
+    img.src = src;
+  }
+
+  heroImg.classList.add('bg-processing');
+  processImage(heroImg.getAttribute('src'));
+})();
 </script>
 </body></html>
