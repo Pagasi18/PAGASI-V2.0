@@ -286,7 +286,7 @@ PG.creditos = function(){
       <div><div class="ct">${tab==='archivados'?'Archivados':'Listado de créditos'}</div><div class="cs">${filtered.length} resultado${filtered.length!==1?'s':''} · ${tab==='todos'?'activos, en mora y completados':tab==='archivados'?'créditos cancelados o recuperados':'filtrado por '+tab}</div></div>
       <div class="srch" style="width:240px"><span class="srch-i">◆</span><input type="text" id="credQ" placeholder="Buscar crédito, cliente, modelo..." value="${S.credFiltro||''}" oninput="liveSearchCred(this.value)" style="width:100%"></div>
     </div>
-    <div class="tw tw-compact"><table>
+    <div class="tw tw-compact tw-creditos"><table>
     <thead><tr>
       ${['id','cli','modelo','fecha','precio','total','cuota','progreso','saldo','mora','apy','estado'].map(function(col){
         var labels={id:'ID',cli:'Cliente',modelo:'Modelo',fecha:'Fecha inicio',precio:'Precio',total:'Total',cuota:'Cuota Q.',progreso:'Progreso',saldo:'Saldo',mora:'Mora',apy:'APY',estado:'Estado'};
