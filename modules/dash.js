@@ -232,6 +232,11 @@ PG.dash = function(){
   <!-- Cumpleaños y daily tabs viven ahora en Centro de Trabajo -->
 
 
+  <style>
+    .dash-tasa-card .dash-refresh:hover{transform:rotate(180deg);background:rgba(139,92,246,.20)!important}
+    .dash-tasa-card{transition:box-shadow .2s}
+    .dash-tasa-card:hover{box-shadow:0 8px 24px rgba(139,92,246,.18)}
+  </style>
   <!-- ROW 1: 6 KPI CARDS -->
   <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;margin-bottom:18px">
 
@@ -306,26 +311,53 @@ PG.dash = function(){
       </div>
     </div>
 
-    <!-- KPI: TASA DEL DÍA (BCV + Binance) -->
-    <div class="card dash-kpi" id="dash-tasa-card" onclick="bcvForzarActualizacion&&bcvForzarActualizacion()" title="Click para refrescar la tasa" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8B5CF6;font-family:var(--fm)">Tasa del día</span>
-        <span style="font-size:9px;background:rgba(139,92,246,.12);color:#8B5CF6;padding:2px 7px;border-radius:20px;font-weight:700">Bs/$</span>
+    <!-- KPI: TASA DEL DÍA (BCV + Binance + EUR) -->
+    <div class="card dash-kpi dash-tasa-card" id="dash-tasa-card" title="Click ↻ para refrescar las tasas"
+         style="cursor:default;position:relative;overflow:hidden;background:linear-gradient(160deg,#FAFAFE 0%,#F5F3FF 60%,#EDE9FE 100%);border:1px solid rgba(139,92,246,.18)">
+      <!-- Decoración de fondo -->
+      <div style="position:absolute;top:-40px;right:-40px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.10),transparent 70%);pointer-events:none"></div>
+      <div style="position:absolute;bottom:-50px;left:-20px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(240,185,11,.08),transparent 70%);pointer-events:none"></div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;position:relative;z-index:1">
+        <div style="display:flex;align-items:center;gap:7px">
+          <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#5B21B6;font-family:var(--fm)">Tasa del día</span>
+        </div>
+        <button class="dash-refresh" onclick="event.stopPropagation();bcvForzarActualizacion&&bcvForzarActualizacion()"
+                title="Actualizar tasas"
+                style="background:rgba(139,92,246,.10);border:1px solid rgba(139,92,246,.18);color:#7C3AED;border-radius:50%;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;line-height:1;padding:0;transition:transform .3s">↻</button>
       </div>
+
       <!-- BCV -->
-      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px;margin-bottom:6px">
-        <span style="font-size:9.5px;font-weight:800;color:var(--ink3);letter-spacing:.3px;text-transform:uppercase">BCV</span>
-        <span id="dash-tasa-bcv" style="font-family:var(--fd);font-weight:900;font-size:18px;color:var(--ink);letter-spacing:-.4px">${(window._tasaBsGlobal||1).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:rgba(37,99,235,.04);border-radius:9px;border:1px solid rgba(37,99,235,.10);margin-bottom:5px;position:relative;z-index:1">
+        <span style="font-size:14px;line-height:1;flex-shrink:0">🇻🇪</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:9px;font-weight:800;color:#1E40AF;text-transform:uppercase;letter-spacing:.5px;line-height:1.2">BCV</div>
+        </div>
+        <span id="dash-tasa-bcv" style="font-family:var(--fd);font-weight:900;font-size:15px;color:#1E40AF;letter-spacing:-.4px;white-space:nowrap">${(window._tasaBsGlobal||0)>1?(window._tasaBsGlobal).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
       </div>
+
       <!-- Binance -->
-      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px">
-        <span style="font-size:9.5px;font-weight:800;color:var(--ink3);letter-spacing:.3px;text-transform:uppercase">Binance</span>
-        <span id="dash-tasa-binance" style="font-family:var(--fd);font-weight:900;font-size:18px;color:#F0B90B;letter-spacing:-.4px">${(window._tasaBinance||0)>1?(window._tasaBinance).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:rgba(240,185,11,.06);border-radius:9px;border:1px solid rgba(240,185,11,.18);margin-bottom:5px;position:relative;z-index:1">
+        <span style="font-size:14px;line-height:1;flex-shrink:0;color:#F0B90B;font-weight:900">⬢</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:9px;font-weight:800;color:#92400E;text-transform:uppercase;letter-spacing:.5px;line-height:1.2">Binance</div>
+        </div>
+        <span id="dash-tasa-binance" style="font-family:var(--fd);font-weight:900;font-size:15px;color:#B45309;letter-spacing:-.4px;white-space:nowrap">${(window._tasaBinance||0)>1?(window._tasaBinance).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
       </div>
-      <!-- Spread -->
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;justify-content:space-between;font-size:10.5px">
-        <span style="color:var(--ink3)" id="dash-tasa-spread-lbl">Spread</span>
-        <span id="dash-tasa-spread" style="color:#8B5CF6;font-weight:700">${(window._tasaBinance>1&&window._tasaBsGlobal>1)?('+'+(((window._tasaBinance-window._tasaBsGlobal)/window._tasaBsGlobal*100).toFixed(1))+'%'):'—'}</span>
+
+      <!-- EUR -->
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:rgba(34,197,94,.05);border-radius:9px;border:1px solid rgba(34,197,94,.16);position:relative;z-index:1">
+        <span style="font-size:14px;line-height:1;flex-shrink:0">🇪🇺</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:9px;font-weight:800;color:#15803D;text-transform:uppercase;letter-spacing:.5px;line-height:1.2">Euro</div>
+        </div>
+        <span id="dash-tasa-eur" style="font-family:var(--fd);font-weight:900;font-size:15px;color:#15803D;letter-spacing:-.4px;white-space:nowrap">${(window._tasaEuro||0)>1?(window._tasaEuro).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
+      </div>
+
+      <!-- Spread BCV↔Binance -->
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid rgba(139,92,246,.15);display:flex;justify-content:space-between;align-items:center;font-size:10.5px;position:relative;z-index:1">
+        <span style="color:#6B7280;font-weight:600">Brecha BCV↔Bin</span>
+        <span id="dash-tasa-spread" style="color:#7C3AED;font-weight:800;font-family:var(--fd)">${(window._tasaBinance>1&&window._tasaBsGlobal>1)?('+'+(((window._tasaBinance-window._tasaBsGlobal)/window._tasaBsGlobal*100).toFixed(1))+'%'):'—'}</span>
       </div>
     </div>
   </div>

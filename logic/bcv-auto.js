@@ -11,6 +11,10 @@ var _bcvAutoTasa   = 0;
 // Tasa Binance (mercado paralelo / P2P)
 var _binanceTasa = 0;
 var _binanceEstado = 'inactivo';
+// Tasa Euro (calculada como EUR/USD × BCV)
+var _eurTasa = 0;
+var _eurEstado = 'inactivo';
+var _eurUsdRatio = 0; // EUR/USD para mostrar como dato
 
 // Endpoints en orden de preferencia (fallback si uno falla)
 var _BCV_ENDPOINTS = [
@@ -22,6 +26,12 @@ var _BCV_ENDPOINTS = [
 var _BINANCE_ENDPOINTS = [
   'https://ve.dolarapi.com/v1/dolares/paralelo',
   'https://pydolarvenezuela-api.vercel.app/api/v1/dollar?monitor=binance'
+];
+
+// Endpoint para EUR/USD (ECB official via Frankfurter)
+var _EUR_ENDPOINTS = [
+  'https://api.frankfurter.app/latest?from=EUR&to=USD',
+  'https://open.er-api.com/v6/latest/EUR'
 ];
 
 // ── Función principal — llamar al inicio de la app ──
@@ -41,6 +51,8 @@ function bcvAutoInit(){
       var fechaGuardada = (d.fechaActualizacion||d.fecha||'').slice(0,10);
       var tasaGuardada  = parseFloat(d.tasaBs||0);
       var binanceGuardada = parseFloat(d.tasaBinance||0);
+      var euroGuardada = parseFloat(d.tasaEuro||0);
+      var eurUsdGuardado = parseFloat(d.eurUsd||0);
 
       if(fechaGuardada === hoy && tasaGuardada > 1){
         // Ya tenemos la tasa BCV de hoy — usar directamente
@@ -53,27 +65,86 @@ function bcvAutoInit(){
           _binanceTasa = binanceGuardada;
           _binanceEstado = 'ok';
         }
+        if(euroGuardada > 1){
+          window._tasaEuro = euroGuardada;
+          _eurTasa = euroGuardada;
+          _eurEstado = 'ok';
+          if(eurUsdGuardado > 0) _eurUsdRatio = eurUsdGuardado;
+        }
         _bcvActualizarUI();
-        console.log('[BCV-Auto] Tasa de hoy ya en Firestore: BCV '+tasaGuardada+' · Binance '+binanceGuardada);
-        // Si no hay Binance guardada o es de otro día, descargarla
+        console.log('[BCV-Auto] Tasas de hoy ya en Firestore: BCV '+tasaGuardada+' · Binance '+binanceGuardada+' · EUR '+euroGuardada);
+        // Si falta alguna, descargarla
         if(!binanceGuardada || binanceGuardada <= 1) _binanceFetchTasa(0);
+        if(!euroGuardada || euroGuardada <= 1) _eurFetchTasa(0);
         return;
       }
     }
     // No hay tasa de hoy → descargar del API
-    console.log('[BCV-Auto] Descargando tasa BCV y Binance de hoy...');
+    console.log('[BCV-Auto] Descargando tasas BCV, Binance y EUR de hoy...');
     _bcvAutoEstado = 'cargando';
     _binanceEstado = 'cargando';
+    _eurEstado = 'cargando';
     _bcvActualizarUI();
     _bcvFetchTasa(0);
     _binanceFetchTasa(0);
+    // EUR se calcula después de que BCV esté disponible (necesita la base USD/VES)
+    setTimeout(function(){ _eurFetchTasa(0); }, 1500);
   }).catch(function(err){
     console.warn('[BCV-Auto] Error leyendo Firestore:', err.message);
     _bcvFetchTasa(0);
     _binanceFetchTasa(0);
+    setTimeout(function(){ _eurFetchTasa(0); }, 1500);
   });
 }
 window.bcvAutoInit = bcvAutoInit;
+
+// ─── EUR fetcher (calcula EUR/VES = EUR/USD × BCV) ──
+function _eurFetchTasa(endpointIdx){
+  if(endpointIdx >= _EUR_ENDPOINTS.length){
+    _eurEstado = 'error';
+    _bcvActualizarUI();
+    return;
+  }
+  // Necesitamos la tasa BCV (USD/VES) para calcular EUR/VES
+  var bcvBase = _bcvAutoTasa || window._tasaBsGlobal || 0;
+  if(bcvBase < 1){
+    // BCV aún no disponible, reintentar en 2s (max 5 reintentos)
+    if(!window._eurRetries) window._eurRetries = 0;
+    if(window._eurRetries++ > 5){ _eurEstado = 'error'; _bcvActualizarUI(); return; }
+    setTimeout(function(){ _eurFetchTasa(endpointIdx); }, 2000);
+    return;
+  }
+  var url = _EUR_ENDPOINTS[endpointIdx];
+  var ctrl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+  var to = setTimeout(function(){ if(ctrl) ctrl.abort(); }, 5000);
+  fetch(url, ctrl ? {signal: ctrl.signal} : {})
+    .then(function(res){ clearTimeout(to); if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
+    .then(function(data){
+      // frankfurter: { rates: { USD: 1.0876 } }
+      // er-api: { rates: { USD: 1.0876, ... } }
+      var eurUsd = 0;
+      if(data.rates && data.rates.USD) eurUsd = parseFloat(data.rates.USD);
+      if(!eurUsd || eurUsd <= 0) throw new Error('EUR/USD inválido');
+      _eurUsdRatio = Math.round(eurUsd * 10000) / 10000;
+      var eurVes = eurUsd * bcvBase;
+      eurVes = Math.round(eurVes * 100) / 100;
+      window._tasaEuro = eurVes;
+      _eurTasa = eurVes;
+      _eurEstado = 'ok';
+      if(db){
+        db.collection('config').doc('tasa').set({
+          tasaEuro: eurVes,
+          eurUsd: _eurUsdRatio,
+          fechaEuro: hoyLocalISO()
+        }, {merge:true}).catch(function(){});
+      }
+      _bcvActualizarUI();
+    })
+    .catch(function(){
+      clearTimeout(to);
+      _eurFetchTasa(endpointIdx + 1);
+    });
+}
 
 // ─── Binance fetcher ──
 function _binanceFetchTasa(endpointIdx){
@@ -178,7 +249,9 @@ function _bcvGuardarTasa(tasa, fechaISO){
     }).then(function(){
       console.log('[BCV-Auto] ✓ Tasa guardada en Firestore: '+tasaRedondeada+' Bs./$ ('+hoy+')');
       _bcvActualizarUI();
-      toast('✓ Tasa BCV actualizada automáticamente: '+tasaRedondeada+' Bs./$', 'success');
+      // Ahora que BCV está disponible, gatillar EUR si no se cargó aún
+      if(_eurEstado !== 'ok'){ setTimeout(function(){ _eurFetchTasa(0); }, 500); }
+      toast('✓ Tasa BCV actualizada: '+tasaRedondeada+' Bs./$', 'success');
     }).catch(function(err){
       console.warn('[BCV-Auto] Error guardando en Firestore:', err.message);
       _bcvActualizarUI();
@@ -206,15 +279,21 @@ function _bcvActualizarUI(){
   }
 
   // Card del Dashboard (Tasa del día)
+  function _fmtTasa(v){ return v.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
   var dashBCV = document.getElementById('dash-tasa-bcv');
   if(dashBCV){
     var bcv = _bcvAutoTasa || window._tasaBsGlobal || 0;
-    dashBCV.textContent = bcv > 1 ? bcv.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+    dashBCV.textContent = bcv > 1 ? _fmtTasa(bcv) : '—';
   }
   var dashBinance = document.getElementById('dash-tasa-binance');
   if(dashBinance){
     var bin = _binanceTasa || window._tasaBinance || 0;
-    dashBinance.textContent = bin > 1 ? bin.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+    dashBinance.textContent = bin > 1 ? _fmtTasa(bin) : '—';
+  }
+  var dashEur = document.getElementById('dash-tasa-eur');
+  if(dashEur){
+    var eur = _eurTasa || window._tasaEuro || 0;
+    dashEur.textContent = eur > 1 ? _fmtTasa(eur) : '—';
   }
   var dashSpread = document.getElementById('dash-tasa-spread');
   if(dashSpread){
@@ -278,9 +357,12 @@ window._bcvBadgeHTML = _bcvBadgeHTML;
 function bcvForzarActualizacion(){
   _bcvAutoEstado = 'cargando';
   _binanceEstado = 'cargando';
+  _eurEstado = 'cargando';
+  window._eurRetries = 0;
   _bcvActualizarUI();
-  toast('Consultando tasas BCV y Binance...', 'info');
+  toast('Consultando tasas BCV, Binance y EUR...', 'info');
   _bcvFetchTasa(0);
   _binanceFetchTasa(0);
+  setTimeout(function(){ _eurFetchTasa(0); }, 1500);
 }
 window.bcvForzarActualizacion = bcvForzarActualizacion;
