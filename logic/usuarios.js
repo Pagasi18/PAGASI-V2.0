@@ -559,6 +559,8 @@ function openUserPanel(uid){
   var iconPause  = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e8980a" stroke-width="2.2" stroke-linecap="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
   var iconPlay   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00b876" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5,3 19,12 5,21"/></svg>';
 
+  var iconEdit   = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
+  addAction(iconEdit,   'Editar datos personales', 'Cédula, género, cumpleaños, contacto, redes', function(){ closeUserPanel(); editarPerfilPersonal(uid); });
   addAction(iconShield, 'Editar permisos', 'Cambiar módulos con acceso', function(){ closeUserPanel(); editarUsuario(uid); });
   addAction(iconUser,   'Cambiar rol', 'Reasignar a otro rol', function(){ closeUserPanel(); cambiarRolUsuario(uid); });
   if(u.email){
@@ -1107,6 +1109,114 @@ function _invTogglePerms(){
     preview.style.display = 'none';
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// EDITAR DATOS PERSONALES DE OTRO USUARIO (admin)
+// Espeja Mi Perfil: 14 campos. Solo admins pueden hacerlo.
+// ═══════════════════════════════════════════════════════════════
+function editarPerfilPersonal(uid){
+  if(!db){ toast('Requiere Firebase activo','error'); return; }
+  if(typeof isAdminUser==='function' && !isAdminUser()){ toast('Solo los administradores pueden editar perfiles ajenos','error'); return; }
+  db.collection('usuarios').doc(uid).get().then(function(doc){
+    if(!doc.exists){ toast('Usuario no encontrado','error'); return; }
+    var u = doc.data() || {};
+    function esc(s){ return String(s==null?'':s).replace(/"/g,'&quot;'); }
+    setMicon('editar');
+    $('mtt').textContent = 'Editar datos personales';
+    $('msb').textContent = u.nombre || u.email || uid;
+    $('modal-box').className = 'modal';
+    $('mbd').innerHTML =
+      '<div style="font-size:11.5px;color:var(--ink3);background:rgba(37,99,235,.06);border-left:3px solid var(--p1);padding:9px 13px;border-radius:8px;margin-bottom:14px;line-height:1.5">'
+      +'Estás editando los datos de <b>'+esc(u.nombre||u.email)+'</b>. Los cambios quedan registrados en la bitácora.'
+      +'</div>'
+      // ─── Personales ───
+      +'<div style="font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">Datos personales</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;margin-bottom:14px">'
+        +'<div class="fg"><label>Nombre completo</label><input class="fi" id="ep_nombre" type="text" value="'+esc(u.nombre)+'"></div>'
+        +'<div class="fg"><label>Cédula</label><input class="fi" id="ep_cedula" type="text" value="'+esc(u.cedula)+'" placeholder="V-12345678"></div>'
+        +'<div class="fg"><label>Género</label>'
+          +'<select class="fs" id="ep_genero">'
+          +'<option value=""'+(!u.genero?' selected':'')+'>— Selecciona —</option>'
+          +'<option value="M"'+(u.genero==='M'?' selected':'')+'>Masculino</option>'
+          +'<option value="F"'+(u.genero==='F'?' selected':'')+'>Femenino</option>'
+          +'</select></div>'
+        +'<div class="fg"><label>Cumpleaños</label><input class="fi" id="ep_cumple" type="date" value="'+esc(u.cumpleanos||u.fechaNacimiento)+'"></div>'
+        +'<div class="fg"><label>Estado civil</label>'
+          +'<select class="fs" id="ep_estadocivil">'
+          +'<option value=""'+(!u.estadoCivil?' selected':'')+'>— Selecciona —</option>'
+          +'<option value="soltero"'+(u.estadoCivil==='soltero'?' selected':'')+'>Soltero/a</option>'
+          +'<option value="casado"'+(u.estadoCivil==='casado'?' selected':'')+'>Casado/a</option>'
+          +'<option value="union"'+(u.estadoCivil==='union'?' selected':'')+'>Unión estable</option>'
+          +'<option value="divorciado"'+(u.estadoCivil==='divorciado'?' selected':'')+'>Divorciado/a</option>'
+          +'<option value="viudo"'+(u.estadoCivil==='viudo'?' selected':'')+'>Viudo/a</option>'
+          +'</select></div>'
+        +'<div class="fg"><label>Sede / Oficina</label><input class="fi" id="ep_sede" type="text" value="'+esc(u.sede)+'" placeholder="EK Bello Monte, Boleita..."></div>'
+      +'</div>'
+      // ─── Contacto ───
+      +'<div style="font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">Contacto</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;margin-bottom:14px">'
+        +'<div class="fg"><label>Teléfono</label><input class="fi" id="ep_tel" type="tel" value="'+esc(u.tel||u.telefono)+'" placeholder="+58 414 ..."></div>'
+        +'<div class="fg"><label>Tel. alternativo</label><input class="fi" id="ep_tel2" type="tel" value="'+esc(u.tel2)+'" placeholder="Casa o familiar"></div>'
+        +'<div class="fg" style="grid-column:1 / -1"><label>Dirección</label><input class="fi" id="ep_direccion" type="text" value="'+esc(u.direccion)+'"></div>'
+        +'<div class="fg" style="grid-column:1 / -1"><label>Contacto de emergencia</label><input class="fi" id="ep_emergencia" type="text" value="'+esc(u.emergencia)+'" placeholder="Nombre y teléfono"></div>'
+      +'</div>'
+      // ─── Redes ───
+      +'<div style="font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:8px">Redes sociales</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start">'
+        +'<div class="fg"><label>Instagram</label><input class="fi" id="ep_instagram" type="text" value="'+esc(u.instagram)+'" placeholder="@tuusuario"></div>'
+        +'<div class="fg"><label>Facebook</label><input class="fi" id="ep_facebook" type="text" value="'+esc(u.facebook)+'"></div>'
+        +'<div class="fg"><label>TikTok</label><input class="fi" id="ep_tiktok" type="text" value="'+esc(u.tiktok)+'" placeholder="@tuusuario"></div>'
+        +'<div class="fg"><label>X (Twitter)</label><input class="fi" id="ep_twitter" type="text" value="'+esc(u.twitter)+'" placeholder="@tuusuario"></div>'
+        +'<div class="fg" style="grid-column:1 / -1"><label>LinkedIn</label><input class="fi" id="ep_linkedin" type="text" value="'+esc(u.linkedin)+'" placeholder="linkedin.com/in/tuusuario"></div>'
+      +'</div>';
+
+    S.saveFn = function(){
+      function val(id){ var el = $(id); return el ? (el.value||'') : ''; }
+      var update = {
+        nombre: val('ep_nombre').trim(),
+        cedula: val('ep_cedula').trim(),
+        genero: val('ep_genero').trim(),
+        cumpleanos: val('ep_cumple').trim(),
+        estadoCivil: val('ep_estadocivil').trim(),
+        sede: val('ep_sede').trim(),
+        tel: val('ep_tel').trim(),
+        tel2: val('ep_tel2').trim(),
+        direccion: val('ep_direccion').trim(),
+        emergencia: val('ep_emergencia').trim(),
+        instagram: val('ep_instagram').trim().replace(/^@/,''),
+        facebook: val('ep_facebook').trim(),
+        tiktok: val('ep_tiktok').trim().replace(/^@/,''),
+        twitter: val('ep_twitter').trim().replace(/^@/,''),
+        linkedin: val('ep_linkedin').trim(),
+        actualizadoEn: new Date().toISOString(),
+        actualizadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin'
+      };
+      db.collection('usuarios').doc(uid).set(update, {merge:true}).then(function(){
+        // Sincronizar caché
+        try {
+          if(typeof _usersCache !== 'undefined' && Array.isArray(_usersCache)){
+            var idx = _usersCache.findIndex(function(x){return x && x.uid===uid;});
+            if(idx>=0) Object.assign(_usersCache[idx], update);
+          }
+          if(S._wtUsers){
+            var idx2 = S._wtUsers.findIndex(function(x){return x && x.uid===uid;});
+            if(idx2>=0) Object.assign(S._wtUsers[idx2], update);
+          }
+        } catch(e){}
+        if(typeof logActividad==='function') logActividad('usuario_editado','users',uid,{nombre:update.nombre, campos:'datos personales (admin)'});
+        toast('✓ Datos personales actualizados','success');
+        closeM(); nav('users');
+      }).catch(function(err){
+        toast('Error: '+(err.message||err),'error');
+      });
+      return false; // Manejar cierre manualmente para esperar el save
+    };
+    $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+                       + '<button class="btn btn-p" onclick="saveM()">Guardar cambios</button>';
+    $('ov').style.display = 'flex';
+  }).catch(function(e){ toast('Error: '+e.message,'error'); });
+}
+window.editarPerfilPersonal = editarPerfilPersonal;
 
 function editarUsuario(uid){
   if(!db){ toast('Requiere Firebase activo','error'); return; }

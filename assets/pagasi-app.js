@@ -1119,20 +1119,30 @@ async function dashDailyLoad(tipo, force){
          }}
       ];
 
+      // Fetch con timeout para no quedar colgado en fuentes lentas
+      function _newsfetch(url, timeoutMs){
+        return new Promise(function(resolve, reject){
+          var ctrl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+          var to = setTimeout(function(){ if(ctrl) ctrl.abort(); reject(new Error('timeout')); }, timeoutMs||4000);
+          fetch(url, ctrl ? {signal: ctrl.signal} : {})
+            .then(function(r){ clearTimeout(to); resolve(r); })
+            .catch(function(e){ clearTimeout(to); reject(e); });
+        });
+      }
       for(var i=0;i<fuentesNoticias.length;i++){
         try {
           var src = fuentesNoticias[i];
-          var rr = await fetch(src.url);
+          var rr = await _newsfetch(src.url, 4500);
           if(!rr.ok) continue;
           var dd = await rr.json();
           var arr = src.parse(dd);
           if(arr && arr.length){
             noticias = arr;
-            console.log('[Noticias] Fuente', i+1, 'OK -', arr.length, 'items');
             break;
           }
         } catch(e){
-          console.warn('[Noticias] Fuente', i+1, 'falló:', e.message);
+          // Silencioso: los CORS/timeout de feeds externos no son bugs nuestros,
+          // no ensuciar la consola del navegador.
         }
       }
 
@@ -1155,7 +1165,7 @@ async function dashDailyLoad(tipo, force){
     textEl.textContent = resultado;
     try { localStorage.setItem(cacheKey, resultado); } catch(e){}
   } catch(err) {
-    console.warn('[daily-'+tipo+'] falla red:', err);
+    // Silencioso: red/CORS no es bug nuestro, usar fallback local sin alarmar consola
     // Fallbacks locales
     var fallbacks = {
       chiste: '¿Por qué los programadores prefieren motos? Porque tienen "throw" y "catch" en cada curva.',
