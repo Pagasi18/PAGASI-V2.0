@@ -75,7 +75,44 @@ h2.head{font-size:clamp(34px,4vw,52px);font-weight:800;letter-spacing:-2px;line-
 /* Capa de glassmorphism encima de los blobs (para legibilidad) */
 .hero::before{content:'';position:absolute;inset:0;background:rgba(255,255,255,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:1;pointer-events:none;}
 
-.hero-inner{position:relative;z-index:3;max-width:920px;margin:0 auto;text-align:center;animation:fadeUp .85s var(--ease) both;}
+.hero-inner{position:relative;z-index:3;max-width:1380px;margin:0 auto;animation:fadeUp .85s var(--ease) both;}
+
+/* Layout principal del hero: izq (texto+cards) / der (moto destacada) */
+.hero-grid{display:grid;grid-template-columns:1.1fr .95fr;gap:64px;align-items:center;margin-bottom:36px;}
+.hero-left{text-align:left;}
+.hero-right{position:relative;display:flex;align-items:center;justify-content:center;}
+
+/* Moto destacada — visual impactante a la derecha */
+.hero-bike{position:relative;width:100%;}
+.hero-bike-stage{position:relative;background:linear-gradient(160deg,rgba(255,255,255,.85) 0%,rgba(239,243,255,.80) 100%);border:1px solid rgba(37,99,235,.18);border-radius:32px;padding:34px;backdrop-filter:blur(12px);box-shadow:0 40px 80px -30px rgba(37,99,235,.32),0 16px 32px -16px rgba(0,0,0,.10);overflow:hidden;}
+.hero-bike-stage::before{content:'';position:absolute;top:-100px;right:-80px;width:300px;height:300px;background:radial-gradient(circle,rgba(124,58,237,.18) 0%,transparent 70%);pointer-events:none;}
+.hero-bike-stage::after{content:'';position:absolute;bottom:-60px;left:-40px;width:240px;height:240px;background:radial-gradient(circle,rgba(6,182,212,.18) 0%,transparent 70%);pointer-events:none;}
+.hero-bike img{position:relative;z-index:1;display:block;width:100%;height:auto;max-height:380px;object-fit:contain;filter:drop-shadow(0 24px 36px rgba(0,0,0,.20));}
+.hero-bike-badge{position:absolute;top:-14px;left:24px;display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#00C853,#00A045);color:#fff;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:8px 16px;border-radius:50px;box-shadow:0 10px 24px rgba(0,200,83,.35);z-index:3;animation:badgePop 1.5s var(--ease) both .7s;}
+@keyframes badgePop{0%{opacity:0;transform:translateY(-12px) scale(.85);}100%{opacity:1;transform:translateY(0) scale(1);}}
+
+/* Card de precio flotante sobre la moto */
+.hero-bike-price{position:absolute;bottom:-18px;right:22px;background:#fff;border-radius:18px;padding:16px 20px;box-shadow:0 18px 40px rgba(0,0,0,.14),0 0 0 1px rgba(37,99,235,.10);z-index:3;animation:priceIn 1.5s var(--ease) both .9s;}
+@keyframes priceIn{0%{opacity:0;transform:translateY(12px) scale(.95);}100%{opacity:1;transform:translateY(0) scale(1);}}
+.hero-bike-price-lbl{font-size:10px;font-weight:700;color:var(--ink-4);letter-spacing:.14em;text-transform:uppercase;margin-bottom:3px;}
+.hero-bike-price-row{display:flex;align-items:baseline;gap:5px;}
+.hero-bike-price-num{font-family:Georgia,serif;font-size:30px;font-weight:900;color:var(--p);letter-spacing:-1px;line-height:1;}
+.hero-bike-price-unit{font-size:11px;color:var(--ink-3);font-weight:700;}
+.hero-bike-price-sub{font-size:10.5px;color:var(--ink-4);font-weight:600;margin-top:5px;}
+
+/* Stats inline en el lado izquierdo */
+.hero-stats-row{display:flex;align-items:center;gap:32px;margin-top:32px;padding-top:24px;border-top:1px solid var(--line);animation:fadeUp .85s var(--ease) both .95s;}
+.hero-stat-mini{display:flex;flex-direction:column;gap:3px;}
+.hero-stat-mini-n{font-family:Georgia,serif;font-size:28px;font-weight:900;color:var(--ink);letter-spacing:-.8px;line-height:1;}
+.hero-stat-mini-n .accent{color:var(--p);}
+.hero-stat-mini-l{font-size:11.5px;color:var(--ink-4);font-weight:600;}
+.hero-stat-sep{width:1px;align-self:stretch;background:var(--line);}
+
+@media(max-width:980px){
+  .hero-grid{grid-template-columns:1fr;gap:40px;}
+  .hero-left{text-align:center;}
+  .hero-stats-row{justify-content:center;}
+}
 
 /* ── Pill premium con border gradient ── */
 .hero-pill{display:inline-flex;align-items:center;gap:9px;background:rgba(255,255,255,.95);border:1px solid rgba(37,99,235,.22);border-radius:50px;padding:9px 20px;font-size:12.5px;font-weight:700;color:var(--p);margin-bottom:32px;backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(37,99,235,.10),0 2px 6px rgba(0,0,0,.04);letter-spacing:.01em;position:relative;animation:pillIn 1s var(--ease) both .15s;}
@@ -83,7 +120,7 @@ h2.head{font-size:clamp(34px,4vw,52px);font-weight:800;letter-spacing:-2px;line-
 .pdot{width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;box-shadow:0 0 0 4px rgba(0,200,83,.18);}
 
 /* ── H1 con gradient en una línea + animación de entrada ── */
-h1{font-size:clamp(48px,7vw,96px);font-weight:800;letter-spacing:-3.8px;line-height:.94;color:var(--ink);margin-bottom:26px;}
+h1{font-size:clamp(42px,5.8vw,76px);font-weight:800;letter-spacing:-3px;line-height:.96;color:var(--ink);margin-bottom:22px;}
 h1 i{font-style:normal;font-weight:900;background:linear-gradient(135deg,#2563EB 0%,#7C3AED 50%,#06B6D4 100%);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:200% 200%;animation:gradShift 6s ease infinite;}
 @keyframes gradShift{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
 h1 .ln{display:block;animation:lineUp .85s var(--ease) both;}
@@ -92,18 +129,25 @@ h1 .ln:nth-child(2){animation-delay:.35s;}
 h1 .ln:nth-child(3){animation-delay:.50s;}
 @keyframes lineUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
 
-.hero-desc{font-size:clamp(16px,1.4vw,19px);color:var(--ink-3);line-height:1.65;letter-spacing:-.01em;max-width:560px;margin:0 auto 38px;animation:fadeUp .85s var(--ease) both .65s;}
+.hero-desc{font-size:clamp(15.5px,1.3vw,18px);color:var(--ink-3);line-height:1.65;letter-spacing:-.01em;max-width:520px;margin:0 0 32px;animation:fadeUp .85s var(--ease) both .65s;}
+.hero-left .hero-desc{margin:0 0 32px;}
 .hero-desc b{color:var(--ink);font-weight:700;}
 
-.hero-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:48px;animation:fadeUp .85s var(--ease) both .80s;}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:0;animation:fadeUp .85s var(--ease) both .80s;}
+.hero-left .hero-actions{justify-content:flex-start;}
+
+@media(max-width:980px){
+  .hero-left .hero-desc{margin:0 auto 32px;}
+  .hero-left .hero-actions{justify-content:center;}
+}
 
 /* CTA principal con glow pulsante */
 .hero-actions .btn-p{position:relative;box-shadow:0 12px 30px rgba(37,99,235,.32),0 4px 12px rgba(37,99,235,.18);}
 .hero-actions .btn-p::after{content:'';position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 0 0 rgba(37,99,235,.45);animation:ctaPulse 2.5s ease-in-out infinite;pointer-events:none;}
 @keyframes ctaPulse{0%,100%{box-shadow:0 0 0 0 rgba(37,99,235,.35);}50%{box-shadow:0 0 0 14px rgba(37,99,235,0);}}
 
-/* ── Mini-cards de motos en oferta (en el hero) ── */
-.hero-offers{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:780px;margin:0 auto 36px;animation:fadeUp .85s var(--ease) both .95s;}
+/* ── Mini-cards de motos en oferta (franja full-width abajo del hero grid) ── */
+.hero-offers{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:1100px;margin:0 auto 28px;animation:fadeUp .85s var(--ease) both 1.05s;}
 .hero-offer{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px 14px 16px;text-align:center;cursor:pointer;transition:all .25s cubic-bezier(.4,0,.2,1);text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:stretch;position:relative;overflow:hidden;}
 .hero-offer:hover{transform:translateY(-6px);border-color:rgba(37,99,235,.4);box-shadow:0 18px 40px rgba(37,99,235,.15);}
 .hero-offer-img{width:100%;height:96px;background:linear-gradient(180deg,#FAFBFF 0%,#EFF3FF 100%);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;padding:6px;overflow:hidden;}
@@ -540,21 +584,66 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
   <div class="hero-dots"></div>
 
   <div class="hero-inner">
-    <div class="hero-pill"><span class="pdot"></span>41 modelos · Aprobación en 24 horas</div>
 
-    <h1>
-      <span class="ln">Tu próxima moto.</span>
-      <span class="ln">Desde <i>$56</i> quincenal.</span>
-    </h1>
+    <!-- ░░░ GRID: TEXTO (IZQ) + MOTO DESTACADA (DER) ░░░ -->
+    <div class="hero-grid">
 
-    <p class="hero-desc">Con la inicial que <b>sí podés pagar</b>. Llevátela hoy desde nuestras 3 sedes en Caracas — financiamiento simple, cuotas fijas, aprobación rápida.</p>
+      <!-- IZQUIERDA: copy + CTAs + stats -->
+      <div class="hero-left">
+        <div class="hero-pill"><span class="pdot"></span>Financiamiento simple · Aprobación 24h</div>
 
-    <div class="hero-actions">
-      <a href="catalogo.html" class="btn btn-p">Ver catálogo →</a>
-      <a href="solicitar.html" class="btn btn-s">Solicitar ahora</a>
+        <h1>
+          <span class="ln">Cómprala hoy.</span>
+          <span class="ln"><i>Pagala</i> en quincenas.</span>
+        </h1>
+
+        <p class="hero-desc">Inicial accesible. Cuotas fijas. Sin sorpresas.<br>Llevátela el mismo día desde nuestras 3 sedes en Caracas.</p>
+
+        <div class="hero-actions">
+          <a href="catalogo.html" class="btn btn-p">Ver catálogo →</a>
+          <a href="solicitar.html" class="btn btn-s">Solicitar ahora</a>
+        </div>
+
+        <!-- Stats inline -->
+        <div class="hero-stats-row">
+          <div class="hero-stat-mini">
+            <div class="hero-stat-mini-n"><span class="accent">+40</span></div>
+            <div class="hero-stat-mini-l">Modelos</div>
+          </div>
+          <div class="hero-stat-sep"></div>
+          <div class="hero-stat-mini">
+            <div class="hero-stat-mini-n"><span class="accent">24h</span></div>
+            <div class="hero-stat-mini-l">Aprobación</div>
+          </div>
+          <div class="hero-stat-sep"></div>
+          <div class="hero-stat-mini">
+            <div class="hero-stat-mini-n"><span class="accent">3</span></div>
+            <div class="hero-stat-mini-l">Sedes en Caracas</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DERECHA: moto destacada con badge + precio flotante -->
+      <div class="hero-right">
+        <div class="hero-bike">
+          <div class="hero-bike-stage">
+            <div class="hero-bike-badge">★ Más vendida</div>
+            <img src="assets/motos/new-horse-150.jpg" alt="New Horse 150">
+            <div class="hero-bike-price">
+              <div class="hero-bike-price-lbl">Desde</div>
+              <div class="hero-bike-price-row">
+                <span class="hero-bike-price-num">$65</span>
+                <span class="hero-bike-price-unit">/ quincena</span>
+              </div>
+              <div class="hero-bike-price-sub">Inicial desde $594</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <!-- Mini-cards de motos destacadas con precio + cuota -->
+    <!-- ░░░ FRANJA DE 3 MOTOS EN OFERTA (full width) ░░░ -->
     <div class="hero-offers">
       <a href="solicitar.html?moto=5" class="hero-offer">
         <span class="hero-offer-tag green">Económica</span>
@@ -564,12 +653,12 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
         <div class="hero-offer-sub">Inicial desde $459</div>
       </a>
 
-      <a href="solicitar.html?moto=1" class="hero-offer">
-        <span class="hero-offer-tag">★ Más vendida</span>
-        <div class="hero-offer-img"><img src="assets/motos/new-horse-150.jpg" alt="New Horse 150"></div>
-        <div class="hero-offer-name">New Horse 150</div>
-        <div class="hero-offer-price-row"><span class="hero-offer-price-num">$65</span><span class="hero-offer-price-unit">/ quincena</span></div>
-        <div class="hero-offer-sub">Inicial desde $594</div>
+      <a href="solicitar.html?moto=3" class="hero-offer">
+        <span class="hero-offer-tag">Disponible</span>
+        <div class="hero-offer-img"><img src="assets/motos/ek-xpress-ii-150.jpg" alt="EK Xpress II 150"></div>
+        <div class="hero-offer-name">EK Xpress II 150</div>
+        <div class="hero-offer-price-row"><span class="hero-offer-price-num">$57</span><span class="hero-offer-price-unit">/ quincena</span></div>
+        <div class="hero-offer-sub">Inicial desde $507</div>
       </a>
 
       <a href="solicitar.html?moto=8" class="hero-offer">
@@ -581,7 +670,7 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
       </a>
     </div>
 
-    <div class="hero-sedes">
+    <div class="hero-sedes" style="justify-content:center">
       <span>EK Bello Monte</span>
       <span>Boleita</span>
       <span>Toro Sabana Grande</span>
