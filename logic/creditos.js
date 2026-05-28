@@ -580,16 +580,31 @@ function _wzCliSearch(){
         return Math.floor(diff/365)+'a';
       } catch(e){ return ''; }
     }
+    // Detectar si un cliente es lead (sin créditos activos ni historial)
+    function esCliLead(c){
+      var creds = (S.creds||[]).filter(function(x){
+        if(x.eliminado) return false;
+        if(x.cliId!=null && String(x.cliId)!==''){ return String(x.cliId)===String(c.id); }
+        var xnom=(x.cli||'').trim(), cnom=(c.nombre||'').trim();
+        return xnom && cnom && xnom===cnom;
+      });
+      return creds.length === 0;
+    }
     dd.innerHTML = resultados.map(function(c){
       var nombreEsc = (c.nombre||'(sin nombre)').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+      var esLead = esCliLead(c);
       var esLeadWeb = c.origen === 'web';
-      var bg = esLeadWeb ? 'background:rgba(37,99,235,.06);border-left:3px solid var(--p1)' : 'background:none';
-      var leadBadge = esLeadWeb ? '<span style="background:rgba(37,99,235,.14);color:var(--p1);font-size:9px;font-weight:800;padding:2px 7px;border-radius:50px;margin-left:6px;letter-spacing:.04em;text-transform:uppercase;border:1px solid rgba(37,99,235,.25)">Lead web</span>' : '';
+      var bg = esLead ? 'background:rgba(37,99,235,.06);border-left:3px solid var(--p1)' : 'background:none';
+      var leadBadge = esLeadWeb
+        ? '<span style="background:rgba(37,99,235,.14);color:var(--p1);font-size:9px;font-weight:800;padding:2px 7px;border-radius:50px;margin-left:6px;letter-spacing:.04em;text-transform:uppercase;border:1px solid rgba(37,99,235,.25)">Lead web</span>'
+        : (esLead ? '<span style="background:rgba(37,99,235,.10);color:var(--p1);font-size:9px;font-weight:800;padding:2px 7px;border-radius:50px;margin-left:6px;letter-spacing:.04em;text-transform:uppercase;border:1px solid rgba(37,99,235,.20)">Lead</span>' : '');
       var rel = fechaRel(c.creado);
       var fechaTag = rel ? '<span style="font-size:10px;color:var(--ink3);font-weight:600;margin-left:auto;font-family:var(--fd)">'+rel+'</span>' : '';
+      var bgHoverOut = esLead ? 'rgba(37,99,235,.06)' : 'none';
+      var bgHoverIn = esLead ? 'rgba(37,99,235,.12)' : 'var(--gs)';
       return '<button type="button" onmousedown="event.preventDefault();_wzCliPick(\''+String(c.id).replace(/'/g,'')+'\')" '
         + 'style="display:block;width:100%;text-align:left;padding:9px 12px;'+bg+';border:none;border-bottom:1px solid var(--rim2);cursor:pointer;font-family:var(--f);transition:background .15s" '
-        + 'onmouseover="this.style.background=\''+(esLeadWeb?'rgba(37,99,235,.12)':'var(--gs)')+'\'" onmouseout="this.style.background=\''+(esLeadWeb?'rgba(37,99,235,.06)':'none')+'\'">'
+        + 'onmouseover="this.style.background=\''+bgHoverIn+'\'" onmouseout="this.style.background=\''+bgHoverOut+'\'">'
         + '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:700;color:var(--ink)">'+nombreEsc+'</span>'+leadBadge+fechaTag+'</div>'
         + '<div style="font-size:11px;color:var(--ink3);margin-top:2px">C.I.: '+(c.cedula||'—')+(c.tel?' · '+c.tel:'')+(c.ciudad?' · '+c.ciudad:'')+'</div>'
         + '</button>';
