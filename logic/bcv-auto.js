@@ -11,10 +11,9 @@ var _bcvAutoTasa   = 0;
 // Tasa Binance (mercado paralelo / P2P)
 var _binanceTasa = 0;
 var _binanceEstado = 'inactivo';
-// Tasa Euro (calculada como EUR/USD × BCV)
+// Tasa Euro oficial BCV (mercado real venezolano)
 var _eurTasa = 0;
 var _eurEstado = 'inactivo';
-var _eurUsdRatio = 0; // EUR/USD para mostrar como dato
 
 // Endpoints en orden de preferencia (fallback si uno falla)
 var _BCV_ENDPOINTS = [
@@ -28,10 +27,12 @@ var _BINANCE_ENDPOINTS = [
   'https://pydolarvenezuela-api.vercel.app/api/v1/dollar?monitor=binance'
 ];
 
-// Endpoint para EUR/USD (ECB official via Frankfurter)
+// Endpoints para EUR/VES oficial BCV (NO calculado, real del mercado venezolano)
 var _EUR_ENDPOINTS = [
-  'https://api.frankfurter.app/latest?from=EUR&to=USD',
-  'https://open.er-api.com/v6/latest/EUR'
+  'https://ve.dolarapi.com/v1/dolares/oficial',  // Algunos endpoints incluyen euro paralelo en el mismo doc
+  'https://pydolarvenezuela-api.vercel.app/api/v1/euro?monitor=bcv',
+  'https://pydolarvenezuela-api.vercel.app/api/v2/euro?page=bcv',
+  'https://bcv-api.rafnixg.dev/rates/'
 ];
 
 // ── Función principal — llamar al inicio de la app ──
@@ -52,7 +53,6 @@ function bcvAutoInit(){
       var tasaGuardada  = parseFloat(d.tasaBs||0);
       var binanceGuardada = parseFloat(d.tasaBinance||0);
       var euroGuardada = parseFloat(d.tasaEuro||0);
-      var eurUsdGuardado = parseFloat(d.eurUsd||0);
 
       if(fechaGuardada === hoy && tasaGuardada > 1){
         // Ya tenemos la tasa BCV de hoy — usar directamente
@@ -69,7 +69,6 @@ function bcvAutoInit(){
           window._tasaEuro = euroGuardada;
           _eurTasa = euroGuardada;
           _eurEstado = 'ok';
-          if(eurUsdGuardado > 0) _eurUsdRatio = eurUsdGuardado;
         }
         _bcvActualizarUI();
         console.log('[BCV-Auto] Tasas de hoy ya en Firestore: BCV '+tasaGuardada+' · Binance '+binanceGuardada+' · EUR '+euroGuardada);
@@ -87,31 +86,21 @@ function bcvAutoInit(){
     _bcvActualizarUI();
     _bcvFetchTasa(0);
     _binanceFetchTasa(0);
-    // EUR se calcula después de que BCV esté disponible (necesita la base USD/VES)
-    setTimeout(function(){ _eurFetchTasa(0); }, 1500);
+    _eurFetchTasa(0);
   }).catch(function(err){
     console.warn('[BCV-Auto] Error leyendo Firestore:', err.message);
     _bcvFetchTasa(0);
     _binanceFetchTasa(0);
-    setTimeout(function(){ _eurFetchTasa(0); }, 1500);
+    _eurFetchTasa(0);
   });
 }
 window.bcvAutoInit = bcvAutoInit;
 
-// ─── EUR fetcher (calcula EUR/VES = EUR/USD × BCV) ──
+// ─── EUR fetcher (tasa BCV oficial venezolana, NO calculada) ──
 function _eurFetchTasa(endpointIdx){
   if(endpointIdx >= _EUR_ENDPOINTS.length){
     _eurEstado = 'error';
     _bcvActualizarUI();
-    return;
-  }
-  // Necesitamos la tasa BCV (USD/VES) para calcular EUR/VES
-  var bcvBase = _bcvAutoTasa || window._tasaBsGlobal || 0;
-  if(bcvBase < 1){
-    // BCV aún no disponible, reintentar en 2s (max 5 reintentos)
-    if(!window._eurRetries) window._eurRetries = 0;
-    if(window._eurRetries++ > 5){ _eurEstado = 'error'; _bcvActualizarUI(); return; }
-    setTimeout(function(){ _eurFetchTasa(endpointIdx); }, 2000);
     return;
   }
   var url = _EUR_ENDPOINTS[endpointIdx];
@@ -120,21 +109,15 @@ function _eurFetchTasa(endpointIdx){
   fetch(url, ctrl ? {signal: ctrl.signal} : {})
     .then(function(res){ clearTimeout(to); if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
     .then(function(data){
-      // frankfurter: { rates: { USD: 1.0876 } }
-      // er-api: { rates: { USD: 1.0876, ... } }
-      var eurUsd = 0;
-      if(data.rates && data.rates.USD) eurUsd = parseFloat(data.rates.USD);
-      if(!eurUsd || eurUsd <= 0) throw new Error('EUR/USD inválido');
-      _eurUsdRatio = Math.round(eurUsd * 10000) / 10000;
-      var eurVes = eurUsd * bcvBase;
-      eurVes = Math.round(eurVes * 100) / 100;
-      window._tasaEuro = eurVes;
-      _eurTasa = eurVes;
+      var tasa = _eurParseTasa(data);
+      if(!tasa || tasa < 1) throw new Error('EUR/VES no encontrado en este endpoint');
+      tasa = Math.round(tasa * 100) / 100;
+      window._tasaEuro = tasa;
+      _eurTasa = tasa;
       _eurEstado = 'ok';
       if(db){
         db.collection('config').doc('tasa').set({
-          tasaEuro: eurVes,
-          eurUsd: _eurUsdRatio,
+          tasaEuro: tasa,
           fechaEuro: hoyLocalISO()
         }, {merge:true}).catch(function(){});
       }
@@ -144,6 +127,21 @@ function _eurFetchTasa(endpointIdx){
       clearTimeout(to);
       _eurFetchTasa(endpointIdx + 1);
     });
+}
+
+// Parsea la tasa EUR según el formato de cada API venezolana
+function _eurParseTasa(data){
+  // pydolarvenezuela v1 /euro?monitor=bcv: { price: 520.15, ... }
+  if(data.price && parseFloat(data.price) > 1) return parseFloat(data.price);
+  // pydolarvenezuela v2: { monitors: { bcv: { price: 520.15 } } }
+  if(data.monitors && data.monitors.bcv && data.monitors.bcv.price) return parseFloat(data.monitors.bcv.price);
+  // bcv-api.rafnixg.dev: { EUR: { rate: 520.15 } } o { eur: 520.15 }
+  if(data.EUR && data.EUR.rate && parseFloat(data.EUR.rate) > 1) return parseFloat(data.EUR.rate);
+  if(data.eur && parseFloat(data.eur) > 1) return parseFloat(data.eur);
+  // ve.dolarapi formato fallback: { promedio, venta }
+  if(data.euro && parseFloat(data.euro) > 1) return parseFloat(data.euro);
+  if(data.tasaEur && parseFloat(data.tasaEur) > 1) return parseFloat(data.tasaEur);
+  return 0;
 }
 
 // ─── Binance fetcher ──
@@ -247,11 +245,9 @@ function _bcvGuardarTasa(tasa, fechaISO){
       fuenteAuto:        true,
       api:               _BCV_ENDPOINTS[0]
     }).then(function(){
-      console.log('[BCV-Auto] ✓ Tasa guardada en Firestore: '+tasaRedondeada+' Bs./$ ('+hoy+')');
+      console.log('[BCV-Auto] Tasa guardada en Firestore: '+tasaRedondeada+' Bs./$ ('+hoy+')');
       _bcvActualizarUI();
-      // Ahora que BCV está disponible, gatillar EUR si no se cargó aún
-      if(_eurEstado !== 'ok'){ setTimeout(function(){ _eurFetchTasa(0); }, 500); }
-      toast('✓ Tasa BCV actualizada: '+tasaRedondeada+' Bs./$', 'success');
+      toast('Tasa BCV actualizada: '+tasaRedondeada+' Bs./$', 'success');
     }).catch(function(err){
       console.warn('[BCV-Auto] Error guardando en Firestore:', err.message);
       _bcvActualizarUI();
@@ -324,7 +320,7 @@ function _bcvBadgeHTML(){
       +'<div style="display:flex;align-items:center;gap:8px">'
       +'<div style="width:10px;height:10px;border-radius:50%;background:var(--green)"></div>'
       +'<div>'
-      +'<div style="font-size:12px;font-weight:700;color:var(--green)">✓ Tasa BCV actualizada automáticamente</div>'
+      +'<div style="font-size:12px;font-weight:700;color:var(--green)">Tasa BCV actualizada automáticamente</div>'
       +'<div style="font-size:10.5px;color:var(--ink3)">Fuente: ve.dolarapi.com · Fecha: '+(_bcvAutoFecha||hoyLocalISO())+' · Actualiza cada día automáticamente</div>'
       +'</div>'
       +'</div>'
@@ -338,7 +334,7 @@ function _bcvBadgeHTML(){
       +'<div style="display:flex;align-items:center;gap:8px">'
       +'<div style="width:10px;height:10px;border-radius:50%;background:var(--red)"></div>'
       +'<div>'
-      +'<div style="font-size:12px;font-weight:700;color:var(--red)">⚠ No se pudo obtener la tasa automáticamente</div>'
+      +'<div style="font-size:12px;font-weight:700;color:var(--red)">No se pudo obtener la tasa automáticamente</div>'
       +'<div style="font-size:10.5px;color:var(--ink3)">Usando tasa guardada: '+tasa.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})+' Bs./$ · Actualiza manualmente o reintenta</div>'
       +'</div>'
       +'</div>'
@@ -358,11 +354,10 @@ function bcvForzarActualizacion(){
   _bcvAutoEstado = 'cargando';
   _binanceEstado = 'cargando';
   _eurEstado = 'cargando';
-  window._eurRetries = 0;
   _bcvActualizarUI();
-  toast('Consultando tasas BCV, Binance y EUR...', 'info');
+  toast('Consultando tasas BCV, Euro y Binance...', 'info');
   _bcvFetchTasa(0);
   _binanceFetchTasa(0);
-  setTimeout(function(){ _eurFetchTasa(0); }, 1500);
+  _eurFetchTasa(0);
 }
 window.bcvForzarActualizacion = bcvForzarActualizacion;

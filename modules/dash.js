@@ -328,30 +328,30 @@ PG.dash = function(){
       </div>
 
       <!-- BCV -->
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:rgba(37,99,235,.04);border-radius:9px;border:1px solid rgba(37,99,235,.10);margin-bottom:5px;position:relative;z-index:1">
-        <span style="font-size:14px;line-height:1;flex-shrink:0">🇻🇪</span>
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(37,99,235,.05);border-radius:9px;border:1px solid rgba(37,99,235,.14);margin-bottom:5px;position:relative;z-index:1">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#1E40AF;color:#fff;font-family:var(--fd);font-weight:900;font-size:9px;letter-spacing:.3px;flex-shrink:0">BCV</span>
         <div style="flex:1;min-width:0">
-          <div style="font-size:9px;font-weight:800;color:#1E40AF;text-transform:uppercase;letter-spacing:.5px;line-height:1.2">BCV</div>
+          <div style="font-size:9.5px;font-weight:800;color:#1E40AF;text-transform:uppercase;letter-spacing:.5px;line-height:1.2">Dólar oficial</div>
         </div>
         <span id="dash-tasa-bcv" style="font-family:var(--fd);font-weight:900;font-size:15px;color:#1E40AF;letter-spacing:-.4px;white-space:nowrap">${(window._tasaBsGlobal||0)>1?(window._tasaBsGlobal).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
       </div>
 
-      <!-- Binance -->
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:rgba(240,185,11,.06);border-radius:9px;border:1px solid rgba(240,185,11,.18);margin-bottom:5px;position:relative;z-index:1">
-        <span style="font-size:14px;line-height:1;flex-shrink:0;color:#F0B90B;font-weight:900">⬢</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:9px;font-weight:800;color:#92400E;text-transform:uppercase;letter-spacing:.5px;line-height:1.2">Binance</div>
-        </div>
-        <span id="dash-tasa-binance" style="font-family:var(--fd);font-weight:900;font-size:15px;color:#B45309;letter-spacing:-.4px;white-space:nowrap">${(window._tasaBinance||0)>1?(window._tasaBinance).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
-      </div>
-
       <!-- EUR -->
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 9px;background:rgba(34,197,94,.05);border-radius:9px;border:1px solid rgba(34,197,94,.16);position:relative;z-index:1">
-        <span style="font-size:14px;line-height:1;flex-shrink:0">🇪🇺</span>
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(21,128,61,.06);border-radius:9px;border:1px solid rgba(21,128,61,.18);margin-bottom:5px;position:relative;z-index:1">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#15803D;color:#fff;font-family:var(--fd);font-weight:900;font-size:11px;letter-spacing:0;flex-shrink:0">€</span>
         <div style="flex:1;min-width:0">
-          <div style="font-size:9px;font-weight:800;color:#15803D;text-transform:uppercase;letter-spacing:.5px;line-height:1.2">Euro</div>
+          <div style="font-size:9.5px;font-weight:800;color:#15803D;text-transform:uppercase;letter-spacing:.5px;line-height:1.2">Euro oficial</div>
         </div>
         <span id="dash-tasa-eur" style="font-family:var(--fd);font-weight:900;font-size:15px;color:#15803D;letter-spacing:-.4px;white-space:nowrap">${(window._tasaEuro||0)>1?(window._tasaEuro).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
+      </div>
+
+      <!-- Binance -->
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(240,185,11,.07);border-radius:9px;border:1px solid rgba(240,185,11,.22);position:relative;z-index:1">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#F0B90B;color:#1a1a1a;font-family:var(--fd);font-weight:900;font-size:11px;letter-spacing:0;flex-shrink:0">B</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:9.5px;font-weight:800;color:#92400E;text-transform:uppercase;letter-spacing:.5px;line-height:1.2">Binance P2P</div>
+        </div>
+        <span id="dash-tasa-binance" style="font-family:var(--fd);font-weight:900;font-size:15px;color:#B45309;letter-spacing:-.4px;white-space:nowrap">${(window._tasaBinance||0)>1?(window._tasaBinance).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
       </div>
 
       <!-- Spread BCV↔Binance -->
