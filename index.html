@@ -115,8 +115,28 @@ h1 .ln{display:block;}
 .featured-h{font-size:clamp(34px,4vw,52px);font-weight:800;letter-spacing:-2px;line-height:1.05;color:var(--ink);margin-bottom:14px;max-width:680px;}
 .featured-s{font-size:17px;color:var(--ink-3);line-height:1.65;max-width:480px;margin-bottom:52px;}
 
-.featured-card{position:relative;background:linear-gradient(135deg,#FAFBFF 0%,#EFF3FF 100%);border-radius:32px;border:1px solid rgba(37,99,235,.10);padding:0;overflow:hidden;display:grid;grid-template-columns:1.1fr .9fr;gap:0;box-shadow:0 30px 80px -30px rgba(37,99,235,.18);}
-.featured-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 600px 400px at 100% 100%,rgba(37,99,235,.10) 0%,transparent 60%);pointer-events:none;}
+.featured-card{position:relative;background:linear-gradient(135deg,#FAFBFF 0%,#EFF3FF 100%);border-radius:32px;border:1px solid rgba(37,99,235,.10);padding:0;overflow:hidden;box-shadow:0 30px 80px -30px rgba(37,99,235,.18);}
+.featured-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 600px 400px at 100% 100%,rgba(37,99,235,.10) 0%,transparent 60%);pointer-events:none;z-index:0;}
+
+/* ── Carrusel: track de slides ── */
+.fcar-track{display:flex;transition:transform .6s cubic-bezier(.4,0,.2,1);position:relative;z-index:1;}
+.fcar-slide{flex:0 0 100%;display:grid;grid-template-columns:1.1fr .9fr;gap:0;}
+@media(max-width:980px){.fcar-slide{grid-template-columns:1fr;}}
+
+/* ── Botones prev/next ── */
+.fcar-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:10;background:#fff;border:1px solid var(--line);width:48px;height:48px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.10);transition:all .2s;color:var(--ink);}
+.fcar-nav:hover{background:var(--p);color:#fff;border-color:var(--p);transform:translateY(-50%) scale(1.05);}
+.fcar-nav.prev{left:18px;}
+.fcar-nav.next{right:18px;}
+.fcar-nav svg{width:20px;height:20px;}
+
+/* ── Dots ── */
+.fcar-dots{display:flex;justify-content:center;gap:8px;margin-top:24px;}
+.fcar-dot{width:28px;height:4px;border-radius:3px;background:var(--line-p);border:none;padding:0;cursor:pointer;transition:background .25s,width .25s;}
+.fcar-dot.is-active{background:var(--p);width:48px;}
+.fcar-dot:hover{background:var(--p);}
+
+@media(max-width:600px){.fcar-nav{width:40px;height:40px;}.fcar-nav.prev{left:8px;}.fcar-nav.next{right:8px;}}
 
 .featured-photo{position:relative;height:100%;min-height:460px;display:flex;align-items:center;justify-content:center;padding:40px;background:linear-gradient(180deg,#fff 0%,#F4F8FF 100%);}
 .featured-photo img{max-width:100%;max-height:480px;width:auto;height:auto;object-fit:contain;display:block;filter:drop-shadow(0 30px 40px rgba(0,0,0,.15));}
@@ -491,9 +511,6 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
 <section class="hero" id="inicio">
   <div class="hero-glow"></div><div class="hero-dots"></div>
 
-  <!-- Foto rotativa atrás -->
-  <img id="heroBgPhoto" class="hero-bg-photo" src="assets/motos/rk-200.jpg" alt="">
-
   <div class="hero-inner">
     <div class="hero-pill"><span class="pdot"></span>100% transparente · Sin letra chica</div>
 
@@ -534,47 +551,8 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
       <span>Boleita</span>
       <span>Toro Sabana Grande</span>
     </div>
-
-    <!-- Indicador del carrusel -->
-    <div class="hero-dots-carousel" id="heroDotsCarousel">
-      <button class="hero-dot is-active" data-i="0" title="RK 200"></button>
-      <button class="hero-dot" data-i="1" title="EK Xpress II 150"></button>
-      <button class="hero-dot" data-i="2" title="Owen 200S"></button>
-      <button class="hero-dot" data-i="3" title="TX 250 GS"></button>
-    </div>
   </div>
 </section>
-
-<script>
-// ─── Carrusel de fotos del hero (rotación cada 4.5s) ───
-(function heroCarousel(){
-  var photos = [
-    'assets/motos/rk-200.jpg',
-    'assets/motos/ek-xpress-ii-150.jpg',
-    'assets/motos/owen-200s.jpg',
-    'assets/motos/tx-250-gs.jpg'
-  ];
-  var idx = 0;
-  var img = document.getElementById('heroBgPhoto');
-  var dotsEl = document.getElementById('heroDotsCarousel');
-  if(!img || !dotsEl) return;
-  var dots = dotsEl.querySelectorAll('.hero-dot');
-  var timer = null;
-  function setActive(i){
-    idx = (i+photos.length) % photos.length;
-    img.src = photos[idx];
-    img.classList.remove('is-active');
-    void img.offsetWidth; // reset animation
-    img.classList.add('is-active');
-    dots.forEach(function(d,j){ d.classList.toggle('is-active', j===idx); });
-  }
-  function next(){ setActive(idx+1); }
-  function start(){ stop(); timer = setInterval(next, 4500); }
-  function stop(){ if(timer) clearInterval(timer); timer=null; }
-  dots.forEach(function(d){ d.addEventListener('click', function(){ setActive(+this.dataset.i); start(); }); });
-  start();
-})();
-</script>
 
 <!-- FEATURED MOTO SHOWCASE -->
 <section class="featured-sec" id="featured">
@@ -585,41 +563,171 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
       <p class="featured-s">La cuota que ves es la que pagás. Cero intereses moratorios escondidos, cero comisiones de mantenimiento, cero letra chica. Acá no hay trampas — solo una moto y un plan que sí podés cumplir.</p>
     </div>
 
-    <div class="featured-card reveal">
-      <div class="featured-photo">
-        <div class="featured-photo-shine"></div>
-        <img src="assets/motos/ek-xpress-150.jpg" alt="EK Xpress 150">
-      </div>
-      <div class="featured-info">
-        <div class="featured-info-tag">Stock disponible</div>
-        <h3 class="featured-name">EK Xpress 150</h3>
-        <div class="featured-spec">150cc · Urbana · Entrega en 24h</div>
+    <div class="featured-card reveal" id="featuredCarousel">
+      <!-- Botones de navegación -->
+      <button class="fcar-nav prev" type="button" aria-label="Anterior" onclick="featuredCarouselGo(-1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button class="fcar-nav next" type="button" aria-label="Siguiente" onclick="featuredCarouselGo(1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
 
-        <div class="featured-pricing">
-          <div class="featured-pricing-item">
-            <div class="featured-pricing-lbl">Precio</div>
-            <div class="featured-pricing-val">$1,099</div>
-            <div class="featured-pricing-sub">Contado total</div>
+      <div class="fcar-track" id="fcarTrack">
+
+        <!-- SLIDE 1: EK Xpress 150 (popular) -->
+        <div class="fcar-slide">
+          <div class="featured-photo">
+            <div class="featured-photo-shine"></div>
+            <img src="assets/motos/ek-xpress-150.jpg" alt="EK Xpress 150" loading="lazy">
           </div>
-          <div class="featured-pricing-item highlight">
-            <div class="featured-pricing-lbl">Cuota mensual</div>
-            <div class="featured-pricing-val">$94</div>
-            <div class="featured-pricing-sub">12 meses · 50% inicial</div>
+          <div class="featured-info">
+            <div class="featured-info-tag">Stock disponible</div>
+            <h3 class="featured-name">EK Xpress 150</h3>
+            <div class="featured-spec">150cc · Urbana · Entrega en 24h</div>
+            <div class="featured-pricing">
+              <div class="featured-pricing-item"><div class="featured-pricing-lbl">Precio</div><div class="featured-pricing-val">$1,099</div><div class="featured-pricing-sub">Contado total</div></div>
+              <div class="featured-pricing-item highlight"><div class="featured-pricing-lbl">Cuota quincenal</div><div class="featured-pricing-val">$56</div><div class="featured-pricing-sub">12 meses · 50% inicial</div></div>
+            </div>
+            <div class="featured-feats">
+              <span class="featured-feat">Garantía oficial</span>
+              <span class="featured-feat">Entrega inmediata</span>
+              <span class="featured-feat">Aprobación 24h</span>
+            </div>
+            <div class="featured-actions" style="margin-top:28px">
+              <a href="solicitar.html?moto=2" class="btn btn-p" style="flex:1;justify-content:center">Solicitar esta moto</a>
+              <a href="catalogo.html" class="btn btn-s">Ver todas</a>
+            </div>
           </div>
         </div>
 
-        <div class="featured-feats">
-          <span class="featured-feat">Garantía oficial</span>
-          <span class="featured-feat">Entrega inmediata</span>
-          <span class="featured-feat">Aprobación en 24h</span>
+        <!-- SLIDE 2: RK 200 (premium deportiva) -->
+        <div class="fcar-slide">
+          <div class="featured-photo">
+            <div class="featured-photo-shine"></div>
+            <img src="assets/motos/rk-200.jpg" alt="RK 200" loading="lazy">
+          </div>
+          <div class="featured-info">
+            <div class="featured-info-tag" style="background:rgba(124,58,237,.10);color:#7C3AED">Premium</div>
+            <h3 class="featured-name">RK 200</h3>
+            <div class="featured-spec">200cc · Naked · Deportiva</div>
+            <div class="featured-pricing">
+              <div class="featured-pricing-item"><div class="featured-pricing-lbl">Precio</div><div class="featured-pricing-val">$1,750</div><div class="featured-pricing-sub">Contado total</div></div>
+              <div class="featured-pricing-item highlight"><div class="featured-pricing-lbl">Cuota quincenal</div><div class="featured-pricing-val">$83</div><div class="featured-pricing-sub">12 meses · 50% inicial</div></div>
+            </div>
+            <div class="featured-feats">
+              <span class="featured-feat">Frenos de disco</span>
+              <span class="featured-feat">200cc deportivo</span>
+              <span class="featured-feat">Aprobación 24h</span>
+            </div>
+            <div class="featured-actions" style="margin-top:28px">
+              <a href="solicitar.html?moto=8" class="btn btn-p" style="flex:1;justify-content:center">Solicitar esta moto</a>
+              <a href="catalogo.html" class="btn btn-s">Ver todas</a>
+            </div>
+          </div>
         </div>
 
-        <div class="featured-actions" style="margin-top:28px">
-          <a href="solicitar.html?moto=2" class="btn btn-p" style="flex:1;justify-content:center">Solicitar esta moto</a>
-          <a href="catalogo.html" class="btn btn-s">Ver todas</a>
+        <!-- SLIDE 3: New Horse 150 (más vendida) -->
+        <div class="fcar-slide">
+          <div class="featured-photo">
+            <div class="featured-photo-shine"></div>
+            <img src="assets/motos/new-horse-150.jpg" alt="New Horse 150" loading="lazy">
+          </div>
+          <div class="featured-info">
+            <div class="featured-info-tag" style="background:rgba(0,200,83,.10);color:#00C853">★ Más vendida</div>
+            <h3 class="featured-name">New Horse 150</h3>
+            <div class="featured-spec">150cc · Carga · Urbana · Trabajo</div>
+            <div class="featured-pricing">
+              <div class="featured-pricing-item"><div class="featured-pricing-lbl">Precio</div><div class="featured-pricing-val">$1,320</div><div class="featured-pricing-sub">Contado total</div></div>
+              <div class="featured-pricing-item highlight"><div class="featured-pricing-lbl">Cuota quincenal</div><div class="featured-pricing-val">$65</div><div class="featured-pricing-sub">12 meses · 50% inicial</div></div>
+            </div>
+            <div class="featured-feats">
+              <span class="featured-feat">Ideal delivery</span>
+              <span class="featured-feat">Tanque 12L</span>
+              <span class="featured-feat">Aprobación 24h</span>
+            </div>
+            <div class="featured-actions" style="margin-top:28px">
+              <a href="solicitar.html?moto=1" class="btn btn-p" style="flex:1;justify-content:center">Solicitar esta moto</a>
+              <a href="catalogo.html" class="btn btn-s">Ver todas</a>
+            </div>
+          </div>
         </div>
+
+        <!-- SLIDE 4: Owen 200S (custom) -->
+        <div class="fcar-slide">
+          <div class="featured-photo">
+            <div class="featured-photo-shine"></div>
+            <img src="assets/motos/owen-200s.jpg" alt="Owen 200S" loading="lazy">
+          </div>
+          <div class="featured-info">
+            <div class="featured-info-tag" style="background:rgba(245,158,11,.10);color:#F59E0B">Nuevo</div>
+            <h3 class="featured-name">Owen 200S</h3>
+            <div class="featured-spec">200cc · Custom · Deportiva</div>
+            <div class="featured-pricing">
+              <div class="featured-pricing-item"><div class="featured-pricing-lbl">Precio</div><div class="featured-pricing-val">$1,550</div><div class="featured-pricing-sub">Contado total</div></div>
+              <div class="featured-pricing-item highlight"><div class="featured-pricing-lbl">Cuota quincenal</div><div class="featured-pricing-val">$75</div><div class="featured-pricing-sub">12 meses · 50% inicial</div></div>
+            </div>
+            <div class="featured-feats">
+              <span class="featured-feat">Estilo custom</span>
+              <span class="featured-feat">200cc</span>
+              <span class="featured-feat">Aprobación 24h</span>
+            </div>
+            <div class="featured-actions" style="margin-top:28px">
+              <a href="solicitar.html?moto=7" class="btn btn-p" style="flex:1;justify-content:center">Solicitar esta moto</a>
+              <a href="catalogo.html" class="btn btn-s">Ver todas</a>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
+
+    <!-- Dots indicators -->
+    <div class="fcar-dots" id="fcarDots">
+      <button class="fcar-dot is-active" type="button" data-i="0" aria-label="EK Xpress 150"></button>
+      <button class="fcar-dot" type="button" data-i="1" aria-label="RK 200"></button>
+      <button class="fcar-dot" type="button" data-i="2" aria-label="New Horse 150"></button>
+      <button class="fcar-dot" type="button" data-i="3" aria-label="Owen 200S"></button>
+    </div>
+
+    <script>
+    // Carrusel del featured (auto-rotate cada 6s, clic en dots o flechas)
+    (function featuredCar(){
+      var track = document.getElementById('fcarTrack');
+      var dotsWrap = document.getElementById('fcarDots');
+      if(!track || !dotsWrap) return;
+      var total = track.children.length;
+      var idx = 0;
+      var timer = null;
+      function update(){
+        track.style.transform = 'translateX(-'+(idx*100)+'%)';
+        dotsWrap.querySelectorAll('.fcar-dot').forEach(function(d,j){
+          d.classList.toggle('is-active', j===idx);
+        });
+      }
+      window.featuredCarouselGo = function(dir){
+        idx = (idx + dir + total) % total;
+        update();
+        restart();
+      };
+      dotsWrap.querySelectorAll('.fcar-dot').forEach(function(d){
+        d.addEventListener('click', function(){
+          idx = +this.dataset.i;
+          update();
+          restart();
+        });
+      });
+      function start(){ timer = setInterval(function(){ idx = (idx+1)%total; update(); }, 6000); }
+      function stop(){ if(timer) clearInterval(timer); timer = null; }
+      function restart(){ stop(); start(); }
+      // Pausar en hover
+      var card = document.getElementById('featuredCarousel');
+      if(card){
+        card.addEventListener('mouseenter', stop);
+        card.addEventListener('mouseleave', start);
+      }
+      start();
+    })();
+    </script>
 
     <div class="kpi-strip">
       <div class="kpi-item"><div class="kpi-n">41</div><div class="kpi-l">Modelos disponibles</div></div>
