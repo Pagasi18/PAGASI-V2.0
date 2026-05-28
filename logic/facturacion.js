@@ -20,7 +20,7 @@ function mostrarAlertaMora(){
         return '<div style="display:flex;align-items:center;gap:10px;background:var(--surf2);border-radius:12px;padding:11px 14px">'
           +'<div style="flex:1;min-width:0">'
             +'<div style="font-size:13px;font-weight:700;color:var(--ink)">'+c.cli+'</div>'
-            +'<div style="font-size:10.5px;color:var(--ink3);margin-top:2px">'+c.id+' · '+c.modelo+(cl.tel?' · '+cl.tel:'')+'</div>'
+            +'<div style="font-size:10.5px;color:var(--ink3);margin-top:2px">'+c.id+' Â· '+c.modelo+(cl.tel?' Â· '+cl.tel:'')+'</div>'
           +'</div>'
           +'<div style="text-align:right;flex-shrink:0;margin-right:10px">'
             +'<div style="font-family:var(--fd);font-weight:900;font-size:17px;color:'+color+'">'+c.mora+'d</div>'
@@ -37,56 +37,51 @@ function mostrarAlertaMora(){
   $('mic').style.color = '#E8335A';
   $('mic').style.background = '#FCEBEB';
   $('mic').style.border = 'none';
-  $('mtt').textContent = 'Alertas de Mora — '+enMora.length+' cliente'+(enMora.length!==1?'s':'');
-  $('msb').textContent = 'Revisión al ' + new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
+  $('mtt').textContent = 'Alertas de Mora â€” '+enMora.length+' cliente'+(enMora.length!==1?'s':'');
+  $('msb').textContent = 'RevisiÃ³n al ' + new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
   $('modal-box').className = 'modal modal-lg';
   $('mbd').innerHTML =
     '<div style="max-height:65vh;overflow-y:auto;padding:4px 2px">'
     +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">'
       +'<div style="background:#FCEBEB;border-radius:14px;padding:16px;text-align:center">'
         +'<div style="font-family:var(--fd);font-size:30px;font-weight:900;color:#E8335A;line-height:1">'+critico.length+'</div>'
-        +'<div style="font-size:10.5px;color:#A32D2D;margin-top:6px;font-weight:600">Crítico +30d</div>'
+        +'<div style="font-size:10.5px;color:#A32D2D;margin-top:6px;font-weight:600">CrÃ­tico +30d</div>'
       +'</div>'
       +'<div style="background:#FAEEDA;border-radius:14px;padding:16px;text-align:center">'
         +'<div style="font-family:var(--fd);font-size:30px;font-weight:900;color:#BA7517;line-height:1">'+alto.length+'</div>'
-        +'<div style="font-size:10.5px;color:#854F0B;margin-top:6px;font-weight:600">Alto 16–30d</div>'
+        +'<div style="font-size:10.5px;color:#854F0B;margin-top:6px;font-weight:600">Alto 16â€“30d</div>'
       +'</div>'
       +'<div style="background:#FFF6E5;border-radius:14px;padding:16px;text-align:center">'
         +'<div style="font-family:var(--fd);font-size:30px;font-weight:900;color:#C9A227;line-height:1">'+moderado.length+'</div>'
-        +'<div style="font-size:10.5px;color:#946F0B;margin-top:6px;font-weight:600">Moderado 1–15d</div>'
+        +'<div style="font-size:10.5px;color:#946F0B;margin-top:6px;font-weight:600">Moderado 1â€“15d</div>'
       +'</div>'
     +'</div>'
-    +grupoHTML(critico, 'var(--red)', '', 'CRÍTICO — Más de 30 días')
-    +grupoHTML(alto, 'var(--amber)', '', 'ALTO — 16 a 30 días')
-    +grupoHTML(moderado, '#c9a227', '', 'MODERADO — 1 a 15 días')
+    +grupoHTML(critico, 'var(--red)', '', 'CRÃTICO â€” MÃ¡s de 30 dÃ­as')
+    +grupoHTML(alto, 'var(--amber)', '', 'ALTO â€” 16 a 30 dÃ­as')
+    +grupoHTML(moderado, '#c9a227', '', 'MODERADO â€” 1 a 15 dÃ­as')
     +'</div>';
   $('mft').innerHTML =
     '<button class="btn btn-g" onclick="sessionStorage.setItem(\'mora_alert_dismissed\',\''+hoy+'\');closeM()">Ignorar por hoy</button>'
-    +'<button class="btn btn-p" onclick="closeM();nav(\'cobranza\')">Ver gestión de cobranza</button>';
+    +'<button class="btn btn-p" onclick="closeM();nav(\'cobranza\')">Ver gestiÃ³n de cobranza</button>';
   $('ov').style.display = 'flex';
 }
 
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // FEATURE 2: RECIBO / COMPROBANTE DE PAGO
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function ofrecerRecibo(pago, cred){
   setMicon('check');
   $('mtt').textContent = 'Pago Registrado';
   $('msb').textContent = 'El pago fue guardado exitosamente';
   $('modal-box').className = 'modal';
-  var conceptoMini = _facBuildConcepto(pago, cred);
   $('mbd').innerHTML =
     '<div style="text-align:center;padding:10px 0 16px">'
     +'<div style="width:56px;height:56px;border-radius:50%;background:var(--greens);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">'
     +'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>'
     +'</div>'
     +'<div style="font-family:var(--fd);font-weight:900;font-size:26px;color:var(--green)">'+fmt(pago.monto)+'</div>'
-    +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">'+cred.cli+' · '+pago.id+'</div>'
-    +'<div style="font-size:11px;color:var(--ink3);margin-top:2px">'+pago.fecha+(pago.referencia?' · Ref: #'+pago.referencia:'')+'</div>'
-    +'<div style="margin:14px auto 6px;max-width:340px;background:rgba(74,107,255,.08);border:1px solid rgba(74,107,255,.22);border-radius:10px;padding:10px 14px;text-align:left">'
-      +'<div style="font-size:9.5px;letter-spacing:1px;color:var(--p1);font-weight:800;text-transform:uppercase;margin-bottom:4px">Concepto</div>'
-      +'<div style="font-size:12.5px;font-weight:700;color:var(--ink);line-height:1.4">'+conceptoMini+'</div>'
-    +'</div>'
+    +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">'+cred.cli+' Â· '+pago.id+'</div>'
+    +'<div style="font-size:11px;color:var(--ink3);margin-top:2px">'+pago.fecha+(pago.referencia?' Â· Ref: #'+pago.referencia:'')+'</div>'
     +'<div style="display:flex;gap:8px;justify-content:center;margin-top:18px">'
     +'<button class="btn btn-g btn-sm" onclick="closeM()">Cerrar</button>'
     +'<button class="btn btn-g btn-sm" onclick="closeM();abrirWhatsAppRecibo('+JSON.stringify(pago).replace(/"/g,"&quot;")+')" style="background:#25D366;color:#fff;border:none"> WhatsApp</button>'
@@ -100,7 +95,6 @@ function ofrecerRecibo(pago, cred){
 function imprimirRecibo(pago, cred){
   var empresa = ($('cfg_empresa')&&$('cfg_empresa').value) || 'Pagasi';
   var fecha = new Date(pago.fecha+'T12:00:00').toLocaleDateString('es-VE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  var conceptoRecibo = _facBuildConcepto(pago, cred);
   var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
     +'<title>Recibo '+pago.id+'</title>'
     +'<style>'
@@ -129,17 +123,16 @@ function imprimirRecibo(pago, cred){
     +'</div>'
     +'<div class="body">'
     +'<div class="monto"><div class="label">Monto recibido</div><div class="valor">'+fmt(pago.monto)+'</div></div>'
-    +'<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:12px 14px;margin-bottom:14px"><div style="font-size:9.5px;letter-spacing:1px;color:#2563EB;font-weight:700;text-transform:uppercase;margin-bottom:4px">Concepto</div><div style="font-size:13px;font-weight:700;color:#111;line-height:1.45">'+conceptoRecibo+'</div></div>'
     +'<div class="row"><span class="k">Cliente</span><span class="v">'+pago.cli+'</span></div>'
-    +'<div class="row"><span class="k">Crédito</span><span class="v">'+pago.cred+'</span></div>'
-    +'<div class="row"><span class="k">Vehículo</span><span class="v">'+(cred.modelo||'—')+'</span></div>'
+    +'<div class="row"><span class="k">CrÃ©dito</span><span class="v">'+pago.cred+'</span></div>'
+    +'<div class="row"><span class="k">VehÃ­culo</span><span class="v">'+(cred.modelo||'â€”')+'</span></div>'
     +'<div class="row"><span class="k">Fecha</span><span class="v">'+fecha+'</span></div>'
-    +'<div class="row"><span class="k">Método de pago</span><span class="v">'+(pago.metodo||'—')+'</span></div>'
+    +'<div class="row"><span class="k">MÃ©todo de pago</span><span class="v">'+(pago.metodo||'â€”')+'</span></div>'
     +(pago.referencia?'<div class="row"><span class="k">Referencia</span><span class="v">#'+pago.referencia+'</span></div>':'')
-    +'<div class="row"><span class="k">Cobrador</span><span class="v">'+(pago.cobrador||pago.realizadoPor||'—')+'</span></div>'
-    +'<div class="row" style="border:none"><span class="k">Cuotas pagadas</span><span class="v">'+(cred.pagado||'—')+' / '+(cred.totalCuotas||cred.plazo*2||'—')+'</span></div>'
+    +'<div class="row"><span class="k">Cobrador</span><span class="v">'+(pago.cobrador||pago.realizadoPor||'â€”')+'</span></div>'
+    +'<div class="row" style="border:none"><span class="k">Cuotas pagadas</span><span class="v">'+(cred.pagado||'â€”')+' / '+(cred.totalCuotas||cred.plazo*2||'â€”')+'</span></div>'
     +'</div>'
-    +'<div class="footer">'+empresa+' · Documento generado el '+new Date().toLocaleDateString('es-VE')+' · Conserve este comprobante</div>'
+    +'<div class="footer">'+empresa+' Â· Documento generado el '+new Date().toLocaleDateString('es-VE')+' Â· Conserve este comprobante</div>'
     +'</div>'
     +'<script>window.onload=function(){window.print();}<\/script>'
     +'</body></html>';
@@ -150,26 +143,22 @@ function imprimirRecibo(pago, cred){
 function abrirWhatsAppRecibo(pago){
   var empresa = ($('cfg_empresa')&&$('cfg_empresa').value) || 'Pagasi';
   var cl = S.clientes.find(function(c){ return c.nombre===pago.cli; })||{};
-  var cred = (S.creds||[]).find(function(x){ return x.id===pago.cred; });
   var tel = (cl.tel||'').replace(/\D/g,'');
-  var concepto = _facBuildConcepto(pago, cred);
-  var texto = '*Comprobante de Pago — '+empresa+'*\n\n'
-    +'*Recibo:* '+pago.id+'\n'
-    +'*Cliente:* '+pago.cli+'\n'
-    +'*Concepto:* '+concepto+'\n'
-    +'*Monto recibido:* '+fmt(pago.monto)+'\n'
-    +'*Fecha:* '+pago.fecha+'\n'
-    +'*Método:* '+(pago.metodo||'—')+'\n'
-    +(pago.referencia?'*Referencia:* #'+pago.referencia+'\n':'')
-    +(cred?'*Cuotas pagadas:* '+(cred.pagado||'—')+' / '+(cred.totalCuotas||cred.plazo*2||'—')+'\n':'')
+  var texto = ' *Comprobante de Pago â€” '+empresa+'*\n\n'
+    +' *Recibo:* '+pago.id+'\n'
+    +' *Cliente:* '+pago.cli+'\n'
+    +' *Monto:* '+fmt(pago.monto)+'\n'
+    +' *Fecha:* '+pago.fecha+'\n'
+    +' *MÃ©todo:* '+(pago.metodo||'â€”')+'\n'
+    +(pago.referencia?' *Referencia:* #'+pago.referencia+'\n':'')
     +'\n_Gracias por su pago puntual_';
-  var url = 'https://wa.me/'+(tel||'')+'?text='+encodeURIComponent(texto);
+  var url = 'https://wa.me/'+(tel||'')+( tel?'':'')+'?text='+encodeURIComponent(texto);
   window.open(url,'_blank');
 }
 
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // FEATURE 3: DASHBOARD DE COBRANZA POR COBRADOR
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function renderDashboardCobradores(){
   var hoy = hoyLocalISO();
   var inicioSemana = (function(){
@@ -203,9 +192,9 @@ function renderDashboardCobradores(){
         +'<div style="font-weight:700;font-size:13px;color:var(--ink)">'+c.nombre+'</div>'
         +'<div style="font-size:10.5px;color:var(--ink3)">'+c.count+' cobro(s) en total</div>'
       +'</td>'
-      +'<td style="text-align:right;font-family:var(--fd);font-weight:800;color:var(--green)">'+(c.hoy>0?'+'+fmt(c.hoy):'—')+'</td>'
-      +'<td style="text-align:right;font-family:var(--fd);font-weight:800;color:var(--p1)">'+(c.semana>0?fmt(c.semana):'—')+'</td>'
-      +'<td style="text-align:right;font-family:var(--fd);font-weight:800">'+(c.mes>0?fmt(c.mes):'—')+'</td>'
+      +'<td style="text-align:right;font-family:var(--fd);font-weight:800;color:var(--green)">'+(c.hoy>0?'+'+fmt(c.hoy):'â€”')+'</td>'
+      +'<td style="text-align:right;font-family:var(--fd);font-weight:800;color:var(--p1)">'+(c.semana>0?fmt(c.semana):'â€”')+'</td>'
+      +'<td style="text-align:right;font-family:var(--fd);font-weight:800">'+(c.mes>0?fmt(c.mes):'â€”')+'</td>'
       +'<td style="text-align:right;font-family:var(--fd);font-weight:700;color:var(--ink3)">'+fmt(c.total)+'</td>'
       +'</tr>';
   }).join('');
@@ -217,7 +206,7 @@ function renderDashboardCobradores(){
   return '<div class="card" style="margin-top:12px">'
     +'<div class="ch">'
       +'<div><div class="ct">Rendimiento de Cobradores</div>'
-      +'<div class="cs">Hoy · Esta semana · Este mes</div></div>'
+      +'<div class="cs">Hoy Â· Esta semana Â· Este mes</div></div>'
       +'<div style="display:flex;gap:14px">'
         +'<div style="text-align:center"><div style="font-size:10px;color:var(--ink3)">Hoy</div><div style="font-weight:800;color:var(--green);font-family:var(--fd)">'+fmt(totalHoy)+'</div></div>'
         +'<div style="text-align:center"><div style="font-size:10px;color:var(--ink3)">Semana</div><div style="font-weight:800;color:var(--p1);font-family:var(--fd)">'+fmt(totalSemana)+'</div></div>'
@@ -231,20 +220,20 @@ function renderDashboardCobradores(){
         +'<th style="text-align:right">Hoy</th>'
         +'<th style="text-align:right">Esta semana</th>'
         +'<th style="text-align:right">Este mes</th>'
-        +'<th style="text-align:right">Total histórico</th>'
+        +'<th style="text-align:right">Total histÃ³rico</th>'
       +'</tr></thead>'
       +'<tbody>'+rows+'</tbody>'
     +'</table></div>'
   +'</div>';
 }
 
-// â•”â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•—
-// â•‘  FACTURACIÓN SENIAT — Generación de facturas digitales    â•‘
-// â•‘  Sistema correlativo legal: números inmutables,           â•‘
-// â•‘  facturas anulables (no eliminables) según SENIAT.        â•‘
-// â•šâ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
+// â•‘  FACTURACIÃ“N SENIAT â€” GeneraciÃ³n de facturas digitales    â•‘
+// â•‘  Sistema correlativo legal: nÃºmeros inmutables,           â•‘
+// â•‘  facturas anulables (no eliminables) segÃºn SENIAT.        â•‘
+// â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-// Devuelve siguiente número de factura (correlativo, 8 dígitos)
+// Devuelve siguiente nÃºmero de factura (correlativo, 8 dÃ­gitos)
 function _facSiguienteNumeroFactura(){
   var maxN = 0;
   (S.facturas||[]).forEach(function(f){
@@ -254,7 +243,7 @@ function _facSiguienteNumeroFactura(){
   return String(maxN + 1).padStart(8, '0');
 }
 
-// Devuelve siguiente número de control SENIAT (correlativo, 8 dígitos con prefijo 00-)
+// Devuelve siguiente nÃºmero de control SENIAT (correlativo, 8 dÃ­gitos con prefijo 00-)
 function _facSiguienteNumeroControl(){
   var maxN = 0;
   (S.facturas||[]).forEach(function(f){
@@ -265,109 +254,12 @@ function _facSiguienteNumeroControl(){
   return '00-' + String(maxN + 1).padStart(8, '0');
 }
 
-// Busca la factura asociada a un pago (si existe y no está anulada)
+// Busca la factura asociada a un pago (si existe y no estÃ¡ anulada)
 function _facGetByPagoId(pagoId){
   return (S.facturas||[]).find(function(f){ return f.pagoId === pagoId; });
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// Smart Concepto Builder — detecta inicial / cuota / parcial / multi
-// Genera la descripción del pago para Factura SENIAT, Recibo y WhatsApp
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-function _facFmtUsd(n){
-  var v = parseFloat(n) || 0;
-  return '$' + v.toFixed(2);
-}
-
-function _facBuildConcepto(pago, cred){
-  if(!pago) return 'Pago';
-  var modelo = (cred && cred.modelo) || '';
-  var credId = (pago.cred || (cred && cred.id) || '');
-  var suffix = (modelo ? ' — Moto ' + modelo : '') + (credId ? ' — Crédito ' + credId : '');
-
-  // 1) Pago inicial de la moto
-  var conceptoStr = (pago.concepto || '');
-  if(pago.esInicial || pago.tipoOperacion === 'inicial_credito' || conceptoStr.indexOf('Inicial · ') === 0){
-    return 'Pago inicial' + suffix;
-  }
-
-  // 2) Liquidación anticipada
-  if(pago.tipo === 'liquidacion' || pago.referencia === 'LIQ-ANT'){
-    return 'Liquidación anticipada' + suffix;
-  }
-
-  // 3) Cuota regular — calcular qué cuota(s) cubre este pago
-  var cuotaBase = parseFloat((cred && (cred.cuotaQ || cred.cuota)) || 0);
-  if(cuotaBase <= 0){
-    return 'Pago de cuota' + suffix;
-  }
-
-  // Todos los pagos confirmados del crédito (sin la inicial), ordenados por fecha+id
-  var allPagos = (typeof S !== 'undefined' && Array.isArray(S.pagos)) ? S.pagos.filter(function(x){
-    return x && !x.eliminado && x.cred === credId
-        && x.estado === 'confirmado'
-        && !x.esInicial
-        && x.tipoOperacion !== 'inicial_credito';
-  }) : [];
-  allPagos.sort(function(a,b){
-    var fa = String((a.fecha||'')) + '_' + String(a.id||'');
-    var fb = String((b.fecha||'')) + '_' + String(b.id||'');
-    return fa < fb ? -1 : fa > fb ? 1 : 0;
-  });
-
-  // Suma acumulada de pagos confirmados ANTES de este pago
-  var prevSum = 0;
-  for(var i = 0; i < allPagos.length; i++){
-    if(String(allPagos[i].id) === String(pago.id)) break;
-    prevSum += parseFloat(allPagos[i].monto) || 0;
-  }
-  var monto = parseFloat(pago.monto) || 0;
-  var newSum = prevSum + monto;
-  var eps = 0.005;
-
-  var completadasAntes  = Math.floor((prevSum + eps) / cuotaBase);
-  var completadasDespues = Math.floor((newSum  + eps) / cuotaBase);
-  var saldoAnterior = Math.max(0, prevSum - completadasAntes * cuotaBase);
-  var nuevoSaldo    = Math.max(0, newSum  - completadasDespues * cuotaBase);
-  var cuotaEnCurso  = completadasAntes + 1;
-
-  // A) Pago parcial — no completa ninguna cuota
-  if(completadasDespues === completadasAntes){
-    var totalAbonado = saldoAnterior + monto;
-    return 'Cuota parcial · Cuota Nº ' + cuotaEnCurso
-         + ' (' + _facFmtUsd(totalAbonado) + ' de ' + _facFmtUsd(cuotaBase) + ')'
-         + suffix;
-  }
-
-  // B) Completa una o más cuotas — construir descripción detallada
-  var cuotasCompletadas = completadasDespues - completadasAntes;
-  var partes = [];
-
-  // ¿Venía con saldo pendiente de una cuota anterior?
-  if(saldoAnterior > eps){
-    partes.push('Saldo Cuota Nº ' + cuotaEnCurso + ' (' + _facFmtUsd(cuotaBase - saldoAnterior) + ')');
-    cuotaEnCurso++;
-    cuotasCompletadas--;
-  }
-
-  if(cuotasCompletadas === 1){
-    partes.push('Cuota Nº ' + cuotaEnCurso);
-  } else if(cuotasCompletadas > 1){
-    partes.push('Cuotas Nº ' + cuotaEnCurso + ' a Nº ' + (cuotaEnCurso + cuotasCompletadas - 1));
-  }
-
-  if(nuevoSaldo > eps){
-    partes.push('parcial Cuota Nº ' + (completadasDespues + 1)
-              + ' (' + _facFmtUsd(nuevoSaldo) + ' de ' + _facFmtUsd(cuotaBase) + ')');
-  }
-
-  if(!partes.length){
-    return 'Cuota Nº ' + (completadasAntes + 1) + suffix;
-  }
-  return partes.join(' + ') + suffix;
-}
-
-// Helper: convierte número a letras (para factura SENIAT)
+// Helper: convierte nÃºmero a letras (para factura SENIAT)
 function _numeroALetras(num){
   var n = parseFloat(num);
   if(isNaN(n)) return '';
@@ -409,7 +301,7 @@ function _numeroALetras(num){
   return _miles(entero) + ' CON ' + String(decimal).padStart(2,'0') + '/100 DOLARES';
 }
 
-// Modal: ver detalle de un pago (con opción de generar factura)
+// Modal: ver detalle de un pago (con opciÃ³n de generar factura)
 function abrirDetallePago(pagoId){
   var p = (S.pagos||[]).find(function(x){ return x.id === pagoId; });
   if(!p){ toast('Pago no encontrado','error'); return; }
@@ -430,22 +322,22 @@ function abrirDetallePago(pagoId){
       + '<div style="font-size:11px;color:var(--ink3);font-weight:700;letter-spacing:.5px">FACTURA ASOCIADA</div>'
       + '<span class="bdg" style="background:'+facColor+';color:#fff;font-size:9px;padding:2px 7px;border-radius:4px">'+facLabel+'</span>'
       + '</div>'
-      + '<div style="font-family:var(--fd);font-weight:800;font-size:15px">N° '+fac.numero+'</div>'
+      + '<div style="font-family:var(--fd);font-weight:800;font-size:15px">NÂ° '+fac.numero+'</div>'
       + '<div style="font-size:11px;color:var(--ink3)">Control SENIAT: '+fac.numeroControl+'</div>'
       + '<div style="font-size:11px;color:var(--ink3);margin-top:3px">Emitida: '+fmtFechaHora(fac.fechaEmision)+'</div>'
-      + (fac.anulada ? '<div style="font-size:11px;color:var(--red);margin-top:5px">Anulada: '+fmtFechaHora(fac.fechaAnulacion)+'<br>Razón: '+(fac.razonAnulacion||'—')+'</div>' : '')
+      + (fac.anulada ? '<div style="font-size:11px;color:var(--red);margin-top:5px">Anulada: '+fmtFechaHora(fac.fechaAnulacion)+'<br>RazÃ³n: '+(fac.razonAnulacion||'â€”')+'</div>' : '')
       + '</div>';
   }
   $('mbd').innerHTML =
     '<div class="fgr c1" style="gap:10px">'
-    + '<div class="fg"><label>Cliente</label><div style="font-weight:700;font-size:14px;padding:6px 0">'+(p.cli||'—')+'</div></div>'
-    + '<div class="fg"><label>Crédito</label><div style="font-family:var(--fd);font-size:13px;padding:6px 0">'+(p.cred||'—')+(cred?' — '+cred.modelo:'')+'</div></div>'
+    + '<div class="fg"><label>Cliente</label><div style="font-weight:700;font-size:14px;padding:6px 0">'+(p.cli||'â€”')+'</div></div>'
+    + '<div class="fg"><label>CrÃ©dito</label><div style="font-family:var(--fd);font-size:13px;padding:6px 0">'+(p.cred||'â€”')+(cred?' â€” '+cred.modelo:'')+'</div></div>'
     + '</div>'
     + '<div class="fgr" style="margin-top:10px;gap:10px">'
-    + '<div class="fg"><label>Fecha</label><div style="font-family:var(--fd);font-size:13px;padding:6px 0">'+(p.fecha||'—')+'</div></div>'
+    + '<div class="fg"><label>Fecha</label><div style="font-family:var(--fd);font-size:13px;padding:6px 0">'+(p.fecha||'â€”')+'</div></div>'
     + '<div class="fg"><label>Monto</label><div style="font-family:var(--fd);font-weight:800;font-size:18px;color:var(--green);padding:6px 0">'+fmt(p.monto||0)+'</div></div>'
-    + '<div class="fg"><label>Recibido en</label><div style="font-size:13px;padding:6px 0">'+(p.metodo||'—')+'</div></div>'
-    + '<div class="fg"><label>Cobrador</label><div style="font-size:13px;padding:6px 0">'+(p.cobrador||'—')+'</div></div>'
+    + '<div class="fg"><label>Recibido en</label><div style="font-size:13px;padding:6px 0">'+(p.metodo||'â€”')+'</div></div>'
+    + '<div class="fg"><label>Cobrador</label><div style="font-size:13px;padding:6px 0">'+(p.cobrador||'â€”')+'</div></div>'
     + '<div class="fg"><label>Estado</label><div style="padding:6px 0"><span class="bdg" style="background:'+estadoColor+';color:#fff;font-size:10px;padding:3px 9px;border-radius:5px;text-transform:uppercase;font-weight:700">'+estadoLabel+'</span></div></div>'
     + (p.referencia ? '<div class="fg"><label>Referencia</label><div style="font-family:var(--fd);font-size:12px;padding:6px 0">'+p.referencia+'</div></div>' : '')
     + '</div>'
@@ -481,30 +373,30 @@ function abrirGenerarFactura(pagoId){
   $('modal-box').className='modal';
   $('mbd').innerHTML =
     '<div style="background:rgba(74,107,255,0.08);border:1px solid rgba(74,107,255,0.25);border-radius:9px;padding:11px;margin-bottom:14px;font-size:11.5px;color:var(--ink2)">'
-    + '<strong style="color:var(--p1)">âš  Importante:</strong> Una vez creada, la factura será inmutable. Solo podrá ser anulada (no eliminada) según las normas SENIAT.'
+    + '<strong style="color:var(--p1)">âš  Importante:</strong> Una vez creada, la factura serÃ¡ inmutable. Solo podrÃ¡ ser anulada (no eliminada) segÃºn las normas SENIAT.'
     + '</div>'
-    + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin-bottom:8px">NÚMEROS LEGALES</div>'
+    + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin-bottom:8px">NÃšMEROS LEGALES</div>'
     + '<div class="fgr" style="gap:10px">'
-    + '<div class="fg"><label>N° de Factura</label><input class="fi" id="fac_numero" value="'+nextNum+'" style="font-family:var(--fd);font-weight:700"></div>'
-    + '<div class="fg"><label>N° de Control SENIAT</label><input class="fi" id="fac_control" value="'+nextCtrl+'" style="font-family:var(--fd);font-weight:700"></div>'
-    + '<div class="fg"><label>Fecha de Emisión</label><input class="fi" id="fac_fecha" type="date" value="'+(hoyLocalISO())+'"></div>'
+    + '<div class="fg"><label>NÂ° de Factura</label><input class="fi" id="fac_numero" value="'+nextNum+'" style="font-family:var(--fd);font-weight:700"></div>'
+    + '<div class="fg"><label>NÂ° de Control SENIAT</label><input class="fi" id="fac_control" value="'+nextCtrl+'" style="font-family:var(--fd);font-weight:700"></div>'
+    + '<div class="fg"><label>Fecha de EmisiÃ³n</label><input class="fi" id="fac_fecha" type="date" value="'+(hoyLocalISO())+'"></div>'
     + '</div>'
     + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin:14px 0 8px">DATOS DEL EMISOR (EMPRESA)</div>'
     + '<div class="fgr" style="gap:10px">'
-    + '<div class="fg"><label>Razón Social</label><div style="font-weight:700;font-size:13px;padding:6px 0">'+(emp.nombre||'—')+'</div></div>'
-    + '<div class="fg"><label>RIF</label><div style="font-family:var(--fd);font-weight:700;font-size:13px;padding:6px 0">'+(emp.rif||'—')+'</div></div>'
-    + '<div class="fg" style="grid-column:1/-1"><label>Dirección Fiscal</label><div style="font-size:12px;padding:6px 0">'+(emp.direccion||emp.ciudad||'—')+'</div></div>'
+    + '<div class="fg"><label>RazÃ³n Social</label><div style="font-weight:700;font-size:13px;padding:6px 0">'+(emp.nombre||'â€”')+'</div></div>'
+    + '<div class="fg"><label>RIF</label><div style="font-family:var(--fd);font-weight:700;font-size:13px;padding:6px 0">'+(emp.rif||'â€”')+'</div></div>'
+    + '<div class="fg" style="grid-column:1/-1"><label>DirecciÃ³n Fiscal</label><div style="font-size:12px;padding:6px 0">'+(emp.direccion||emp.ciudad||'â€”')+'</div></div>'
     + '</div>'
     + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin:14px 0 8px">DATOS DEL CLIENTE</div>'
     + '<div class="fgr" style="gap:10px">'
-    + '<div class="fg"><label>Nombre / Razón Social</label><input class="fi" id="fac_cli_nom" value="'+(p.cli||'')+'"></div>'
+    + '<div class="fg"><label>Nombre / RazÃ³n Social</label><input class="fi" id="fac_cli_nom" value="'+(p.cli||'')+'"></div>'
     + '<div class="fg"><label>C.I. / RIF</label><input class="fi" id="fac_cli_ci" value="'+((cliente&&cliente.ci)||'')+'"></div>'
-    + '<div class="fg"><label>Teléfono</label><input class="fi" id="fac_cli_tel" value="'+((cliente&&cliente.telefono)||'')+'"></div>'
-    + '<div class="fg" style="grid-column:1/-1"><label>Dirección</label><input class="fi" id="fac_cli_dir" value="'+((cliente&&(cliente.dir_det||cliente.ciudad_res||cliente.ciudad))||'')+'"></div>'
+    + '<div class="fg"><label>TelÃ©fono</label><input class="fi" id="fac_cli_tel" value="'+((cliente&&cliente.telefono)||'')+'"></div>'
+    + '<div class="fg" style="grid-column:1/-1"><label>DirecciÃ³n</label><input class="fi" id="fac_cli_dir" value="'+((cliente&&(cliente.dir_det||cliente.ciudad_res||cliente.ciudad))||'')+'"></div>'
     + '</div>'
-    + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin:14px 0 8px">DETALLE DE LA OPERACIÓN</div>'
+    + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin:14px 0 8px">DETALLE DE LA OPERACIÃ“N</div>'
     + '<div class="fgr c1" style="gap:10px">'
-    + '<div class="fg"><label>Concepto / Descripción</label><textarea class="fi" id="fac_concepto" rows="3" style="resize:vertical">'+_facBuildConcepto(p, cred)+'</textarea><div style="font-size:10.5px;color:var(--ink3);margin-top:5px">Detecta automáticamente si es inicial, cuota completa, parcial o multi-cuota. Editable.</div></div>'
+    + '<div class="fg"><label>Concepto / DescripciÃ³n</label><textarea class="fi" id="fac_concepto" rows="2" style="resize:vertical">Pago de cuota â€” CrÃ©dito '+(p.cred||'')+(cred?' / '+cred.modelo:'')+'</textarea></div>'
     + '</div>'
     + '<div class="fgr" style="gap:10px;margin-top:10px">'
     + '<div class="fg"><label>Subtotal</label><div style="font-family:var(--fd);font-weight:700;font-size:14px;padding:6px 0">'+fmt(p.monto||0)+'</div></div>'
@@ -523,13 +415,13 @@ function crearFactura(pagoId){
   if(!p){ toast('Pago no encontrado','error'); return; }
   var numero = ($('fac_numero')&&$('fac_numero').value||'').trim();
   var control = ($('fac_control')&&$('fac_control').value||'').trim();
-  if(!numero){ toast('El N° de factura es obligatorio','error'); return; }
-  if(!control){ toast('El N° de control SENIAT es obligatorio','error'); return; }
-  // Validar que el número no esté ya usado
+  if(!numero){ toast('El NÂ° de factura es obligatorio','error'); return; }
+  if(!control){ toast('El NÂ° de control SENIAT es obligatorio','error'); return; }
+  // Validar que el nÃºmero no estÃ© ya usado
   var dupN = (S.facturas||[]).find(function(f){ return f.numero === numero; });
-  if(dupN){ toast('El N° '+numero+' ya está usado en otra factura','error'); return; }
+  if(dupN){ toast('El NÂ° '+numero+' ya estÃ¡ usado en otra factura','error'); return; }
   var dupC = (S.facturas||[]).find(function(f){ return f.numeroControl === control; });
-  if(dupC){ toast('El N° de control '+control+' ya está usado','error'); return; }
+  if(dupC){ toast('El NÂ° de control '+control+' ya estÃ¡ usado','error'); return; }
   var emp = getEmpresa();
   var fac = {
     id: 'FAC-'+Date.now(),
@@ -552,7 +444,7 @@ function crearFactura(pagoId){
       tel: ($('fac_cli_tel')&&$('fac_cli_tel').value)||'',
       direccion: ($('fac_cli_dir')&&$('fac_cli_dir').value)||''
     },
-    concepto: (($('fac_concepto')&&$('fac_concepto').value)||'').trim() || _facBuildConcepto(p, (S.creds||[]).find(function(x){ return x.id === p.cred; })),
+    concepto: ($('fac_concepto')&&$('fac_concepto').value)||'Pago de cuota',
     subtotal: p.monto||0,
     iva: 0,
     total: p.monto||0,
@@ -575,25 +467,25 @@ function abrirVerFactura(facId){
   $('msb').textContent='Control: '+fac.numeroControl;
   $('modal-box').className='modal';
   var anuladaBlock = fac.anulada
-    ? '<div style="background:rgba(255,71,87,0.12);border:1px solid rgba(255,71,87,0.35);border-radius:9px;padding:11px;margin-bottom:12px"><div style="color:var(--red);font-weight:800;font-size:13px;margin-bottom:4px"> FACTURA ANULADA</div><div style="font-size:11.5px;color:var(--ink2)">Anulada: '+fmtFechaHora(fac.fechaAnulacion)+' por '+(fac.anuladaPor||'—')+'</div><div style="font-size:11.5px;color:var(--ink2);margin-top:3px">Razón: '+(fac.razonAnulacion||'—')+'</div></div>'
+    ? '<div style="background:rgba(255,71,87,0.12);border:1px solid rgba(255,71,87,0.35);border-radius:9px;padding:11px;margin-bottom:12px"><div style="color:var(--red);font-weight:800;font-size:13px;margin-bottom:4px"> FACTURA ANULADA</div><div style="font-size:11.5px;color:var(--ink2)">Anulada: '+fmtFechaHora(fac.fechaAnulacion)+' por '+(fac.anuladaPor||'â€”')+'</div><div style="font-size:11.5px;color:var(--ink2);margin-top:3px">RazÃ³n: '+(fac.razonAnulacion||'â€”')+'</div></div>'
     : '';
   $('mbd').innerHTML =
     anuladaBlock
     + '<div style="background:var(--surf);padding:14px;border-radius:9px;margin-bottom:12px">'
     + '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:14px">'
     + '<div><div style="font-size:13px;color:var(--ink3);font-weight:700;letter-spacing:.5px">FACTURA</div>'
-    + '<div style="font-family:var(--fd);font-weight:800;font-size:22px;color:var(--p1)">N° '+fac.numero+'</div>'
+    + '<div style="font-family:var(--fd);font-weight:800;font-size:22px;color:var(--p1)">NÂ° '+fac.numero+'</div>'
     + '<div style="font-size:11px;color:var(--ink3);margin-top:2px">Control SENIAT: '+fac.numeroControl+'</div></div>'
     + '<div style="text-align:right">'
-    + '<div style="font-weight:800;font-size:14px">'+(fac.emisor&&fac.emisor.nombre||'—')+'</div>'
-    + '<div style="font-family:var(--fd);font-size:11px;color:var(--ink2)">'+(fac.emisor&&fac.emisor.rif||'—')+'</div>'
+    + '<div style="font-weight:800;font-size:14px">'+(fac.emisor&&fac.emisor.nombre||'â€”')+'</div>'
+    + '<div style="font-family:var(--fd);font-size:11px;color:var(--ink2)">'+(fac.emisor&&fac.emisor.rif||'â€”')+'</div>'
     + '<div style="font-size:10.5px;color:var(--ink3);margin-top:3px">'+(fac.emisor&&fac.emisor.direccion||'')+'</div>'
     + (fac.emisor&&fac.emisor.tel?'<div style="font-size:10.5px;color:var(--ink3)">Tel: '+fac.emisor.tel+'</div>':'')
     + '</div></div>'
     + '<hr style="border:none;border-top:1px dashed var(--ln);margin:10px 0">'
     + '<div style="display:flex;justify-content:space-between;gap:14px;margin-bottom:10px">'
     + '<div style="flex:1"><div style="font-size:10px;color:var(--ink3);font-weight:700;letter-spacing:.5px">FACTURAR A</div>'
-    + '<div style="font-weight:700;font-size:13px;margin-top:2px">'+(fac.cliente&&fac.cliente.nombre||'—')+'</div>'
+    + '<div style="font-weight:700;font-size:13px;margin-top:2px">'+(fac.cliente&&fac.cliente.nombre||'â€”')+'</div>'
     + (fac.cliente&&fac.cliente.ci?'<div style="font-family:var(--fd);font-size:11px;color:var(--ink2)">C.I./RIF: '+fac.cliente.ci+'</div>':'')
     + (fac.cliente&&fac.cliente.tel?'<div style="font-size:11px;color:var(--ink2)">Tel: '+fac.cliente.tel+'</div>':'')
     + (fac.cliente&&fac.cliente.direccion?'<div style="font-size:11px;color:var(--ink2)">'+fac.cliente.direccion+'</div>':'')
@@ -612,9 +504,9 @@ function abrirVerFactura(facId){
     + '<div style="display:flex;justify-content:space-between;font-size:15px;padding:6px 0;font-weight:800;border-top:2px solid var(--ln);margin-top:5px"><span>TOTAL:</span><span style="font-family:var(--fd);color:var(--green)">'+fmt(fac.total)+'</span></div>'
     + '</div></div>'
     + '<div style="font-size:10px;color:var(--ink3);text-align:center;margin-top:14px;padding-top:10px;border-top:1px dashed var(--ln);font-style:italic">Son: '+_numeroALetras(fac.total)+'</div>'
-    + '<div style="font-size:9.5px;color:var(--ink3);text-align:center;margin-top:5px">Emitida el '+fmtFechaHora(fac.fechaCreacion)+' · Método: '+(fac.metodo||'—')+(fac.referencia?' · Ref: '+fac.referencia:'')+'</div>'
+    + '<div style="font-size:9.5px;color:var(--ink3);text-align:center;margin-top:5px">Emitida el '+fmtFechaHora(fac.fechaCreacion)+' Â· MÃ©todo: '+(fac.metodo||'â€”')+(fac.referencia?' Â· Ref: '+fac.referencia:'')+'</div>'
     + '</div>';
-  var ftHtml = '<button class="btn btn-g" onclick="abrirDetallePago(\''+fac.pagoId+'\')">â†Â Volver al pago</button>';
+  var ftHtml = '<button class="btn btn-g" onclick="abrirDetallePago(\''+fac.pagoId+'\')">â† Volver al pago</button>';
   if(!fac.anulada){
     ftHtml += '<button class="btn btn-s" onclick="abrirImprimirFactura(\''+fac.id+'\')"> Imprimir</button>';
     ftHtml += '<button class="btn btn-d" onclick="abrirAnularFactura(\''+fac.id+'\')">Anular</button>';
@@ -625,35 +517,35 @@ function abrirVerFactura(facId){
   $('ov').style.display='flex';
 }
 
-// Modal: elegir formato de impresión
+// Modal: elegir formato de impresiÃ³n
 function abrirImprimirFactura(facId){
   var fac = (S.facturas||[]).find(function(x){ return x.id === facId; });
   if(!fac){ toast('Factura no encontrada','error'); return; }
   setMicon('imprimir');
   $('mtt').textContent='Imprimir Factura';
-  $('msb').textContent='N° '+fac.numero;
+  $('msb').textContent='NÂ° '+fac.numero;
   $('modal-box').className='modal';
   $('mbd').innerHTML =
-    '<div style="font-size:12.5px;color:var(--ink2);margin-bottom:14px">Selecciona el formato de impresión:</div>'
+    '<div style="font-size:12.5px;color:var(--ink2);margin-bottom:14px">Selecciona el formato de impresiÃ³n:</div>'
     + '<div style="display:grid;gap:10px">'
     + '<button class="btn btn-p" style="padding:14px;text-align:left;display:flex;align-items:center;gap:12px" onclick="imprimirFactura(\''+fac.id+'\',\'carta\')">'
     + '<span style="font-family:var(--fd);font-weight:800;font-size:18px;width:60px;text-align:center"></span>'
-    + '<span><div style="font-weight:700;font-size:13.5px">Carta (8.5\" x 11\")</div><div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:400">Impresora estándar — Hoja completa</div></span>'
+    + '<span><div style="font-weight:700;font-size:13.5px">Carta (8.5\" x 11\")</div><div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:400">Impresora estÃ¡ndar â€” Hoja completa</div></span>'
     + '</button>'
     + '<button class="btn btn-p" style="padding:14px;text-align:left;display:flex;align-items:center;gap:12px" onclick="imprimirFactura(\''+fac.id+'\',\'media\')">'
     + '<span style="font-family:var(--fd);font-weight:800;font-size:18px;width:60px;text-align:center"></span>'
-    + '<span><div style="font-weight:700;font-size:13.5px">Media Carta (8.5\" x 5.5\")</div><div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:400">2 facturas por hoja — Ahorro de papel</div></span>'
+    + '<span><div style="font-weight:700;font-size:13.5px">Media Carta (8.5\" x 5.5\")</div><div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:400">2 facturas por hoja â€” Ahorro de papel</div></span>'
     + '</button>'
     + '<button class="btn btn-p" style="padding:14px;text-align:left;display:flex;align-items:center;gap:12px" onclick="imprimirFactura(\''+fac.id+'\',\'ticket\')">'
     + '<span style="font-family:var(--fd);font-weight:800;font-size:18px;width:60px;text-align:center"></span>'
-    + '<span><div style="font-weight:700;font-size:13.5px">Ticket 80mm</div><div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:400">Impresora térmica — Comprobante rápido</div></span>'
+    + '<span><div style="font-weight:700;font-size:13.5px">Ticket 80mm</div><div style="font-size:11px;color:rgba(255,255,255,.85);font-weight:400">Impresora tÃ©rmica â€” Comprobante rÃ¡pido</div></span>'
     + '</button>'
     + '</div>';
-  $('mft').innerHTML = '<button class="btn btn-g" onclick="abrirVerFactura(\''+fac.id+'\')">â†Â Volver</button>';
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="abrirVerFactura(\''+fac.id+'\')">â† Volver</button>';
   $('ov').style.display='flex';
 }
 
-// Genera HTML imprimible y abre ventana de impresión
+// Genera HTML imprimible y abre ventana de impresiÃ³n
 function imprimirFactura(facId, formato){
   var fac = (S.facturas||[]).find(function(x){ return x.id === facId; });
   if(!fac){ toast('Factura no encontrada','error'); return; }
@@ -678,7 +570,7 @@ function imprimirFactura(facId, formato){
   }
   var contenidoFactura = '';
   if(formato === 'ticket'){
-    // Diseño compacto monoespaciado para ticket
+    // DiseÃ±o compacto monoespaciado para ticket
     contenidoFactura =
       '<div style="text-align:center;margin-bottom:6mm">'
       + '<div style="font-weight:900;font-size:'+fontTitle+';margin-bottom:1mm">'+fac.emisor.nombre+'</div>'
@@ -688,7 +580,7 @@ function imprimirFactura(facId, formato){
       + '</div>'
       + '<div style="border-top:1px dashed #000;border-bottom:1px dashed #000;padding:2mm 0;text-align:center;margin-bottom:3mm">'
       + '<div style="font-weight:900;font-size:12px">FACTURA</div>'
-      + '<div style="font-size:11px;font-weight:700">N° '+fac.numero+'</div>'
+      + '<div style="font-size:11px;font-weight:700">NÂ° '+fac.numero+'</div>'
       + '<div style="font-size:9px">Control: '+fac.numeroControl+'</div>'
       + '</div>'
       + '<div style="font-size:9.5px;line-height:1.5;margin-bottom:3mm">'
@@ -706,7 +598,7 @@ function imprimirFactura(facId, formato){
       + '</div>'
       + '<div style="text-align:center;font-size:8.5px;margin-top:4mm;font-style:italic">Son: '+_numeroALetras(fac.total)+'</div>'
       + '<div style="text-align:center;font-size:8.5px;margin-top:2mm;color:#666">'+fmtFechaHora(fac.fechaCreacion)+'</div>'
-      + '<div style="text-align:center;font-size:8px;margin-top:3mm">¡Gracias por su pago!</div>';
+      + '<div style="text-align:center;font-size:8px;margin-top:3mm">Â¡Gracias por su pago!</div>';
   } else {
     // Carta o Media: formato profesional
     contenidoFactura =
@@ -720,7 +612,7 @@ function imprimirFactura(facId, formato){
       + '</td><td style="vertical-align:top;text-align:right">'
       + '<div style="border:2px solid #1a1a1a;padding:8px 14px;display:inline-block">'
       + '<div style="font-weight:900;font-size:'+headSize+';letter-spacing:1px">FACTURA</div>'
-      + '<div style="font-family:monospace;font-weight:700;font-size:'+headSize+';margin-top:2px">N° '+fac.numero+'</div>'
+      + '<div style="font-family:monospace;font-weight:700;font-size:'+headSize+';margin-top:2px">NÂ° '+fac.numero+'</div>'
       + '<div style="font-family:monospace;font-size:'+fontSize+';margin-top:2px">Control: '+fac.numeroControl+'</div>'
       + '</div>'
       + '</td></tr></table>'
@@ -732,17 +624,17 @@ function imprimirFactura(facId, formato){
       + (fac.cliente.tel ? '<div>Tel: '+fac.cliente.tel+'</div>' : '')
       + (fac.cliente.direccion ? '<div>'+fac.cliente.direccion+'</div>' : '')
       + '</td><td style="vertical-align:top;text-align:right">'
-      + '<div style="font-weight:700;color:#666;font-size:9px;letter-spacing:.5px;margin-bottom:3px">FECHA DE EMISIÓN</div>'
+      + '<div style="font-weight:700;color:#666;font-size:9px;letter-spacing:.5px;margin-bottom:3px">FECHA DE EMISIÃ“N</div>'
       + '<div style="font-weight:700;font-size:'+headSize+'">'+fmtFecha(fac.fechaEmision)+'</div>'
       + '</td></tr></table>'
       + '<table style="width:100%;border-collapse:collapse;margin-bottom:'+ (formato==='media'?'8px':'14px') +';font-size:'+fontSize+'">'
-      + '<thead><tr style="background:#f0f0f0"><th style="text-align:left;padding:8px;border:1px solid #ccc">CONCEPTO / DESCRIPCIÓN</th><th style="text-align:right;padding:8px;border:1px solid #ccc;width:120px">MONTO</th></tr></thead>'
+      + '<thead><tr style="background:#f0f0f0"><th style="text-align:left;padding:8px;border:1px solid #ccc">CONCEPTO / DESCRIPCIÃ“N</th><th style="text-align:right;padding:8px;border:1px solid #ccc;width:120px">MONTO</th></tr></thead>'
       + '<tbody><tr><td style="padding:10px;border:1px solid #ccc;vertical-align:top">'+fac.concepto+'</td><td style="padding:10px;border:1px solid #ccc;text-align:right;font-family:monospace;font-weight:700">$'+parseFloat(fac.total).toFixed(2)+'</td></tr></tbody>'
       + '</table>'
       + '<table style="width:100%;border-collapse:collapse;font-size:'+fontSize+'">'
       + '<tr><td style="vertical-align:top;padding-right:12px;font-style:italic;color:#555">'
       + '<div style="font-size:9.5px"><strong>Son:</strong> '+_numeroALetras(fac.total)+'</div>'
-      + (fac.metodo ? '<div style="font-size:9.5px;margin-top:4px"><strong>Método de pago:</strong> '+fac.metodo+'</div>' : '')
+      + (fac.metodo ? '<div style="font-size:9.5px;margin-top:4px"><strong>MÃ©todo de pago:</strong> '+fac.metodo+'</div>' : '')
       + (fac.referencia ? '<div style="font-size:9.5px"><strong>Referencia:</strong> '+fac.referencia+'</div>' : '')
       + '</td><td style="vertical-align:top;text-align:right;width:200px">'
       + '<table style="width:100%;border-collapse:collapse">'
@@ -765,7 +657,7 @@ function imprimirFactura(facId, formato){
     + '<script>setTimeout(function(){window.print();},250);<\/script>'
     + '</body></html>';
   var w = window.open('', '_blank', 'width=900,height=700');
-  if(!w){ toast('No se pudo abrir la ventana de impresión. Verifica el bloqueador de popups.','error'); return; }
+  if(!w){ toast('No se pudo abrir la ventana de impresiÃ³n. Verifica el bloqueador de popups.','error'); return; }
   w.document.open();
   w.document.write(html);
   w.document.close();
@@ -775,21 +667,21 @@ function imprimirFactura(facId, formato){
 function abrirAnularFactura(facId){
   var fac = (S.facturas||[]).find(function(x){ return x.id === facId; });
   if(!fac){ toast('Factura no encontrada','error'); return; }
-  if(fac.anulada){ toast('Esta factura ya está anulada','warning'); return; }
+  if(fac.anulada){ toast('Esta factura ya estÃ¡ anulada','warning'); return; }
   setMicon('anular');
   $('mtt').textContent='Anular Factura';
-  $('msb').textContent='N° '+fac.numero;
+  $('msb').textContent='NÂ° '+fac.numero;
   $('modal-box').className='modal';
   $('mbd').innerHTML =
     '<div style="background:rgba(255,71,87,0.12);border:1px solid rgba(255,71,87,0.35);border-radius:9px;padding:12px;margin-bottom:14px">'
-    + '<div style="font-weight:800;color:var(--red);font-size:13px;margin-bottom:5px">âš  Acción irreversible</div>'
+    + '<div style="font-weight:800;color:var(--red);font-size:13px;margin-bottom:5px">âš  AcciÃ³n irreversible</div>'
     + '<div style="font-size:11.5px;color:var(--ink2);line-height:1.55">Una factura anulada queda registrada permanentemente como tal. Por exigencia SENIAT:</div>'
     + '<ul style="font-size:11.5px;color:var(--ink2);margin-top:6px;padding-left:20px;line-height:1.5">'
-    + '<li>El número de la factura ('+fac.numero+') no podrá reutilizarse</li>'
-    + '<li>El número de control ('+fac.numeroControl+') no podrá reutilizarse</li>'
-    + '<li>La factura permanecerá en el sistema con estado "ANULADA"</li>'
+    + '<li>El nÃºmero de la factura ('+fac.numero+') no podrÃ¡ reutilizarse</li>'
+    + '<li>El nÃºmero de control ('+fac.numeroControl+') no podrÃ¡ reutilizarse</li>'
+    + '<li>La factura permanecerÃ¡ en el sistema con estado "ANULADA"</li>'
     + '</ul></div>'
-    + '<div class="fg"><label>Razón de anulación <span style="color:var(--red)">*</span></label>'
+    + '<div class="fg"><label>RazÃ³n de anulaciÃ³n <span style="color:var(--red)">*</span></label>'
     + '<textarea class="fi" id="anu_razon" rows="3" placeholder="Ej: Error en datos del cliente, monto incorrecto, etc."></textarea></div>';
   $('mft').innerHTML =
     '<button class="btn btn-g" onclick="abrirVerFactura(\''+fac.id+'\')">Cancelar</button>'
@@ -801,7 +693,7 @@ function confirmarAnularFactura(facId){
   var fi = (S.facturas||[]).findIndex(function(x){ return x.id === facId; });
   if(fi < 0){ toast('Factura no encontrada','error'); return; }
   var razon = ($('anu_razon')&&$('anu_razon').value||'').trim();
-  if(!razon){ toast('Debes indicar la razón de anulación','error'); return; }
+  if(!razon){ toast('Debes indicar la razÃ³n de anulaciÃ³n','error'); return; }
   S.facturas[fi].anulada = true;
   S.facturas[fi].fechaAnulacion = new Date().toISOString();
   S.facturas[fi].razonAnulacion = razon;
@@ -813,21 +705,21 @@ function confirmarAnularFactura(facId){
 }
 
 
-// â•”â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•—
+// â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
 // â•‘  LIBRO DE VENTAS SENIAT                                   â•‘
-// â•‘  Reporte fiscal con cálculo de IVA y IGTF para entregar   â•‘
+// â•‘  Reporte fiscal con cÃ¡lculo de IVA y IGTF para entregar   â•‘
 // â•‘  al contador. NO emite facturas legales.                  â•‘
-// â•šâ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-// Configuración (se guarda en localStorage)
+// ConfiguraciÃ³n (se guarda en localStorage)
 var _libroSeniatCfg = {
-  ivaActivo: false,        // ¿Cobro IVA?
+  ivaActivo: false,        // Â¿Cobro IVA?
   ivaAlicuota: 16,          // 16, 8, 0
-  esSPE: false,             // ¿Soy Sujeto Pasivo Especial (cobro IGTF)?
+  esSPE: false,             // Â¿Soy Sujeto Pasivo Especial (cobro IGTF)?
   igtfAlicuota: 3,          // % IGTF (default 3%)
-  // Métodos que se consideran "moneda extranjera" (gravados con IGTF si esSPE=true)
-  metodosDivisa: ['Zelle','USDT','Efectivo USD','Efectivo','PayPal','Binance','Wise','Cash App','Dolar','Dólar'],
-  // Período seleccionado
+  // MÃ©todos que se consideran "moneda extranjera" (gravados con IGTF si esSPE=true)
+  metodosDivisa: ['Zelle','USDT','Efectivo USD','Efectivo','PayPal','Binance','Wise','Cash App','Dolar','DÃ³lar'],
+  // PerÃ­odo seleccionado
   periodoTipo: 'mes',       // 'mes' | 'rango'
   periodoMes: '',           // YYYY-MM
   periodoDesde: '',         // YYYY-MM-DD
@@ -853,14 +745,14 @@ function _libroSeniatSaveCfg(){
   try{ localStorage.setItem('libroSeniatCfg_v1', JSON.stringify(_libroSeniatCfg)); }catch(e){}
 }
 
-// Determina si un método de pago es divisa (gravado con IGTF)
-// Estrategia 1: Si el nombre del método coincide con una cuenta bancaria configurada,
-//   usar el campo `moneda` de esa cuenta (USD = divisa, BS = bolívares)
+// Determina si un mÃ©todo de pago es divisa (gravado con IGTF)
+// Estrategia 1: Si el nombre del mÃ©todo coincide con una cuenta bancaria configurada,
+//   usar el campo `moneda` de esa cuenta (USD = divisa, BS = bolÃ­vares)
 // Estrategia 2 (fallback): Si no hay match con cuenta, usar lista de palabras clave
 function _libroSeniatEsDivisa(metodo){
   if(!metodo) return false;
   var nombreMetodo = String(metodo).trim();
-  // Buscar cuenta bancaria con ese nombre (insensible a mayúsculas)
+  // Buscar cuenta bancaria con ese nombre (insensible a mayÃºsculas)
   var cuentas = (typeof _cuentasBanc !== 'undefined' && _cuentasBanc) ? _cuentasBanc : [];
   var cuenta = cuentas.find(function(c){
     return (c.nombre||'').trim().toLowerCase() === nombreMetodo.toLowerCase();
@@ -869,17 +761,17 @@ function _libroSeniatEsDivisa(metodo){
     // moneda 'USD' o cualquier cosa distinta a 'BS' se considera divisa
     return (cuenta.moneda||'USD').toUpperCase() !== 'BS';
   }
-  // Fallback: palabras clave (por si el método no coincide con cuenta configurada)
+  // Fallback: palabras clave (por si el mÃ©todo no coincide con cuenta configurada)
   var m = nombreMetodo.toLowerCase();
-  // "Bs" / "bolívares" / "bolivares" â†’ bolívares (NO divisa)
-  if(m.indexOf('bs') !== -1 || m.indexOf('bolivar') !== -1 || m.indexOf('bolívar') !== -1) return false;
-  // Si contiene palabras de divisa explícitas
+  // "Bs" / "bolÃ­vares" / "bolivares" â†’ bolÃ­vares (NO divisa)
+  if(m.indexOf('bs') !== -1 || m.indexOf('bolivar') !== -1 || m.indexOf('bolÃ­var') !== -1) return false;
+  // Si contiene palabras de divisa explÃ­citas
   return _libroSeniatCfg.metodosDivisa.some(function(d){
     return m.indexOf(d.toLowerCase()) !== -1;
   });
 }
 
-// Filtra pagos según período configurado
+// Filtra pagos segÃºn perÃ­odo configurado
 function _libroSeniatFiltrarPagos(){
   var pagos = (S.pagos||[]).filter(function(p){
     return !p.eliminado && p.estado==='confirmado';
@@ -902,7 +794,7 @@ function _libroSeniatFiltrarPagos(){
   });
 }
 
-// Calcula desglose fiscal de un pago según configuración actual
+// Calcula desglose fiscal de un pago segÃºn configuraciÃ³n actual
 // Asume: monto pagado YA INCLUYE IVA (sacar base dividiendo entre 1+iva%)
 function _libroSeniatDesglose(pago){
   var total = parseFloat(pago.monto)||0;
@@ -915,8 +807,8 @@ function _libroSeniatDesglose(pago){
     base = total;
     iva = 0;
   }
-  // IGTF aplica solo si es SPE Y método es divisa. IGTF se calcula adicional al total.
-  // Sin embargo, en práctica el IGTF se documenta sobre el monto pagado en divisas (el total recibido)
+  // IGTF aplica solo si es SPE Y mÃ©todo es divisa. IGTF se calcula adicional al total.
+  // Sin embargo, en prÃ¡ctica el IGTF se documenta sobre el monto pagado en divisas (el total recibido)
   var igtf = 0;
   var igtfAplica = false;
   if(_libroSeniatCfg.esSPE && _libroSeniatEsDivisa(pago.metodo)){
@@ -930,7 +822,7 @@ function _libroSeniatDesglose(pago){
     iva: iva,
     igtf: igtf,
     igtfAplica: igtfAplica,
-    totalConIgtf: total + igtf  // Lo que el cliente debió pagar realmente con IGTF
+    totalConIgtf: total + igtf  // Lo que el cliente debiÃ³ pagar realmente con IGTF
   };
 }
 
@@ -962,7 +854,7 @@ function _renderLibroSeniat(){
     totConIgtf += d.totalConIgtf;
     var ci = _libroSeniatGetCI(p.cli);
     var fac = (S.facturas||[]).find(function(f){ return f.pagoId === p.id; });
-    var nFac = fac && !fac.anulada ? fac.numero : '—';
+    var nFac = fac && !fac.anulada ? fac.numero : 'â€”';
     return '<tr style="border-bottom:1px solid var(--rim2)">'
       + '<td class="tds" style="padding:6px 8px">'+(idx+1)+'</td>'
       + '<td class="tds" style="padding:6px 8px">'+(p.fecha||'')+'</td>'
@@ -971,14 +863,14 @@ function _renderLibroSeniat(){
       + '<td class="tds" style="padding:6px 8px">'+(p.cli||'')+'</td>'
       + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);font-size:10.5px">'+(ci||'<span style="color:var(--red)">SIN CI</span>')+'</td>'
       + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right">'+fmt(d.base)+'</td>'
-      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right;color:var(--ink3)">'+(d.aliv>0 ? d.aliv+'%' : '—')+'</td>'
+      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right;color:var(--ink3)">'+(d.aliv>0 ? d.aliv+'%' : 'â€”')+'</td>'
       + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right">'+fmt(d.iva)+'</td>'
-      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right;'+(d.igtfAplica?'color:var(--amber)':'color:var(--ink3)')+'">'+(d.igtfAplica ? fmt(d.igtf) : '—')+'</td>'
+      + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right;'+(d.igtfAplica?'color:var(--amber)':'color:var(--ink3)')+'">'+(d.igtfAplica ? fmt(d.igtf) : 'â€”')+'</td>'
       + '<td class="tds" style="padding:6px 8px;font-family:var(--fd);text-align:right;font-weight:700">'+fmt(d.total)+'</td>'
-      + '<td class="tds" style="padding:6px 8px;color:var(--ink3);font-size:10.5px">'+(p.metodo||'—')+'</td>'
+      + '<td class="tds" style="padding:6px 8px;color:var(--ink3);font-size:10.5px">'+(p.metodo||'â€”')+'</td>'
       + '</tr>';
   }).join('');
-  // Período label
+  // PerÃ­odo label
   var periodoLbl = '';
   if(cfg.periodoTipo === 'mes' && cfg.periodoMes){
     var partes = cfg.periodoMes.split('-');
@@ -995,51 +887,51 @@ function _renderLibroSeniat(){
   var clientesSinCI = pagos.filter(function(p){ return !_libroSeniatGetCI(p.cli); }).length;
   return ''
     + '<div class="card" style="margin-bottom:14px">'
-    + '<div class="ch"><div><div class="ct">âš– Libro de Ventas SENIAT</div><div class="cs">Reporte fiscal · No es factura legal</div></div></div>'
+    + '<div class="ch"><div><div class="ct">âš– Libro de Ventas SENIAT</div><div class="cs">Reporte fiscal Â· No es factura legal</div></div></div>'
     + '<div style="background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.3);border-radius:9px;padding:11px 13px;font-size:11.5px;color:var(--ink2);line-height:1.55">'
-    + '<strong style="color:var(--amber)">âš  Importante:</strong> Este reporte es un auxiliar contable para entregar a tu contador o al SENIAT en caso de fiscalización. '
-    + '<strong>No sustituye la facturación legal</strong> (talonarios autorizados, máquina fiscal o sistema certificado SENIAT). '
-    + 'Los cálculos asumen que el monto cobrado <strong>YA INCLUYE IVA</strong> (base = monto / 1.16 si IVA 16%). Verifica con tu contador antes de entregar.'
+    + '<strong style="color:var(--amber)">âš  Importante:</strong> Este reporte es un auxiliar contable para entregar a tu contador o al SENIAT en caso de fiscalizaciÃ³n. '
+    + '<strong>No sustituye la facturaciÃ³n legal</strong> (talonarios autorizados, mÃ¡quina fiscal o sistema certificado SENIAT). '
+    + 'Los cÃ¡lculos asumen que el monto cobrado <strong>YA INCLUYE IVA</strong> (base = monto / 1.16 si IVA 16%). Verifica con tu contador antes de entregar.'
     + '</div>'
     + '</div>'
-    // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â CONFIGURACIÓN â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+    // â•â•â•â•â•â•â•â• CONFIGURACIÃ“N â•â•â•â•â•â•â•â•
     + '<div class="card" style="margin-bottom:14px">'
-    + '<div class="ch"><div><div class="ct">Configuración fiscal</div><div class="cs">Define cómo calcular impuestos · Pregunta a tu contador</div></div></div>'
+    + '<div class="ch"><div><div class="ct">ConfiguraciÃ³n fiscal</div><div class="cs">Define cÃ³mo calcular impuestos Â· Pregunta a tu contador</div></div></div>'
     + '<div class="fgr" style="gap:12px;margin-top:6px">'
-    + '<div class="fg"><label>¿Cobras IVA en tus operaciones?</label>'
+    + '<div class="fg"><label>Â¿Cobras IVA en tus operaciones?</label>'
     + '<select class="fs" id="ls_iva_activo" onchange="_libroSeniatChange()">'
-    + '<option value="no" '+(!cfg.ivaActivo?'selected':'')+'>No — Estoy exento o no aplica</option>'
-    + '<option value="si" '+(cfg.ivaActivo?'selected':'')+'>Sí — Cobro IVA</option>'
+    + '<option value="no" '+(!cfg.ivaActivo?'selected':'')+'>No â€” Estoy exento o no aplica</option>'
+    + '<option value="si" '+(cfg.ivaActivo?'selected':'')+'>SÃ­ â€” Cobro IVA</option>'
     + '</select></div>'
-    + '<div class="fg"><label>Alícuota IVA</label>'
+    + '<div class="fg"><label>AlÃ­cuota IVA</label>'
     + '<select class="fs" id="ls_iva_aliv" onchange="_libroSeniatChange()" '+(cfg.ivaActivo?'':'disabled')+'>'
     + '<option value="16" '+(cfg.ivaAlicuota==16?'selected':'')+'>16% (general)</option>'
     + '<option value="8" '+(cfg.ivaAlicuota==8?'selected':'')+'>8% (reducida)</option>'
-    + '<option value="0" '+(cfg.ivaAlicuota==0?'selected':'')+'>0% (exportación)</option>'
+    + '<option value="0" '+(cfg.ivaAlicuota==0?'selected':'')+'>0% (exportaciÃ³n)</option>'
     + '</select></div>'
-    + '<div class="fg"><label>¿Eres Sujeto Pasivo Especial (SPE)?</label>'
+    + '<div class="fg"><label>Â¿Eres Sujeto Pasivo Especial (SPE)?</label>'
     + '<select class="fs" id="ls_spe" onchange="_libroSeniatChange()">'
-    + '<option value="no" '+(!cfg.esSPE?'selected':'')+'>No — No cobro IGTF</option>'
-    + '<option value="si" '+(cfg.esSPE?'selected':'')+'>Sí — Soy SPE, cobro IGTF en pagos en divisa</option>'
+    + '<option value="no" '+(!cfg.esSPE?'selected':'')+'>No â€” No cobro IGTF</option>'
+    + '<option value="si" '+(cfg.esSPE?'selected':'')+'>SÃ­ â€” Soy SPE, cobro IGTF en pagos en divisa</option>'
     + '</select></div>'
-    + '<div class="fg"><label>Alícuota IGTF</label>'
+    + '<div class="fg"><label>AlÃ­cuota IGTF</label>'
     + '<select class="fs" id="ls_igtf_aliv" onchange="_libroSeniatChange()" '+(cfg.esSPE?'':'disabled')+'>'
-    + '<option value="3" '+(cfg.igtfAlicuota==3?'selected':'')+'>3% (estándar — divisas)</option>'
+    + '<option value="3" '+(cfg.igtfAlicuota==3?'selected':'')+'>3% (estÃ¡ndar â€” divisas)</option>'
     + '<option value="2" '+(cfg.igtfAlicuota==2?'selected':'')+'>2% (otros casos)</option>'
     + '</select></div>'
     + '</div>'
     + '<div style="margin-top:8px;padding:10px;background:var(--gs);border-radius:8px;font-size:11px;color:var(--ink3);line-height:1.55">'
-    + '<strong style="color:var(--ink2)">¿Cómo se detecta si un pago genera IGTF?</strong> '
-    + 'El sistema usa la <strong>moneda configurada de cada cuenta bancaria</strong> en Configuración: '
+    + '<strong style="color:var(--ink2)">Â¿CÃ³mo se detecta si un pago genera IGTF?</strong> '
+    + 'El sistema usa la <strong>moneda configurada de cada cuenta bancaria</strong> en ConfiguraciÃ³n: '
     + 'cuentas en <strong>USD</strong> generan IGTF, cuentas en <strong>Bs</strong> no. '
-    + 'Si un método no coincide con ninguna cuenta configurada, se detecta por palabras clave (Zelle, USDT, etc).'
+    + 'Si un mÃ©todo no coincide con ninguna cuenta configurada, se detecta por palabras clave (Zelle, USDT, etc).'
     + '</div>'
     + '</div>'
-    // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â PERÍODO â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+    // â•â•â•â•â•â•â•â• PERÃODO â•â•â•â•â•â•â•â•
     + '<div class="card" style="margin-bottom:14px">'
-    + '<div class="ch"><div><div class="ct">Período del reporte</div><div class="cs">'+periodoLbl+'</div></div></div>'
+    + '<div class="ch"><div><div class="ct">PerÃ­odo del reporte</div><div class="cs">'+periodoLbl+'</div></div></div>'
     + '<div class="fgr" style="gap:12px">'
-    + '<div class="fg"><label>Tipo de período</label>'
+    + '<div class="fg"><label>Tipo de perÃ­odo</label>'
     + '<select class="fs" id="ls_periodo_tipo" onchange="_libroSeniatChange()">'
     + '<option value="mes" '+(cfg.periodoTipo==='mes'?'selected':'')+'>Por mes</option>'
     + '<option value="rango" '+(cfg.periodoTipo==='rango'?'selected':'')+'>Rango personalizado</option>'
@@ -1050,19 +942,19 @@ function _renderLibroSeniat(){
           + '<div class="fg"><label>Hasta</label><input class="fi" type="date" id="ls_hasta" value="'+(cfg.periodoHasta||'')+'" onchange="_libroSeniatChange()"></div>')
     + '</div>'
     + '</div>'
-    // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â TOTALES â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+    // â•â•â•â•â•â•â•â• TOTALES â•â•â•â•â•â•â•â•
     + '<div class="card" style="margin-bottom:14px">'
-    + '<div class="ch"><div><div class="ct">Totales del período</div><div class="cs">'+pagos.length+' operaciones</div></div></div>'
+    + '<div class="ch"><div><div class="ct">Totales del perÃ­odo</div><div class="cs">'+pagos.length+' operaciones</div></div></div>'
     + '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:6px">'
     + '<div style="background:var(--gs);padding:11px;border-radius:9px;"><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Base imponible</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totBase)+'</div></div>'
-    + '<div style="background:var(--gs);padding:11px;border-radius:9px;"><div style="font-size:9.5px;font-weight:800;color:var(--p1);text-transform:uppercase;letter-spacing:.5px">IVA débito fiscal</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totIva)+'</div></div>'
+    + '<div style="background:var(--gs);padding:11px;border-radius:9px;"><div style="font-size:9.5px;font-weight:800;color:var(--p1);text-transform:uppercase;letter-spacing:.5px">IVA dÃ©bito fiscal</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totIva)+'</div></div>'
     + '<div style="background:var(--gs);padding:11px;border-radius:9px;"><div style="font-size:9.5px;font-weight:800;color:var(--amber);text-transform:uppercase;letter-spacing:.5px">IGTF percibido</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totIgtf)+'</div></div>'
     + '<div style="background:var(--gs);padding:11px;border-radius:9px;"><div style="font-size:9.5px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px">Total cobrado</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totTotal)+'</div></div>'
     + '<div style="background:var(--gs);padding:11px;border-radius:9px;"><div style="font-size:9.5px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.5px">Total + IGTF</div><div style="font-family:var(--fd);font-weight:800;font-size:16px;margin-top:3px">'+fmt(totConIgtf)+'</div></div>'
     + '</div>'
     + (clientesSinCI > 0 ? '<div style="margin-top:10px;padding:9px 11px;background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.25);border-radius:8px;font-size:11px;color:var(--red)">âš  Hay <strong>'+clientesSinCI+' pago'+(clientesSinCI>1?'s':'')+'</strong> con cliente sin CI/RIF registrado. SENIAT lo exige para el libro.</div>' : '')
     + '</div>'
-    // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â TABLA â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+    // â•â•â•â•â•â•â•â• TABLA â•â•â•â•â•â•â•â•
     + '<div class="card">'
     + '<div class="ch"><div><div class="ct">Detalle de operaciones</div><div class="cs">Estilo Libro de Ventas SENIAT</div></div>'
     + '<div style="display:flex;gap:6px">'
@@ -1070,13 +962,13 @@ function _renderLibroSeniat(){
     + '<button class="btn btn-p btn-sm" onclick="_libroSeniatImprimir()"> Imprimir / PDF</button>'
     + '</div></div>'
     + (pagos.length === 0
-      ? '<div style="padding:30px 0;text-align:center;color:var(--ink3);font-size:13px">Sin operaciones en este período</div>'
+      ? '<div style="padding:30px 0;text-align:center;color:var(--ink3);font-size:13px">Sin operaciones en este perÃ­odo</div>'
       : '<div class="tw" style="overflow-x:auto"><table style="font-size:11.5px;min-width:1100px">'
         + '<thead><tr style="background:var(--gs)">'
         + '<th style="padding:8px;text-align:left">#</th>'
         + '<th style="padding:8px;text-align:left">Fecha</th>'
         + '<th style="padding:8px;text-align:left">Comprob.</th>'
-        + '<th style="padding:8px;text-align:left">N° Factura</th>'
+        + '<th style="padding:8px;text-align:left">NÂ° Factura</th>'
         + '<th style="padding:8px;text-align:left">Cliente</th>'
         + '<th style="padding:8px;text-align:left">RIF/C.I.</th>'
         + '<th style="padding:8px;text-align:right">Base</th>'
@@ -1084,7 +976,7 @@ function _renderLibroSeniat(){
         + '<th style="padding:8px;text-align:right">IVA</th>'
         + '<th style="padding:8px;text-align:right">IGTF</th>'
         + '<th style="padding:8px;text-align:right">Total</th>'
-        + '<th style="padding:8px;text-align:left">Método</th>'
+        + '<th style="padding:8px;text-align:left">MÃ©todo</th>'
         + '</tr></thead>'
         + '<tbody>'+filas+'</tbody>'
         + '<tfoot><tr style="background:var(--gs);font-weight:800">'
@@ -1099,7 +991,7 @@ function _renderLibroSeniat(){
     + '</div>';
 }
 
-// Maneja cualquier cambio en los selects/inputs de configuración
+// Maneja cualquier cambio en los selects/inputs de configuraciÃ³n
 function _libroSeniatChange(){
   var cfg = _libroSeniatCfg;
   var el;
@@ -1132,13 +1024,13 @@ function _libroSeniatExportarCSV(){
   // Encabezado
   rows.push(['LIBRO DE VENTAS - REPORTE AUXILIAR SENIAT']);
   rows.push(['Empresa:', emp.nombre||'', 'RIF:', emp.rif||'']);
-  rows.push(['Período:', periodoLbl]);
+  rows.push(['PerÃ­odo:', periodoLbl]);
   rows.push(['IVA aplicado:', cfg.ivaActivo ? cfg.ivaAlicuota+'%' : 'No aplica']);
   rows.push(['IGTF (SPE):', cfg.esSPE ? cfg.igtfAlicuota+'% en pagos divisa' : 'No aplica']);
   rows.push(['Generado:', new Date().toLocaleString('es-VE')]);
   rows.push([]);
   // Headers de tabla
-  rows.push(['#','Fecha','N° Comprobante','N° Factura','Cliente','RIF/C.I.','Base Imponible','% IVA','IVA','IGTF','Total','Método de pago']);
+  rows.push(['#','Fecha','NÂ° Comprobante','NÂ° Factura','Cliente','RIF/C.I.','Base Imponible','% IVA','IVA','IGTF','Total','MÃ©todo de pago']);
   var totBase=0, totIva=0, totIgtf=0, totTotal=0;
   pagos.forEach(function(p, idx){
     var d = _libroSeniatDesglose(p);
@@ -1182,10 +1074,10 @@ function _libroSeniatExportarCSV(){
   document.body.appendChild(a);
   a.click();
   setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
-  if(typeof toast === 'function') toast('Libro exportado · CSV','success');
+  if(typeof toast === 'function') toast('Libro exportado Â· CSV','success');
 }
 
-// Imprimir (también permite guardar como PDF desde el diálogo del navegador)
+// Imprimir (tambiÃ©n permite guardar como PDF desde el diÃ¡logo del navegador)
 function _libroSeniatImprimir(){
   var pagos = _libroSeniatFiltrarPagos();
   pagos.sort(function(a,b){ return (a.fecha||'').localeCompare(b.fecha||''); });
@@ -1204,7 +1096,7 @@ function _libroSeniatImprimir(){
     var d = _libroSeniatDesglose(p);
     var ci = _libroSeniatGetCI(p.cli);
     var fac = (S.facturas||[]).find(function(f){ return f.pagoId === p.id; });
-    var nFac = fac && !fac.anulada ? fac.numero : '—';
+    var nFac = fac && !fac.anulada ? fac.numero : 'â€”';
     totBase+=d.base; totIva+=d.iva; totIgtf+=d.igtf; totTotal+=d.total;
     return '<tr>'
       +'<td>'+(idx+1)+'</td>'
@@ -1212,11 +1104,11 @@ function _libroSeniatImprimir(){
       +'<td style="font-family:monospace;font-size:9px">'+(p.id||'')+'</td>'
       +'<td style="font-family:monospace;font-size:9px">'+nFac+'</td>'
       +'<td>'+(p.cli||'')+'</td>'
-      +'<td style="font-family:monospace;font-size:9px">'+(ci||'—')+'</td>'
+      +'<td style="font-family:monospace;font-size:9px">'+(ci||'â€”')+'</td>'
       +'<td class="num">'+d.base.toFixed(2)+'</td>'
-      +'<td class="num">'+(d.aliv||'—')+(d.aliv>0?'%':'')+'</td>'
+      +'<td class="num">'+(d.aliv||'â€”')+(d.aliv>0?'%':'')+'</td>'
       +'<td class="num">'+d.iva.toFixed(2)+'</td>'
-      +'<td class="num">'+(d.igtfAplica ? d.igtf.toFixed(2) : '—')+'</td>'
+      +'<td class="num">'+(d.igtfAplica ? d.igtf.toFixed(2) : 'â€”')+'</td>'
       +'<td class="num"><strong>'+d.total.toFixed(2)+'</strong></td>'
       +'<td style="font-size:9px">'+(p.metodo||'')+'</td>'
       +'</tr>';
@@ -1243,11 +1135,11 @@ function _libroSeniatImprimir(){
     + '@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}'
     + '</style></head><body>'
     + '<div class="hd">'
-    + '<h1>LIBRO DE VENTAS — REPORTE AUXILIAR</h1>'
-    + '<div class="sb">Documento de uso interno y contable · Período: <b>'+periodoLbl+'</b></div>'
+    + '<h1>LIBRO DE VENTAS â€” REPORTE AUXILIAR</h1>'
+    + '<div class="sb">Documento de uso interno y contable Â· PerÃ­odo: <b>'+periodoLbl+'</b></div>'
     + '</div>'
     + '<div class="meta">'
-    + '<div><b>Razón social:</b> '+(emp.nombre||'—')+'<br><b>RIF:</b> '+(emp.rif||'—')
+    + '<div><b>RazÃ³n social:</b> '+(emp.nombre||'â€”')+'<br><b>RIF:</b> '+(emp.rif||'â€”')
     + (emp.direccion?'<br><b>Domicilio fiscal:</b> '+emp.direccion:'')+'</div>'
     + '<div style="text-align:right">'
     + '<b>IVA:</b> '+(cfg.ivaActivo?cfg.ivaAlicuota+'%':'No aplica')+'<br>'
@@ -1256,9 +1148,9 @@ function _libroSeniatImprimir(){
     + '<b>Generado:</b> '+new Date().toLocaleString('es-VE')
     + '</div></div>'
     + (pagos.length === 0
-      ? '<p style="text-align:center;padding:40px;color:#666">Sin operaciones en este período.</p>'
+      ? '<p style="text-align:center;padding:40px;color:#666">Sin operaciones en este perÃ­odo.</p>'
       : '<table>'
-        + '<thead><tr><th>#</th><th>Fecha</th><th>N° Comprob.</th><th>N° Factura</th><th>Cliente</th><th>RIF/C.I.</th><th class="num">Base</th><th class="num">% IVA</th><th class="num">IVA</th><th class="num">IGTF</th><th class="num">Total</th><th>Método</th></tr></thead>'
+        + '<thead><tr><th>#</th><th>Fecha</th><th>NÂ° Comprob.</th><th>NÂ° Factura</th><th>Cliente</th><th>RIF/C.I.</th><th class="num">Base</th><th class="num">% IVA</th><th class="num">IVA</th><th class="num">IGTF</th><th class="num">Total</th><th>MÃ©todo</th></tr></thead>'
         + '<tbody>'+rowsHtml+'</tbody>'
         + '<tfoot><tr>'
         + '<td colspan="6" style="text-align:right">TOTALES:</td>'
@@ -1269,10 +1161,10 @@ function _libroSeniatImprimir(){
         + '<td class="num">'+totTotal.toFixed(2)+'</td>'
         + '<td></td></tr></tfoot></table>')
     + '<div class="disc"><strong>Aviso legal:</strong> Este reporte es un documento auxiliar de uso interno y contable. '
-    + 'No sustituye la facturación legal exigida por la Providencia Administrativa SNAT/2011/00071 (talonarios autorizados, máquinas fiscales o sistemas de facturación electrónica certificados por SENIAT). '
-    + 'Los cálculos asumen que el monto cobrado YA INCLUYE el IVA. Validar con contador antes de cualquier uso oficial.</div>'
+    + 'No sustituye la facturaciÃ³n legal exigida por la Providencia Administrativa SNAT/2011/00071 (talonarios autorizados, mÃ¡quinas fiscales o sistemas de facturaciÃ³n electrÃ³nica certificados por SENIAT). '
+    + 'Los cÃ¡lculos asumen que el monto cobrado YA INCLUYE el IVA. Validar con contador antes de cualquier uso oficial.</div>'
     + '<div class="sig"><div class="b">Elaborado por</div><div class="b">Revisado por contador</div><div class="b">Firma y sello</div></div>'
-    + '<div class="foot"><div>Pagasi · Sistema de gestión</div><div>'+new Date().toLocaleString('es-VE')+'</div></div>'
+    + '<div class="foot"><div>Pagasi Â· Sistema de gestiÃ³n</div><div>'+new Date().toLocaleString('es-VE')+'</div></div>'
     + '<script>setTimeout(function(){window.print();},300);<\/script>'
     + '</body></html>';
   var w = window.open('', '_blank', 'width=1100,height=800');
@@ -1286,12 +1178,12 @@ function _libroSeniatImprimir(){
 }
 
 
-// â•”â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•—
-// â•‘  MÓDULO DE COMISIONES                                     â•‘
+// â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
+// â•‘  MÃ“DULO DE COMISIONES                                     â•‘
 // â•‘  - Tarjetas tipo "vendedor" con saldo a pagar             â•‘
 // â•‘  - Pago de comisiones (descuenta de cuenta + crea egreso) â•‘
-// â•‘  - Eliminación con opción de devolver dinero              â•‘
-// â•‘  - Configuración por usuario (fijo o porcentaje)          â•‘
-// â•šâ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•‘  - EliminaciÃ³n con opciÃ³n de devolver dinero              â•‘
+// â•‘  - ConfiguraciÃ³n por usuario (fijo o porcentaje)          â•‘
+// â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 // Defaults globales (usados cuando un usuario activa comisiones sin config previa)

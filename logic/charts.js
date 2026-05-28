@@ -18,9 +18,9 @@ function wtInjectDataLabels(){
   });
 }
 
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // GLOBAL SEARCH
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 function globalSearch(q){
   var val = q.trim().toLowerCase();
@@ -40,35 +40,35 @@ function globalSearch(q){
   S.clientes.filter(c=>!c.eliminado).forEach(function(c){
     if((c.nombre+' '+c.cedula+' '+c.tel+' '+(c.email||'')).toLowerCase().includes(val)){
       results.push({tipo:'cliente',icon:'CLI',titulo:c.nombre,
-        sub:c.cedula+' · '+c.tel+(c.ciudad?' · '+c.ciudad:''),
+        sub:c.cedula+' Â· '+c.tel+(c.ciudad?' Â· '+c.ciudad:''),
         accion:function(){ nav('clientes'); setTimeout(function(){verCliente(c.id);},100); }});
     }
   });
   S.creds.filter(c=>!c.eliminado).forEach(function(c){
     if((c.id+' '+c.cli+' '+c.modelo+' '+(c.vin||'')).toLowerCase().includes(val)){
-      results.push({tipo:'crédito',icon:'',titulo:c.id+' — '+c.cli,
-        sub:c.modelo+' · '+c.estado+' · '+(c.pagado||0)+' cuotas',
+      results.push({tipo:'crÃ©dito',icon:'',titulo:c.id+' â€” '+c.cli,
+        sub:c.modelo+' Â· '+c.estado+' Â· '+(c.pagado||0)+' cuotas',
         accion:function(){ nav('creditos'); setTimeout(function(){openAmort(c.id);},100); }});
     }
   });
   S.motos.filter(m=>!m.eliminado).forEach(function(m){
     if((m.modelo+' '+(m.vin||'')+' '+(m.cliente||'')+' '+(m.color||'')).toLowerCase().includes(val)){
       results.push({tipo:'moto',icon:'MOT',titulo:m.modelo,
-        sub:(m.vin||'Sin VIN')+' · '+m.estado+(m.cliente?' · '+m.cliente:''),
+        sub:(m.vin||'Sin VIN')+' Â· '+m.estado+(m.cliente?' Â· '+m.cliente:''),
         accion:function(){ nav('motos'); }});
     }
   });
   S.pagos.filter(p=>!p.eliminado).forEach(function(p){
     if((p.id+' '+p.cli+' '+(p.referencia||'')+(p.metodo||'')).toLowerCase().includes(val)){
-      results.push({tipo:'pago',icon:'PAG',titulo:p.id+' — '+p.cli,
-        sub:fmt(p.monto)+' · '+p.fecha+' · '+(p.metodo||''),
+      results.push({tipo:'pago',icon:'PAG',titulo:p.id+' â€” '+p.cli,
+        sub:fmt(p.monto)+' Â· '+p.fecha+' Â· '+(p.metodo||''),
         accion:function(){ nav('pagos'); }});
     }
   });
   S.egresos.filter(function(e){return !e.eliminado;}).forEach(function(e){
     if((e.concepto+' '+(e.categoria||'')+(e.forma||'')).toLowerCase().includes(val)){
       results.push({tipo:'egreso',icon:'$',titulo:e.concepto,
-        sub:fmt(e.monto)+' · '+(e.fecha||'')+(e.forma?' · '+e.forma:''),
+        sub:fmt(e.monto)+' Â· '+(e.fecha||'')+(e.forma?' Â· '+e.forma:''),
         accion:function(){ nav('conta'); }});
     }
   });
@@ -86,7 +86,7 @@ function globalSearch(q){
       results.length+' resultado'+(results.length!==1?'s':'')+
     '</div>'+
     results.slice(0,12).map(function(r,i){
-      var typeColors={cliente:'var(--gs)','crédito':'rgba(37,99,235,0.08)',moto:'var(--greens)',pago:'var(--greens)',egreso:'var(--reds)'};
+      var typeColors={cliente:'var(--gs)','crÃ©dito':'rgba(37,99,235,0.08)',moto:'var(--greens)',pago:'var(--greens)',egreso:'var(--reds)'};
       return '<div class="gs-row" data-idx="'+i+'" style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--rim);transition:background .1s" '+
         'onmouseover="gsHover(this,'+i+')" '+
         'onmouseout="" '+
@@ -99,7 +99,7 @@ function globalSearch(q){
         '<span style="font-size:9px;color:var(--ink3);background:var(--surf2);padding:2px 7px;border-radius:12px;flex-shrink:0">'+r.tipo+'</span>'+
       '</div>';
     }).join('')+
-    (results.length>12?'<div style="padding:8px;text-align:center;font-size:11px;color:var(--ink3)">+'+(results.length-12)+' más</div>':'');
+    (results.length>12?'<div style="padding:8px;text-align:center;font-size:11px;color:var(--ink3)">+'+(results.length-12)+' mÃ¡s</div>':'');
 }
 
 function gsHover(el,i){
@@ -136,9 +136,9 @@ function closeGlobalSearch(){
   if(panel) panel.classList.remove('open');
 }
 
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // DARK MODE
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function toggleDark(){
   var isDark = document.documentElement.getAttribute('data-theme')==='dark';
   setDark(!isDark);
@@ -181,9 +181,9 @@ document.addEventListener('DOMContentLoaded', function(){
   }catch(e){}
 });
 
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
-// CHART.JS — DASHBOARD INGRESOS
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// CHART.JS â€” DASHBOARD INGRESOS
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 var _finIngChart = null;
 var _finIngPeriodo = 'diario';
 function setFin2Periodo(tipo, periodo){
@@ -192,7 +192,7 @@ function setFin2Periodo(tipo, periodo){
   var colorT = isIng ? 'rgba(37,99,235,0.3)' : 'rgba(217,59,90,0.28)';
   var dataType = isIng ? 'ingresos' : 'egresos';
   var prefix = 'fin2-'+tipo;
-  var subLabels={diario:'Últimos 30 días',quincenal:'Últimas 8 quincenas',mensual:'Últimos 12 meses'};
+  var subLabels={diario:'Ãšltimos 30 dÃ­as',quincenal:'Ãšltimas 8 quincenas',mensual:'Ãšltimos 12 meses'};
   ['d','q','m'].forEach(function(k){
     var p=k==='d'?'diario':k==='q'?'quincenal':'mensual';
     var btn=document.getElementById(prefix+'-'+k);
@@ -224,7 +224,7 @@ function setFinPeriodo(periodo){
     var btn=document.getElementById('fin-ing-'+k);
     if(btn){ btn.className='btn btn-xs'+(p===periodo?' btn-p':''); btn.style.fontSize='10px'; btn.style.padding='4px 9px'; }
   });
-  var subLabels={diario:'Últimos 14 días',quincenal:'Últimas 8 quincenas',mensual:'Últimos 7 meses'};
+  var subLabels={diario:'Ãšltimos 14 dÃ­as',quincenal:'Ãšltimas 8 quincenas',mensual:'Ãšltimos 7 meses'};
   var sub=document.getElementById('fin-ing-sub'); if(sub) sub.textContent=subLabels[periodo];
   var wrap=document.getElementById('fin-ing-wrap');
   if(!wrap) return;
@@ -256,7 +256,7 @@ function renderFinIngChart(){
   var isDark=document.documentElement.getAttribute('data-theme')==='dark';
   var p1=isDark?'#3B82F6':'#2563EB', p1t=isDark?'rgba(59,130,246,0.18)':'rgba(37,99,235,0.10)';
   var ink3=isDark?'#6B6896':'#9794BB';
-  var subLabels={diario:'Últimos 14 días',quincenal:'Últimas 8 quincenas',mensual:'Últimos 7 meses'};
+  var subLabels={diario:'Ãšltimos 14 dÃ­as',quincenal:'Ãšltimas 8 quincenas',mensual:'Ãšltimos 7 meses'};
   var sub=document.getElementById('fin-ing-sub'); if(sub) sub.textContent=subLabels[periodo];
   if(_finIngChart){_finIngChart.destroy();_finIngChart=null;}
   _finIngChart=new Chart(canvas,{type:'bar',data:{labels:labels,datasets:[{label:'Ingresos',data:values,
@@ -355,7 +355,7 @@ function setDashPeriodo(tipo, periodo){
     var btn = document.getElementById('dash-'+pre+'-'+k);
     if(btn){ btn.className='btn btn-xs'+(p===periodo?' btn-p':''); btn.style.fontSize='10px'; btn.style.padding='4px 9px'; }
   });
-  var subLabels={diario:'Últimos 30 días',quincenal:'Últimas 8 quincenas',mensual:'Últimos 7 meses'};
+  var subLabels={diario:'Ãšltimos 30 dÃ­as',quincenal:'Ãšltimas 8 quincenas',mensual:'Ãšltimos 7 meses'};
   if(tipo==='egresos'){
     var sub=document.getElementById('dash-egr-sub'); if(sub) sub.textContent=subLabels[periodo];
     renderDashEgrChart();
@@ -371,18 +371,18 @@ function renderCredChart(){
   var labels=data.map(function(x){return x.label;}), counts=data.map(function(x){return x.count;});
   var isDark = document.documentElement.getAttribute('data-theme')==='dark';
   var g=isDark?'#00D68F':'#00B876', gt=isDark?'rgba(0,214,143,0.18)':'rgba(0,184,118,0.12)', ink3=isDark?'#6B6896':'#9794BB';
-  var subLabels={diario:'Últimos 30 días',quincenal:'Últimas 8 quincenas',mensual:'Últimos 12 meses'};
+  var subLabels={diario:'Ãšltimos 30 dÃ­as',quincenal:'Ãšltimas 8 quincenas',mensual:'Ãšltimos 12 meses'};
   var sub=document.getElementById('dash-cred-sub'); if(sub) sub.textContent=subLabels[periodo];
   if(_credChart){_credChart.destroy();_credChart=null;}
   // Si no hay datos, mostrar placeholder
   var totalCounts = counts.reduce(function(a,b){return a+b;},0);
   var wrap = canvas.parentElement;
   var placeholder = wrap ? wrap.querySelector('.chart-empty') : null;
-  if(!placeholder && wrap){ placeholder = document.createElement('div'); placeholder.className='chart-empty'; placeholder.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink3);font-size:12px;font-weight:700;gap:6px'; placeholder.innerHTML='<div style="font-size:28px;opacity:.3"></div><div>Sin créditos en este período</div>'; wrap.appendChild(placeholder); }
+  if(!placeholder && wrap){ placeholder = document.createElement('div'); placeholder.className='chart-empty'; placeholder.style.cssText='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink3);font-size:12px;font-weight:700;gap:6px'; placeholder.innerHTML='<div style="font-size:28px;opacity:.3"></div><div>Sin crÃ©ditos en este perÃ­odo</div>'; wrap.appendChild(placeholder); }
   if(placeholder) placeholder.style.display = totalCounts===0 ? 'flex' : 'none';
   canvas.style.display = totalCounts===0 ? 'none' : 'block';
   if(totalCounts===0) return;
-  _credChart=new Chart(canvas,{type:'bar',data:{labels:labels,datasets:[{label:'Créditos',data:counts,backgroundColor:counts.map(function(v,i){return i===counts.length-1?g:gt;}),borderColor:'transparent',borderWidth:0,borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:isDark?'#252844':'#fff',borderColor:isDark?'rgba(0,214,143,0.3)':'rgba(0,184,118,0.2)',borderWidth:1,titleColor:isDark?'#E8E6FF':'#0B0B1E',bodyColor:isDark?'#B0ADDB':'#4A4870',padding:10,callbacks:{label:function(ctx){return ' '+ctx.raw+' crédito'+(ctx.raw!==1?'s':'')+' otorgado'+(ctx.raw!==1?'s':'');}}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{color:ink3,font:{size:9}}},y:{grid:{color:isDark?'rgba(0,214,143,0.08)':'rgba(0,184,118,0.06)'},border:{display:false,dash:[4,4]},ticks:{color:ink3,font:{size:9},stepSize:1,maxTicksLimit:5}}}}});
+  _credChart=new Chart(canvas,{type:'bar',data:{labels:labels,datasets:[{label:'CrÃ©ditos',data:counts,backgroundColor:counts.map(function(v,i){return i===counts.length-1?g:gt;}),borderColor:'transparent',borderWidth:0,borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:isDark?'#252844':'#fff',borderColor:isDark?'rgba(0,214,143,0.3)':'rgba(0,184,118,0.2)',borderWidth:1,titleColor:isDark?'#E8E6FF':'#0B0B1E',bodyColor:isDark?'#B0ADDB':'#4A4870',padding:10,callbacks:{label:function(ctx){return ' '+ctx.raw+' crÃ©dito'+(ctx.raw!==1?'s':'')+' otorgado'+(ctx.raw!==1?'s':'');}}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{color:ink3,font:{size:9}}},y:{grid:{color:isDark?'rgba(0,214,143,0.08)':'rgba(0,184,118,0.06)'},border:{display:false,dash:[4,4]},ticks:{color:ink3,font:{size:9},stepSize:1,maxTicksLimit:5}}}}});
 }
 function renderMoraChart(){
   var canvas=document.getElementById('mora-chart');
@@ -395,7 +395,7 @@ function renderMoraChart(){
   var redt=isDark?'rgba(217,59,90,0.15)':'rgba(217,59,90,0.08)';
   var ink3=isDark?'#6B6896':'#9794BB';
   if(_moraChart){_moraChart.destroy();_moraChart=null;}
-  _moraChart=new Chart(canvas,{type:'line',data:{labels:labels,datasets:[{label:'En mora',data:values,borderColor:red,backgroundColor:redt,borderWidth:2,pointBackgroundColor:red,pointRadius:4,fill:true,tension:0.35}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:isDark?'#252844':'#fff',borderColor:isDark?'rgba(217,59,90,0.3)':'rgba(217,59,90,0.2)',borderWidth:1,titleColor:isDark?'#E8E6FF':'#0B0B1E',bodyColor:isDark?'#B0ADDB':'#4A4870',padding:10,callbacks:{label:function(ctx){return ' '+ctx.raw+' créd. en mora';}}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{color:ink3,font:{size:10}}},y:{grid:{color:isDark?'rgba(217,59,90,0.08)':'rgba(217,59,90,0.05)'},border:{display:false},ticks:{color:ink3,font:{size:10},stepSize:1,maxTicksLimit:5}}}}});
+  _moraChart=new Chart(canvas,{type:'line',data:{labels:labels,datasets:[{label:'En mora',data:values,borderColor:red,backgroundColor:redt,borderWidth:2,pointBackgroundColor:red,pointRadius:4,fill:true,tension:0.35}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:isDark?'#252844':'#fff',borderColor:isDark?'rgba(217,59,90,0.3)':'rgba(217,59,90,0.2)',borderWidth:1,titleColor:isDark?'#E8E6FF':'#0B0B1E',bodyColor:isDark?'#B0ADDB':'#4A4870',padding:10,callbacks:{label:function(ctx){return ' '+ctx.raw+' crÃ©d. en mora';}}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{color:ink3,font:{size:10}}},y:{grid:{color:isDark?'rgba(217,59,90,0.08)':'rgba(217,59,90,0.05)'},border:{display:false},ticks:{color:ink3,font:{size:10},stepSize:1,maxTicksLimit:5}}}}});
 }
 
 // â”€â”€ Cobros programados con toggle D/Q/M (igual que dashboard) â”€â”€
@@ -432,7 +432,7 @@ function renderCredCobrosChart(){
   var subTxt = '';
 
   if(periodo === 'diario'){
-    subTxt = 'Próximos 30 días';
+    subTxt = 'PrÃ³ximos 30 dÃ­as';
     for(var i=0; i<30; i++){
       var d = new Date(now.getFullYear(), now.getMonth(), now.getDate()+i);
       buckets.push({ label: d.getDate()+'/'+(d.getMonth()+1), dayTs: new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime(), monto:0, cuotas:0 });
@@ -453,7 +453,7 @@ function renderCredCobrosChart(){
       }
     });
   } else if(periodo === 'quincenal'){
-    subTxt = 'Próximas 8 quincenas';
+    subTxt = 'PrÃ³ximas 8 quincenas';
     for(var i=0; i<8; i++){
       var tFut = ahora + i*MS_QUINCENA;
       var d = new Date(tFut);
@@ -476,7 +476,7 @@ function renderCredCobrosChart(){
       }
     });
   } else {
-    subTxt = 'Próximos 7 meses';
+    subTxt = 'PrÃ³ximos 7 meses';
     for(var i=0; i<7; i++){
       var d = new Date(now.getFullYear(), now.getMonth()+i, 1);
       var nextD = new Date(now.getFullYear(), now.getMonth()+i+1, 1);
@@ -538,7 +538,7 @@ function renderDashChart(){
   var p1 = isDark ? '#3B82F6' : '#2563EB';
   var p1t = isDark ? 'rgba(124,111,240,0.18)' : 'rgba(37,99,235,0.12)';
   var ink3 = isDark ? '#6B6896' : '#9794BB';
-  var subLabels = {diario:'Últimos 14 días', quincenal:'Últimas 8 quincenas', mensual:'Últimos 7 meses'};
+  var subLabels = {diario:'Ãšltimos 14 dÃ­as', quincenal:'Ãšltimas 8 quincenas', mensual:'Ãšltimos 7 meses'};
   var sub = document.getElementById('dash-ing-sub');
   if(sub) sub.textContent = subLabels[periodo];
   if(_dashChart){ _dashChart.destroy(); _dashChart=null; }
@@ -573,7 +573,7 @@ function renderDashEgrChart(){
   var red  = isDark ? '#ff5577' : '#D93B5A';
   var redt = isDark ? 'rgba(255,85,119,0.18)' : 'rgba(217,59,90,0.12)';
   var ink3 = isDark ? '#6B6896' : '#9794BB';
-  var subLabels = {diario:'Últimos 30 días', quincenal:'Últimas 8 quincenas', mensual:'Últimos 7 meses'};
+  var subLabels = {diario:'Ãšltimos 30 dÃ­as', quincenal:'Ãšltimas 8 quincenas', mensual:'Ãšltimos 7 meses'};
   var sub = document.getElementById('dash-egr-sub');
   if(sub) sub.textContent = subLabels[periodo];
   if(_dashEgrChart){ _dashEgrChart.destroy(); _dashEgrChart=null; }
@@ -594,9 +594,9 @@ function renderDashEgrChart(){
   });
 }
 
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // CHARTS DE CONTABILIDAD (Pro)
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 var _contaCharts = {trend:null, cat:null, cumul:null, proj:null, aging:null, metodos:null};
 function renderContaCharts(){
   if(typeof Chart === 'undefined' || !window._contaData) return;
@@ -701,14 +701,14 @@ function renderContaCharts(){
     }
   }
 
-  // â”€â”€ 3) Utilidad acumulada: histórico + PROYECCIÓN futura â”€â”€
+  // â”€â”€ 3) Utilidad acumulada: histÃ³rico + PROYECCIÃ“N futura â”€â”€
   var c3 = document.getElementById('conta-chart-cumul');
   if(c3){
     if(_contaCharts.cumul){ _contaCharts.cumul.destroy(); _contaCharts.cumul=null; }
-    // Histórico acumulado
+    // HistÃ³rico acumulado
     var acc = 0;
     var cumulHist = data.serie.map(function(x){ acc += x.utilidad; return acc; });
-    // Proyección: continuar desde el último valor histórico, sumando neto esperado mes a mes
+    // ProyecciÃ³n: continuar desde el Ãºltimo valor histÃ³rico, sumando neto esperado mes a mes
     var cumulFut = [];
     var futAcc = cumulHist[cumulHist.length-1] || 0;
     (data.proyAcumulada||[]).forEach(function(p){
@@ -717,9 +717,9 @@ function renderContaCharts(){
     });
     // Etiquetas combinadas
     var allLabels = data.serie.map(function(x){ return x.label; }).concat((data.futMeses||[]).map(function(f){ return f.label; }));
-    // Dataset histórico: valores reales para el tramo histórico, null para el futuro
+    // Dataset histÃ³rico: valores reales para el tramo histÃ³rico, null para el futuro
     var histData = cumulHist.concat((data.futMeses||[]).map(function(){ return null; }));
-    // Dataset proyectado: null para histórico EXCEPTO el último punto (para empalmar), luego proyección
+    // Dataset proyectado: null para histÃ³rico EXCEPTO el Ãºltimo punto (para empalmar), luego proyecciÃ³n
     var projData = [];
     for(var i=0;i<cumulHist.length-1;i++) projData.push(null);
     projData.push(cumulHist[cumulHist.length-1] || 0); // punto de empalme
@@ -736,7 +736,7 @@ function renderContaCharts(){
         labels: allLabels,
         datasets:[
           {
-            label:'Histórico',
+            label:'HistÃ³rico',
             data: histData,
             borderColor: histColor, backgroundColor: histFill,
             borderWidth:2.5, tension:0.35, fill:true, spanGaps:false,
@@ -744,7 +744,7 @@ function renderContaCharts(){
             pointRadius:3, pointHoverRadius:5
           },
           {
-            label:'Proyección',
+            label:'ProyecciÃ³n',
             data: projData,
             borderColor: projColor, backgroundColor:'transparent',
             borderWidth:2.5, borderDash:[6,4], tension:0.3, fill:false, spanGaps:true,
@@ -777,7 +777,7 @@ function renderContaCharts(){
     });
   }
 
-  // â”€â”€ 4) PROYECCIÓN FLUJO DE CAJA (cronograma real) â”€â”€
+  // â”€â”€ 4) PROYECCIÃ“N FLUJO DE CAJA (cronograma real) â”€â”€
   var c4 = document.getElementById('conta-chart-proj');
   if(c4 && data.futMeses){
     if(_contaCharts.proj){ _contaCharts.proj.destroy(); _contaCharts.proj=null; }
@@ -791,7 +791,7 @@ function renderContaCharts(){
             type:'bar', label:'Cobros esperados',
             data: data.futMeses.map(function(f){ return f.esperado; }),
             backgroundColor: data.futMeses.map(function(f,i){
-              // gradiente de intensidad: primeros meses más oscuros
+              // gradiente de intensidad: primeros meses mÃ¡s oscuros
               var alpha = 1 - (i*0.035);
               return isDark ? 'rgba(31,196,122,'+Math.max(0.35,alpha)+')' : 'rgba(6,176,106,'+Math.max(0.4,alpha)+')';
             }),
@@ -876,7 +876,7 @@ function renderContaCharts(){
             backgroundColor: surf, borderColor:'rgba(37,99,235,0.2)', borderWidth:1,
             titleColor: isDark?'#E8E6FF':'#0B0B1E', bodyColor: isDark?'#B0ADDB':'#4A4870',
             padding:8,
-            callbacks:{ label:function(ctx){ return ' '+ctx.raw+' crédito'+(ctx.raw===1?'':'s'); } }
+            callbacks:{ label:function(ctx){ return ' '+ctx.raw+' crÃ©dito'+(ctx.raw===1?'':'s'); } }
           }
         },
         scales:{
@@ -889,7 +889,7 @@ function renderContaCharts(){
     });
   }
 
-  // â”€â”€ 6) Métodos de pago (donut) â”€â”€
+  // â”€â”€ 6) MÃ©todos de pago (donut) â”€â”€
   var c6 = document.getElementById('conta-chart-metodos');
   if(c6 && data.metodosPago){
     if(_contaCharts.metodos){ _contaCharts.metodos.destroy(); _contaCharts.metodos=null; }
@@ -922,9 +922,9 @@ function renderContaCharts(){
     }
   }
 }
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
-// CHARTS DE CRÉDITOS (Pro)
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// CHARTS DE CRÃ‰DITOS (Pro)
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 var _credsCharts = {estados:null, semanas:null, spread:null, aging:null};
 function renderCredsCharts(){
   if(typeof Chart === 'undefined' || !window._credsData) return;
@@ -941,12 +941,12 @@ function renderCredsCharts(){
   var gridGreen = isDark ? 'rgba(31,196,122,0.12)' : 'rgba(6,176,106,0.10)';
   var gridAmber = isDark ? 'rgba(255,185,59,0.15)' : 'rgba(244,180,44,0.12)';
 
-  // â”€â”€ 1) Distribución por estado (donut) â”€â”€
+  // â”€â”€ 1) DistribuciÃ³n por estado (donut) â”€â”€
   var c1 = document.getElementById('creds-chart-estados');
   if(c1 && data.estados){
     if(_credsCharts.estados){ _credsCharts.estados.destroy(); _credsCharts.estados=null; }
     var e = data.estados;
-    var labels = ['Al día','Mora','Completados','Recuperados','Cancelados'];
+    var labels = ['Al dÃ­a','Mora','Completados','Recuperados','Cancelados'];
     var values = [e.activos||0, e.mora||0, e.completados||0, e.recuperados||0, e.cancelados||0];
     var colors = [p1, red, green, amber, ink3];
     // Filtrar los que tienen 0 para que el donut se vea limpio
@@ -971,7 +971,7 @@ function renderCredsCharts(){
               backgroundColor: surf, borderColor:'rgba(37,99,235,0.2)', borderWidth:1,
               titleColor: isDark?'#E8E6FF':'#0B0B1E', bodyColor: isDark?'#B0ADDB':'#4A4870',
               padding:8,
-              callbacks:{ label:function(ctx){ return ' '+ctx.label+': '+ctx.raw+' crédito'+(ctx.raw===1?'':'s'); } }
+              callbacks:{ label:function(ctx){ return ' '+ctx.label+': '+ctx.raw+' crÃ©dito'+(ctx.raw===1?'':'s'); } }
             }
           }
         }
@@ -979,7 +979,7 @@ function renderCredsCharts(){
     }
   }
 
-  // â”€â”€ 2) Cobros programados próximas 4 semanas (bar) â”€â”€
+  // â”€â”€ 2) Cobros programados prÃ³ximas 4 semanas (bar) â”€â”€
   var c2 = document.getElementById('creds-chart-semanas');
   if(c2 && data.semanas){
     if(_credsCharts.semanas){ _credsCharts.semanas.destroy(); _credsCharts.semanas=null; }
@@ -1060,7 +1060,7 @@ function renderCredsCharts(){
     }
   }
 
-  // â”€â”€ 4) Antigüedad de cartera (bar) â”€â”€
+  // â”€â”€ 4) AntigÃ¼edad de cartera (bar) â”€â”€
   var c4 = document.getElementById('creds-chart-aging');
   if(c4 && data.agingMeses){
     if(_credsCharts.aging){ _credsCharts.aging.destroy(); _credsCharts.aging=null; }
@@ -1086,7 +1086,7 @@ function renderCredsCharts(){
             backgroundColor: surf, borderColor:'rgba(37,99,235,0.2)', borderWidth:1,
             titleColor: isDark?'#E8E6FF':'#0B0B1E', bodyColor: isDark?'#B0ADDB':'#4A4870',
             padding:8,
-            callbacks:{ label:function(ctx){ return ' '+ctx.raw+' crédito'+(ctx.raw===1?'':'s'); } }
+            callbacks:{ label:function(ctx){ return ' '+ctx.raw+' crÃ©dito'+(ctx.raw===1?'':'s'); } }
           }
         },
         scales:{
@@ -1099,6 +1099,6 @@ function renderCredsCharts(){
     });
   }
 }
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // SKELETON LOADERS
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•

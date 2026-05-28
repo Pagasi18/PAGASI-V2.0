@@ -192,7 +192,7 @@ function _wzApyCompare(){
   _wzScore();
 }
 
-// Toggle entre % y $ del cuadro personalizado (wizard crédito)
+// Toggle entre % y $ del cuadro personalizado (wizard crÃ©dito)
 function _wzApyCustomSetMode(mode){
   window._wzCustomMode = mode;
   var bp = document.getElementById('wz_cust_btn_pct'), bd = document.getElementById('wz_cust_btn_dol'), inp = document.getElementById('wz_cust_input');
@@ -206,7 +206,7 @@ function _wzApyCustomSetMode(mode){
   _wzApyCustomCalc();
 }
 
-// Recalcula el cuadro de inicial personalizada (wizard crédito)
+// Recalcula el cuadro de inicial personalizada (wizard crÃ©dito)
 function _wzApyCustomCalc(){
   var precio = parseFloat(((document.getElementById('wz_precio_base_real')||{}).value))||parseFloat(WZ.precio)||0;
   var apy = parseFloat(((document.getElementById('wz_apy_objetivo')||{}).value))||0;
@@ -238,7 +238,7 @@ function _wzApyCustomCalc(){
     cuoEl.textContent = '$'+r.cuotaQ.toFixed(2);
     totEl.textContent = '$'+r.totalPagado.toFixed(2);
     window._wzCustomPct = pct;
-    // Actualizar también el preview financiero del wizard si la inicial seleccionada es "custom"
+    // Actualizar tambiÃ©n el preview financiero del wizard si la inicial seleccionada es "custom"
     var sel = document.getElementById('wz_apy_inicial_sel');
     if(sel && sel.value === 'custom'){
       _wzActualizarFinPreview(WZ.precio||0);
@@ -246,7 +246,7 @@ function _wzApyCustomCalc(){
       _wzScore();
     }
   }catch(e){
-    iniDol.textContent='—'; cuoEl.textContent='—'; totEl.textContent='—';
+    iniDol.textContent='â€”'; cuoEl.textContent='â€”'; totEl.textContent='â€”';
   }
 }
 
@@ -266,7 +266,7 @@ function _wzGuardarPlanApy(){
   }
   if(!(precio>0)||!(apy>0)||!(plazo>0)){ if(typeof toast==='function') toast('Completa precio, APY y plazo','error'); return; }
   var r=calcApyPlan(precio,iniSel,apy,plazo);
-  var nombre='APY '+apy.toFixed(1)+'% · '+plazo+'m · Ini '+(iniSel*100).toFixed(0)+'%';
+  var nombre='APY '+apy.toFixed(1)+'% Â· '+plazo+'m Â· Ini '+(iniSel*100).toFixed(0)+'%';
   var newPlan={nombre:nombre, plazo:plazo, factor:parseFloat(r.factor.toFixed(4)), inicial:iniSel, tasaMensual:parseFloat(r.tasaMensual.toFixed(2)), apy:apy, moraPct:(PLAN.moraPct||5), diasGracia:(PLAN.diasGracia||5), origen:'apy'};
   if(!window._planesExtra) window._planesExtra=[];
   window._planesExtra.push(newPlan);
@@ -280,6 +280,6 @@ function _wzGuardarPlanApy(){
   }
 }
 
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // STATE
-// â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
