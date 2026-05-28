@@ -8,6 +8,9 @@
 var _bcvAutoEstado = 'inactivo'; // 'inactivo' | 'cargando' | 'ok' | 'error'
 var _bcvAutoFecha  = '';
 var _bcvAutoTasa   = 0;
+// Tasa Binance (mercado paralelo / P2P)
+var _binanceTasa = 0;
+var _binanceEstado = 'inactivo';
 
 // Endpoints en orden de preferencia (fallback si uno falla)
 var _BCV_ENDPOINTS = [
@@ -15,10 +18,18 @@ var _BCV_ENDPOINTS = [
   'https://bcv-api.rafnixg.dev/rates/'
 ];
 
+// Endpoints para tasa Binance / Paralelo
+var _BINANCE_ENDPOINTS = [
+  'https://ve.dolarapi.com/v1/dolares/paralelo',
+  'https://pydolarvenezuela-api.vercel.app/api/v1/dollar?monitor=binance'
+];
+
 // ── Función principal — llamar al inicio de la app ──
 function bcvAutoInit(){
   if(!db){
     console.log('[BCV-Auto] Sin Firebase — actualización automática desactivada');
+    // Descargar Binance igual aunque no haya Firebase (no requiere persistencia)
+    _binanceFetchTasa(0);
     return;
   }
   var hoy = hoyLocalISO();
@@ -29,29 +40,77 @@ function bcvAutoInit(){
       var d = doc.data();
       var fechaGuardada = (d.fechaActualizacion||d.fecha||'').slice(0,10);
       var tasaGuardada  = parseFloat(d.tasaBs||0);
+      var binanceGuardada = parseFloat(d.tasaBinance||0);
 
       if(fechaGuardada === hoy && tasaGuardada > 1){
-        // Ya tenemos la tasa de hoy — usar directamente
+        // Ya tenemos la tasa BCV de hoy — usar directamente
         window._tasaBsGlobal = tasaGuardada;
         _bcvAutoEstado = 'ok';
         _bcvAutoFecha  = fechaGuardada;
         _bcvAutoTasa   = tasaGuardada;
+        if(binanceGuardada > 1){
+          window._tasaBinance = binanceGuardada;
+          _binanceTasa = binanceGuardada;
+          _binanceEstado = 'ok';
+        }
         _bcvActualizarUI();
-        console.log('[BCV-Auto] Tasa de hoy ya en Firestore: '+tasaGuardada+' Bs./$ ('+fechaGuardada+')');
+        console.log('[BCV-Auto] Tasa de hoy ya en Firestore: BCV '+tasaGuardada+' · Binance '+binanceGuardada);
+        // Si no hay Binance guardada o es de otro día, descargarla
+        if(!binanceGuardada || binanceGuardada <= 1) _binanceFetchTasa(0);
         return;
       }
     }
     // No hay tasa de hoy → descargar del API
-    console.log('[BCV-Auto] Descargando tasa BCV de hoy...');
+    console.log('[BCV-Auto] Descargando tasa BCV y Binance de hoy...');
     _bcvAutoEstado = 'cargando';
+    _binanceEstado = 'cargando';
     _bcvActualizarUI();
     _bcvFetchTasa(0);
+    _binanceFetchTasa(0);
   }).catch(function(err){
     console.warn('[BCV-Auto] Error leyendo Firestore:', err.message);
-    _bcvFetchTasa(0); // Intentar de todas formas
+    _bcvFetchTasa(0);
+    _binanceFetchTasa(0);
   });
 }
 window.bcvAutoInit = bcvAutoInit;
+
+// ─── Binance fetcher ──
+function _binanceFetchTasa(endpointIdx){
+  if(endpointIdx >= _BINANCE_ENDPOINTS.length){
+    _binanceEstado = 'error';
+    _bcvActualizarUI();
+    return;
+  }
+  var url = _BINANCE_ENDPOINTS[endpointIdx];
+  var ctrl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+  var to = setTimeout(function(){ if(ctrl) ctrl.abort(); }, 5000);
+  fetch(url, ctrl ? {signal: ctrl.signal} : {})
+    .then(function(res){ clearTimeout(to); if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
+    .then(function(data){
+      // ve.dolarapi.com /paralelo: { promedio, venta, compra }
+      // pydolarvenezuela /binance: { monitors: { binance: { price: X } } }
+      var tasa = 0;
+      if(data.promedio && parseFloat(data.promedio) > 1) tasa = parseFloat(data.promedio);
+      else if(data.venta && parseFloat(data.venta) > 1) tasa = parseFloat(data.venta);
+      else if(data.price && parseFloat(data.price) > 1) tasa = parseFloat(data.price);
+      else if(data.monitors && data.monitors.binance && data.monitors.binance.price) tasa = parseFloat(data.monitors.binance.price);
+      if(!tasa || tasa < 1) throw new Error('Tasa Binance inválida');
+      tasa = Math.round(tasa * 100) / 100;
+      window._tasaBinance = tasa;
+      _binanceTasa = tasa;
+      _binanceEstado = 'ok';
+      // Guardar en Firestore junto con la BCV
+      if(db){
+        db.collection('config').doc('tasa').set({tasaBinance: tasa, fechaBinance: hoyLocalISO()}, {merge:true}).catch(function(){});
+      }
+      _bcvActualizarUI();
+    })
+    .catch(function(){
+      clearTimeout(to);
+      _binanceFetchTasa(endpointIdx + 1);
+    });
+}
 
 // ── Descarga la tasa con fallback entre endpoints ──
 function _bcvFetchTasa(endpointIdx){
@@ -145,6 +204,30 @@ function _bcvActualizarUI(){
   if($('cfg_tasa_bs') && _bcvAutoTasa > 1){
     $('cfg_tasa_bs').value = _bcvAutoTasa;
   }
+
+  // Card del Dashboard (Tasa del día)
+  var dashBCV = document.getElementById('dash-tasa-bcv');
+  if(dashBCV){
+    var bcv = _bcvAutoTasa || window._tasaBsGlobal || 0;
+    dashBCV.textContent = bcv > 1 ? bcv.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+  }
+  var dashBinance = document.getElementById('dash-tasa-binance');
+  if(dashBinance){
+    var bin = _binanceTasa || window._tasaBinance || 0;
+    dashBinance.textContent = bin > 1 ? bin.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+  }
+  var dashSpread = document.getElementById('dash-tasa-spread');
+  if(dashSpread){
+    var b1 = _bcvAutoTasa || window._tasaBsGlobal || 0;
+    var b2 = _binanceTasa || window._tasaBinance || 0;
+    if(b1 > 1 && b2 > 1){
+      var pct = ((b2 - b1) / b1) * 100;
+      dashSpread.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
+      dashSpread.style.color = pct > 10 ? '#E8335A' : (pct > 5 ? '#BA7517' : '#8B5CF6');
+    } else {
+      dashSpread.textContent = '—';
+    }
+  }
 }
 window._bcvActualizarUI = _bcvActualizarUI;
 
@@ -194,8 +277,10 @@ window._bcvBadgeHTML = _bcvBadgeHTML;
 // ── Forzar actualización manual (botón en config) ──
 function bcvForzarActualizacion(){
   _bcvAutoEstado = 'cargando';
+  _binanceEstado = 'cargando';
   _bcvActualizarUI();
-  toast('Consultando tasa BCV...', 'info');
+  toast('Consultando tasas BCV y Binance...', 'info');
   _bcvFetchTasa(0);
+  _binanceFetchTasa(0);
 }
 window.bcvForzarActualizacion = bcvForzarActualizacion;

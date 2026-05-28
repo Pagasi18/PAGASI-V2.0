@@ -232,8 +232,8 @@ PG.dash = function(){
   <!-- Cumpleaños y daily tabs viven ahora en Centro de Trabajo -->
 
 
-  <!-- ROW 1: 4 KPI CARDS -->
-  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:18px">
+  <!-- ROW 1: 6 KPI CARDS -->
+  <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;margin-bottom:18px">
 
     <div class="card dash-kpi" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer;background:var(--p1);border:none">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
@@ -298,11 +298,34 @@ PG.dash = function(){
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p2);font-family:var(--fm)">Utilidad</span>
         <span style="font-size:9px;background:rgba(91,141,239,0.1);color:var(--p2);padding:2px 7px;border-radius:20px;font-weight:700">${new Date().toLocaleDateString('es-VE',{month:'short'})}</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:28px;letter-spacing:-1px;color:${utilidad>=0?'var(--p2)':'var(--red)'};margin-bottom:4px">${fmt(utilidad)}</div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:${utilidad>=0?'var(--p2)':'var(--red)'};margin-bottom:4px">${fmt(utilidad)}</div>
       <div style="font-size:11px;color:var(--ink3)">Ingresos menos Egresos</div>
       <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;justify-content:space-between;font-size:10.5px">
         <span style="color:var(--green)">↑ ${fmt(ingMes)}</span>
         <span style="color:var(--red)">↓ ${fmt(egMes)}</span>
+      </div>
+    </div>
+
+    <!-- KPI: TASA DEL DÍA (BCV + Binance) -->
+    <div class="card dash-kpi" id="dash-tasa-card" onclick="bcvForzarActualizacion&&bcvForzarActualizacion()" title="Click para refrescar la tasa" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#8B5CF6;font-family:var(--fm)">Tasa del día</span>
+        <span style="font-size:9px;background:rgba(139,92,246,.12);color:#8B5CF6;padding:2px 7px;border-radius:20px;font-weight:700">Bs/$</span>
+      </div>
+      <!-- BCV -->
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px;margin-bottom:6px">
+        <span style="font-size:9.5px;font-weight:800;color:var(--ink3);letter-spacing:.3px;text-transform:uppercase">BCV</span>
+        <span id="dash-tasa-bcv" style="font-family:var(--fd);font-weight:900;font-size:18px;color:var(--ink);letter-spacing:-.4px">${(window._tasaBsGlobal||1).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+      </div>
+      <!-- Binance -->
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px">
+        <span style="font-size:9.5px;font-weight:800;color:var(--ink3);letter-spacing:.3px;text-transform:uppercase">Binance</span>
+        <span id="dash-tasa-binance" style="font-family:var(--fd);font-weight:900;font-size:18px;color:#F0B90B;letter-spacing:-.4px">${(window._tasaBinance||0)>1?(window._tasaBinance).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
+      </div>
+      <!-- Spread -->
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;justify-content:space-between;font-size:10.5px">
+        <span style="color:var(--ink3)" id="dash-tasa-spread-lbl">Spread</span>
+        <span id="dash-tasa-spread" style="color:#8B5CF6;font-weight:700">${(window._tasaBinance>1&&window._tasaBsGlobal>1)?('+'+(((window._tasaBinance-window._tasaBsGlobal)/window._tasaBsGlobal*100).toFixed(1))+'%'):'—'}</span>
       </div>
     </div>
   </div>
