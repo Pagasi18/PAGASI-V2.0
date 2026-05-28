@@ -27,12 +27,17 @@ var _BINANCE_ENDPOINTS = [
   'https://pydolarvenezuela-api.vercel.app/api/v1/dollar?monitor=binance'
 ];
 
-// Endpoints para EUR/VES oficial BCV (NO calculado, real del mercado venezolano)
+// Endpoints para EUR/VES oficial BCV (real del mercado venezolano)
+// Estrategia: scraping directo de bcv.org.ve via proxy CORS + fallback a APIs
 var _EUR_ENDPOINTS = [
-  'https://ve.dolarapi.com/v1/dolares/oficial',  // Algunos endpoints incluyen euro paralelo en el mismo doc
-  'https://pydolarvenezuela-api.vercel.app/api/v1/euro?monitor=bcv',
-  'https://pydolarvenezuela-api.vercel.app/api/v2/euro?page=bcv',
-  'https://bcv-api.rafnixg.dev/rates/'
+  // 1) Scrape directo de la página oficial del BCV via allorigins
+  'https://api.allorigins.win/get?url=' + encodeURIComponent('https://www.bcv.org.ve/'),
+  // 2) Proxy alternativo de scraping
+  'https://corsproxy.io/?' + encodeURIComponent('https://www.bcv.org.ve/'),
+  // 3) Fallback: API publica con tasa de mercado europea (no necesariamente BCV)
+  'https://open.er-api.com/v6/latest/EUR',
+  // 4) Endpoint legacy por si vuelve
+  'https://ve.dolarapi.com/v1/cotizaciones'
 ];
 
 // ── Función principal — llamar al inicio de la app ──
@@ -105,12 +110,15 @@ function _eurFetchTasa(endpointIdx){
   }
   var url = _EUR_ENDPOINTS[endpointIdx];
   var ctrl = (typeof AbortController!=='undefined') ? new AbortController() : null;
-  var to = setTimeout(function(){ if(ctrl) ctrl.abort(); }, 5000);
+  var to = setTimeout(function(){ if(ctrl) ctrl.abort(); }, 6000);
   fetch(url, ctrl ? {signal: ctrl.signal} : {})
-    .then(function(res){ clearTimeout(to); if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
-    .then(function(data){
-      var tasa = _eurParseTasa(data);
-      if(!tasa || tasa < 1) throw new Error('EUR/VES no encontrado en este endpoint');
+    .then(function(res){ clearTimeout(to); if(!res.ok) throw new Error('HTTP '+res.status); return res.text(); })
+    .then(function(txt){
+      // Algunos endpoints son JSON, otros son HTML scraping
+      var data;
+      try { data = JSON.parse(txt); } catch(e){ data = {__rawText:txt}; }
+      var tasa = _eurParseTasa(data, url);
+      if(!tasa || tasa < 1) throw new Error('EUR/VES no encontrado en endpoint #'+(endpointIdx+1));
       tasa = Math.round(tasa * 100) / 100;
       window._tasaEuro = tasa;
       _eurTasa = tasa;
@@ -123,24 +131,68 @@ function _eurFetchTasa(endpointIdx){
       }
       _bcvActualizarUI();
     })
-    .catch(function(){
+    .catch(function(err){
       clearTimeout(to);
       _eurFetchTasa(endpointIdx + 1);
     });
 }
 
 // Parsea la tasa EUR según el formato de cada API venezolana
-function _eurParseTasa(data){
-  // pydolarvenezuela v1 /euro?monitor=bcv: { price: 520.15, ... }
-  if(data.price && parseFloat(data.price) > 1) return parseFloat(data.price);
-  // pydolarvenezuela v2: { monitors: { bcv: { price: 520.15 } } }
-  if(data.monitors && data.monitors.bcv && data.monitors.bcv.price) return parseFloat(data.monitors.bcv.price);
-  // bcv-api.rafnixg.dev: { EUR: { rate: 520.15 } } o { eur: 520.15 }
-  if(data.EUR && data.EUR.rate && parseFloat(data.EUR.rate) > 1) return parseFloat(data.EUR.rate);
-  if(data.eur && parseFloat(data.eur) > 1) return parseFloat(data.eur);
-  // ve.dolarapi formato fallback: { promedio, venta }
-  if(data.euro && parseFloat(data.euro) > 1) return parseFloat(data.euro);
-  if(data.tasaEur && parseFloat(data.tasaEur) > 1) return parseFloat(data.tasaEur);
+function _eurParseTasa(data, url){
+  // ─── Caso 1: scraping HTML de bcv.org.ve via proxy ───
+  if(data && data.__rawText){
+    return _extractEurFromBcvHtml(data.__rawText);
+  }
+  // ─── Caso 2: allorigins envuelve el HTML en data.contents ───
+  if(data && data.contents && typeof data.contents === 'string'){
+    return _extractEurFromBcvHtml(data.contents);
+  }
+  // ─── Caso 3: open.er-api.com base EUR → rates.VES ───
+  // { result: "success", rates: { VES: 580.25, USD: 1.08, ... } }
+  if(data && data.rates && data.rates.VES && parseFloat(data.rates.VES) > 1){
+    return parseFloat(data.rates.VES);
+  }
+  // ─── Caso 4: pydolarvenezuela v1 ───
+  if(data && data.price && parseFloat(data.price) > 1) return parseFloat(data.price);
+  // ─── Caso 5: pydolarvenezuela v2 ───
+  if(data && data.monitors && data.monitors.bcv && data.monitors.bcv.price) return parseFloat(data.monitors.bcv.price);
+  // ─── Caso 6: bcv-api.rafnixg.dev ───
+  if(data && data.EUR && data.EUR.rate && parseFloat(data.EUR.rate) > 1) return parseFloat(data.EUR.rate);
+  if(data && data.eur && parseFloat(data.eur) > 1) return parseFloat(data.eur);
+  // ─── Caso 7: ve.dolarapi cotizaciones (array) ───
+  if(Array.isArray(data)){
+    var eurEntry = data.find(function(d){ return d && (d.moneda === 'EUR' || d.codigo === 'EUR' || /euro/i.test(d.nombre||'')); });
+    if(eurEntry){
+      var v = eurEntry.promedio || eurEntry.precio || eurEntry.venta;
+      if(v && parseFloat(v) > 1) return parseFloat(v);
+    }
+  }
+  // ─── Otros formatos genéricos ───
+  if(data && data.euro && parseFloat(data.euro) > 1) return parseFloat(data.euro);
+  if(data && data.tasaEur && parseFloat(data.tasaEur) > 1) return parseFloat(data.tasaEur);
+  return 0;
+}
+
+// Extrae la tasa EUR del HTML de bcv.org.ve
+function _extractEurFromBcvHtml(html){
+  if(!html || typeof html !== 'string') return 0;
+  // BCV publica el euro en un div#euro con <strong>X,XX</strong>
+  // Patrón principal: <div id="euro">...<strong>1.234,56</strong>
+  var patterns = [
+    /id=['"]euro['"][^>]*>[\s\S]*?<strong>\s*([0-9.,]+)\s*<\/strong>/i,
+    /<div[^>]*>\s*EUR\s*<\/div>\s*<div[^>]*>\s*<strong>\s*([0-9.,]+)\s*<\/strong>/i,
+    /euro[\s\S]{0,500}?<strong>\s*([0-9.,]+)\s*<\/strong>/i
+  ];
+  for(var i=0;i<patterns.length;i++){
+    var m = html.match(patterns[i]);
+    if(m && m[1]){
+      // "1.234,56" → 1234.56 (formato venezolano: punto miles, coma decimal)
+      var raw = m[1].trim();
+      var num = raw.replace(/\./g,'').replace(',','.');
+      var v = parseFloat(num);
+      if(v && v > 1) return v;
+    }
+  }
   return 0;
 }
 
