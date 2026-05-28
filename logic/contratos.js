@@ -41,7 +41,7 @@ function _docCtx(){
   var li = 'font-size:11.5px;line-height:1.55;color:#222;margin:3px 0;text-align:justify';
   var lblCell = 'background:'+purpleLight+';color:'+purpleDark+';font-weight:700;font-size:11.5px;padding:7px 10px;width:22%';
   var valCell = 'padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7;width:28%';
-  return { c:c, cli:cli, moto:moto, emp:emp, empresaUp:empresaUp, logoSrc:logoSrc, hoy:hoy, V:V, Vm:Vm,
+  return { c:c, cli:cli, moto:moto, emp:emp, empresaUp:empresaUp, logoSrc:logoSrc, hoy:hoy, fechaContrato:fechaContrato, V:V, Vm:Vm,
            mModelo:mModelo, mVin:mVin, mColor:mColor, mAnio:mAnio, mPlaca:mPlaca, mMarca:mMarca,
            mSerialMotor:mSerialMotor, mSerialChasis:mSerialChasis, mGpsNum:mGpsNum,
            purple:purple, purpleDark:purpleDark, purpleLight:purpleLight,
@@ -87,7 +87,7 @@ function _numALetras(n){
 function _renderContratoArrendamiento(){
   var ctx = _docCtx();
   if(!ctx){ $('cz').innerHTML='<div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">No hay créditos</div><div style="font-size:11.5px">Registra un crédito primero</div></div>'; return; }
-  var c=ctx.c, cli=ctx.cli, emp=ctx.emp, empresaUp=ctx.empresaUp, logoSrc=ctx.logoSrc, hoy=ctx.hoy, V=ctx.V, Vm=ctx.Vm;
+  var c=ctx.c, cli=ctx.cli, emp=ctx.emp, empresaUp=ctx.empresaUp, logoSrc=ctx.logoSrc, hoy=ctx.hoy, fechaContrato=ctx.fechaContrato, V=ctx.V, Vm=ctx.Vm;
   var mModelo=ctx.mModelo, mColor=ctx.mColor, mAnio=ctx.mAnio, mPlaca=ctx.mPlaca, mMarca=ctx.mMarca, mSerialMotor=ctx.mSerialMotor, mSerialChasis=ctx.mSerialChasis;
   var purple=ctx.purple, purpleDark=ctx.purpleDark, purpleLight=ctx.purpleLight;
   var clausH=ctx.clausH, p=ctx.p, li=ctx.li, lblCell=ctx.lblCell, valCell=ctx.valCell;
@@ -341,7 +341,7 @@ function _renderContratoArrendamiento(){
 function _renderPagare(){
   var ctx = _docCtx();
   if(!ctx){ $('cz').innerHTML='<div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">No hay créditos</div><div style="font-size:11.5px">Registra un crédito primero</div></div>'; return; }
-  var c=ctx.c, cli=ctx.cli, emp=ctx.emp, empresaUp=ctx.empresaUp, logoSrc=ctx.logoSrc, hoy=ctx.hoy, V=ctx.V, Vm=ctx.Vm;
+  var c=ctx.c, cli=ctx.cli, emp=ctx.emp, empresaUp=ctx.empresaUp, logoSrc=ctx.logoSrc, hoy=ctx.hoy, fechaContrato=ctx.fechaContrato, V=ctx.V, Vm=ctx.Vm;
   var purple=ctx.purple, purpleDark=ctx.purpleDark, purpleLight=ctx.purpleLight;
   var tableHdr=ctx.tableHdr, clausH=ctx.clausH, p=ctx.p, lblCell=ctx.lblCell, valCell=ctx.valCell;
   // El pagaré cubre el monto sujeto a canon (lo que financia) — si prefieres el total, cambia c.fin por c.total
