@@ -410,16 +410,13 @@ function nxAcPick(id){
     else meta.push('Lead');
     if(c.tel) meta.push(c.tel);
     else meta.push('sin teléfono');
-    selWrap.innerHTML = '<div class="nx-ac-selected">'
-      + '<div class="nx-ac-avatar">'+esc(initials(c.nombre))+'</div>'
-      + '<div class="nx-ac-body">'
-      + '<div class="nx-ac-name" style="display:flex;align-items:center;gap:6px">'
-      + '<span style="background:var(--p1);color:#fff;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:900;letter-spacing:.3px">SOLO ESTE</span>'
-      + esc(c.nombre)
+    selWrap.innerHTML = '<div class="nf2-solo nx-ac-selected">'
+      + '<div class="nf2-solo-av">'+esc(initials(c.nombre))+'</div>'
+      + '<div class="nf2-solo-info">'
+      + '<div class="nf2-solo-n"><span class="nf2-solo-bdg">SOLO ESTE</span>'+esc(c.nombre)+'</div>'
+      + '<div class="nf2-solo-m">'+esc(meta.join(' · '))+'</div>'
       + '</div>'
-      + '<div class="nx-ac-meta">'+esc(meta.join(' · '))+'</div>'
-      + '</div>'
-      + '<button type="button" class="nx-ac-selected-x" onclick="nxAcUnpick()" title="Volver a enviar a todo el grupo">×</button>'
+      + '<button type="button" class="nf2-solo-x" onclick="nxAcUnpick()" title="Volver a enviar a todo el grupo">×</button>'
       + '</div>';
   }
   actualizarPreviewNotif();
