@@ -647,7 +647,7 @@ function pgControls(key, total, perPage, navFn){
     +'</div></div>';
 }
 
-function pgNav(key, n){ pgSet(key,n); nav(S.page); }
+function pgNav(key, n){ pgSet(key,n); window._pgKeep=true; nav(S.page); }
 
 function generarReporte(tipo){
   try{
