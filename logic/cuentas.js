@@ -50,7 +50,7 @@ function renderCuentas(){
 
   var tab=window._cuentasTab||'cuentas';
 
-  // Métricas rápidas para el banner
+  // M�tricas r�pidas para el banner
   var cuentasList = (typeof _cuentasBanc!=='undefined' && _cuentasBanc)?_cuentasBanc:[];
   var totalSaldo = 0;
   try{
@@ -62,11 +62,11 @@ function renderCuentas(){
   var banner = '';
   if(typeof pageBanner==='function'){
     banner = pageBanner(
-      'Tesorería · Cuentas bancarias',
+      'Tesorer�a � Cuentas bancarias',
       'Cuentas',
-      '<b>'+nCuentas+'</b> cuenta'+(nCuentas!==1?'s':'')+' bancaria'+(nCuentas!==1?'s':'')+' · Saldo total: <b>'+(typeof fmt==='function'?fmt(totalSaldo):'$'+totalSaldo)+'</b>'+(pendientesCount>0?' · <b>'+pendientesCount+'</b> pendiente'+(pendientesCount!==1?'s':'')+' por confirmar':''),
+      '<b>'+nCuentas+'</b> cuenta'+(nCuentas!==1?'s':'')+' bancaria'+(nCuentas!==1?'s':'')+' � Saldo total: <b>'+(typeof fmt==='function'?fmt(totalSaldo):'$'+totalSaldo)+'</b>'+(pendientesCount>0?' � <b>'+pendientesCount+'</b> pendiente'+(pendientesCount!==1?'s':'')+' por confirmar':''),
       [
-        {label:'ï¼‹ Nuevo Depósito', onclick:'openDeposito(null)', primary:true},
+        {label:'＋ Nuevo Dep�sito', onclick:'openDeposito(null)', primary:true},
         {label:'↓ Exportar CSV', onclick:"exportarCSV('movimientos')"}
       ]
     );
@@ -74,7 +74,7 @@ function renderCuentas(){
 
   var tabBar='<div style="display:flex;gap:0;border-bottom:2px solid var(--rim);margin-bottom:20px">'
     +['cuentas','historial','pendientes'].map(function(t){
-      var labels={cuentas:' Cuentas',historial:' Historial',pendientes:'â³ Pendientes'};
+      var labels={cuentas:' Cuentas',historial:' Historial',pendientes:'�� Pendientes'};
       var active=tab===t;
       return '<button onclick="switchCuentasTab(\''+t+'\')" style="'
         +'background:none;border:none;padding:11px 20px;font-size:13px;font-weight:'+(active?'800':'600')
@@ -91,14 +91,14 @@ function renderCuentas(){
   return '<div class="page">'+banner+tabBar+body+'</div>';
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// �������������������������������
 // TAB 1: CUENTAS BANCARIAS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// �������������������������������
 function renderTabCuentasBanc(){
   var cuentas=_cuentasBanc||[];
   var total=cuentas.reduce(function(a,c){return a+saldoCuenta(c.nombre);},0);
 
-  // â•â•â• Métricas del mes para los KPIs â•â•â•
+  // ��� M�tricas del mes para los KPIs ���
   var now = new Date();
   var mesKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   var movsMes = (S.movimientos||[]).filter(function(m){
@@ -109,7 +109,7 @@ function renderTabCuentasBanc(){
   var transfMes = movsMes.filter(function(m){return m.tipo==='transferencia';}).length;
   var netoMes = ingresosMes - egresosMes;
 
-  // Últimos 6 meses de flujo neto (para mini-chart)
+  // �ltimos 6 meses de flujo neto (para mini-chart)
   var flujo6m = [];
   for(var i=5;i>=0;i--){
     var d = new Date(now.getFullYear(), now.getMonth()-i, 1);
@@ -121,7 +121,7 @@ function renderTabCuentasBanc(){
   }
   var maxFlujo = Math.max(1, ...flujo6m.map(function(f){return Math.max(f.ing,f.eg);}));
 
-  // â•â•â• KPIs row â•â•â•
+  // ��� KPIs row ���
   var kpisHTML = '<div class="sg" style="grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px">'
     +'<div class="stat">'
       +'<div class="st-v" style="color:var(--p1);font-size:26px">'+fmt(total)+'</div>'
@@ -150,9 +150,9 @@ function renderTabCuentasBanc(){
     +'</div>'
     +'</div>';
 
-  // â•â•â• Mini chart flujo 6 meses â•â•â•
+  // ��� Mini chart flujo 6 meses ���
   var chartHTML = '<div class="card" style="margin-bottom:14px">'
-    +'<div class="ch"><div><div class="ct">Flujo de caja · últimos 6 meses</div><div class="cs">Ingresos vs egresos por mes</div></div>'
+    +'<div class="ch"><div><div class="ct">Flujo de caja � �ltimos 6 meses</div><div class="cs">Ingresos vs egresos por mes</div></div>'
     +'<div style="display:flex;gap:12px;font-size:11px">'
     +'<span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--green)"></span>Ingresos</span>'
     +'<span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--red)"></span>Egresos</span>'
@@ -172,7 +172,7 @@ function renderTabCuentasBanc(){
     }).join('')
     +'</div></div>';
 
-  // â•â•â• Cards de cuentas — compactas, coherentes con .card del sistema â•â•â•
+  // ��� Cards de cuentas � compactas, coherentes con .card del sistema ���
   var cardsHTML=cuentas.length?cuentas.map(function(c){
     var saldo=saldoCuenta(c.nombre);
     var pctTotal = total>0 ? Math.round(saldo/total*100) : 0;
@@ -189,7 +189,7 @@ function renderTabCuentasBanc(){
 
     return '<div class="card" onclick="verMovsCuenta(\''+c.nombre+'\')" style="cursor:pointer;padding:16px 18px">'
 
-      // Fila 1: ícono + nombre + badge moneda
+      // Fila 1: �cono + nombre + badge moneda
       +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'
         +'<div style="width:36px;height:36px;border-radius:10px;background:var(--gs);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:'+accentColor+';flex-shrink:0">'+moneda+'</div>'
         +'<div style="flex:1;min-width:0">'
@@ -210,11 +210,11 @@ function renderTabCuentasBanc(){
       // Ingresos/egresos del mes en una fila
       +'<div style="display:flex;gap:12px;margin-bottom:12px;font-size:11.5px">'
         +'<div style="flex:1">'
-          +'<div style="color:var(--ink3);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">↑ Ingresó</div>'
+          +'<div style="color:var(--ink3);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">↑ Ingres�</div>'
           +'<div style="font-weight:800;color:var(--green);font-family:var(--fd)">'+fmt(ingCuentaMes)+'</div>'
         +'</div>'
         +'<div style="flex:1">'
-          +'<div style="color:var(--ink3);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">↓ Salió</div>'
+          +'<div style="color:var(--ink3);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">↓ Sali�</div>'
           +'<div style="font-weight:800;color:var(--red);font-family:var(--fd)">'+fmt(egCuentaMes)+'</div>'
         +'</div>'
         +'<div style="flex:1;text-align:right">'
@@ -223,24 +223,24 @@ function renderTabCuentasBanc(){
         +'</div>'
       +'</div>'
 
-      // Botones acción
+      // Botones acci�n
       +'<div style="display:flex;gap:5px;border-top:1px solid var(--rim2);padding-top:10px" onclick="event.stopPropagation()">'
-        +'<button class="btn btn-p btn-xs" style="flex:1" onclick="openDeposito(\''+c.nombre+'\')">ï¼‹</button>'
-        +'<button class="btn btn-d btn-xs" style="flex:1" onclick="openRetiro(\''+c.nombre+'\')">âˆ’</button>'
-        +'<button class="btn btn-g btn-xs" style="flex:1" onclick="openTransferencia(\''+c.nombre+'\')">â‡„</button>'
+        +'<button class="btn btn-p btn-xs" style="flex:1" onclick="openDeposito(\''+c.nombre+'\')">＋</button>'
+        +'<button class="btn btn-d btn-xs" style="flex:1" onclick="openRetiro(\''+c.nombre+'\')">−</button>'
+        +'<button class="btn btn-g btn-xs" style="flex:1" onclick="openTransferencia(\''+c.nombre+'\')">⇄</button>'
         +'<button class="btn btn-g btn-xs" style="flex:1" onclick="verMovsCuenta(\''+c.nombre+'\')">Ver →</button>'
       +'</div>'
     +'</div>';
-  }).join(''):'<div class="empty" style="padding:40px 20px;grid-column:1/-1"><div style="font-size:16px;font-weight:700;margin-bottom:8px">Sin cuentas configuradas</div><div style="font-size:12.5px;color:var(--ink3);margin-bottom:14px">Las cuentas bancarias sirven para registrar ingresos y egresos con trazabilidad completa.</div><button class="btn btn-p btn-sm" onclick="nav(\'config\')">ï¼‹ Crear primera cuenta</button></div>';
+  }).join(''):'<div class="empty" style="padding:40px 20px;grid-column:1/-1"><div style="font-size:16px;font-weight:700;margin-bottom:8px">Sin cuentas configuradas</div><div style="font-size:12.5px;color:var(--ink3);margin-bottom:14px">Las cuentas bancarias sirven para registrar ingresos y egresos con trazabilidad completa.</div><button class="btn btn-p btn-sm" onclick="nav(\'config\')">＋ Crear primera cuenta</button></div>';
 
   // Toolbar superior
   var toolbar = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-      +'<button class="btn btn-p btn-sm" onclick="openDeposito(null)">ï¼‹ Ingresar saldo</button>'
-      +'<button class="btn btn-d btn-sm" onclick="openRetiro(null)">âˆ’ Retirar</button>'
-      +'<button class="btn btn-g btn-sm" onclick="openTransferencia(null)">â‡„ Transferir</button>'
+      +'<button class="btn btn-p btn-sm" onclick="openDeposito(null)">＋ Ingresar saldo</button>'
+      +'<button class="btn btn-d btn-sm" onclick="openRetiro(null)">− Retirar</button>'
+      +'<button class="btn btn-g btn-sm" onclick="openTransferencia(null)">⇄ Transferir</button>'
     +'</div>'
-    +'<button class="btn btn-g btn-sm" onclick="nav(\'config\')">ï¼‹ Nueva cuenta</button>'
+    +'<button class="btn btn-g btn-sm" onclick="nav(\'config\')">＋ Nueva cuenta</button>'
     +'</div>';
 
   return '<div>'
@@ -252,21 +252,21 @@ function renderTabCuentasBanc(){
     + '</div></div>';
 }
 
-// Helper para pluralización
+// Helper para pluralizaci�n
 function nCuentasLbl(n){
   return n+' '+(n===1?'cuenta activa':'cuentas activas');
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// �������������������������������
 // TAB 2: HISTORIAL
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// �������������������������������
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// �������������������������������
 // VER MOVIMIENTOS DE UNA CUENTA
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// DETALLE DE CUENTA BANCARIA — Vista completa con buscador
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// �������������������������������������������������������
+// DETALLE DE CUENTA BANCARIA � Vista completa con buscador
+// �������������������������������������������������������
 function verMovsCuenta(nombre){
   window._cuentasDetalle = nombre;
   window._cuentasTab = 'cuentas';
@@ -274,7 +274,7 @@ function verMovsCuenta(nombre){
 }
 
 function renderDetalleCuenta(nombre){
-  // Mostrar TODOS (incluyendo anulados para auditoría), ordenados por fecha desc
+  // Mostrar TODOS (incluyendo anulados para auditor�a), ordenados por fecha desc
   var todos = (S.movimientos||[]).filter(function(m){
     return m.cuentaOrigen===nombre || m.cuentaDestino===nombre;
   }).sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||'') || (b.hora||'').localeCompare(a.hora||''); });
@@ -295,14 +295,14 @@ function renderDetalleCuenta(nombre){
     var arrow = esIng
       ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="'+iconColor+'" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>'
       : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="'+iconColor+'" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>';
-    var monto = (esIng ? '+' : 'âˆ’') + fmt(m.monto||0);
+    var monto = (esIng ? '+' : '−') + fmt(m.monto||0);
     var contrap = esIng ? (m.cuentaOrigen||'Externo') : (m.cuentaDestino||'Externo');
     var rowStyle = anulado ? 'opacity:0.45' : '';
     var tags = '';
     if(anulado) tags += '<span style="font-size:9.5px;background:rgba(231,76,60,0.12);color:var(--red);border-radius:20px;padding:1px 8px;font-weight:800;margin-left:5px">ANULADO</span>';
-    if(m.tipo==='transferencia') tags += '<span style="font-size:9.5px;background:rgba(37,99,235,0.10);color:var(--p1);border-radius:20px;padding:1px 7px;font-weight:700;margin-left:4px">â‡„ Transf.</span>';
+    if(m.tipo==='transferencia') tags += '<span style="font-size:9.5px;background:rgba(37,99,235,0.10);color:var(--p1);border-radius:20px;padding:1px 7px;font-weight:700;margin-left:4px">⇄ Transf.</span>';
     if(m.referencia) tags += '<span style="font-size:9.5px;background:var(--surf2);color:var(--ink3);border-radius:20px;padding:1px 7px;margin-left:4px">#'+m.referencia+'</span>';
-    if(anulado && m.eliminadoPor) tags += '<span style="font-size:9.5px;color:var(--ink3);margin-left:5px">Anuló: '+m.eliminadoPor+(m.eliminadoEn?' · '+m.eliminadoEn.split('T')[0]:'')+'</span>';
+    if(anulado && m.eliminadoPor) tags += '<span style="font-size:9.5px;color:var(--ink3);margin-left:5px">Anul�: '+m.eliminadoPor+(m.eliminadoEn?' � '+m.eliminadoEn.split('T')[0]:'')+'</span>';
 
     var accionCell = '';
     if(!anulado && esAdmin){
@@ -321,7 +321,7 @@ function renderDetalleCuenta(nombre){
       +'<td>'
         +'<div style="font-size:12.5px;font-weight:700;color:var(--ink);'+(anulado?'text-decoration:line-through;':'')+'">'+(m.concepto||m.descripcion||'Movimiento')+tags+'</div>'
         +'<div style="font-size:10.5px;color:var(--ink3);margin-top:2px">'+function(){
-            if(!m.fecha) return '—';
+            if(!m.fecha) return '�';
             if(m.fecha.indexOf('T')!==-1||m.fecha.length>10) return fmtFechaHora(m.fecha);
             var h=(m.hora||'').trim();
             if(h&&(h.indexOf('a. m.')!==-1||h.indexOf('p. m.')!==-1||h.indexOf('a.m.')!==-1||h.indexOf('p.m.')!==-1)){
@@ -332,8 +332,8 @@ function renderDetalleCuenta(nombre){
           }()+'</div>'
       +'</td>'
       +'<td style="font-size:11.5px;color:var(--ink2)">'+(m.tipo==='transferencia'?(esIng?'Desde: ':'Hacia: ')+contrap:contrap)+'</td>'
-      +'<td style="font-size:11px;color:var(--ink3)">'+(m.referencia||'—')+'</td>'
-      +'<td style="font-size:11px;color:var(--ink3)">'+(m.realizadoPor||'—')+'</td>'
+      +'<td style="font-size:11px;color:var(--ink3)">'+(m.referencia||'�')+'</td>'
+      +'<td style="font-size:11px;color:var(--ink3)">'+(m.realizadoPor||'�')+'</td>'
       +'<td style="text-align:right;font-family:var(--fd);font-weight:800;font-size:14px;color:'+iconColor+';'+(anulado?'text-decoration:line-through;':'')+'">'+monto+'</td>'
       +'<td style="width:36px">'+accionCell+'</td>'
       +'</tr>';
@@ -344,18 +344,18 @@ function renderDetalleCuenta(nombre){
   return '<div class="page">'
     // ── HEADER: volver + nombre ──
     +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">'
-      +'<button onclick="window._cuentasDetalle=null;nav(\'cuentas\')" class="btn btn-g btn-sm" style="gap:6px">â† Volver</button>'
+      +'<button onclick="window._cuentasDetalle=null;nav(\'cuentas\')" class="btn btn-g btn-sm" style="gap:6px">� Volver</button>'
       +'<div style="display:flex;align-items:center;gap:10px">'
         +'<div style="width:38px;height:38px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800">BNK</div>'
         +'<div>'
           +'<div style="font-weight:900;font-size:17px;color:var(--ink);letter-spacing:-0.3px">'+nombre+'</div>'
-          +'<div style="font-size:11px;color:var(--ink3)">'+activos.length+' activo(s)'+(todos.length>activos.length?' · '+(todos.length-activos.length)+' anulado(s)':'')+'</div>'
+          +'<div style="font-size:11px;color:var(--ink3)">'+activos.length+' activo(s)'+(todos.length>activos.length?' � '+(todos.length-activos.length)+' anulado(s)':'')+'</div>'
         +'</div>'
       +'</div>'
       +'<div style="margin-left:auto;display:flex;gap:8px">'
-        +'<button class="btn btn-p btn-sm" onclick="openDeposito(\''+nombre+'\')">ï¼‹ Ingresar</button>'
-        +'<button class="btn btn-d btn-sm" onclick="openRetiro(\''+nombre+'\')">âˆ’ Retirar</button>'
-        +'<button class="btn btn-g btn-sm" onclick="openTransferencia(\''+nombre+'\')">â‡„ Transferir</button>'
+        +'<button class="btn btn-p btn-sm" onclick="openDeposito(\''+nombre+'\')">＋ Ingresar</button>'
+        +'<button class="btn btn-d btn-sm" onclick="openRetiro(\''+nombre+'\')">− Retirar</button>'
+        +'<button class="btn btn-g btn-sm" onclick="openTransferencia(\''+nombre+'\')">⇄ Transferir</button>'
       +'</div>'
     +'</div>'
 
@@ -372,7 +372,7 @@ function renderDetalleCuenta(nombre){
       +'</div>'
       +'<div class="card" style="padding:16px 20px">'
         +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--red);font-weight:700;margin-bottom:6px">↓ Total egresos</div>'
-        +'<div style="font-family:var(--fd);font-weight:900;font-size:24px;color:var(--red);letter-spacing:-1px">âˆ’'+fmt(totalEg)+'</div>'
+        +'<div style="font-family:var(--fd);font-weight:900;font-size:24px;color:var(--red);letter-spacing:-1px">−'+fmt(totalEg)+'</div>'
         +'<div style="font-size:10.5px;color:var(--ink3);margin-top:2px">'+activos.filter(function(m){return m.cuentaOrigen===nombre;}).length+' transacciones</div>'
       +'</div>'
     +'</div>'
@@ -465,27 +465,27 @@ function anularMovimiento(id, cuenta){
   var m = S.movimientos[idx];
   if(m.eliminado){ toast('Este movimiento ya fue anulado','error'); return; }
 
-  // Modal de confirmación con razón
+  // Modal de confirmaci�n con raz�n
   setMicon('anular');
   $('mtt').textContent='Anular movimiento';
-  $('msb').textContent='El movimiento seguirá visible pero no contará en saldos ni contabilidad';
+  $('msb').textContent='El movimiento seguir� visible pero no contar� en saldos ni contabilidad';
   $('modal-box').className='modal';
   $('mbd').innerHTML=
     '<div style="background:rgba(231,76,60,0.07);border:1px solid rgba(231,76,60,0.2);border-radius:12px;padding:14px 16px;margin-bottom:14px">'
     +'<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:4px">'+(m.concepto||'Movimiento')+'</div>'
-    +'<div style="font-size:12px;color:var(--ink3)">'+(m.fecha||'')+(m.referencia?' · #'+m.referencia:'')+'</div>'
+    +'<div style="font-size:12px;color:var(--ink3)">'+(m.fecha||'')+(m.referencia?' � #'+m.referencia:'')+'</div>'
     +'<div style="font-family:var(--fd);font-weight:900;font-size:20px;margin-top:8px;color:var(--red)">'+fmt(m.monto||0)+'</div>'
     +'</div>'
-    +'<div class="fg"><label>Razón de anulación *</label>'
+    +'<div class="fg"><label>Raz�n de anulaci�n *</label>'
     +'<input class="fi" id="anul_razon" placeholder="Ej: Error de registro, duplicado, reverso..." autofocus></div>';
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    +'<button class="btn btn-d" onclick="confirmarAnulacion(\''+id+'\',\''+cuenta+'\')"> Confirmar anulación</button>';
+    +'<button class="btn btn-d" onclick="confirmarAnulacion(\''+id+'\',\''+cuenta+'\')"> Confirmar anulaci�n</button>';
   $('ov').style.display='flex';
 }
 
 function confirmarAnulacion(id, cuenta){
   var razon = ($('anul_razon')||{}).value||'';
-  if(!razon.trim()){ toast('La razón de anulación es obligatoria','error'); return; }
+  if(!razon.trim()){ toast('La raz�n de anulaci�n es obligatoria','error'); return; }
   var idx = (S.movimientos||[]).findIndex(function(m){return m.id===id;});
   if(idx<0){ closeM(); return; }
   Object.assign(S.movimientos[idx], {
@@ -498,14 +498,14 @@ function confirmarAnulacion(id, cuenta){
   closeM();
   window._cuentasDetalle = cuenta;
   nav('cuentas');
-  toast('Movimiento anulado · quedará visible en auditoría','info');
+  toast('Movimiento anulado � quedar� visible en auditor�a','info');
 }
 
 function renderTabHistorial(){
   var mes=window._cuentasMes;
   var movs=S.movimientos.filter(function(m){
     var f=(m.fecha||'');
-    return f.startsWith(mes); // incluye anulados para auditoría
+    return f.startsWith(mes); // incluye anulados para auditor�a
   }).sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
 
   // Build month options (last 12 months)
@@ -521,7 +521,7 @@ function renderTabHistorial(){
   var tasaBs=window._tasaBsGlobal||1;
   var esAdmin = S.currentUser && S.currentUser.rol === 'Administrador';
 
-  // â•â•â• KPIs del mes â•â•â•
+  // ��� KPIs del mes ���
   var movsActivos = movs.filter(function(m){return !m.eliminado;});
   var totalIngresos = movsActivos.filter(function(m){return m.cuentaDestino && m.tipo!=='transferencia';}).reduce(function(a,m){return a+(m.monto||0);},0);
   var totalEgresos = movsActivos.filter(function(m){return m.cuentaOrigen && m.tipo!=='transferencia';}).reduce(function(a,m){return a+(m.monto||0);},0);
@@ -549,7 +549,7 @@ function renderTabHistorial(){
     +'<div class="stat">'
       +'<div class="st-v" style="color:var(--p1);font-size:26px">'+movs.length+'</div>'
       +'<div class="st-l">Movimientos</div>'
-      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+totalTransf+' transferencias'+(anulados>0?' · '+anulados+' anulados':'')+'</div>'
+      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+totalTransf+' transferencias'+(anulados>0?' � '+anulados+' anulados':'')+'</div>'
     +'</div>'
     +'<div class="stat">'
       +'<div class="st-v" style="color:var(--amber);font-size:26px">'+fmt(promedioPorMov)+'</div>'
@@ -558,7 +558,7 @@ function renderTabHistorial(){
     +'</div>'
     +'</div>';
 
-  // â•â•â• Mini chart de flujo diario â•â•â•
+  // ��� Mini chart de flujo diario ���
   var diasEnMes = new Date(parseInt(mes.split('-')[0]), parseInt(mes.split('-')[1]), 0).getDate();
   var flujoDiario = [];
   for(var d=1; d<=diasEnMes; d++){
@@ -571,13 +571,13 @@ function renderTabHistorial(){
   var maxDia = Math.max(1, ...flujoDiario.map(function(f){return Math.max(f.ing,f.eg);}));
 
   var chartDiario = '<div class="card" style="margin-bottom:14px">'
-    +'<div class="ch"><div><div class="ct">Actividad diaria</div><div class="cs">Flujo por día en '+nombreMesEsp(mes)+'</div></div></div>'
+    +'<div class="ch"><div><div class="ct">Actividad diaria</div><div class="cs">Flujo por d�a en '+nombreMesEsp(mes)+'</div></div></div>'
     +'<div style="display:flex;align-items:flex-end;gap:2px;height:90px;margin-top:12px;padding:0 4px">'
     +flujoDiario.map(function(f){
       var hIng = f.ing>0 ? Math.max(3, Math.round(f.ing/maxDia*70)) : 1;
       var hEg = f.eg>0 ? Math.max(3, Math.round(f.eg/maxDia*70)) : 1;
       var showLabel = f.dia%5===0 || f.dia===1;
-      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px" title="Día '+f.dia+': +'+fmt(f.ing)+' / -'+fmt(f.eg)+'">'
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px" title="D�a '+f.dia+': +'+fmt(f.ing)+' / -'+fmt(f.eg)+'">'
         +'<div style="flex:1;width:100%;display:flex;align-items:flex-end;gap:1px">'
         +'<div style="flex:1;background:var(--green);border-radius:2px 2px 0 0;height:'+hIng+'px;opacity:.85"></div>'
         +'<div style="flex:1;background:var(--red);border-radius:2px 2px 0 0;height:'+hEg+'px;opacity:.85"></div>'
@@ -587,18 +587,18 @@ function renderTabHistorial(){
     }).join('')
     +'</div></div>';
 
-  // â•â•â• Tabla de movimientos â•â•â•
+  // ��� Tabla de movimientos ���
   var rows=movs.length?movs.map(function(m){
-    var cuenta=m.cuentaDestino||m.cuentaOrigen||'—';
+    var cuenta=m.cuentaDestino||m.cuentaOrigen||'�';
     var esIngreso=!!m.cuentaDestino&&m.tipo!=='transferencia';
     var esTransfer = m.tipo==='transferencia';
     var anulado=!!m.eliminado;
     var monto=m.monto||0;
     var tasaM=m.tasaBs||tasaBs;
     var comision=m.comision||0;
-    var realizadoPor=m.realizadoPor||S.currentUser&&S.currentUser.nombre||'—';
+    var realizadoPor=m.realizadoPor||S.currentUser&&S.currentUser.nombre||'�';
     var fechaFmt=(function(){
-      if(!m.fecha) return '—';
+      if(!m.fecha) return '�';
       // If hora exists and is a clean HH:MM string, combine directly
       var h = (m.hora||'').trim();
       // Clean up old locale strings with "a. m."/"p. m." notation
@@ -624,7 +624,7 @@ function renderTabHistorial(){
       return m.fecha+(h?' '+h:'');
     })();
     var tipoColor = anulado ? 'var(--ink3)' : (esTransfer ? 'var(--amber)' : (esIngreso ? '#27ae60' : '#e74c3c'));
-    var tipoIcon = esTransfer ? 'â‡„' : (esIngreso ? 'â†©' : 'â†ª');
+    var tipoIcon = esTransfer ? '⇄' : (esIngreso ? '↩' : '↪');
     var tipoBg = anulado ? 'var(--surf2)' : (esTransfer ? 'var(--ambers)' : (esIngreso ? 'var(--greens)' : 'var(--reds)'));
     var anulTag=anulado?'<span style="font-size:9px;background:rgba(231,76,60,0.12);color:var(--red);border-radius:20px;padding:2px 8px;font-weight:800;margin-left:6px">ANULADO</span>':'';
     var anulBtn=(!anulado&&esAdmin)?'<button onclick="anularMovimiento(\''+m.id+'\',null)" title="Anular movimiento" style="background:none;border:none;cursor:pointer;color:var(--ink3);font-size:14px;padding:4px 8px;border-radius:6px;transition:all .15s" onmouseover="this.style.color=\'var(--red)\';this.style.background=\'var(--reds)\'" onmouseout="this.style.color=\'var(--ink3)\';this.style.background=\'none\'"></button>':'';
@@ -639,7 +639,7 @@ function renderTabHistorial(){
       +'<td style="font-size:11.5px">'+realizadoPor+'</td>'
       +'<td class="tdm" style="max-width:220px;'+(anulado?'text-decoration:line-through;':'')+'">'+( m.concepto||'<span style="color:var(--ink3);font-style:italic">sin concepto</span>' )+'</td>'
       +'<td style="text-align:right;white-space:nowrap;font-size:11px;color:var(--ink3)">'+tasaM+' Bs/$</td>'
-      +'<td style="text-align:right;font-size:11px;color:var(--ink3)">'+(comision>0?'BS '+parseFloat(comision).toFixed(2):'—')+'</td>'
+      +'<td style="text-align:right;font-size:11px;color:var(--ink3)">'+(comision>0?'BS '+parseFloat(comision).toFixed(2):'�')+'</td>'
       +'<td style="text-align:right;font-weight:800;color:'+montoColor+';white-space:nowrap;font-family:var(--fd);'+(anulado?'text-decoration:line-through;':'')+'">'+(esIngreso?'+':esTransfer?'':'-')+'$'+parseFloat(monto).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'
       +'<td style="text-align:center">'+anulBtn+'</td>'
       +'</tr>';
@@ -665,7 +665,7 @@ function renderTabHistorial(){
     +'<th style="text-align:left;padding:10px 8px;font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px">Usuario</th>'
     +'<th style="text-align:left;padding:10px 8px;font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px">Concepto</th>'
     +'<th style="text-align:right;padding:10px 8px;font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px">Tasa</th>'
-    +'<th style="text-align:right;padding:10px 8px;font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px">Comisión</th>'
+    +'<th style="text-align:right;padding:10px 8px;font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px">Comisi�n</th>'
     +'<th style="text-align:right;padding:10px 8px;font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.4px">Monto</th>'
     +'<th style="width:40px"></th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table>'
@@ -700,14 +700,14 @@ function exportHistorialXLS(){
   toast('Historial exportado','success');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// �������������������������������
 // TAB 3: CUENTAS PENDIENTES
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// �������������������������������
 function renderTabPendientes(){
   var subTab=window._cuentasSubTab||'cobrar';
   var ocultarCero=window._ocultarCero!==false;
 
-  // â•â•â• KPIs de pendientes â•â•â•
+  // ��� KPIs de pendientes ���
   var credActivosKpi = S.creds.filter(function(c){return !c.eliminado&&(c.estado==='activo'||c.estado==='mora');});
   var totalPorCobrar = credActivosKpi.reduce(function(a,c){return a+(getCreditoSaldoPendiente(c)||0);},0);
   var manualCobrarKpi = (S.cuentasPendientes||[]).filter(function(p){return p.tipo==='cobrar'&&!p.pagado&&!p.eliminado;});
@@ -721,7 +721,7 @@ function renderTabPendientes(){
     +'<div class="stat">'
       +'<div class="st-v" style="color:var(--green);font-size:26px">'+fmt(totalPorCobrar + totalManualCobrar)+'</div>'
       +'<div class="st-l">Por cobrar</div>'
-      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+credActivosKpi.length+' créditos'+(manualCobrarKpi.length>0?' · '+manualCobrarKpi.length+' manuales':'')+'</div>'
+      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+credActivosKpi.length+' cr�ditos'+(manualCobrarKpi.length>0?' � '+manualCobrarKpi.length+' manuales':'')+'</div>'
     +'</div>'
     +'<div class="stat">'
       +'<div class="st-v" style="color:var(--red);font-size:26px">'+fmt(totalManualPagar)+'</div>'
@@ -731,12 +731,12 @@ function renderTabPendientes(){
     +'<div class="stat">'
       +'<div class="st-v" style="color:'+(clientesMoraKpi>0?'var(--red)':'var(--green)')+';font-size:26px">'+clientesMoraKpi+'</div>'
       +'<div class="st-l">En mora</div>'
-      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+clientesAlDiaKpi+' al día</div>'
+      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+clientesAlDiaKpi+' al d�a</div>'
     +'</div>'
     +'<div class="stat">'
       +'<div class="st-v" style="color:var(--p1);font-size:26px">'+fmt((totalPorCobrar + totalManualCobrar) - totalManualPagar)+'</div>'
       +'<div class="st-l">Balance neto</div>'
-      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">Por cobrar âˆ’ por pagar</div>'
+      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">Por cobrar − por pagar</div>'
     +'</div>'
     +'</div>';
 
@@ -754,8 +754,8 @@ function renderTabPendientes(){
     +'</div>'
     +'<div style="display:flex;gap:8px;margin-bottom:14px">'
     +(subTab==='cobrar'
-      ? '<button class="btn btn-p btn-sm" onclick="openAgregarPendiente(\'cobrar\')">ï¼‹ Agregar pendiente por cobrar</button>'
-      : '<button class="btn btn-d btn-sm" onclick="openAgregarPendiente(\'pagar\')" style="background:rgba(231,76,60,0.12);color:#e74c3c;border:1px solid rgba(231,76,60,0.25)">ï¼‹ Agregar pendiente por pagar</button>'
+      ? '<button class="btn btn-p btn-sm" onclick="openAgregarPendiente(\'cobrar\')">＋ Agregar pendiente por cobrar</button>'
+      : '<button class="btn btn-d btn-sm" onclick="openAgregarPendiente(\'pagar\')" style="background:rgba(231,76,60,0.12);color:#e74c3c;border:1px solid rgba(231,76,60,0.25)">＋ Agregar pendiente por pagar</button>'
     )
     +'</div>';
 
@@ -787,14 +787,14 @@ function renderCobrar(ocultarCero){
 
   var totalCobrar=grupos.reduce(function(a,g){return a+g.total;},0);
 
-  if(!grupos.length && !manualCobrar.length) return '<div class="empty"><span class="e-ic">✓</span><div class="e-tt">Sin cuentas pendientes por cobrar</div><div style="font-size:12px;color:var(--ink3);margin-top:6px"><button class="btn btn-p btn-sm" onclick="openAgregarPendiente(\'cobrar\')">ï¼‹ Agregar pendiente</button></div></div>';
+  if(!grupos.length && !manualCobrar.length) return '<div class="empty"><span class="e-ic">✓</span><div class="e-tt">Sin cuentas pendientes por cobrar</div><div style="font-size:12px;color:var(--ink3);margin-top:6px"><button class="btn btn-p btn-sm" onclick="openAgregarPendiente(\'cobrar\')">＋ Agregar pendiente</button></div></div>';
 
   var rowsManual=manualCobrar.map(function(p,idx){
     return '<tr style="background:rgba(37,99,235,0.03)">'
       +'<td><span style="font-size:10px;background:rgba(37,99,235,0.12);color:var(--p1);border-radius:20px;padding:2px 8px;font-weight:700;margin-right:6px">MANUAL</span>'+p.descripcion+'</td>'
-      +'<td style="text-align:center;color:var(--ink3)">'+( p.contraparte||'—' )+'</td>'
+      +'<td style="text-align:center;color:var(--ink3)">'+( p.contraparte||'�' )+'</td>'
       +'<td style="text-align:right;font-weight:700">'+fmt(p.monto||0)+'</td>'
-      +'<td style="text-align:center">'+(p.fechaVenc?'<span style="font-size:11px;color:var(--amber)">'+p.fechaVenc+'</span>':'—')+'</td>'
+      +'<td style="text-align:center">'+(p.fechaVenc?'<span style="font-size:11px;color:var(--amber)">'+p.fechaVenc+'</span>':'�')+'</td>'
       +'<td style="text-align:center;display:flex;gap:6px;justify-content:center;align-items:center">'
       +'<button class="btn btn-p btn-xs" onclick="marcarPendientePagado(\''+p.id+'\')">✓ Cobrado</button>'
       +'<button class="btn btn-d btn-xs" onclick="delPendiente(\''+p.id+'\')">✕</button>'
@@ -803,15 +803,15 @@ function renderCobrar(ocultarCero){
 
   var rows=grupos.map(function(g,idx){
     var expired=g.creds.some(function(c){return c.estado==='mora';});
-    var diasLabel=expired?'<span style="color:#e74c3c;font-weight:700">Expirado</span>':'<span style="color:var(--ink2)">—</span>';
+    var diasLabel=expired?'<span style="color:#e74c3c;font-weight:700">Expirado</span>':'<span style="color:var(--ink2)">�</span>';
     return '<tr>'
-      +'<td><span style="cursor:pointer;font-size:11px;color:var(--p1)" onclick="toggleCobrarRow('+idx+')">â–¶</span> Cliente: '+g.cli+'</td>'
+      +'<td><span style="cursor:pointer;font-size:11px;color:var(--p1)" onclick="toggleCobrarRow('+idx+')">▶</span> Cliente: '+g.cli+'</td>'
       +'<td style="text-align:center;font-weight:700">'+g.pendCount+'</td>'
       +'<td style="text-align:right;font-weight:700">'+fmt(g.total)+'</td>'
       +'<td style="text-align:center">'+diasLabel+'</td>'
       +'<td style="text-align:center">'
       +'<button onclick="cobrarTodoCliente(\''+g.cli+'\')" class="btn btn-p btn-xs">Cobrar todo</button>'
-      +'<button style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--ink3);padding:4px 6px">â‹®</button>'
+      +'<button style="background:none;border:none;font-size:16px;cursor:pointer;color:var(--ink3);padding:4px 6px">⋮</button>'
       +'</td></tr>'
       +'<tr id="cobrar-row-'+idx+'" style="display:none"><td colspan="5" style="padding:0">'
       +'<div style="padding:10px 20px 10px 40px;background:var(--base);border-bottom:1px solid var(--rim)">'
@@ -832,15 +832,15 @@ function renderCobrar(ocultarCero){
     +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">'
     +'<div><div class="ct" style="color:var(--p1)">Cuentas pendientes por cobrar</div></div>'
     +'<div style="display:flex;gap:10px;align-items:center">'
-    +'<input type="text" class="fi" placeholder="Búsqueda de texto completo..." style="min-width:220px;font-size:12px" oninput="filtrarCobrar(this.value)">'
+    +'<input type="text" class="fi" placeholder="B�squeda de texto completo..." style="min-width:220px;font-size:12px" oninput="filtrarCobrar(this.value)">'
     +'<div style="background:rgba(37,99,235,0.12);border-radius:20px;padding:8px 16px;font-weight:800;font-size:13px;color:var(--p1)">Total: '+fmt(totalCobrarFull)+'</div>'
     +'</div></div>'
     +'<div style="overflow-x:auto"><table class="tbl" id="cobrar-table"><thead><tr>'
     +'<th>Asunto ↑</th><th style="text-align:center">Contraparte / Cuotas ↑</th>'
     +'<th style="text-align:right">Por cobrar ↑</th><th style="text-align:center">Vencimiento ↑</th>'
-    +'<th style="text-align:center">Acción</th></tr></thead>'
+    +'<th style="text-align:center">Acci�n</th></tr></thead>'
     +'<tbody>'+rows+rowsManual+'</tbody></table></div>'
-    +'<div style="font-size:12px;color:var(--ink3);padding-top:12px">'+(grupos.length+manualCobrar.length)+' resultado(s) — '+(manualCobrar.length)+' manuales</div>'
+    +'<div style="font-size:12px;color:var(--ink3);padding-top:12px">'+(grupos.length+manualCobrar.length)+' resultado(s) � '+(manualCobrar.length)+' manuales</div>'
     +'</div>';
 }
 
@@ -859,14 +859,14 @@ function renderPagar(ocultarCero){
     .sort(function(a,b){return b.total-a.total;});
   var totalPagar=grupos.reduce(function(a,g){return a+g.total;},0);
 
-  if(!grupos.length && !manualPagar.length) return '<div class="empty"><span class="e-ic">✓</span><div class="e-tt">Sin cuentas pendientes por pagar</div><div style="font-size:12px;color:var(--ink3);margin-top:6px"><button class="btn btn-d btn-sm" onclick="openAgregarPendiente(\'pagar\')">ï¼‹ Agregar pendiente</button></div></div>';
+  if(!grupos.length && !manualPagar.length) return '<div class="empty"><span class="e-ic">✓</span><div class="e-tt">Sin cuentas pendientes por pagar</div><div style="font-size:12px;color:var(--ink3);margin-top:6px"><button class="btn btn-d btn-sm" onclick="openAgregarPendiente(\'pagar\')">＋ Agregar pendiente</button></div></div>';
 
   var rowsManualPagar=manualPagar.map(function(p){
     return '<tr style="background:rgba(231,76,60,0.03)">'
       +'<td><span style="font-size:10px;background:rgba(231,76,60,0.12);color:#e74c3c;border-radius:20px;padding:2px 8px;font-weight:700;margin-right:6px">MANUAL</span>'+p.descripcion+'</td>'
-      +'<td style="text-align:center;color:var(--ink3)">'+( p.contraparte||'—' )+'</td>'
+      +'<td style="text-align:center;color:var(--ink3)">'+( p.contraparte||'�' )+'</td>'
       +'<td style="text-align:right;font-weight:700;color:#e74c3c">'+fmt(p.monto||0)+'</td>'
-      +'<td style="text-align:center">'+(p.fechaVenc?'<span style="font-size:11px;color:var(--amber)">'+p.fechaVenc+'</span>':'—')+'</td>'
+      +'<td style="text-align:center">'+(p.fechaVenc?'<span style="font-size:11px;color:var(--amber)">'+p.fechaVenc+'</span>':'�')+'</td>'
       +'<td style="text-align:center;display:flex;gap:6px;justify-content:center;align-items:center">'
       +'<button class="btn btn-g btn-xs" onclick="marcarPendientePagado(\''+p.id+'\')">✓ Pagado</button>'
       +'<button class="btn btn-d btn-xs" onclick="delPendiente(\''+p.id+'\')">✕</button>'
@@ -874,12 +874,12 @@ function renderPagar(ocultarCero){
   }).join('');
 
   var rows=grupos.map(function(g,idx){
-    var catLabel={inventario:'Inventario',equipos:'Equipos',operativo:'Operativo',nomina:'Nómina',otros:'Otros'}[g.cat]||g.cat;
+    var catLabel={inventario:'Inventario',equipos:'Equipos',operativo:'Operativo',nomina:'N�mina',otros:'Otros'}[g.cat]||g.cat;
     return '<tr>'
-      +'<td><span style="cursor:pointer;font-size:11px;color:var(--p1)" onclick="togglePagarRow('+idx+')">â–¶</span> '+catLabel+'</td>'
+      +'<td><span style="cursor:pointer;font-size:11px;color:var(--p1)" onclick="togglePagarRow('+idx+')">▶</span> '+catLabel+'</td>'
       +'<td style="text-align:center;font-weight:700">'+g.items.length+'</td>'
       +'<td style="text-align:right;font-weight:700;color:var(--red)">'+fmt(g.total)+'</td>'
-      +'<td style="text-align:center"><span style="color:var(--ink3)">—</span></td>'
+      +'<td style="text-align:center"><span style="color:var(--ink3)">�</span></td>'
       +'<td style="text-align:center">'
       +'<button onclick="nav(\'conta\')" class="btn btn-g btn-xs">Ver detalle</button>'
       +'</td></tr>'
@@ -902,15 +902,15 @@ function renderPagar(ocultarCero){
     +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">'
     +'<div><div class="ct" style="color:var(--red,#e74c3c)">Cuentas por pagar</div></div>'
     +'<div style="display:flex;gap:10px;align-items:center">'
-    +'<input type="text" class="fi" placeholder="Búsqueda de texto completo..." style="min-width:220px;font-size:12px">'
+    +'<input type="text" class="fi" placeholder="B�squeda de texto completo..." style="min-width:220px;font-size:12px">'
     +'<div style="background:rgba(231,76,60,0.10);border-radius:20px;padding:8px 16px;font-weight:800;font-size:13px;color:#e74c3c">Total: '+fmt(totalPagarFull)+'</div>'
     +'</div></div>'
     +'<div style="overflow-x:auto"><table class="tbl"><thead><tr>'
-    +'<th>Descripción</th><th style="text-align:center">Contraparte</th>'
+    +'<th>Descripci�n</th><th style="text-align:center">Contraparte</th>'
     +'<th style="text-align:right">Por pagar</th><th style="text-align:center">Vencimiento</th>'
-    +'<th style="text-align:center">Acción</th></tr></thead>'
+    +'<th style="text-align:center">Acci�n</th></tr></thead>'
     +'<tbody>'+rows+rowsManualPagar+'</tbody></table></div>'
-    +'<div style="font-size:12px;color:var(--ink3);padding-top:12px">'+(grupos.length+manualPagar.length)+' resultado(s) — '+(manualPagar.length)+' manuales</div>'
+    +'<div style="font-size:12px;color:var(--ink3);padding-top:12px">'+(grupos.length+manualPagar.length)+' resultado(s) � '+(manualPagar.length)+' manuales</div>'
     +'</div>';
 }
 
@@ -943,11 +943,11 @@ function openAgregarPendiente(tipo){
   var label=esCobrar?'por cobrar':'por pagar';
   setMicon('pago');
   $('mtt').textContent='Nueva cuenta pendiente '+label;
-  $('msb').textContent='Se agregará a cuentas '+label;
+  $('msb').textContent='Se agregar� a cuentas '+label;
   $('modal-box').className='modal';
   $('mbd').innerHTML=
     '<div class="fgr c1" style="gap:10px">'
-    +'<div class="fg"><label>Descripción *</label><input class="fi" id="pnd_desc" placeholder="Ej: Pago alquiler local, Cobro cliente ABC..."></div>'
+    +'<div class="fg"><label>Descripci�n *</label><input class="fi" id="pnd_desc" placeholder="Ej: Pago alquiler local, Cobro cliente ABC..."></div>'
     +'<div class="fg"><label>Contraparte</label><input class="fi" id="pnd_contra" placeholder="Nombre del cliente o proveedor"></div>'
     +'<div class="fgr c2" style="gap:10px">'
     +'<div class="fg"><label>Monto *</label><input class="fi" id="pnd_monto" type="number" min="0" step="0.01" placeholder="0.00"></div>'
@@ -956,15 +956,15 @@ function openAgregarPendiente(tipo){
     +'<div class="fg"><label>Notas</label><input class="fi" id="pnd_notas" placeholder="Opcional..."></div>'
     +'</div>';
   $('mft').innerHTML='<button class="btn btn-g btn-sm" onclick="closeM()">Cancelar</button>'
-    +'<button class="btn btn-p btn-sm" style="background:'+color+'" onclick="savePendiente(\''+tipo+'\')">ï¼‹ Guardar pendiente</button>';
+    +'<button class="btn btn-p btn-sm" style="background:'+color+'" onclick="savePendiente(\''+tipo+'\')">＋ Guardar pendiente</button>';
   $('ov').style.display='flex';
 }
 
 function savePendiente(tipo){
   var desc=($('pnd_desc')||{}).value||'';
   var monto=parseFloat(($('pnd_monto')||{}).value||'0');
-  if(!desc.trim()){toast('La descripción es obligatoria','error');return;}
-  if(isNaN(monto)||monto<0){toast('Monto inválido','error');return;}
+  if(!desc.trim()){toast('La descripci�n es obligatoria','error');return;}
+  if(isNaN(monto)||monto<0){toast('Monto inv�lido','error');return;}
   if(!S.cuentasPendientes) S.cuentasPendientes=[];
   var obj={
     id:'PND-'+Date.now(),
@@ -1011,9 +1011,9 @@ function marcarPendientePagado(id){
 }
 
 
-// ── DEPÓSITO ──
+// ── DEP�SITO ──
 function openDeposito(cuentaNombre){
-  setMicon('deposito');$('mtt').textContent='Registrar Depósito';
+  setMicon('deposito');$('mtt').textContent='Registrar Dep�sito';
   $('msb').textContent=cuentaNombre||'Selecciona la cuenta';
   $('modal-box').className='modal';
   var opts = (_cuentasBanc||[]).map(function(cu){
@@ -1047,10 +1047,10 @@ function openDeposito(cuentaNombre){
       monedaMov:($('dep_moneda')&&$('dep_moneda').value)||'USD',
       realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin'};
     S.movimientos.push(mov); DB.saveMovimiento(mov);
-    closeM(); nav('cuentas'); toast('Depósito registrado · '+fmt(monto),'success'); return true;
+    closeM(); nav('cuentas'); toast('Dep�sito registrado � '+fmt(monto),'success'); return true;
   };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    +'<button class="btn btn-p" onclick="saveM()">Registrar Depósito</button>';
+    +'<button class="btn btn-p" onclick="saveM()">Registrar Dep�sito</button>';
   $('ov').style.display='flex';
 }
 
@@ -1067,7 +1067,7 @@ function openRetiro(cuentaNombre){
     +(opts?'<select class="fs" id="ret_cuenta">'+opts+'</select>'
       :'<input class="fi" id="ret_cuenta" placeholder="Nombre de la cuenta">')
     +'</div>'
-    +'<div class="fg"><label>Concepto *</label><input class="fi" id="ret_conc" placeholder="Ej: Pago proveedor, nómina..."></div>'
+    +'<div class="fg"><label>Concepto *</label><input class="fi" id="ret_conc" placeholder="Ej: Pago proveedor, n�mina..."></div>'
     +'<div class="fgr" style="gap:8px">'
     +'<div class="fg"><label>Monto *</label><input class="fi" id="ret_monto" type="number" step="0.01" placeholder="0.00"></div>'
     +'<div class="fg"><label>Fecha</label><input class="fi" id="ret_fecha" type="date" value="'+hoyLocalISO()+'"></div></div>'
@@ -1090,7 +1090,7 @@ function openRetiro(cuentaNombre){
       monedaMov:($('ret_moneda')&&$('ret_moneda').value)||'USD',
       realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin'};
     S.movimientos.push(mov); DB.saveMovimiento(mov);
-    closeM(); nav('cuentas'); toast('Retiro registrado · '+fmt(monto),'success'); return true;
+    closeM(); nav('cuentas'); toast('Retiro registrado � '+fmt(monto),'success'); return true;
   };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
     +'<button class="btn btn-d" onclick="saveM()">Registrar Retiro</button>';
@@ -1107,10 +1107,10 @@ function openTransferencia(cuentaNombre){
   var optsOrig = (_cuentasBanc||[]).map(function(cu){
     return '<option value="'+cu.nombre+'" '+(cu.nombre===cuentaNombre?'selected':'')+'>'+cu.nombre+'</option>';
   }).join('');
-  if(!opts){ toast('Agrega cuentas en Configuración primero','error'); return; }
+  if(!opts){ toast('Agrega cuentas en Configuraci�n primero','error'); return; }
   $('mbd').innerHTML='<div class="fgr c1" style="gap:9px">'
     +'<div class="fg"><label>Cuenta origen *</label><select class="fs" id="tr_origen">'+optsOrig+'</select></div>'
-    +'<div style="text-align:center;font-size:22px;color:var(--p1);margin:4px 0">â¬‡ï¸</div>'
+    +'<div style="text-align:center;font-size:22px;color:var(--p1);margin:4px 0">⬇�</div>'
     +'<div class="fg"><label>Cuenta destino *</label><select class="fs" id="tr_destino">'+opts+'</select></div>'
     +'<div class="fgr" style="gap:8px">'
     +'<div class="fg"><label>Monto *</label><input class="fi" id="tr_monto" type="number" step="0.01" placeholder="0.00"></div>'
@@ -1125,7 +1125,7 @@ function openTransferencia(cuentaNombre){
     var monto=parseFloat(($('tr_monto')&&$('tr_monto').value))||0;
     if(!orig||!dest){toast('Selecciona origen y destino','error');return false;}
     if(orig===dest){toast('El origen y destino deben ser distintos','error');return false;}
-    if(monto<=0){toast('Ingresa un monto válido','error');return false;}
+    if(monto<=0){toast('Ingresa un monto v�lido','error');return false;}
     var conc=($('tr_conc')&&$('tr_conc').value)||'Transferencia interna';
     var mov={id:'MOV-'+Date.now(),tipo:'transferencia',concepto:conc,monto:monto,
       cuentaOrigen:orig,cuentaDestino:dest,
@@ -1136,7 +1136,7 @@ function openTransferencia(cuentaNombre){
       monedaMov:'USD',
       realizadoPor:(S.currentUser&&S.currentUser.nombre)||'Admin'};
     S.movimientos.push(mov); DB.saveMovimiento(mov);
-    closeM(); nav('cuentas'); toast('Transferencia registrada · '+fmt(monto),'success'); return true;
+    closeM(); nav('cuentas'); toast('Transferencia registrada � '+fmt(monto),'success'); return true;
   };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
     +'<button class="btn btn-p" onclick="saveM()">Transferir</button>';
@@ -1155,9 +1155,9 @@ function delMovimiento(id){
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// NOTIFICACIONES — funciones reales
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ������������������������������������������
+// NOTIFICACIONES � funciones reales
+// ������������������������������������������
 
 
-// ── INIT — arranca la app después del login ─────────────────
+// ── INIT � arranca la app despu�s del login ─────────────────

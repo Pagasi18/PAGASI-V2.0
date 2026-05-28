@@ -2,10 +2,10 @@
 function restaurarPago(id){
   if(!requireDeletePermission()) return;
   var p=S.pagos.find(function(x){return x.id===id;});
-  if(!p||!p.eliminado){toast('Pago no encontrado o no está archivado','error');return;}
-  if(!confirm('¿Restaurar el pago '+p.id+' ('+p.cli+' · '+fmt(p.monto)+')?')) return;
+  if(!p||!p.eliminado){toast('Pago no encontrado o no est� archivado','error');return;}
+  if(!confirm('�Restaurar el pago '+p.id+' ('+p.cli+' � '+fmt(p.monto)+')?')) return;
   var modoPrevio = p.eliminadoModo || 'completo';
-  // Limpiar flags de eliminación
+  // Limpiar flags de eliminaci�n
   delete p.eliminado;
   delete p.eliminadoPor;
   delete p.eliminadoPorUid;
@@ -14,7 +14,7 @@ function restaurarPago(id){
   delete p.eliminadoModo;
   p.mantenerEnAmortizacion = false;
   DB.savePago(p);
-  // Si la eliminación era completa, recalcular crédito y restaurar el movimiento asociado
+  // Si la eliminaci�n era completa, recalcular cr�dito y restaurar el movimiento asociado
   if(modoPrevio==='completo'){
     // Restaurar movimiento asociado si existe
     var mi=S.movimientos.findIndex(function(m){
@@ -26,7 +26,7 @@ function restaurarPago(id){
       delete S.movimientos[mi].eliminadoEn;
       DB.saveMovimiento(S.movimientos[mi]);
     }
-    // Recalcular crédito desde pagos
+    // Recalcular cr�dito desde pagos
     if(typeof recalcularCreditoDesdePagos==='function') recalcularCreditoDesdePagos(p.cred);
   }
   nav('pagos');
@@ -34,10 +34,10 @@ function restaurarPago(id){
 }
 window.restaurarPago=restaurarPago;
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// NUEVA SOLICITUD — Wizard estilo Indexa integrado en Pagasi
+// ��������������������������������������������������������������
+// NUEVA SOLICITUD � Wizard estilo Indexa integrado en Pagasi
 // 4 pasos: cliente → moto → perfil crediticio → resultado
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ��������������������������������������������������������������
 
 // ── Estado del wizard ──
 // Logica de creditos y wizard de solicitudes movida a logic/creditos.js.
@@ -46,13 +46,13 @@ function openAddPago(preCredId){
   setMicon('pago');$('mtt').textContent='Registrar Pago';$('msb').textContent='Plan '+PLAN.plazo+' meses';
   $('modal-box').className='modal';
   $('mbd').innerHTML=`
-    <div class="fgr c1" style="gap:9px"><div class="fg"><label>Crédito</label><select class="fs" id="p_cred" onchange="updPagoMonto(this)">${S.creds.filter(c=>c.estado==='activo'||c.estado==='mora').map(c=>`<option value="${c.id}" data-cuota="${c.cuota}" data-cuotaq="${c.cuotaQ}" ${preCredId&&String(c.id)===String(preCredId)?'selected':''}>${c.id} — ${c.cli} (${c.modelo})</option>`).join('')}</select></div></div>
+    <div class="fgr c1" style="gap:9px"><div class="fg"><label>Cr�dito</label><select class="fs" id="p_cred" onchange="updPagoMonto(this)">${S.creds.filter(c=>c.estado==='activo'||c.estado==='mora').map(c=>`<option value="${c.id}" data-cuota="${c.cuota}" data-cuotaq="${c.cuotaQ}" ${preCredId&&String(c.id)===String(preCredId)?'selected':''}>${c.id} � ${c.cli} (${c.modelo})</option>`).join('')}</select></div></div>
     <div class="fgr" style="margin-top:9px">
-      <div class="fg"><label>Frecuencia</label><input class="fi" value="Quincenal (cada 15 días)" readonly style="color:var(--p1);font-weight:700;background:var(--surf)"></div>
+      <div class="fg"><label>Frecuencia</label><input class="fi" value="Quincenal (cada 15 d�as)" readonly style="color:var(--p1);font-weight:700;background:var(--surf)"></div>
       <div class="fg"><label>Fecha de pago</label><input class="fi" id="p_fecha" type="date" value="${hoyLocalISO()}"></div>
       <div class="fg"><label>Monto ($)</label><input class="fi" id="p_monto" type="number" placeholder="0.00"></div>
-<div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">${(_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[]).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}${(!_cuentasBanc||!_cuentasBanc.length)?'<option value="">— Sin cuentas configuradas —</option>':''}</select></div>
-      <div class="fg"><label>N° Referencia</label><input class="fi" id="p_ref" placeholder="Número de referencia o comprobante"></div>
+<div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">${(_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[]).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}${(!_cuentasBanc||!_cuentasBanc.length)?'<option value="">� Sin cuentas configuradas �</option>':''}</select></div>
+      <div class="fg"><label>N� Referencia</label><input class="fi" id="p_ref" placeholder="N�mero de referencia o comprobante"></div>
       <div class="fg"><label>Cobrador</label><select class="fs" id="p_cobrador">${(_cobradores||[]).map(u=>`<option>${u}</option>`).join('')}</select></div>
     </div>`;
   setTimeout(()=>updPagoMonto($('p_cred')),50);
@@ -69,16 +69,16 @@ function openAddPago(preCredId){
   S.saveFn=()=>{
     const credId=($('p_cred')&&$('p_cred').value);
     const cred=S.creds.find(function(x){return x.id===credId;});
-    if(!cred){toast('Selecciona un crédito','error');return false;}
+    if(!cred){toast('Selecciona un cr�dito','error');return false;}
     const monto=parseFloat(($('p_monto')&&$('p_monto').value))||0;
-    if(monto<=0){toast('Ingresa un monto válido','error');return false;}
+    if(monto<=0){toast('Ingresa un monto v�lido','error');return false;}
     const newPago={
       id:'PAG-'+Date.now(),
       cli:cred.cli,cred:credId,
       fecha:($('p_fecha')&&$('p_fecha').value)||hoyLocalISO(),
       monto:monto,
       metodo:($('p_forma')&&$('p_forma').value)||'Efectivo USD',
-      cuenta:($('p_forma')&&$('p_forma').value)||'—',
+      cuenta:($('p_forma')&&$('p_forma').value)||'�',
       cobrador:($('p_cobrador')&&$('p_cobrador').value)||'Admin',
       referencia:($('p_ref')&&$('p_ref').value)||'',
       estado:'confirmado',
@@ -88,7 +88,7 @@ function openAddPago(preCredId){
     };
     S.pagos.push(newPago);
     DB.savePago(newPago);
-    // Crear movimiento en Cuentas — usar nombre exacto de la cuenta seleccionada
+    // Crear movimiento en Cuentas � usar nombre exacto de la cuenta seleccionada
     var pagoMetodo=($('p_forma')&&$('p_forma').value)||'';
     // Si no hay cuenta seleccionada pero hay cuentas configuradas, usar la primera
     if(!pagoMetodo && _cuentasBanc && _cuentasBanc.length>0) pagoMetodo=_cuentasBanc[0].nombre;
@@ -96,7 +96,7 @@ function openAddPago(preCredId){
       var mov={
         id:'MOV-'+Date.now(),
         tipo:'deposito',
-        concepto:'Pago cuota · '+cred.cli+' · '+credId,
+        concepto:'Pago cuota � '+cred.cli+' � '+credId,
         conceptoPago:newPago.id, // link al pago para evitar movimientos duplicados
         monto:monto,
         cuentaOrigen:null,
@@ -111,14 +111,14 @@ function openAddPago(preCredId){
       DB.saveMovimiento(mov);
     }
 
-    // ── Lógica de cuotas con sobrante ──────────────────────────
+    // ── L�gica de cuotas con sobrante ──────────────────────────
     const ci=S.creds.findIndex(function(x){return x.id===credId;});
     if(ci>=0){
       var c2=S.creds[ci];
       var cuotaVal=parseFloat(c2.cuotaQ||c2.cuota||0);
       var totalCuotas=c2.totalCuotas||c2.plazo*2;
 
-      // Leer historial desde memoria (ya actualizado por pagos anteriores en esta sesión)
+      // Leer historial desde memoria (ya actualizado por pagos anteriores en esta sesi�n)
       var historial=Array.isArray(c2.pagosRegistrados)
         ? JSON.parse(JSON.stringify(c2.pagosRegistrados))
         : [];
@@ -147,7 +147,7 @@ function openAddPago(preCredId){
         }
       }
 
-      // Recalcular cuántas cuotas están 100% pagadas
+      // Recalcular cu�ntas cuotas est�n 100% pagadas
       var cuotasPagadas=0;
       for(var qi=0;qi<totalCuotas;qi++){
         if(saldoPorCuota[qi]<=0.001) cuotasPagadas++;
@@ -157,7 +157,7 @@ function openAddPago(preCredId){
       var proxCuotaIdx=cuotasPagadas;
       var saldoProxCuota=proxCuotaIdx<totalCuotas ? saldoPorCuota[proxCuotaIdx] : 0;
 
-      // Actualizar en memoria PRIMERO para que el próximo pago lea datos correctos
+      // Actualizar en memoria PRIMERO para que el pr�ximo pago lea datos correctos
       S.creds[ci].pagado=cuotasPagadas;
       S.creds[ci].pagosRegistrados=historial;
       S.creds[ci].saldoProxCuota=saldoProxCuota;
@@ -177,7 +177,7 @@ function openAddPago(preCredId){
           DB.saveMoto(S.motos[mIdx]);
         }
 
-        // ── Punto 5: Marcar cliente como premium si pagó sin mora ──
+        // ── Punto 5: Marcar cliente como premium si pag� sin mora ──
         var cliIdx=S.clientes.findIndex(function(cl){return cl.nombre===S.creds[ci].cli;});
         if(cliIdx>=0){
           var tuvomora=(S.creds[ci].tuvoMoraHistorica===true)||S.pagos.some(function(p){return p.cred===credId&&p.mora>0;});
@@ -186,7 +186,7 @@ function openAddPago(preCredId){
             S.clientes[cliIdx].premioPor=credId;
             DB.saveCliente(S.clientes[cliIdx]);
           }
-          // Incrementar contador de créditos completados
+          // Incrementar contador de cr�ditos completados
           S.clientes[cliIdx].creditosCompletados=(S.clientes[cliIdx].creditosCompletados||0)+1;
           S.clientes[cliIdx].estado='solvente';
           DB.saveCliente(S.clientes[cliIdx]);
@@ -214,8 +214,8 @@ function openAddPago(preCredId){
       recienCompletado = c2.estado==='completado' && !!c2.fechaCompletado;
 
       var msg='✓ Pago de '+fmt(monto)+' registrado';
-      if(cuotasAfectadas.length>1) msg+=' · Cuotas '+cuotasAfectadas[0]+' a '+cuotasAfectadas[cuotasAfectadas.length-1]+' cubiertas';
-      if(saldoProxCuota>0&&saldoProxCuota<cuotaVal) msg+=' · Próxima cuota: solo '+fmt(saldoProxCuota)+' pendiente';
+      if(cuotasAfectadas.length>1) msg+=' � Cuotas '+cuotasAfectadas[0]+' a '+cuotasAfectadas[cuotasAfectadas.length-1]+' cubiertas';
+      if(saldoProxCuota>0&&saldoProxCuota<cuotaVal) msg+=' � Pr�xima cuota: solo '+fmt(saldoProxCuota)+' pendiente';
       pgSet('pagos',1);
       toast(msg,'success');
 
@@ -226,7 +226,7 @@ function openAddPago(preCredId){
       }
     } else {
       pgSet('pagos',1);
-      toast('✓ Pago registrado · '+fmt(monto),'success');
+      toast('✓ Pago registrado � '+fmt(monto),'success');
       // Ofrecer recibo
       setTimeout(function(){ ofrecerRecibo(newPago, cred); }, 400);
     }
@@ -244,7 +244,7 @@ function updPagoMonto(sel){
   const cuotaBase=parseFloat(opt.dataset.cuotaq||opt.dataset.cuota)||0;
   var credId=sel&&sel.value;
   var cred=credId&&S.creds.find(function(x){return x.id===credId;});
-  // Si tiene saldo pendiente parcial en la próxima cuota, mostrar ese monto
+  // Si tiene saldo pendiente parcial en la pr�xima cuota, mostrar ese monto
   var montoPendiente=cuotaBase;
   if(cred&&cred.saldoProxCuota>0&&cred.saldoProxCuota<cuotaBase){
     montoPendiente=cred.saldoProxCuota;
@@ -256,17 +256,17 @@ function updPagoMonto(sel){
     if(cred&&cred.saldoProxCuota>0&&cred.saldoProxCuota<cuotaBase){
       var yaAbono=parseFloat((cuotaBase-cred.saldoProxCuota).toFixed(2));
       saldoEl.style.display='block';
-      saldoEl.innerHTML='$ Cuota parcialmente pagada: ya abonó <strong>'+fmt(yaAbono)+'</strong> — solo faltan <strong>'+fmt(cred.saldoProxCuota)+'</strong> para completarla.';
+      saldoEl.innerHTML='$ Cuota parcialmente pagada: ya abon� <strong>'+fmt(yaAbono)+'</strong> � solo faltan <strong>'+fmt(cred.saldoProxCuota)+'</strong> para completarla.';
     } else {
       saldoEl.style.display='none';
     }
   }
 }
 
-// AMORTIZACIÓN
+// AMORTIZACI�N
 function openAmort(id){
   const c=S.creds.find(x=>x.id===id);if(!c)return;
-  window._currentAmortCredId = id; // para que descargarAmortPDF sepa qué crédito exportar
+  window._currentAmortCredId = id; // para que descargarAmortPDF sepa qu� cr�dito exportar
   const tasaMensualAmort = parseFloat((c&&((c.plan&&c.plan.tasaMensual)||c.tasaMensual))||PLAN.tasaMensual)||0;
   const tQ=tasaMensualAmort/100/2;
   const cuota=parseFloat(c.cuotaQ||c.cuota||0);
@@ -275,7 +275,7 @@ function openAmort(id){
   const startDate=new Date((c.fecha||hoyLocalISO())+'T12:00:00');
   const historial=c.pagosRegistrados||[];
   const saldoProxCuota=(c.saldoProxCuota||0)<0.10?0:(c.saldoProxCuota||0);
-  const infoLiquidacion=(c.tipoCierre==='liquidacion_anticipada') ? ('<div class="note" style="margin:8px 0 12px 0"><strong>Liquidación anticipada:</strong> saldo '+fmt(c.saldoOriginalLiquidacion||0)+' · descuento '+fmt(c.descuentoLiquidacion||0)+' · pago final '+fmt(c.montoLiquidado||0)+'</div>') : '';
+  const infoLiquidacion=(c.tipoCierre==='liquidacion_anticipada') ? ('<div class="note" style="margin:8px 0 12px 0"><strong>Liquidaci�n anticipada:</strong> saldo '+fmt(c.saldoOriginalLiquidacion||0)+' � descuento '+fmt(c.descuentoLiquidacion||0)+' � pago final '+fmt(c.montoLiquidado||0)+'</div>') : '';
 
   // Construir mapa cuota→pagos realizados
   var pagosPorCuota={};
@@ -284,7 +284,7 @@ function openAmort(id){
     pagosPorCuota[h.cuota].push(h);
   });
 
-  // Calcular saldo pendiente por cuota — aplicando excedentes a cuotas siguientes
+  // Calcular saldo pendiente por cuota � aplicando excedentes a cuotas siguientes
   var saldoPorCuota=[];
   for(var qi=0;qi<n;qi++) saldoPorCuota[qi]=cuota;
   // Aplicar cada pago secuencialmente distribuido entre cuotas
@@ -301,13 +301,13 @@ function openAmort(id){
         // Registrar abono en pagosPorCuota para mostrarlo en la tabla
         var cuotaNum=qi+1;
         if(!pagosPorCuota[cuotaNum]) pagosPorCuota[cuotaNum]=[];
-        // Solo agregar si no está ya registrado para esta cuota+pagoId
+        // Solo agregar si no est� ya registrado para esta cuota+pagoId
         var yaExiste=pagosPorCuota[cuotaNum].some(function(x){return x.pagoId===h.pagoId&&x.cuota===cuotaNum;});
         if(!yaExiste) pagosPorCuota[cuotaNum].push({cuota:cuotaNum,montoPagado:aplicar,fecha:h.fecha,pagoId:h.pagoId,tipo:h.tipo||'pago'});
       }
     }
   });
-  // Redondear pequeños residuos
+  // Redondear peque�os residuos
   for(var qi=0;qi<n;qi++) saldoPorCuota[qi]=saldoPorCuota[qi]<0.10?0:saldoPorCuota[qi];
 
   let sal=c.fin,rows='';
@@ -326,7 +326,7 @@ function openAmort(id){
     var pagoDetalle='';
     if(histCuota.length>0){
       pagoDetalle=histCuota.map(function(h){
-        return '<div style="font-size:9px;color:'+(h.tipo==='descuento_liquidacion'?'var(--amber)':'var(--green)')+';font-weight:700">+'+fmt(h.montoPagado)+' · '+h.fecha+(h.tipo==='descuento_liquidacion'?' · desc.':'')+'</div>';
+        return '<div style="font-size:9px;color:'+(h.tipo==='descuento_liquidacion'?'var(--amber)':'var(--green)')+';font-weight:700">+'+fmt(h.montoPagado)+' � '+h.fecha+(h.tipo==='descuento_liquidacion'?' � desc.':'')+'</div>';
       }).join('');
     }
 
@@ -337,14 +337,14 @@ function openAmort(id){
       : parcial
         ? '<span class="bdg b-a" style="font-size:9px">Parcial</span>'
         : esProx
-          ? '<span class="bdg b-p" style="font-size:9px">Próxima</span>'
+          ? '<span class="bdg b-p" style="font-size:9px">Pr�xima</span>'
           : '<span class="bdg b-x" style="font-size:9px">Pendiente</span>';
 
     rows+=`<div class="ar ${pd?'pd':''}" style="grid-template-columns:${cols};${parcial?'background:rgba(245,166,35,0.07)':''}">
       <div style="font-weight:800;color:var(--ink3);font-size:11px">${i}</div>
       <div style="font-size:10px;font-weight:700;color:${fechaColor}">${fechaStr}</div>
       <div>${cuotaDisplay}</div>
-      <div style="font-size:10px">${pagoDetalle||'—'}</div>
+      <div style="font-size:10px">${pagoDetalle||'�'}</div>
       <div style="font-weight:${pd||parcial?'700':'800'};color:${pd?'var(--ink3)':parcial?'var(--amber)':'var(--p1)'};font-size:${pd?'10':'12'}px">${pd?fmt(cuota):parcial?fmt(montoPendienteReal)+' pend.':fmt(cuota)}</div>
       <div style="color:var(--amber);font-size:10px">${fmt(Math.max(0,int))}</div>
       <div style="font-size:10px">${fmt(Math.max(0,cap))}</div>
@@ -352,13 +352,13 @@ function openAmort(id){
     </div>`;
   }
 
-  // Próxima fecha y monto
+  // Pr�xima fecha y monto
   var proxIdx=pagado; // base 0
   const proxFd=new Date(startDate.getTime()+((proxIdx+1)*15*24*60*60*1000));
   const proxFecha=proxFd.toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
   var proxMonto=saldoProxCuota>0&&saldoProxCuota<cuota ? saldoProxCuota : cuota;
 
-  // ─────────────── DATOS ADICIONALES DEL CRÉDITO ───────────────
+  // ─────────────── DATOS ADICIONALES DEL CR�DITO ───────────────
   var cliente = S.clientes.find(function(x){return x.nombre===c.cli || (c.cliId && String(x.id)===String(c.cliId));}) || {};
   var totalCredito = parseFloat(c.total||0);
   var precioBase = parseFloat(c.precioBaseReal||c.precio||0);
@@ -376,13 +376,13 @@ function openAmort(id){
   var diasRestantes = Math.max(0, Math.floor((fechaFin-new Date())/(1000*60*60*24)));
   var duracionTotalDias = Math.floor((fechaFin-startDate)/(1000*60*60*24));
 
-  // Estado del crédito con color
+  // Estado del cr�dito con color
   var estadoCred = (c.estado||'activo');
   var estadoColor = estadoCred==='activo' ? (c.mora>0?'var(--red)':'var(--p1)') :
                     estadoCred==='completado' ? 'var(--green)' :
                     estadoCred==='cancelado' ? 'var(--ink3)' :
                     estadoCred==='recuperado'||estadoCred==='recuperada' ? 'var(--red)' : 'var(--ink3)';
-  var estadoLbl = c.mora>0 && estadoCred==='activo' ? 'En mora · '+c.mora+'d' : estadoCred.charAt(0).toUpperCase()+estadoCred.slice(1);
+  var estadoLbl = c.mora>0 && estadoCred==='activo' ? 'En mora � '+c.mora+'d' : estadoCred.charAt(0).toUpperCase()+estadoCred.slice(1);
 
   // Score cliente
   var scRaw = cliente.score_indexa;
@@ -395,25 +395,25 @@ function openAmort(id){
   // Plazo en meses
   var plazoMeses = c.plazo || Math.ceil(n/2);
 
-  // APY del crédito — misma lógica que el listado de créditos
+  // APY del cr�dito � misma l�gica que el listado de cr�ditos
   var apyCred = Number.isFinite(parseFloat(c.apy)) ? parseFloat(c.apy) : (Number.isFinite(parseFloat((c.plan||{}).apy)) ? parseFloat((c.plan||{}).apy) : parseFloat(PLAN.apy||0));
 
   // Cuota mensual (para display)
   var cuotaMensual = parseFloat(c.cuotaM||c.cuotaMensual||cuota*2);
 
-  setMicon('detalle');$('mtt').textContent='Detalle del Crédito';$('msb').textContent=`${c.id} — ${c.cli}`;
+  setMicon('detalle');$('mtt').textContent='Detalle del Cr�dito';$('msb').textContent=`${c.id} � ${c.cli}`;
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML=`
-    <!-- â•â•â•â•â•â•â• HEADER: Cliente + Estado â•â•â•â•â•â•â• -->
+    <!-- ������� HEADER: Cliente + Estado ������� -->
     <div style="background:linear-gradient(135deg,#2563EB 0%,#60A5FA 55%,#9788ff 100%);border-radius:12px;padding:16px 18px;margin-bottom:14px;color:#fff;position:relative;overflow:hidden">
       <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.08)"></div>
       <div style="position:relative;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:12px">
           <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;letter-spacing:-.5px">${String(c.cli||'Cliente').split(' ').map(function(w){return w.charAt(0);}).join('').substring(0,2).toUpperCase()}</div>
           <div>
-            <div style="font-size:10px;font-weight:800;opacity:.85;letter-spacing:1.2px;text-transform:uppercase">${c.id} · Crédito</div>
+            <div style="font-size:10px;font-weight:800;opacity:.85;letter-spacing:1.2px;text-transform:uppercase">${c.id} � Cr�dito</div>
             <div style="font-size:19px;font-weight:900;letter-spacing:-.4px;line-height:1.1;margin-top:2px">${c.cli}</div>
-            <div style="font-size:11.5px;opacity:.85;margin-top:3px">${c.modelo}${c.vin?' · VIN '+c.vin:''}</div>
+            <div style="font-size:11.5px;opacity:.85;margin-top:3px">${c.modelo}${c.vin?' � VIN '+c.vin:''}</div>
           </div>
         </div>
         <div style="text-align:right">
@@ -424,11 +424,11 @@ function openAmort(id){
       </div>
     </div>
 
-    <!-- â•â•â•â•â•â•â• PROGRESO VISUAL â•â•â•â•â•â•â• -->
+    <!-- ������� PROGRESO VISUAL ������� -->
     <div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px 16px;margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div>
-          <div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Progreso del crédito</div>
+          <div style="font-size:11px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Progreso del cr�dito</div>
           <div style="font-size:13px;font-weight:700;margin-top:2px">Cuota ${pagado} de ${n} completadas</div>
         </div>
         <div style="text-align:right">
@@ -443,25 +443,25 @@ function openAmort(id){
         <div><div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase">Cobrado</div><div style="font-size:14px;font-weight:900;color:var(--green);margin-top:2px">${fmt(cobradoReal)}</div></div>
         <div><div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase">Inicial pagada</div><div style="font-size:14px;font-weight:900;margin-top:2px">${fmt(inicial)}</div></div>
         <div><div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase">Cuotas restantes</div><div style="font-size:14px;font-weight:900;color:var(--p1);margin-top:2px">${n-pagado}</div></div>
-        <div><div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase">Días restantes</div><div style="font-size:14px;font-weight:900;color:var(--amber);margin-top:2px">${diasRestantes}d</div></div>
+        <div><div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase">D�as restantes</div><div style="font-size:14px;font-weight:900;color:var(--amber);margin-top:2px">${diasRestantes}d</div></div>
       </div>
     </div>
 
-    <!-- â•â•â•â•â•â•â• DATOS CLIENTE + DATOS CRÉDITO (2 columnas) â•â•â•â•â•â•â• -->
+    <!-- ������� DATOS CLIENTE + DATOS CR�DITO (2 columnas) ������� -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
 
       <!-- Info cliente -->
       <div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:12px 14px">
         <div style="font-size:10.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
-          <span>Información del Cliente</span>
+          <span>Informaci�n del Cliente</span>
           ${scoreCli>0?`<span style="background:${scoreColor};color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:900;letter-spacing:.3px">SCORE ${scoreCli}</span>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:7px;font-size:12px">
-          <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--ink3);font-weight:600">Cédula</span><span style="font-weight:700;font-family:var(--fd)">${cliente.cedula||'—'}</span></div>
-          <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--ink3);font-weight:600">Teléfono</span><span style="font-weight:700;font-family:var(--fd)">${cliente.tel||'—'}</span></div>
-          <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--ink3);font-weight:600">Ciudad</span><span style="font-weight:700">${cliente.ciudad||'—'}</span></div>
-          <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--ink3);font-weight:600">Empleo</span><span style="font-weight:700;text-align:right;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cliente.trabajo||'—'}</span></div>
-          <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--ink3);font-weight:600">Ingreso mensual</span><span style="font-weight:800;color:var(--green)">${cliente.ingreso?fmt(cliente.ingreso):'—'}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--ink3);font-weight:600">C�dula</span><span style="font-weight:700;font-family:var(--fd)">${cliente.cedula||'�'}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--ink3);font-weight:600">Tel�fono</span><span style="font-weight:700;font-family:var(--fd)">${cliente.tel||'�'}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--ink3);font-weight:600">Ciudad</span><span style="font-weight:700">${cliente.ciudad||'�'}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--ink3);font-weight:600">Empleo</span><span style="font-weight:700;text-align:right;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cliente.trabajo||'�'}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--ink3);font-weight:600">Ingreso mensual</span><span style="font-weight:800;color:var(--green)">${cliente.ingreso?fmt(cliente.ingreso):'�'}</span></div>
           ${cliente.ingreso && cuotaMensual ? `<div style="display:flex;justify-content:space-between;gap:10px;padding-top:6px;border-top:1px dashed var(--rim2)"><span style="color:var(--ink3);font-weight:600">Ratio cuota/ingreso</span><span style="font-weight:800;color:${(cuotaMensual/cliente.ingreso)>0.4?'var(--red)':(cuotaMensual/cliente.ingreso)>0.25?'var(--amber)':'var(--green)'}">${Math.round(cuotaMensual/cliente.ingreso*100)}%</span></div>`:''}
         </div>
         <div style="display:flex;gap:5px;margin-top:10px;padding-top:10px;border-top:1px solid var(--rim2)">
@@ -471,9 +471,9 @@ function openAmort(id){
         </div>
       </div>
 
-      <!-- Info crédito -->
+      <!-- Info cr�dito -->
       <div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:12px 14px">
-        <div style="font-size:10.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Estructura del Crédito</div>
+        <div style="font-size:10.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Estructura del Cr�dito</div>
         <div style="display:flex;flex-direction:column;gap:7px;font-size:12px">
           <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--ink3);font-weight:600">Precio moto</span><span style="font-weight:700">${fmt(precioBase)}</span></div>
           <div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--ink3);font-weight:600">Inicial (${Math.round((inicial/precioBase)*100)||0}%)</span><span style="font-weight:700">${fmt(inicial)}</span></div>
@@ -489,15 +489,15 @@ function openAmort(id){
       </div>
     </div>
 
-    <!-- â•â•â•â•â•â•â• FECHAS CLAVE + PRÓX PAGO â•â•â•â•â•â•â• -->
+    <!-- ������� FECHAS CLAVE + PR�X PAGO ������� -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px">
       <div style="background:var(--surf2);border-radius:10px;padding:11px 13px;border:1px solid var(--rim)">
         <div style="font-size:9.5px;color:var(--ink3);font-weight:800;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px">Fecha inicio</div>
-        <div style="font-weight:800;font-family:var(--fd);font-size:13px">${c.fecha||'—'}</div>
+        <div style="font-weight:800;font-family:var(--fd);font-size:13px">${c.fecha||'�'}</div>
         <div style="font-size:10px;color:var(--ink3);margin-top:2px">Hace ${diasTranscurridos}d</div>
       </div>
       <div style="background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(124,109,255,.05));border-radius:10px;padding:11px 13px;border:1px solid rgba(37,99,235,.25)">
-        <div style="font-size:9.5px;color:var(--p1);font-weight:800;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px">Próximo pago</div>
+        <div style="font-size:9.5px;color:var(--p1);font-weight:800;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px">Pr�ximo pago</div>
         <div style="font-weight:900;font-family:var(--fd);font-size:15px;color:var(--p1)">${fmt(proxMonto)}</div>
         <div style="font-size:10px;color:var(--ink3);margin-top:2px">${proxFecha}</div>
       </div>
@@ -508,28 +508,28 @@ function openAmort(id){
       </div>
       <div style="background:${c.mora>0?'var(--reds)':'var(--greens)'};border-radius:10px;padding:11px 13px;border:1px solid ${c.mora>0?'rgba(217,59,90,.25)':'rgba(5,160,96,.25)'}">
         <div style="font-size:9.5px;color:${c.mora>0?'var(--red)':'var(--green)'};font-weight:800;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px">Estado de mora</div>
-        <div style="font-weight:900;font-family:var(--fd);font-size:15px;color:${c.mora>0?'var(--red)':'var(--green)'}">${c.mora>0?c.mora+' días':'Al día'}</div>
+        <div style="font-weight:900;font-family:var(--fd);font-size:15px;color:${c.mora>0?'var(--red)':'var(--green)'}">${c.mora>0?c.mora+' d�as':'Al d�a'}</div>
         <div style="font-size:10px;color:var(--ink3);margin-top:2px">${c.mora>0?fmt(c.moraMonto||0)+' adeudado':'Sin atraso'}</div>
       </div>
     </div>
 
     ${infoLiquidacion}
-    ${saldoProxCuota>0&&saldoProxCuota<cuota?`<div style="background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:10px">La cuota ${pagado+1} tiene un abono de <strong>${fmt(cuota-saldoProxCuota)}</strong> — solo quedan <strong>${fmt(saldoProxCuota)}</strong> por pagar.</div>`:''}
+    ${saldoProxCuota>0&&saldoProxCuota<cuota?`<div style="background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:9px 12px;font-size:12px;margin-bottom:10px">La cuota ${pagado+1} tiene un abono de <strong>${fmt(cuota-saldoProxCuota)}</strong> � solo quedan <strong>${fmt(saldoProxCuota)}</strong> por pagar.</div>`:''}
 
-    <!-- â•â•â•â•â•â•â• TABLA DE AMORTIZACIÓN â•â•â•â•â•â•â• -->
+    <!-- ������� TABLA DE AMORTIZACI�N ������� -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 8px">
       <div>
-        <div style="font-size:14px;font-weight:800;margin-bottom:2px">Tabla de Amortización</div>
+        <div style="font-size:14px;font-weight:800;margin-bottom:2px">Tabla de Amortizaci�n</div>
         <div style="font-size:11px;color:var(--ink3)">Cronograma completo de pagos quincenales</div>
       </div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">
-        <span class="bdg b-b">Quincenal · 15 días</span>
+        <span class="bdg b-b">Quincenal � 15 d�as</span>
         <span class="bdg b-g">✓ ${pagado} de ${n}</span>
         <span class="bdg b-p">Pend: ${n-pagado}</span>
       </div>
     </div>
     <div class="ah" style="grid-template-columns:${cols}">
-      <div>#</div><div>Fecha</div><div>Estado</div><div>Abonos</div><div>Monto</div><div>Interés</div><div>Capital</div><div>Saldo</div>
+      <div>#</div><div>Fecha</div><div>Estado</div><div>Abonos</div><div>Monto</div><div>Inter�s</div><div>Capital</div><div>Saldo</div>
     </div>
     <div style="max-height:280px;overflow-y:auto;margin-top:3px;border:1px solid var(--rim);border-radius:8px;padding:2px">${rows}</div>`;
   var _cliIdAmort = c.clienteId || c.cliId || '';
@@ -542,21 +542,21 @@ function openAmort(id){
 // ── COBRANZA: LLAMADA, WHATSAPP, RECUPERACION ──
 function llamarCliente(credId){
   var c=S.creds.find(function(x){return x.id===credId;});
-  if(!c){toast('Crédito no encontrado','error');return;}
+  if(!c){toast('Cr�dito no encontrado','error');return;}
   var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
   var tel=(cl.tel||'').replace(/\D/g,'');
-  if(!tel){toast('Este cliente no tiene teléfono registrado','error');return;}
+  if(!tel){toast('Este cliente no tiene tel�fono registrado','error');return;}
   window.open('tel:+58'+tel.replace(/^0/,''));
 }
 
 function whatsappCliente(credId){
   var c=S.creds.find(function(x){return x.id===credId;});
-  if(!c){toast('Crédito no encontrado','error');return;}
+  if(!c){toast('Cr�dito no encontrado','error');return;}
   var cl=S.clientes.find(function(x){return x.nombre===c.cli;})||{};
   var tel=(cl.tel||'').replace(/\D/g,'').replace(/^0/,'');
-  if(!tel){toast('Este cliente no tiene teléfono registrado','error');return;}
+  if(!tel){toast('Este cliente no tiene tel�fono registrado','error');return;}
   var empresa=($('cfg_empresa')&&$('cfg_empresa').value)||'Pagasi';
-  // Usar helpers canónicos para que los números coincidan con el resto del app
+  // Usar helpers can�nicos para que los n�meros coincidan con el resto del app
   var totalCuotas2 = getCreditoTotalCuotas(c);
   var cuotasPagadas2 = getCreditoCuotasPagadas(c);
   var totalPagado2 = getCreditoPagosConfirmados(c);
@@ -574,18 +574,18 @@ function whatsappCliente(credId){
   }
   var sep2='--------------------------------';
   var lineas=[
-    empresa.toUpperCase()+' — ESTADO DE CUENTA',
+    empresa.toUpperCase()+' � ESTADO DE CUENTA',
     '',
     'Estimado/a '+c.cli+':',
     '',
     'A continuacion le presentamos el estado actualizado de su cuenta:',
     '',
     sep2,
-    'CUENTA N° : '+credId,
+    'CUENTA N� : '+credId,
     'CLIENTE : '+c.cli,
     'VEHICULO : '+c.modelo,
     sep2,
-    'Cuota N° : '+cuotaNum2+' de '+totalCuotas2,
+    'Cuota N� : '+cuotaNum2+' de '+totalCuotas2,
     'Cuotas pag. : '+cuotasPagadas2+' ('+pct2+'%)',
     'Cuotas rest. : '+cuotasRest2,
     'Cuota quinc. : '+cuotaStr,
@@ -613,14 +613,14 @@ function confirmarRecuperacion(credId){
   if(!c) return;
   setMicon('llave');
   $('mtt').textContent='Recuperar Unidad';
-  $('msb').textContent=c.cli+' · '+c.modelo;
+  $('msb').textContent=c.cli+' � '+c.modelo;
   $('modal-box').className='modal';
   $('mbd').innerHTML='<div style="text-align:center;padding:14px 0">'
     +'<div style="font-size:40px;margin-bottom:12px">MOT</div>'
     +'<div style="font-size:15px;font-weight:800;margin-bottom:6px">'+c.modelo+'</div>'
-    +'<div style="color:var(--ink3);font-size:12px;margin-bottom:18px">Crédito '+credId+' · Cliente: '+c.cli+'</div>'
+    +'<div style="color:var(--ink3);font-size:12px;margin-bottom:18px">Cr�dito '+credId+' � Cliente: '+c.cli+'</div>'
     +'<div style="background:var(--reds);border:1px solid rgba(240,75,106,0.2);border-radius:var(--r8);padding:12px;color:var(--red);font-size:13px;font-weight:700">'
-    +' ¿Confirmas la recuperación de esta unidad? El crédito pasará a estado "recuperado" y la moto quedará disponible.</div></div>';
+    +' �Confirmas la recuperaci�n de esta unidad? El cr�dito pasar� a estado "recuperado" y la moto quedar� disponible.</div></div>';
   S.saveFn=function(){
     var ci=S.creds.findIndex(function(x){return x.id===credId;});
     if(ci>=0){
@@ -629,10 +629,10 @@ function confirmarRecuperacion(credId){
       var mi=S.motos.findIndex(function(x){return String(x.id)===String(S.creds[ci].motoId);});
       if(mi>=0){S.motos[mi].estado='recuperada';S.motos[mi].cliente=null;DB.saveMoto(S.motos[mi]);}
     }
-    toast('Unidad recuperada — crédito cerrado','info');
+    toast('Unidad recuperada � cr�dito cerrado','info');
     closeM();nav('cobranza');return true;
   };
-  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-d" onclick="saveM()">Key Confirmar Recuperación</button>';
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-d" onclick="saveM()">Key Confirmar Recuperaci�n</button>';
   $('ov').style.display='flex';
 }
 
@@ -643,26 +643,26 @@ function confirmarDelPago(id){
   window._delPagoId=id;
   window._delPagoRazon='';
   window._delPagoModo=(p.mantenerEnAmortizacion===true)?'mantener':'completo';
-  setMicon('eliminar');$('mtt').textContent='Eliminar Pago';$('msb').textContent='El registro quedará auditado';
+  setMicon('eliminar');$('mtt').textContent='Eliminar Pago';$('msb').textContent='El registro quedar� auditado';
   $('modal-box').className='modal';
   $('mbd').innerHTML='<div style="text-align:left;padding:10px 0">'
     +'<div style="text-align:center;font-size:42px;margin-bottom:10px">PAG</div>'
-    +'<div style="text-align:center;font-size:15px;font-weight:800">¿Cómo quieres eliminar el pago '+p.id+'?</div>'
-    +'<div style="text-align:center;color:var(--ink3);font-size:13px;margin-top:6px">'+p.cli+' · '+fmt(p.monto)+' · '+p.fecha+'</div>'
+    +'<div style="text-align:center;font-size:15px;font-weight:800">�C�mo quieres eliminar el pago '+p.id+'?</div>'
+    +'<div style="text-align:center;color:var(--ink3);font-size:13px;margin-top:6px">'+p.cli+' � '+fmt(p.monto)+' � '+p.fecha+'</div>'
     +'<div style="margin-top:14px;display:grid;gap:10px">'
     +'<label style="display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:10px;cursor:pointer">'
     +'<input type="radio" name="del_pago_modo" value="mantener" '+(window._delPagoModo==='mantener'?'checked':'')+' onchange="window._delPagoModo=this.value">'
-    +'<div><div style="font-weight:800">Eliminar pero seguir contando en amortización</div>'
-    +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">El pago desaparece del flujo operativo, pero la cuota seguirá contando en la tabla de amortización. El registro queda auditado.</div></div></label>'
+    +'<div><div style="font-weight:800">Eliminar pero seguir contando en amortizaci�n</div>'
+    +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">El pago desaparece del flujo operativo, pero la cuota seguir� contando en la tabla de amortizaci�n. El registro queda auditado.</div></div></label>'
     +'<label style="display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:10px;cursor:pointer">'
     +'<input type="radio" name="del_pago_modo" value="completo" '+(window._delPagoModo!=='mantener'?'checked':'')+' onchange="window._delPagoModo=this.value">'
     +'<div><div style="font-weight:800">Eliminar por completo</div>'
-    +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">El pago deja de contar en la amortización, se recalcula el crédito y el movimiento en Cuentas también se marca como eliminado. El registro queda auditado.</div></div></label>'
+    +'<div style="font-size:12px;color:var(--ink3);margin-top:4px">El pago deja de contar en la amortizaci�n, se recalcula el cr�dito y el movimiento en Cuentas tambi�n se marca como eliminado. El registro queda auditado.</div></div></label>'
     +'</div>'
     +'<div style="margin-top:10px;padding:9px;background:var(--ambers);border-radius:8px;font-size:12px;color:var(--ink)">'
-    +' En ambos casos el pago no se borra de la base: queda con trazabilidad de quién lo eliminó, cuándo y por qué.</div></div>';
+    +' En ambos casos el pago no se borra de la base: queda con trazabilidad de qui�n lo elimin�, cu�ndo y por qu�.</div></div>';
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
-    +'<button class="btn btn-d" onclick="auditarYEliminarPago()">Confirmar eliminación</button>';
+    +'<button class="btn btn-d" onclick="auditarYEliminarPago()">Confirmar eliminaci�n</button>';
   $('ov').style.display='flex';
 }
 
@@ -673,7 +673,7 @@ function auditarYEliminarPago(){
   closeM();
   confirmarEliminacion({
     titulo:'Eliminar Pago',
-    descripcion:'Pago '+p.id+' · '+p.cli+' · '+fmt(p.monto),
+    descripcion:'Pago '+p.id+' � '+p.cli+' � '+fmt(p.monto),
     onConfirm:function(audit){
       window._delPagoRazon=audit.eliminadoRazon;
       ejecutarDelPago();
@@ -687,7 +687,7 @@ function ejecutarDelPago(){
   if(pi<0){closeM();return;}
   var p=S.pagos[pi];
   var modo=(window._delPagoModo==='mantener')?'mantener':'completo';
-  // Soft delete con auditoría
+  // Soft delete con auditor�a
   S.pagos[pi].eliminadoPor=(S.currentUser&&S.currentUser.nombre)||'Admin';
   S.pagos[pi].eliminadoPorUid=(S.currentUser&&S.currentUser.uid)||'';
   S.pagos[pi].eliminadoEn=new Date().toISOString();
@@ -697,7 +697,7 @@ function ejecutarDelPago(){
   S.pagos[pi].mantenerEnAmortizacion=(modo==='mantener');
   DB.savePago(S.pagos[pi]);
 
-  // Si es eliminación completa, recalcular el crédito y eliminar el movimiento asociado.
+  // Si es eliminaci�n completa, recalcular el cr�dito y eliminar el movimiento asociado.
   if(modo==='completo'){
     recalcularCreditoDesdePagos(p.cred);
     var mi=S.movimientos.findIndex(function(m){
@@ -710,14 +710,14 @@ function ejecutarDelPago(){
       DB.saveMovimiento(S.movimientos[mi]);
     }
   } else {
-    // Mantener en amortización: preservar el efecto financiero en el crédito.
+    // Mantener en amortizaci�n: preservar el efecto financiero en el cr�dito.
     recalcularCreditoDesdePagos(p.cred);
   }
 
   window._delPagoId=null;
   window._delPagoModo=null;
   closeM(); nav('pagos');
-  toast(modo==='mantener' ? 'Pago eliminado del flujo, pero sigue contando en amortización' : 'Pago eliminado por completo y crédito recalculado','info');
+  toast(modo==='mantener' ? 'Pago eliminado del flujo, pero sigue contando en amortizaci�n' : 'Pago eliminado por completo y cr�dito recalculado','info');
 }
 
 
@@ -746,7 +746,7 @@ function syncTodosEstadosClientes(){
     var nuevoEstado=tieneActivos ? 'activo' : (tieneCompletados ? 'solvente' : (cl.estado||'activo'));
 
     // ── AUTO-REPARAR SCORE ──
-    // Si score_indexa es objeto corrupto, string no numérico, null, o 0, recalcular
+    // Si score_indexa es objeto corrupto, string no num�rico, null, o 0, recalcular
     var scRaw = cl.score_indexa;
     var scoreNumero = 0;
     if(scRaw && typeof scRaw === 'object'){
@@ -757,7 +757,7 @@ function syncTodosEstadosClientes(){
     var scoreInvalido = !scoreNumero || scoreNumero < 300 || scoreNumero > 850 || (typeof scRaw === 'object');
     if(scoreInvalido && typeof recalcularScoreCliente === 'function'){
       try {
-        scoreNumero = recalcularScoreCliente(cl, false); // calcular pero no persistir aquí
+        scoreNumero = recalcularScoreCliente(cl, false); // calcular pero no persistir aqu�
       } catch(e){ scoreNumero = 0; }
     }
 
@@ -792,35 +792,35 @@ function openLiquidarAnticipado(credId){
   var c=S.creds.find(function(x){return x.id===credId;});
   if(!c) return;
   if(c.estado==='completado' || c.estado==='cancelado'){
-    toast('Este crédito ya no se puede liquidar','info');
+    toast('Este cr�dito ya no se puede liquidar','info');
     return;
   }
   var saldo=getSaldoPendienteCredito(credId);
   if(saldo<=0){
-    toast('Este crédito ya no tiene saldo pendiente','info');
+    toast('Este cr�dito ya no tiene saldo pendiente','info');
     return;
   }
-  $('mtt').innerHTML='Liquidación anticipada';
+  $('mtt').innerHTML='Liquidaci�n anticipada';
   $('mbd').innerHTML=''
     +'<div class="fgr" style="gap:10px">'
-    + '<div class="fg"><label>Crédito</label><input class="fi" value="'+c.id+'" disabled></div>'
+    + '<div class="fg"><label>Cr�dito</label><input class="fi" value="'+c.id+'" disabled></div>'
     + '<div class="fg"><label>Cliente</label><input class="fi" value="'+(c.cli||'')+'" disabled></div>'
     + '<div class="fg"><label>Saldo actual</label><input id="liq_saldo" class="fi" value="'+saldo.toFixed(2)+'" disabled></div>'
     + '<div class="fg"><label>Descuento</label><input id="liq_descuento" class="fi" type="number" min="0" step="0.01" value="0" oninput="updLiquidacionFinal()"></div>'
     + '<div class="fg"><label>Monto final a pagar</label><input id="liq_monto_final" class="fi" type="number" min="0" step="0.01" value="'+saldo.toFixed(2)+'" oninput="updLiquidacionDescuento()"></div>'
     + '<div class="fg"><label>Cuenta destino</label><select id="liq_cuenta" class="fs">'+((((window._cuentasBanc&&window._cuentasBanc.length)?window._cuentasBanc:[{nombre:'Caja principal'}]).map(function(ct){return '<option value="'+ct.nombre+'">'+ct.nombre+'</option>';}).join('')))+'</select></div>'
     + '<div class="fg"><label>Fecha</label><input id="liq_fecha" class="fi" type="date" value="'+hoyLocalISO()+'"></div>'
-    + '<div class="fg"><label>Motivo del descuento</label><input id="liq_motivo" class="fi" placeholder="Negociación por pago anticipado"></div>'
+    + '<div class="fg"><label>Motivo del descuento</label><input id="liq_motivo" class="fi" placeholder="Negociaci�n por pago anticipado"></div>'
     +'</div>'
     +'<div class="fgr" style="gap:10px;margin-top:10px">'
-    + '<div class="fg"><label><input id="liq_obs" class="fi" placeholder="Observación interna del acuerdo"></label></div>'
+    + '<div class="fg"><label><input id="liq_obs" class="fi" placeholder="Observaci�n interna del acuerdo"></label></div>'
     +'</div>'
     +'<div style="display:flex;gap:16px;margin-top:12px;padding:10px 12px;background:var(--surf2);border-radius:var(--r8)">'
     + '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input id="liq_cerrar" type="checkbox" checked> Cerrar contrato</label>'
     + '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input id="liq_finiquito" type="checkbox" checked> Generar finiquito</label>'
     + '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input id="liq_moto_propia" type="checkbox" checked> Moto como propia</label>'
     +'</div>'
-    +'<div class="note" style="margin-top:10px">Se registrará el cobro real y, si aplica, un descuento de cierre anticipado con auditoría.</div>';
+    +'<div class="note" style="margin-top:10px">Se registrar� el cobro real y, si aplica, un descuento de cierre anticipado con auditor�a.</div>';
   window._liqCredId=credId;
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-s" onclick="ejecutarLiquidacionAnticipada()">Liquidar ahora</button>';
   $('ov').style.display='flex';
@@ -850,10 +850,10 @@ function ejecutarLiquidacionAnticipada(){
   try{
   var credId=window._liqCredId;
   var ci=S.creds.findIndex(function(x){return x.id===credId;});
-  if(ci<0){ toast('Crédito no encontrado','error'); return; }
+  if(ci<0){ toast('Cr�dito no encontrado','error'); return; }
   var c=S.creds[ci];
   if(c.estado==='completado' || c.estado==='cancelado'){
-    toast('Este crédito ya no se puede liquidar','info');
+    toast('Este cr�dito ya no se puede liquidar','info');
     return;
   }
   var saldo=getSaldoPendienteCredito(credId);
@@ -867,15 +867,15 @@ function ejecutarLiquidacionAnticipada(){
     if($('liq_monto_final')) $('liq_monto_final').value=montoFinal.toFixed(2);
   }
   if(montoFinal<=0 && descuento<=0){
-    toast('Debes indicar un monto o un descuento válido','error');
+    toast('Debes indicar un monto o un descuento v�lido','error');
     return;
   }
   if(descuento > saldo*0.4){
-    if(!confirm('El descuento supera 40% del saldo pendiente. ¿Deseas continuar?')) return;
+    if(!confirm('El descuento supera 40% del saldo pendiente. �Deseas continuar?')) return;
   }
   var fecha=(($('liq_fecha')&&$('liq_fecha').value)||hoyLocalISO());
   var cuenta=(($('liq_cuenta')&&$('liq_cuenta').value)||(((window._cuentasBanc&&window._cuentasBanc[0]&&window._cuentasBanc[0].nombre))||'Caja principal'));
-  var motivo=(($('liq_motivo')&&$('liq_motivo').value)||'Liquidación anticipada').trim();
+  var motivo=(($('liq_motivo')&&$('liq_motivo').value)||'Liquidaci�n anticipada').trim();
   var observacion=(($('liq_obs')&&$('liq_obs').value)||'').trim();
   var usuario=(S.currentUser&&S.currentUser.nombre)||'Admin';
   var cuotaVal=parseFloat(c.cuotaQ||c.cuota||0);
@@ -911,7 +911,7 @@ function ejecutarLiquidacionAnticipada(){
     var mov={
       id:'MOV-'+Date.now(),
       tipo:'deposito',
-      concepto:'Liquidación anticipada · '+c.cli+' · '+credId,
+      concepto:'Liquidaci�n anticipada � '+c.cli+' � '+credId,
       monto:parseFloat(montoFinal.toFixed(2)),
       cuentaOrigen:null,
       cuentaDestino:cuenta,
@@ -1012,13 +1012,13 @@ function ejecutarLiquidacionAnticipada(){
   syncTodosEstadosClientes();
   closeM();
   nav('creditos');
-  toast('Liquidación anticipada registrada por '+fmt(montoFinal)+(descuento>0?' con descuento de '+fmt(descuento):''),'success');
+  toast('Liquidaci�n anticipada registrada por '+fmt(montoFinal)+(descuento>0?' con descuento de '+fmt(descuento):''),'success');
   if($('liq_finiquito') && $('liq_finiquito').checked){
     setTimeout(function(){ abrirFiniquito(credId); }, 500);
   }
   }catch(err){
-    console.error('Error en liquidación anticipada', err);
-    toast('No se pudo procesar la liquidación. Revisa consola o intenta de nuevo.','error');
+    console.error('Error en liquidaci�n anticipada', err);
+    toast('No se pudo procesar la liquidaci�n. Revisa consola o intenta de nuevo.','error');
   }
 }
 window.openLiquidarAnticipado=openLiquidarAnticipado;
@@ -1069,7 +1069,7 @@ function recalcularCreditoDesdePagos(credId){
   });
 
   if(c.tipoCierre==='liquidacion_anticipada' && (parseFloat(c.descuentoLiquidacion)||0)>0){
-    // Solo aplicar el descuento si aún existe el pago de liquidación activo (no eliminado)
+    // Solo aplicar el descuento si a�n existe el pago de liquidaci�n activo (no eliminado)
     var liquidacionActiva=S.pagos.some(function(p){
       return p.cred===credId && (p.tipo==='liquidacion'||p.referencia==='LIQ-ANT') && !p.eliminado;
     });
@@ -1106,8 +1106,8 @@ function recalcularCreditoDesdePagos(credId){
   if(nuevoEstado==='completado' && !S.creds[ci].fechaCompletado) S.creds[ci].fechaCompletado=hoyLocalISO();
   if(nuevoEstado!=='completado' && S.creds[ci].fechaCompletado) S.creds[ci].fechaCompletado=null;
 
-  // Si el crédito era liquidación anticipada pero ya no hay pago de liquidación activo,
-  // limpiar los metadatos de liquidación para que el saldo vuelva al real original
+  // Si el cr�dito era liquidaci�n anticipada pero ya no hay pago de liquidaci�n activo,
+  // limpiar los metadatos de liquidaci�n para que el saldo vuelva al real original
   var extraClear={};
   if(c.tipoCierre==='liquidacion_anticipada'){
     var liquidacionSigueActiva=S.pagos.some(function(p){
@@ -1158,7 +1158,7 @@ function openPagoRapido(credId){
 
 function openEditPago(pagoId){
   var p = S.pagos.find(function(x){return x.id===pagoId;}); if(!p) return;
-  setMicon('editar'); $('mtt').textContent='Editar Pago'; $('msb').textContent=pagoId+' · '+p.cli;
+  setMicon('editar'); $('mtt').textContent='Editar Pago'; $('msb').textContent=pagoId+' � '+p.cli;
   $('modal-box').className='modal';
   var metOpts = (_cuentasBanc||[]).map(function(c){
     return '<option value="'+c.nombre+'" '+(p.metodo===c.nombre?'selected':'')+'>'+c.nombre+'</option>';
@@ -1169,7 +1169,7 @@ function openEditPago(pagoId){
   $('mbd').innerHTML = '<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:9px;padding:10px 12px;margin-bottom:12px;font-size:11px">'
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'
     +'<div><span style="color:var(--ink3)">Cliente</span><div style="font-weight:700">'+p.cli+'</div></div>'
-    +'<div><span style="color:var(--ink3)">Crédito</span><div style="font-weight:700">'+p.cred+'</div></div>'
+    +'<div><span style="color:var(--ink3)">Cr�dito</span><div style="font-weight:700">'+p.cred+'</div></div>'
     +'<div><span style="color:var(--ink3)">Estado actual</span><div style="font-weight:700">'+p.estado+'</div></div>'
     +'</div></div>'
     +'<div class="fgr" style="gap:8px">'
@@ -1188,13 +1188,13 @@ function openEditPago(pagoId){
     +'</select></div>'
     +'</div>'
     +'<div class="fgr" style="gap:8px;margin-top:8px">'
-    +'<div class="fg"><label>N° Referencia</label>'
+    +'<div class="fg"><label>N� Referencia</label>'
     +'<input class="fi" id="ep_ref" value="'+(p.referencia||'')+'"></div>'
     +'<div class="fg"><label>Cobrador</label>'
     +'<select class="fs" id="ep_cobrador">'+(cobrOpts||'<option>'+p.cobrador+'</option>')+'</select></div>'
     +'</div>'
     +'<div style="margin-top:10px;padding:8px 11px;background:var(--okbg);border:1px solid var(--okbd);border-radius:8px;font-size:11.5px;color:var(--green)">'
-    +'✓ El crédito se recalculará automáticamente al guardar cualquier cambio en el pago.</div>';
+    +'✓ El cr�dito se recalcular� autom�ticamente al guardar cualquier cambio en el pago.</div>';
   S.saveFn = function(){
     var nuevoMonto = parseFloat(($('ep_monto')&&$('ep_monto').value))||0;
     if(nuevoMonto<=0){ toast('El monto debe ser mayor a 0','error'); return false; }
@@ -1224,7 +1224,7 @@ function openEditPago(pagoId){
 
     recalcularCreditoDesdePagos(credId);
     calcularMoraAuto();
-    closeM(); nav('pagos'); toast('Pago actualizado y crédito recalculado ✓','success'); return true;
+    closeM(); nav('pagos'); toast('Pago actualizado y cr�dito recalculado ✓','success'); return true;
   };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
     +'<button class="btn btn-p" onclick="saveM()">Guardar cambios</button>';
@@ -1249,7 +1249,7 @@ function confirmarPago(pagoId){
       var mov = {
         id: 'MOV-'+Date.now(),
         tipo: 'deposito',
-        concepto: 'Pago cuota · '+pago.cli+' · '+pago.cred,
+        concepto: 'Pago cuota � '+pago.cli+' � '+pago.cred,
         conceptoPago: pago.id,
         monto: pago.monto,
         cuentaOrigen: null,
@@ -1277,11 +1277,11 @@ function confirmarPago(pagoId){
     calcularMoraAuto();
     syncEstadoClientePorCredito(pago.cred);
   }
-  toast('✓ Pago confirmado · '+pagoId,'success');
+  toast('✓ Pago confirmado � '+pagoId,'success');
   nav('pagos');
 }
 
-// ── MORA: CALCULAR DÍAS AUTOMÁTICAMENTE AL CARGAR ──
+// ── MORA: CALCULAR D�AS AUTOM�TICAMENTE AL CARGAR ──
 function calcularMoraAuto(){
   var hoy=new Date(); hoy.setHours(0,0,0,0);
   (S.creds||[]).forEach(function(c){
@@ -1332,13 +1332,13 @@ function openNota(id){
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
     +'<div>'
-    +'<div class="fsec" style="margin-bottom:8px">Nueva gestión</div>'
+    +'<div class="fsec" style="margin-bottom:8px">Nueva gesti�n</div>'
     +'<div class="fgr c1" style="gap:9px">'
-    +'<div class="fg"><label>Tipo de gestión</label>'
+    +'<div class="fg"><label>Tipo de gesti�n</label>'
     +'<select class="fs" id="nota_tipo">'
-    +'<option>Llamada telefónica</option><option>Visita domicilio</option>'
+    +'<option>Llamada telef�nica</option><option>Visita domicilio</option>'
     +'<option>WhatsApp</option><option>Acuerdo de pago</option>'
-    +'<option>Recuperación de unidad</option></select></div>'
+    +'<option>Recuperaci�n de unidad</option></select></div>'
     +'<div class="fg"><label>Resultado *</label>'
     +'<textarea class="fta" id="nota_result" placeholder="Describe el resultado..." rows="3"></textarea></div>'
     +'<div class="fgr" style="gap:8px">'
@@ -1346,8 +1346,8 @@ function openNota(id){
     +'<input class="fi" id="nota_monto" type="number" placeholder="0.00"></div>'
     +'<div class="fg"><label>Fecha compromiso</label>'
     +'<input class="fi" id="nota_fecha" type="date"></div></div>'
-    +'<div class="fg"><label>Próxima acción</label>'
-    +'<input class="fi" id="nota_prox" placeholder="Qué hacer después..."></div>'
+    +'<div class="fg"><label>Pr�xima acci�n</label>'
+    +'<input class="fi" id="nota_prox" placeholder="Qu� hacer despu�s..."></div>'
     +'</div></div>'
     +'<div>'
     +'<div class="fsec" style="margin-bottom:8px">Historial de gestiones</div>'
@@ -1356,12 +1356,12 @@ function openNota(id){
   // Load previous notes for this credit
   setTimeout(function(){
     var el=$('nota_historial'); if(!el) return;
-    if(!db){ el.innerHTML='<div style="color:var(--ink3);font-size:11px">Sin conexión Firebase</div>'; return; }
+    if(!db){ el.innerHTML='<div style="color:var(--ink3);font-size:11px">Sin conexi�n Firebase</div>'; return; }
     db.collection('notas_cobranza').where('credId','==',id).orderBy('fecha','desc').get()
       .then(function(snap){
         if(!$('nota_historial')) return;
         if(snap.empty){
-          $('nota_historial').innerHTML='<div style="color:var(--ink3);font-size:11px;padding:8px 0">Sin gestiones previas para este crédito</div>';
+          $('nota_historial').innerHTML='<div style="color:var(--ink3);font-size:11px;padding:8px 0">Sin gestiones previas para este cr�dito</div>';
           return;
         }
         $('nota_historial').innerHTML=snap.docs.map(function(d){
@@ -1380,12 +1380,12 @@ function openNota(id){
   }, 80);
 
   S.saveFn=()=>{
-    var tipo = ($('nota_tipo')&&$('nota_tipo').value)||'Gestión';
+    var tipo = ($('nota_tipo')&&$('nota_tipo').value)||'Gesti�n';
     var result = ($('nota_result')&&$('nota_result').value.trim())||'';
     var monto = ($('nota_monto')&&$('nota_monto').value)||'';
     var fechaComp = ($('nota_fecha')&&$('nota_fecha').value)||'';
     var prox = ($('nota_prox')&&$('nota_prox').value.trim())||'';
-    if(!result){ toast('Describe el resultado de la gestión','error'); return false; }
+    if(!result){ toast('Describe el resultado de la gesti�n','error'); return false; }
     var nota = {
       id: 'NOTA-'+Date.now(),
       credId: id,
@@ -1402,7 +1402,7 @@ function openNota(id){
         .then(function(){ toast('Nota guardada ✓','success'); })
         .catch(function(e){ toast('Error al guardar: '+e.message,'error'); });
     } else {
-      toast('Nota guardada (sin conexión)','info');
+      toast('Nota guardada (sin conexi�n)','info');
     }
     closeM(); return true;
   };

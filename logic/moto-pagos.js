@@ -15,7 +15,7 @@ function _mpagoFilaHtml(prefix, idx){
     + '<button type="button" class="btn btn-g btn-sm '+prefix+'-del" style="height:38px;padding:0 10px" onclick="_mpagoEliminarFila(this,\''+prefix+'\')" title="Eliminar">x</button>'
     + '</div>';
 }
-// El usuario tocó esta fila → ya no autorellenamos
+// El usuario toc� esta fila → ya no autorellenamos
 function _mpagoMarcarTocado(el, prefix){
   var row = el.closest('.mpago-row');
   if(row) row.setAttribute('data-touched','1');
@@ -24,7 +24,7 @@ function _mpagoBloqueHtml(prefix, titulo, descripcion){
   prefix = prefix || _MPAGO_PREFIX;
   return '<div class="fsec" style="margin-top:14px">'+(titulo||'Forma de pago de la moto')+'</div>'
     + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:var(--r8);padding:12px">'
-    + '<div style="font-size:12px;color:var(--ink3);margin-bottom:10px">'+(descripcion||'Indica de cuál(es) cuenta(s) o efectivo sale el dinero para pagar esta moto. Puedes dividir el pago entre varias.')+'</div>'
+    + '<div style="font-size:12px;color:var(--ink3);margin-bottom:10px">'+(descripcion||'Indica de cu�l(es) cuenta(s) o efectivo sale el dinero para pagar esta moto. Puedes dividir el pago entre varias.')+'</div>'
     + '<div id="'+prefix+'-rows">'+_mpagoFilaHtml(prefix,0)+'</div>'
     + '<button type="button" class="btn btn-g btn-sm" onclick="_mpagoAgregarFila(\''+prefix+'\')" style="margin-top:4px">+ Agregar otra cuenta</button>'
     + '<div id="'+prefix+'-totales" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--rim)">'
@@ -49,7 +49,7 @@ function _mpagoAgregarFila(prefix){
   var restante = +(costo - asignado).toFixed(2);
   var idx = cont.querySelectorAll('.mpago-row').length;
   cont.insertAdjacentHTML('beforeend', _mpagoFilaHtml(prefix, idx));
-  // Si hay restante positivo, precargar la nueva fila (que está vacía por ser recién creada)
+  // Si hay restante positivo, precargar la nueva fila (que est� vac�a por ser reci�n creada)
   if(restante > 0.005){
     var rows = cont.querySelectorAll('.mpago-row');
     var nueva = rows[rows.length-1];
@@ -66,7 +66,7 @@ function _mpagoEliminarFila(btn, prefix){
   if(!cont) return;
   var rows = cont.querySelectorAll('.mpago-row');
   if(rows.length<=1){
-    // No eliminar la última, solo limpiar
+    // No eliminar la �ltima, solo limpiar
     var inp = btn.parentNode.querySelector('.'+prefix+'-monto');
     if(inp) inp.value = '';
     _mpagoActualizarTotales(prefix);
@@ -152,7 +152,7 @@ function _mpagoValidarContraCosto(prefix, costo){
   }
   return {ok:true, pagos:pagos};
 }
-// Crea, para una moto recién creada, los egresos + movimientos de retiro
+// Crea, para una moto reci�n creada, los egresos + movimientos de retiro
 // asociados al pago (uno por cada cuenta usada). Los egresos llevan
 // motoIdRef y los movimientos llevan motoIdRef + conceptoEgreso para
 // poder revertirlos en bloque al eliminar la moto.
@@ -162,14 +162,14 @@ function _mpagoCrearGastos(motoObj, pagos, opts){
   var fecha = opts.fecha || hoyLocalISO();
   var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false});
   var quien = (S.currentUser&&S.currentUser.nombre)||'Admin';
-  var conceptoBase = 'Compra de moto · '+(motoObj.modelo||'')+(motoObj.vin?' · VIN '+motoObj.vin:'')+' (Moto #'+motoObj.id+')';
+  var conceptoBase = 'Compra de moto � '+(motoObj.modelo||'')+(motoObj.vin?' � VIN '+motoObj.vin:'')+' (Moto #'+motoObj.id+')';
   var creados = [];
   pagos.forEach(function(p, idx){
-    // 1) Egreso en Finanzas (categoría inventario)
+    // 1) Egreso en Finanzas (categor�a inventario)
     var newEgId = (S.egresos&&S.egresos.length)
       ? Math.max.apply(null, S.egresos.map(function(x){return x.id;}))+1
       : 1;
-    // Asegurar que sea único si se crean varios en el mismo tick
+    // Asegurar que sea �nico si se crean varios en el mismo tick
     newEgId += idx;
     var newEg = {
       id: newEgId,
@@ -190,7 +190,7 @@ function _mpagoCrearGastos(motoObj, pagos, opts){
       id: 'MOV-MOTO-'+motoObj.id+'-'+idx+'-'+Date.now(),
       tipo: 'retiro',
       tipoOperacion: 'compra_moto',
-      concepto: 'Egreso · ' + newEg.concepto,
+      concepto: 'Egreso � ' + newEg.concepto,
       monto: p.monto,
       cuentaOrigen: p.cuenta,
       cuentaDestino: null,
@@ -210,7 +210,7 @@ function _mpagoCrearGastos(motoObj, pagos, opts){
 }
 // Reverso (al eliminar moto): marca como eliminados los egresos y movimientos
 // asociados, y opcionalmente devuelve el dinero a las cuentas creando
-// movimientos de depósito de reverso.
+// movimientos de dep�sito de reverso.
 function _mpagoReversarGastos(motoId, devolver, audit){
   var quien = (audit&&audit.eliminadoPor) || (S.currentUser&&S.currentUser.nombre)||'Admin';
   var fechaAudit = (audit&&audit.eliminadoEn) || new Date().toISOString();
@@ -228,7 +228,7 @@ function _mpagoReversarGastos(motoId, devolver, audit){
       afectados++;
     }
   });
-  // 2) Movimientos originales — marcar eliminados
+  // 2) Movimientos originales � marcar eliminados
   (S.movimientos||[]).forEach(function(m){
     if(!m.eliminado && String(m.motoIdRef)===String(motoId) && m.tipoOperacion==='compra_moto' && m.tipo==='retiro'){
       m.eliminado = true;
@@ -238,7 +238,7 @@ function _mpagoReversarGastos(motoId, devolver, audit){
       if(DB && DB.saveMovimiento) DB.saveMovimiento(m);
     }
   });
-  // 3) Si se devuelve, crear movimientos de reverso (depósito) por cada retiro
+  // 3) Si se devuelve, crear movimientos de reverso (dep�sito) por cada retiro
   if(devolver){
     var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false});
     (S.movimientos||[]).slice().forEach(function(m){
@@ -246,12 +246,12 @@ function _mpagoReversarGastos(motoId, devolver, audit){
         var rev = {
           id:'MOV-REV-MOTO-'+motoId+'-'+Date.now()+'-'+Math.floor(Math.random()*1000),
           tipo:'deposito',
-          concepto:'Reverso compra de moto eliminada · '+(m.concepto||''),
+          concepto:'Reverso compra de moto eliminada � '+(m.concepto||''),
           monto: parseFloat(m.monto)||0,
           cuentaOrigen:null,
           cuentaDestino: m.cuentaOrigen,
           fecha: hoyLocalISO(),
-          referencia:'Reverso por eliminación de moto #'+motoId,
+          referencia:'Reverso por eliminaci�n de moto #'+motoId,
           realizadoPor: quien,
           tasaBs: window._tasaBsGlobal||1,
           hora: hora,
@@ -272,6 +272,6 @@ function _mpagoTieneGastos(motoId){
   });
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ������������������������������������������
 // MOTO CRUD
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ������������������������������������������
