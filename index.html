@@ -40,9 +40,9 @@ h2.head{font-size:clamp(34px,4vw,52px);font-weight:800;letter-spacing:-2px;line-
 .btn-w:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.18);}
 
 /* NAV */
-#nav{position:fixed;top:0;left:0;right:0;z-index:200;height:78px;display:flex;align-items:center;justify-content:space-between;padding:0 48px;transition:background .3s var(--ease),box-shadow .3s var(--ease);}
+#nav{position:fixed;top:0;left:0;right:0;z-index:200;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 48px;transition:background .3s var(--ease),box-shadow .3s var(--ease);}
 #nav.s{background:rgba(255,255,255,.92);backdrop-filter:blur(24px) saturate(180%);box-shadow:0 1px 0 var(--line);}
-.nav-logo img{height:64px;}
+.nav-logo img{height:42px;}
 #nav>a img{filter:hue-rotate(-34deg) saturate(1.35) brightness(.95);}
 .nav-links{display:flex;align-items:center;gap:28px;list-style:none;}
 .nav-links a{font-size:13.5px;font-weight:500;color:var(--ink-3);letter-spacing:-.01em;transition:color .18s;}
@@ -57,21 +57,51 @@ h2.head{font-size:clamp(34px,4vw,52px);font-weight:800;letter-spacing:-2px;line-
 #mob a:hover{color:var(--p);}
 .mob-x{position:absolute;top:20px;right:20px;font-size:24px;background:none;color:var(--ink-3);}
 
-/* HERO — minimalista centrado */
-.hero{min-height:calc(100svh - 64px);display:flex;align-items:center;justify-content:center;padding:80px 48px 60px;position:relative;overflow:hidden;}
+/* HERO — 2 columnas con moto destacada */
+.hero{min-height:calc(100svh - 64px);display:flex;align-items:center;justify-content:center;padding:90px 48px 60px;position:relative;overflow:hidden;}
 .hero-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 1200px 700px at 50% 30%,rgba(37,99,235,.08) 0%,transparent 65%);}
 .hero-dots{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(37,99,235,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.04) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse 80% 70% at 50% 45%,#000 10%,transparent 100%);}
-.hero-inner{position:relative;z-index:2;max-width:880px;margin:0 auto;text-align:center;animation:fadeUp .85s var(--ease) both;}
-.hero-pill{display:inline-flex;align-items:center;gap:8px;background:var(--off);border:1px solid rgba(37,99,235,.15);border-radius:50px;padding:8px 18px;font-size:12.5px;font-weight:600;color:var(--p);margin-bottom:32px;}
+.hero-inner{position:relative;z-index:2;max-width:1280px;margin:0 auto;display:grid;grid-template-columns:1.05fr .95fr;gap:64px;align-items:center;animation:fadeUp .85s var(--ease) both;}
+.hero-left{text-align:left;}
+.hero-right{position:relative;display:flex;align-items:center;justify-content:center;}
+.hero-pill{display:inline-flex;align-items:center;gap:8px;background:var(--off);border:1px solid rgba(37,99,235,.15);border-radius:50px;padding:7px 16px;font-size:12px;font-weight:600;color:var(--p);margin-bottom:22px;}
 .pdot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
-h1{font-size:clamp(54px,8vw,104px);font-weight:800;letter-spacing:-4.5px;line-height:.94;color:var(--ink);margin-bottom:28px;}
+h1{font-size:clamp(42px,5.6vw,76px);font-weight:800;letter-spacing:-3px;line-height:.98;color:var(--ink);margin-bottom:22px;}
 h1 i{font-style:normal;color:var(--p);}
-.hero-desc{font-size:clamp(17px,1.6vw,20px);color:var(--ink-3);line-height:1.6;letter-spacing:-.01em;max-width:540px;margin:0 auto 42px;}
+.hero-desc{font-size:clamp(15.5px,1.3vw,18px);color:var(--ink-3);line-height:1.6;letter-spacing:-.01em;max-width:520px;margin:0 0 32px;}
 .hero-desc b{color:var(--ink);font-weight:700;}
-.hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:52px;}
-.hero-sedes{display:flex;align-items:center;justify-content:center;gap:24px;flex-wrap:wrap;color:var(--ink-4);font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;}
+.hero-actions{display:flex;gap:11px;flex-wrap:wrap;margin-bottom:38px;}
+.hero-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line);padding-top:24px;max-width:480px;}
+.hero-stat{padding:0 16px 0 0;}
+.hero-stat:not(:last-child){border-right:1px solid var(--line);}
+.hero-stat:not(:first-child){padding-left:16px;}
+.hero-stat-n{font-size:26px;font-weight:800;letter-spacing:-1px;color:var(--ink);line-height:1;margin-bottom:4px;}
+.hero-stat-n .accent{color:var(--p);}
+.hero-stat-l{font-size:11px;color:var(--ink-4);font-weight:600;letter-spacing:.02em;line-height:1.35;}
+
+/* Hero foto principal — moto destacada */
+.hero-photo{position:relative;width:100%;max-width:540px;}
+.hero-photo-bg{position:absolute;inset:-30px;background:radial-gradient(ellipse 70% 70% at 50% 60%,rgba(37,99,235,.18) 0%,transparent 65%);filter:blur(40px);z-index:0;}
+.hero-photo-card{position:relative;background:linear-gradient(160deg,#FAFBFF 0%,#EFF3FF 100%);border-radius:32px;border:1px solid rgba(37,99,235,.12);padding:30px;box-shadow:0 40px 80px -30px rgba(37,99,235,.22);z-index:1;}
+.hero-photo-card img{display:block;width:100%;height:auto;object-fit:contain;filter:drop-shadow(0 20px 30px rgba(0,0,0,.18));}
+.hero-photo-badge{position:absolute;top:18px;left:18px;background:#00C853;color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:6px 12px;border-radius:50px;box-shadow:0 6px 16px rgba(0,200,83,.32);z-index:2;}
+.hero-photo-price{position:absolute;bottom:18px;right:18px;background:#fff;border-radius:14px;padding:10px 14px;box-shadow:0 12px 26px rgba(0,0,0,.10);text-align:right;z-index:2;}
+.hero-photo-price-lbl{font-size:9.5px;font-weight:700;color:var(--ink-4);letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px;}
+.hero-photo-price-val{font-size:18px;font-weight:800;color:var(--p);letter-spacing:-.5px;line-height:1;}
+.hero-photo-price-sub{font-size:9.5px;color:var(--ink-4);font-weight:500;margin-top:2px;}
+
+.hero-sedes{display:flex;align-items:center;justify-content:flex-start;gap:24px;flex-wrap:wrap;color:var(--ink-4);font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-top:28px;}
 .hero-sedes span{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);}
 .hero-sedes span::before{content:'';width:5px;height:5px;background:var(--p);border-radius:50%;}
+
+@media(max-width:980px){
+  .hero-inner{grid-template-columns:1fr;gap:48px;text-align:center;}
+  .hero-left{text-align:center;}
+  .hero-desc{margin:0 auto 32px;}
+  .hero-actions{justify-content:center;}
+  .hero-stats{margin:0 auto;}
+  .hero-sedes{justify-content:center;}
+}
 
 /* FEATURED MOTO SHOWCASE — sección de moto destacada */
 .featured-sec{padding:80px 48px 100px;position:relative;background:var(--white);}
@@ -413,11 +443,11 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
 .wa-btn svg{display:block;}
 
 /* Pagasi refinements */
-#nav{height:78px!important;}
-#nav>a img{height:64px!important;filter:hue-rotate(-34deg) saturate(1.35) brightness(.95);}
-.nav-logo img{height:64px!important;}
-.fl-logo img{height:34px!important;}
-.brand-logo{height:64px!important;}
+#nav{height:64px!important;}
+#nav>a img{height:42px!important;filter:hue-rotate(-34deg) saturate(1.35) brightness(.95);}
+.nav-logo img{height:42px!important;}
+.fl-logo img{height:30px!important;}
+.brand-logo{height:42px!important;}
 .cat-sec{padding:96px 0!important;background:linear-gradient(180deg,var(--white) 0%,var(--off) 100%)!important;}
 .cat-head{margin-bottom:36px!important;gap:18px!important;}
 .cat-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))!important;gap:24px!important;align-items:stretch!important;}
@@ -431,7 +461,7 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
 .mcard-name{font-size:1.05rem!important;line-height:1.25!important;}
 .mcard-meta{margin-bottom:18px!important;}
 .btn-req{margin-top:auto!important;}
-@media(max-width:768px){#nav{height:66px!important;}#nav>a img,.nav-logo img{height:50px!important;}.brand-logo{height:50px!important;}.cat-sec{padding:76px 0!important;}.mcard-img{height:210px!important;}}
+@media(max-width:768px){#nav{height:58px!important;}#nav>a img,.nav-logo img{height:36px!important;}.brand-logo{height:36px!important;}.cat-sec{padding:76px 0!important;}.mcard-img{height:210px!important;}}
 
 </style>
 </head>
@@ -457,17 +487,51 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
 <section class="hero" id="inicio">
   <div class="hero-glow"></div><div class="hero-dots"></div>
   <div class="hero-inner">
-    <div class="hero-pill"><span class="pdot"></span>Disponible en todo Venezuela</div>
-    <h1>Tu moto.<br><i>En cuotas.</i><br>Ya.</h1>
-    <p class="hero-desc"><b>Aprobación en 24 horas. Entrega inmediata.</b><br>El camino más simple para tener la moto que necesitas, con cuotas que entiendes y sin sorpresas.</p>
-    <div class="hero-actions">
-      <a href="catalogo.html" class="btn btn-p">Ver catálogo →</a>
-      <a href="solicitar.html" class="btn btn-s">Solicitar ahora</a>
+    <div class="hero-left">
+      <div class="hero-pill"><span class="pdot"></span>Disponible en todo Venezuela</div>
+      <h1>Tu moto.<br><i>En cuotas.</i><br>Ya.</h1>
+      <p class="hero-desc"><b>Aprobación en 24 horas. Entrega inmediata.</b><br>El camino más simple para tener la moto que necesitas, con cuotas que entiendes y sin sorpresas.</p>
+      <div class="hero-actions">
+        <a href="catalogo.html" class="btn btn-p">Ver catálogo →</a>
+        <a href="solicitar.html" class="btn btn-s">Solicitar ahora</a>
+      </div>
+
+      <!-- Stats de confianza -->
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-n"><span class="accent">+40</span></div>
+          <div class="hero-stat-l">Modelos en catálogo</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-n"><span class="accent">3</span></div>
+          <div class="hero-stat-l">Sedes activas en Caracas</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-n"><span class="accent">24h</span></div>
+          <div class="hero-stat-l">Aprobación garantizada</div>
+        </div>
+      </div>
+
+      <div class="hero-sedes">
+        <span>EK Bello Monte</span>
+        <span>Boleita</span>
+        <span>Toro Sabana Grande</span>
+      </div>
     </div>
-    <div class="hero-sedes">
-      <span>EK Bello Monte</span>
-      <span>Boleita</span>
-      <span>Toro Sabana Grande</span>
+
+    <div class="hero-right">
+      <div class="hero-photo">
+        <div class="hero-photo-bg"></div>
+        <div class="hero-photo-card">
+          <div class="hero-photo-badge">★ Más vendida</div>
+          <img src="assets/motos/new-horse-150.jpg" alt="New Horse 150" loading="eager">
+          <div class="hero-photo-price">
+            <div class="hero-photo-price-lbl">Desde</div>
+            <div class="hero-photo-price-val">$110 / quincena</div>
+            <div class="hero-photo-price-sub">con $594 inicial</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
