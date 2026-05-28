@@ -490,6 +490,30 @@ function motoSvg(modelo, cat){
   return `<img src="${FOTO_TEMP}" alt="${modelo}" class="moto-photo" loading="lazy">`;
 }
 
+// Mapping modelo → archivo de imagen real (en assets/motos/)
+const MOTO_IMG = {
+  'New Horse 150':       'assets/motos/new-horse-150.jpg',
+  'EK Xpress 150':       'assets/motos/ek-xpress-150.jpg',
+  'EK Xpress II 150':    'assets/motos/ek-xpress-ii-150.jpg',
+  'EK Xpress 200S':      'assets/motos/ek-xpress-200s.jpg',
+  'EK Xpress 150 Lite':  'assets/motos/ek-xpress-150-lite.jpg',
+  'New Owen II 150':     'assets/motos/new-owen-ii-150.jpg',
+  'Owen 200S':           'assets/motos/owen-200s.jpg',
+  'Owen 200S Amarillo':  'assets/motos/owen-200s-amarillo.jpg',
+  'RK 200':              'assets/motos/rk-200.jpg',
+  'RK 250':              'assets/motos/rk-250.jpg',
+  'TX 250 GS':           'assets/motos/tx-250-gs.jpg',
+  'Matrix 150':          'assets/motos/matrix-150.png',
+  'Matrix 150 Lite':     'assets/motos/matrix-150-lite.jpg',
+  'New Outlook 175':     'assets/motos/new-outlook-175.jpg',
+  'Outlook XL Paleta':   'assets/motos/outlook-xl-paleta.jpg',
+  'Atlas 200HD':         'assets/motos/atlas-200hd.jpg',
+  'Arsen':               'assets/motos/arsen.png'
+};
+function motoImgFor(modelo){
+  return MOTO_IMG[modelo] || '';
+}
+
 function renderMotos(sedeFilter){
   const grid = document.getElementById('catGrid');
   const list = (sedeFilter === 'all' || !sedeFilter) ? MOTOS : MOTOS.filter(m => m.sede === sedeFilter);
@@ -504,8 +528,10 @@ function renderMotos(sedeFilter){
     const tagHtml = m.tag ? `<div class="mlabel" style="background:${tagBg};color:#fff;">${m.tag}</div>` : '';
     return `
       <div class="mcard reveal${dly}" data-idx="${m.id}" data-sede="${m.sede}">
-        <div class="mcard-img mcard-img-svg">
-          ${motoSvg(m.modelo, m.cat)}
+        <div class="mcard-img">
+          ${motoImgFor(m.modelo)
+            ? `<img src="${motoImgFor(m.modelo)}" alt="${m.modelo}" loading="lazy" onerror="this.style.display='none'">`
+            : motoSvg(m.modelo, m.cat)}
           ${tagHtml}
           <div class="sede-pin">${m.sedeName}</div>
         </div>
