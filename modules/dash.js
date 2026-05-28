@@ -186,14 +186,24 @@ PG.dash = function(){
   }).sort(function(a,b){ return a.dia - b.dia; });
   var cumplesHoy = cumplesEsteMes.filter(function(u){return u.esHoy;});
 
-  // Si el usuario LOGUEADO es cumpleañero hoy, disparar cotillón
+  // Si el usuario LOGUEADO es cumpleañero hoy, disparar cotillón con SU género
   setTimeout(function(){
     try {
-      var miCumple = _parseCumple((S.currentUser||{}).cumpleanos || (S.currentUser||{}).fechaNacimiento);
+      var u = S.currentUser || {};
+      var miCumple = _parseCumple(u.cumpleanos || u.fechaNacimiento);
       if(miCumple && miCumple.mes === hoyM && miCumple.dia === hoyD){
         if(typeof dispararCotillon === 'function' && !window._cotillonShown){
-          window._cotillonShown = true;
-          setTimeout(dispararCotillon, 600);
+          // Anti-spam por día via localStorage (compatible con centro.js)
+          var hoyKey = '_cotillonShown_'+(new Date()).getFullYear()+'-'+hoyM+'-'+hoyD;
+          var yaShown = false;
+          try { yaShown = !!localStorage.getItem(hoyKey); } catch(e){}
+          if(!yaShown){
+            window._cotillonShown = true;
+            try { localStorage.setItem(hoyKey,'1'); } catch(e){}
+            var nombre = u.nombre || u.email || 'Compañero/a';
+            var genero = u.genero || '';
+            setTimeout(function(){ dispararCotillon(nombre, false, genero); }, 600);
+          }
         }
       }
     } catch(e){}
