@@ -313,13 +313,22 @@ function nxAcFilter(){
 function nxAcRender(){
   var list = $('nx-ac-list');
   if(!list) return;
+  // Actualizar título del bloque y contador
+  var titleEl = $('nx-ac-list-title');
+  var countEl = $('nx-ac-list-count');
+  var destSel = $('notif-dest');
+  var dest = (destSel && destSel.value) || 'leads';
+  var nombresGrupo = {leads:'Leads sin cuenta',activos:'Activos con cuenta',proximas:'Cuotas pendientes esta semana',mora:'En mora',especifico:'Cliente específico'};
+  if(titleEl) titleEl.textContent = nombresGrupo[dest] || 'Destinatarios';
+  if(countEl) countEl.textContent = _nxAcResults.length || 0;
+
   if(!_nxAcResults.length){
     var input=$('nx-ac-input');
     var hasQuery = input && input.value.trim();
     if(hasQuery){
-      list.innerHTML = '<div class="nx-ac-empty">Sin coincidencias en este grupo. <button type="button" onclick="nxAcToggleScope()" style="border:none;background:none;color:var(--p1);font-weight:700;cursor:pointer;padding:0;font-size:inherit;text-decoration:underline">Buscar en todos los clientes</button></div>';
+      list.innerHTML = '<div class="nx-ac-empty" style="padding:18px;text-align:center;font-size:12px;color:var(--ink3)">Sin coincidencias en este grupo. <button type="button" onclick="nxAcToggleScope()" style="border:none;background:none;color:var(--p1);font-weight:700;cursor:pointer;padding:0;font-size:inherit;text-decoration:underline">Buscar en todos los clientes</button></div>';
     } else {
-      list.innerHTML = '<div class="nx-ac-empty">No hay clientes en este grupo</div>';
+      list.innerHTML = '<div class="nx-ac-empty" style="padding:24px;text-align:center;font-size:12px;color:var(--ink3)">No hay clientes en este grupo</div>';
     }
     return;
   }
@@ -338,7 +347,7 @@ function nxAcRender(){
     if(c.tel) meta.push(c.tel);
     else meta.push('sin teléfono');
     if(c.mora>0) meta.push(c.mora+'d mora');
-    return '<div class="nx-ac-item" data-id="'+esc(c.id)+'" data-idx="'+idx+'" onclick="nxAcPick(\''+esc(c.id)+'\')">'
+    return '<div class="nx-ac-item" data-id="'+esc(c.id)+'" data-idx="'+idx+'" onclick="nxAcPick(\''+esc(c.id)+'\')" title="Click para enviar solo a este cliente">'
       + '<div class="nx-ac-avatar" style="'+(c.isActivo?'':'background:var(--ink3)')+'">'+esc(initials(c.nombre))+'</div>'
       + '<div class="nx-ac-body">'
       + '<div class="nx-ac-name">'+esc(c.nombre||'Sin nombre')+'</div>'

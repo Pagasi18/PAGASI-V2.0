@@ -48,6 +48,10 @@ PG.notif = function(){
     var destSel=$('notif-dest');
     if(destSel) destSel.onchange=function(){ actualizarPreviewNotif(); };
     if(typeof nxAcUpdateHint==='function') nxAcUpdateHint();
+    // Poblar lista permanente de destinatarios desde el inicio
+    if(typeof nxAcGetClientsForScope==='function' && typeof nxAcRender==='function'){
+      try { _nxAcResults = nxAcGetClientsForScope(); nxAcRender(); } catch(e){}
+    }
     actualizarPreviewNotif();
     actualizarTipoDesc();
   }, 80);
@@ -312,16 +316,25 @@ PG.notif = function(){
           </select>
 
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <div style="font-size:10.5px;color:var(--ink3);font-weight:600" id="nx-ac-hint">O busca un cliente específico</div>
+            <div style="font-size:10.5px;color:var(--ink3);font-weight:600" id="nx-ac-hint">Lista de destinatarios — filtra o selecciona uno específico</div>
             <button type="button" id="nx-ac-modeswitch" onclick="nxAcToggleScope()" style="border:none;background:transparent;color:var(--p1);font-size:10.5px;font-weight:700;cursor:pointer;padding:2px 6px;border-radius:6px">Ver todos</button>
           </div>
 
           <div class="notif-search nx-ac-wrap">
             <span class="notif-search-icon nx-ac-icon">⌕</span>
-            <input type="text" class="nx-ac-input" id="nx-ac-input" placeholder="Nombre, cédula, teléfono o crédito..." autocomplete="off" oninput="nxAcFilter()" onfocus="nxAcOpen()" onkeydown="nxAcKey(event)">
+            <input type="text" class="nx-ac-input" id="nx-ac-input" placeholder="Filtrar por nombre, cédula, teléfono o crédito..." autocomplete="off" oninput="nxAcFilter()" onkeydown="nxAcKey(event)">
             <button type="button" class="notif-search-clear nx-ac-clear" id="nx-ac-clear" onclick="nxAcClearInput()">×</button>
-            <div class="nx-ac-list" id="nx-ac-list"></div>
           </div>
+
+          <!-- LISTA PERMANENTE DE DESTINATARIOS (siempre visible) -->
+          <div class="nx-ac-list-perm" id="nx-ac-list-perm">
+            <div class="nx-ac-list-head">
+              <span id="nx-ac-list-title">Destinatarios del grupo</span>
+              <span class="count" id="nx-ac-list-count">0</span>
+            </div>
+            <div class="nx-ac-list" id="nx-ac-list" style="position:static;display:block;max-height:none;border:none;box-shadow:none;background:transparent;"></div>
+          </div>
+
           <div id="nx-ac-selected-wrap"></div>
           <input type="hidden" id="notif-cliente-sel-id" value="">
           <select id="notif-cliente-sel" style="display:none"></select>
