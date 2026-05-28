@@ -510,6 +510,8 @@ function wtHTML(){
   html+='<div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">';
   html+=wtM6('Hoy',st.hoy,'',' #E6F1FB','#2563EB')+wtM6('Vencidas',st.vencidas,'','#FCEBEB','#E8335A')+wtM6('En proceso',st.proceso,'','#FAEEDA','#BA7517')+wtM6('Archivadas',st.archivadas,'','#E1F5EE','#00B876');
   html+='</div>';
+  // ─── NOTICIAS + CUMPLEAÑOS arriba para acceso rápido ──
+  html+=wtTopRowHTML();
   html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px">';
   html+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
   [['kanban','Kanban'],['hoy','Hoy'],['vencidas','Vencidas'],['proceso','En proceso'],['completadas','Completadas'],['todas','Todas'],['archivadas','Archivadas']].forEach(function(f){
@@ -548,9 +550,6 @@ function wtHTML(){
       html+='</div>';
     }
   }
-  // ─── CARD DEL DÍA + CUMPLEAÑOS (al final, no distraen del trabajo) ──
-  html+='<div style="margin-top:24px;padding-top:18px;border-top:1px dashed var(--rim)"></div>';
-  html+=wtTopRowHTML();
   return html;
 }
 
