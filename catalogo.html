@@ -491,8 +491,9 @@ function motoSvg(modelo, cat){
 }
 
 // Mapping modelo → archivo de imagen real (en assets/motos/)
-// Keys normalizadas (lowercase, sin espacios extras) para evitar problemas de case
+// Keys normalizadas: lowercase, sin tildes, sin espacios extras
 const MOTO_IMG = {
+  // Empire Keeway
   'new horse 150':       'assets/motos/new-horse-150.jpg',
   'ek xpress 150':       'assets/motos/ek-xpress-150.jpg',
   'ek xpress ii 150':    'assets/motos/ek-xpress-ii-150.jpg',
@@ -509,11 +510,39 @@ const MOTO_IMG = {
   'new outlook 175':     'assets/motos/new-outlook-175.jpg',
   'outlook xl paleta':   'assets/motos/outlook-xl-paleta.jpg',
   'atlas 200hd':         'assets/motos/atlas-200hd.jpg',
-  'arsen':               'assets/motos/arsen.png'
+  'arsen':               'assets/motos/arsen.png',
+  // Toro
+  'cappucino':           'assets/motos/cappucino.jpg',
+  'fox':                 'assets/motos/fox.jpg',
+  'jaguar 150':          'assets/motos/jaguar-150.jpg',
+  'leon 200':            'assets/motos/leon-200.jpg',
+  'moka':                'assets/motos/moka.jpg',
+  'power':               'assets/motos/power.jpg',
+  'r3x':                 'assets/motos/r3x.jpg',
+  'rex 150':             'assets/motos/rex-150.jpg',
+  'rex 250':             'assets/motos/rex-250.jpg',
+  'rex 250 mt':          'assets/motos/rex-250.jpg',
+  'tank':                'assets/motos/tank.jpg',
+  'tank iii':            'assets/motos/tank-iii.jpg',
+  'trx150 paleta':       'assets/motos/trx150-paleta.jpg',
+  'trx150 rayo':         'assets/motos/trx150-paleta.jpg',
+  'typhoon':             'assets/motos/typhoon.jpg',
+  // Haojin
+  'aguila':              'assets/motos/aguila.jpg',
+  'canario':             'assets/motos/canario.jpg',
+  'condor':              'assets/motos/condor.jpg',
+  'cuervo':              'assets/motos/cuervo.jpg',
+  'fenix 150':           'assets/motos/fenix.jpg',
+  'fenix 200':           'assets/motos/fenix.jpg',
+  'lechuza i':           'assets/motos/lechuza-i.jpg',
+  'lechuza ii':          'assets/motos/lechuza-ii.jpg'
 };
 function motoImgFor(modelo){
   if(!modelo) return '';
-  var k = String(modelo).toLowerCase().replace(/\s+/g,' ').trim();
+  // Normalizar: lowercase + quitar tildes + colapsar espacios
+  var k = String(modelo).toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/\s+/g,' ').trim();
   return MOTO_IMG[k] || '';
 }
 
