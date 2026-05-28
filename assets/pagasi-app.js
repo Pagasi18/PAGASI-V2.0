@@ -3041,7 +3041,7 @@ function showAdminProfile() {
     + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:18px;margin-bottom:14px">'
       + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin-bottom:12px">Información de sesión</div>'
       + [
-          ['Firebase', db ? '● Conectado · pagasi-b859b' : '● Sin conexión', db ? 'var(--green)' : 'var(--red)'],
+          ['Firebase', db ? '● Conectado · '+(FIREBASE_CONFIG.projectId||'firebase') : '● Sin conexión', db ? 'var(--green)' : 'var(--red)'],
           ['Email', email, 'var(--ink)'],
           ['UID', (auth && auth.currentUser && auth.currentUser.uid) ? auth.currentUser.uid.slice(0,20)+'…' : '--', 'var(--ink3)'],
           ['Último acceso', (auth && auth.currentUser && auth.currentUser.metadata && auth.currentUser.metadata.lastSignInTime) ? new Date(auth.currentUser.metadata.lastSignInTime).toLocaleString('es-VE') : '—', 'var(--ink3)'],

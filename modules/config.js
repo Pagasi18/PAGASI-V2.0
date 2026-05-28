@@ -217,7 +217,7 @@ PG.config = function(){
           <div style="width:10px;height:10px;border-radius:50%;background:${db?'var(--green)':'var(--red)'};flex-shrink:0"></div>
           <div>
             <div style="font-weight:700;font-size:13px;color:${db?'var(--green)':'var(--red)'}">${db?'Firebase conectado':'Sin conexión Firebase'}</div>
-            <div style="font-size:11px;color:var(--ink3)">${db?'pagasi-b859b · datos en la nube':'Los datos son locales y temporales'}</div>
+            <div style="font-size:11px;color:var(--ink3)">${db?((typeof FIREBASE_CONFIG!=='undefined'&&FIREBASE_CONFIG.projectId)||'firebase')+' · datos en la nube':'Los datos son locales y temporales'}</div>
           </div>
           <a href="https://console.firebase.google.com" target="_blank" rel="noopener" class="btn btn-g btn-xs" style="margin-left:auto">Consola →</a>
         </div>
