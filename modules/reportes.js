@@ -180,12 +180,33 @@ PG.reportes = function(){
     'Finanzas',
     '<b>'+fmt(totalIngresos)+'</b> ingresos · <b>'+fmt(totalEgresos)+'</b> egresos · Utilidad: <b>'+fmt(utilidad)+'</b> · Cartera: <b>'+fmt(cartera)+'</b>',
     [
-      {label:'📧 Enviar reporte mensual', onclick:'reporteMensualEnviarEmail()'},
-      {label:'📄 Ver reporte mensual', onclick:'reporteMensualAbrir()'},
       {label:'↻ Actualizar', onclick:"nav('reportes')"},
       {label:'＋ Registrar Egreso', onclick:'openAddEgreso()', primary:true}
     ]
   )}
+
+  <!-- BOTÓN GRANDE DESTACADO: Reporte mensual -->
+  <div style="background:linear-gradient(135deg,#2563EB 0%,#1D4ED8 50%,#1E40AF 100%);border-radius:16px;padding:22px 26px;margin-bottom:18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;color:#fff;box-shadow:0 14px 40px rgba(37,99,235,.22);position:relative;overflow:hidden">
+    <div style="position:absolute;top:-30px;right:-30px;width:200px;height:200px;background:radial-gradient(circle,rgba(255,255,255,.10) 0%,transparent 70%);pointer-events:none"></div>
+    <div style="width:60px;height:60px;background:rgba(255,255,255,.18);backdrop-filter:blur(8px);border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(255,255,255,.2)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="28" height="28"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    </div>
+    <div style="flex:1;min-width:240px;position:relative;z-index:1">
+      <div style="font-size:10.5px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;opacity:.85;margin-bottom:4px">Reporte mensual completo</div>
+      <div style="font-size:22px;font-weight:800;letter-spacing:-.5px;margin-bottom:5px;text-transform:capitalize">${new Date().toLocaleDateString('es-VE',{month:'long',year:'numeric'})}</div>
+      <div style="font-size:13px;opacity:.85;line-height:1.5">Genera un reporte ejecutivo con todos los ingresos, egresos, créditos, mora, top cobradores, clientes y más. Listo para imprimir o enviar por email.</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;position:relative;z-index:1">
+      <button onclick="reporteMensualAbrir()" style="background:#fff;color:#1E40AF;border:none;padding:14px 22px;border-radius:11px;font-weight:800;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 16px rgba(0,0,0,.18);transition:transform .15s">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="14 2 14 8 20 8"/><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+        Ver reporte
+      </button>
+      <button onclick="reporteMensualEnviarEmail()" style="background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.3);backdrop-filter:blur(8px);padding:14px 22px;border-radius:11px;font-weight:800;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.26)'" onmouseout="this.style.background='rgba(255,255,255,.16)'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Enviar por email
+      </button>
+    </div>
+  </div>
 
   <!-- Tabs internas -->
   <div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--rim);flex-wrap:wrap">

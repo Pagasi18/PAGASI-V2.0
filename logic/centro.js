@@ -263,13 +263,9 @@ function wtTopRowHTML(){
 }
 
 function wtDailyCardHTML(){
-  var diaDelAnio = (function(){var d=new Date();var i=new Date(d.getFullYear(),0,0);return Math.floor((d-i)/(1000*60*60*24));})();
-  var tipIdx = (typeof window._tipOverride !== 'undefined' && window._tipOverride !== null) ? window._tipOverride : (diaDelAnio % WT_TIPS.length);
-  var tipHoy = WT_TIPS[tipIdx % WT_TIPS.length];
   var hoyStr = new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long'});
 
   // Fonts divertidos
-  var FONT_TIP = '"Caveat","Bricolage Grotesque",-apple-system,sans-serif';
   var FONT_CHISTE = '"Caveat",cursive';
   var FONT_DATO = '"Lora",Georgia,serif';
   var FONT_NOTICIA = '"Bricolage Grotesque","Inter",sans-serif';
@@ -278,24 +274,16 @@ function wtDailyCardHTML(){
     +'<div class="wt-daily-card" style="background:#fff;border:1px solid var(--rim);border-radius:18px;overflow:hidden;box-shadow:0 4px 18px rgba(37,99,235,.05);height:100%;display:flex;flex-direction:column">'
     +'<div style="display:flex;border-bottom:1px solid var(--rim);background:var(--surf2)">'
       +'<button class="dly-tab is-active" data-tab="noticia" onclick="dashDailyTab(\'noticia\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--ink);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid #DC2626">Noticias</button>'
-      +'<button class="dly-tab" data-tab="tip" onclick="dashDailyTab(\'tip\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink3);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid transparent">Tip del día</button>'
       +'<button class="dly-tab" data-tab="chiste" onclick="dashDailyTab(\'chiste\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink3);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid transparent">Chiste</button>'
       +'<button class="dly-tab" data-tab="dato" onclick="dashDailyTab(\'dato\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink3);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid transparent">Dato curioso</button>'
     +'</div>'
     +'<div style="padding:32px 36px 28px;min-height:230px;position:relative;flex:1">'
 
-      // NOTICIAS — primera tab
+      // NOTICIAS — primera y única tab activa por defecto
       +'<div id="dly-tab-noticia" class="dly-content" style="display:block">'
         +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#DC2626;margin-bottom:14px;font-family:'+FONT_NOTICIA+'">Noticias del día · '+hoyStr+'</div>'
         +'<div id="dly-noticia-text" style="font-size:16px;line-height:1.5;color:var(--ink);font-family:'+FONT_NOTICIA+';font-weight:500">Cargando noticias…</div>'
         +'<button onclick="dashDailyLoad(\'noticia\',true)" style="position:absolute;bottom:18px;right:24px;background:#DC2626;color:#fff;border:none;padding:9px 18px;border-radius:50px;cursor:pointer;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(220,38,38,.28)">Refrescar →</button>'
-      +'</div>'
-
-      // TIP
-      +'<div id="dly-tab-tip" class="dly-content" style="display:none">'
-        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--p1);margin-bottom:14px;font-family:'+FONT_NOTICIA+'">Tip del día · '+hoyStr+'</div>'
-        +'<div id="dly-tip-text" style="font-size:30px;line-height:1.32;color:var(--ink);font-weight:700;font-family:'+FONT_TIP+';letter-spacing:-.2px;padding-right:140px">'+wtEsc(tipHoy)+'</div>'
-        +'<button onclick="dashTipNext()" style="position:absolute;bottom:18px;right:24px;background:var(--p1);color:#fff;border:none;padding:9px 18px;border-radius:50px;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:.02em;box-shadow:0 4px 12px rgba(37,99,235,.28)">Otro tip →</button>'
       +'</div>'
 
       // CHISTE
