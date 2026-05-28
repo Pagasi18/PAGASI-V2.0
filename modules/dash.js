@@ -218,65 +218,8 @@ PG.dash = function(){
     ]
   )}
 
-  <!-- ROW 0: DAILY CARDS (Tip / Chiste / Dato / Noticia) + CUMPLEAÑOS -->
-  <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-bottom:16px">
-    <div class="card dash-daily" style="padding:0;overflow:hidden;border:1px solid var(--rim)">
-      <div style="display:flex;border-bottom:1px solid var(--rim);background:var(--surf2)">
-        <button class="dly-tab is-active" data-tab="tip" onclick="dashDailyTab('tip')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:11px;font-weight:800;color:var(--ink);padding:11px 6px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;border-bottom:2px solid var(--p1);position:relative">Tip del día</button>
-        <button class="dly-tab" data-tab="chiste" onclick="dashDailyTab('chiste')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:11px;font-weight:700;color:var(--ink3);padding:11px 6px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;border-bottom:2px solid transparent">Chiste</button>
-        <button class="dly-tab" data-tab="dato" onclick="dashDailyTab('dato')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:11px;font-weight:700;color:var(--ink3);padding:11px 6px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;border-bottom:2px solid transparent">Dato curioso</button>
-        <button class="dly-tab" data-tab="noticia" onclick="dashDailyTab('noticia')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:11px;font-weight:700;color:var(--ink3);padding:11px 6px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;border-bottom:2px solid transparent">Noticias</button>
-      </div>
-      <div style="padding:18px 22px;min-height:128px;position:relative">
-        <div id="dly-tab-tip" class="dly-content" style="display:block">
-          <div style="font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--p1);margin-bottom:7px">${new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long'})}</div>
-          <div id="dly-tip-text" style="font-size:14px;line-height:1.55;color:var(--ink);font-weight:500">${tipHoy}</div>
-          <button onclick="dashTipNext()" title="Otro tip" style="position:absolute;bottom:12px;right:14px;background:var(--surf);border:1px solid var(--rim);color:var(--p1);padding:5px 12px;border-radius:50px;cursor:pointer;font-size:11px;font-weight:700">Otro tip →</button>
-        </div>
-        <div id="dly-tab-chiste" class="dly-content" style="display:none">
-          <div style="font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#F97316;margin-bottom:7px">Chiste del día · es.jokes</div>
-          <div id="dly-chiste-text" style="font-size:14px;line-height:1.55;color:var(--ink);font-weight:500">Cargando chiste…</div>
-          <button onclick="dashDailyLoad('chiste',true)" style="position:absolute;bottom:12px;right:14px;background:var(--surf);border:1px solid var(--rim);color:#F97316;padding:5px 12px;border-radius:50px;cursor:pointer;font-size:11px;font-weight:700">Otro →</button>
-        </div>
-        <div id="dly-tab-dato" class="dly-content" style="display:none">
-          <div style="font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#16A34A;margin-bottom:7px">Dato curioso · uselessfacts</div>
-          <div id="dly-dato-text" style="font-size:14px;line-height:1.55;color:var(--ink);font-weight:500">Cargando dato…</div>
-          <button onclick="dashDailyLoad('dato',true)" style="position:absolute;bottom:12px;right:14px;background:var(--surf);border:1px solid var(--rim);color:#16A34A;padding:5px 12px;border-radius:50px;cursor:pointer;font-size:11px;font-weight:700">Otro →</button>
-        </div>
-        <div id="dly-tab-noticia" class="dly-content" style="display:none">
-          <div style="font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#DC2626;margin-bottom:7px">Noticia del día · Google News VE</div>
-          <div id="dly-noticia-text" style="font-size:14px;line-height:1.45;color:var(--ink);font-weight:500">Cargando noticia…</div>
-          <button onclick="dashDailyLoad('noticia',true)" style="position:absolute;bottom:12px;right:14px;background:var(--surf);border:1px solid var(--rim);color:#DC2626;padding:5px 12px;border-radius:50px;cursor:pointer;font-size:11px;font-weight:700">Refrescar →</button>
-        </div>
-      </div>
-    </div>
+  <!-- Cumpleaños y daily tabs viven ahora en Centro de Trabajo -->
 
-    <div class="card" style="padding:18px 20px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div>
-          <div style="font-size:13px;font-weight:800;color:var(--ink);letter-spacing:-.2px">Cumpleaños</div>
-          <div style="font-size:10.5px;color:var(--ink3);font-weight:600;text-transform:capitalize">${new Date().toLocaleDateString('es-VE',{month:'long'})}</div>
-        </div>
-        <span style="background:var(--gs);color:var(--p1);padding:3px 8px;border-radius:50px;font-size:10px;font-weight:800">${cumplesEsteMes.length}</span>
-      </div>
-      ${cumplesEsteMes.length === 0 ? `
-        <div style="text-align:center;padding:24px 4px;color:var(--ink3);font-size:11.5px;line-height:1.5">
-          Nadie cumple este mes.<br><span style="font-size:10.5px">Pide a los empleados que llenen su fecha de cumpleaños en su perfil.</span>
-        </div>
-      ` : `
-        <div style="display:flex;flex-direction:column;gap:6px;max-height:140px;overflow-y:auto">
-          ${cumplesEsteMes.map(function(u){
-            return '<div style="display:flex;align-items:center;gap:9px;padding:7px 9px;background:'+(u.esHoy?'linear-gradient(135deg,#FCE7F3 0%,#FBCFE8 100%)':'var(--surf2)')+';border:1px solid '+(u.esHoy?'#F9A8D4':'var(--rim)')+';border-radius:9px">'
-              +'<div style="width:30px;height:30px;border-radius:50%;background:'+(u.esHoy?'#EC4899':'var(--p1)')+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10.5px">'+_initialsName(u.nom)+'</div>'
-              +'<div style="flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+u.nom+'</div>'
-              +'<div style="font-family:var(--fd);font-weight:800;font-size:11px;letter-spacing:.04em;color:'+(u.esHoy?'#BE185D':'var(--ink3)')+'">'+(u.esHoy?'HOY':'día '+u.dia)+'</div>'
-            +'</div>';
-          }).join('')}
-        </div>
-        ${cumplesHoy.length ? '<button onclick="dispararCotillon()" style="margin-top:10px;width:100%;background:linear-gradient(135deg,#EC4899,#BE185D);color:#fff;border:none;padding:9px;border-radius:9px;font-weight:800;font-size:12px;cursor:pointer;letter-spacing:.04em">Lanzar cotillón</button>' : ''}
-      `}
-    </div>
-  </div>
 
   <!-- ROW 1: 4 KPI CARDS -->
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:18px">

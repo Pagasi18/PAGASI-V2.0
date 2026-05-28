@@ -266,24 +266,84 @@ async function dashDailyLoad(tipo, force){
       } else throw new Error('Sin dato');
     }
     else if(tipo === 'noticia'){
-      // RSS de Google News para Venezuela vía rss2json (gratis, sin key)
-      var rssUrl = encodeURIComponent('https://news.google.com/rss?hl=es-419&gl=VE&ceid=VE:es-419');
-      var r = await fetch('https://api.rss2json.com/v1/api.json?rss_url='+rssUrl+'&count=5');
-      var d = await r.json();
-      if(d.items && d.items.length){
-        // Mostrar 3 titulares con link
-        var items = d.items.slice(0,3);
-        textEl.innerHTML = items.map(function(it){
-          var title = (it.title||'').replace(/<[^>]*>/g,'').slice(0,140);
-          var src = (it.author||'').slice(0,30);
-          return '<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--rim);last:border:none">'
-            +'<a href="'+(it.link||'#')+'" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:none;font-weight:700;line-height:1.35;display:block">'+title+'</a>'
-            +(src?'<div style="font-size:10.5px;color:var(--ink3);margin-top:3px">'+src+'</div>':'')
+      // Múltiples fuentes de noticias con fallback automático
+      var noticias = null;
+      var fuentesNoticias = [
+        // 1) RSS2JSON con Google News VE
+        {url:'https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent('https://news.google.com/rss?hl=es-419&gl=VE&ceid=VE:es-419')+'&count=6',
+         parse:function(d){ return d.items && d.items.length ? d.items : null; }},
+        // 2) AllOrigins proxy con Google News VE
+        {url:'https://api.allorigins.win/get?url='+encodeURIComponent('https://news.google.com/rss?hl=es-419&gl=VE&ceid=VE:es-419'),
+         parse:function(d){
+           if(!d.contents) return null;
+           try {
+             var doc = new DOMParser().parseFromString(d.contents, 'text/xml');
+             var items = doc.querySelectorAll('item');
+             var arr = [];
+             items.forEach(function(it){
+               arr.push({
+                 title: (it.querySelector('title')||{}).textContent || '',
+                 link: (it.querySelector('link')||{}).textContent || '',
+                 author: (it.querySelector('source')||{}).textContent || ''
+               });
+             });
+             return arr.length ? arr.slice(0,6) : null;
+           } catch(e) { return null; }
+         }},
+        // 3) RSS2JSON con BBC Mundo (cobertura LatAm en español)
+        {url:'https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent('https://feeds.bbci.co.uk/mundo/rss.xml')+'&count=6',
+         parse:function(d){ return d.items && d.items.length ? d.items : null; }},
+        // 4) AllOrigins con BBC Mundo
+        {url:'https://api.allorigins.win/get?url='+encodeURIComponent('https://feeds.bbci.co.uk/mundo/rss.xml'),
+         parse:function(d){
+           if(!d.contents) return null;
+           try {
+             var doc = new DOMParser().parseFromString(d.contents, 'text/xml');
+             var items = doc.querySelectorAll('item');
+             var arr = [];
+             items.forEach(function(it){
+               arr.push({
+                 title: (it.querySelector('title')||{}).textContent || '',
+                 link: (it.querySelector('link')||{}).textContent || '',
+                 author: 'BBC Mundo'
+               });
+             });
+             return arr.length ? arr.slice(0,6) : null;
+           } catch(e) { return null; }
+         }}
+      ];
+
+      for(var i=0;i<fuentesNoticias.length;i++){
+        try {
+          var src = fuentesNoticias[i];
+          var rr = await fetch(src.url);
+          if(!rr.ok) continue;
+          var dd = await rr.json();
+          var arr = src.parse(dd);
+          if(arr && arr.length){
+            noticias = arr;
+            console.log('[Noticias] Fuente', i+1, 'OK -', arr.length, 'items');
+            break;
+          }
+        } catch(e){
+          console.warn('[Noticias] Fuente', i+1, 'falló:', e.message);
+        }
+      }
+
+      if(noticias && noticias.length){
+        var items = noticias.slice(0,3);
+        textEl.innerHTML = items.map(function(it, idx){
+          var title = String(it.title||'').replace(/<[^>]*>/g,'').slice(0,180);
+          var src = String(it.author||it.source||'').slice(0,40);
+          var isLast = idx === items.length - 1;
+          return '<div style="margin-bottom:'+(isLast?'0':'10px')+';padding-bottom:'+(isLast?'0':'10px')+';'+(isLast?'':'border-bottom:1px solid var(--rim);')+'">'
+            +'<a href="'+(it.link||'#')+'" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:none;font-weight:700;line-height:1.4;display:block;font-size:15px">'+title+'</a>'
+            +(src?'<div style="font-size:11px;color:var(--ink3);margin-top:5px;font-weight:600">'+src+'</div>':'')
           +'</div>';
         }).join('');
         try { localStorage.setItem(cacheKey, textEl.innerHTML); } catch(e){}
         return;
-      } else throw new Error('Sin noticias');
+      } else throw new Error('Todas las fuentes de noticias fallaron');
     }
 
     textEl.textContent = resultado;

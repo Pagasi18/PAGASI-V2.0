@@ -10,6 +10,162 @@ var WT_NOTIFIED=false;
 var _wtDragId=null;
 
 function wtEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+
+// ─── DAILY CARD para Centro de trabajo (Tip/Chiste/Dato/Noticia) ───
+var WT_TIPS = [
+  '"Lo que se mide, se mejora." Revisa tu cartera vencida cada lunes a primera hora.',
+  'Una moto se entrega tres veces: en el lote, en el contrato, y en la primera cuota a tiempo.',
+  'El mejor cliente es el que paga puntual. Premia a los puntuales con un mensaje de "gracias" antes de pedir la siguiente cuota.',
+  'No respondas WhatsApp después de las 8pm; protege tu tiempo personal. Los clientes lo respetan.',
+  'El precio de la moto no es el problema. El problema es no haber explicado bien la cuota.',
+  'Cobranza al día = libertad financiera. Un día de atraso es un día de tu plata trabajando para otro.',
+  '"El cliente no compra una moto, compra movilidad y libertad." Vende eso, no las especificaciones.',
+  'Un cliente referido vale 5 veces más que uno por publicidad. Pide referencias cuando paguen la última cuota.',
+  'Si no sabes tu costo de oportunidad, todo te parece barato. Calcula cuánto te cuesta cada día de mora.',
+  'Llama al cliente el día antes de su cuota, no después. Convierte el cobro en un servicio.',
+  'Una factura emitida es un cliente más conectado. Pide su RIF/cédula al emitir y guarda los datos.',
+  'Las primeras 3 cuotas predicen las 21 restantes. Si fallan ahí, el patrón se repite.',
+  'Sorprende a tus mejores clientes con un casco gratis o una revisión. El boca a boca es tu mejor marketing.',
+  'Si un cliente no contesta WhatsApp en 24h, llámalo. Si no contesta llamadas en 48h, ve al lote.',
+  'Documenta todo: contratos firmados, fotos de la moto, copias de cédula. La memoria falla, los papeles no.',
+  '"La calidad no es un acto, es un hábito." Aristóteles. Revisa cada moto antes de entregarla, sin excepción.',
+  'El admin no es para llenarlo de datos, es para tomar decisiones más rápido. Si una pantalla no te ayuda a decidir, sobra.',
+  'Un cliente con plan personalizado paga 30% más puntual que uno con plan estándar. Vale la conversación.',
+  'Compite contigo, no con la competencia. Si este mes cobraste $20k, la meta del próximo es $22k.',
+  'Un fiador firmado vale más que tres promesas verbales. No bajes ese requisito por presión de cerrar.',
+  'Si un cliente tarda más de 1 hora en pensar la oferta, no la va a tomar. Ofrece dos opciones y deja que elija.',
+  'Nadie nace sabiendo cobrar. Practica el guion de cobranza amable hasta que lo digas natural.',
+  'Cada hora que un crédito está en mora cuesta tu margen del día. Cobranza temprana = ganancia real.',
+  'El cliente que paga su última cuota merece una llamada de felicitación. Y un descuento si vuelve.',
+  'Configura recordatorios automáticos 3 días antes de cada cuota. El olvido es enemigo del cobro.',
+  'Mide tu APY real cada mes. Si bajó, algo está fallando: ya sea precio, plazo o cobranza.',
+  'El sistema es tan bueno como los datos que le metes. Llena bien el perfil del cliente desde el primer contacto.',
+  'No vendas crédito al primero que entra. Vende al que califica. La mora arruina más negocios que la falta de clientes.',
+  '"Hay que pensar en grande, pero empezar pequeño." Cobra una cuota completa antes de pensar en 100.',
+  'Cada lunes es nueva oportunidad. Empieza con la lista de morosos del viernes, no con emails.',
+  'Celebra los logros chiquitos del equipo. 10 cobros perfectos en una semana merecen reconocimiento.'
+];
+
+function _wtInitialsName(n){
+  var p=(n||'').split(/\s+/).filter(Boolean);
+  return ((p[0]||'')[0]||'?').toUpperCase()+((p[1]||'')[0]||'').toUpperCase();
+}
+
+function _wtParseCumple(v){
+  if(!v) return null;
+  var s = String(v).replace(/\//g,'-');
+  var m1 = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m1) return {mes:parseInt(m1[2],10), dia:parseInt(m1[3],10)};
+  var m2 = s.match(/^(\d{1,2})-(\d{1,2})(?:-\d{2,4})?/);
+  if(m2) return {mes:parseInt(m2[2],10), dia:parseInt(m2[1],10)};
+  return null;
+}
+
+function wtCumplesHTML(){
+  var hoyM = new Date().getMonth()+1, hoyD = new Date().getDate();
+  var cumplesEsteMes = (S.usuarios||[]).filter(function(u){
+    if(!u || u.eliminado) return false;
+    var c = _wtParseCumple(u.cumpleanos || u.fechaNacimiento || u.bday);
+    return c && c.mes === hoyM;
+  }).map(function(u){
+    var c = _wtParseCumple(u.cumpleanos || u.fechaNacimiento || u.bday);
+    return {nom:u.nombre||u.email||'Usuario', dia:c.dia, esHoy:c.dia===hoyD};
+  }).sort(function(a,b){ return a.dia - b.dia; });
+  var cumplesHoy = cumplesEsteMes.filter(function(u){return u.esHoy;});
+  var mes = new Date().toLocaleDateString('es-VE',{month:'long'});
+
+  if(cumplesEsteMes.length === 0){
+    return '<div style="padding:24px 22px;background:#fff;border:1px solid var(--rim);border-radius:18px;height:100%;display:flex;flex-direction:column">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
+        +'<div><div style="font-size:14px;font-weight:800;color:var(--ink);letter-spacing:-.3px">Cumpleaños</div>'
+        +'<div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:capitalize;margin-top:2px">'+mes+'</div></div>'
+        +'<span style="background:var(--gs);color:var(--p1);padding:3px 9px;border-radius:50px;font-size:10.5px;font-weight:800">0</span>'
+      +'</div>'
+      +'<div style="flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;color:var(--ink3);font-size:12.5px;line-height:1.55">'
+        +'Nadie cumple este mes.<br><span style="font-size:11px">Pide a los empleados que llenen su fecha de cumpleaños en su perfil.</span>'
+      +'</div>'
+    +'</div>';
+  }
+
+  var rows = cumplesEsteMes.map(function(u){
+    var bg = u.esHoy ? 'linear-gradient(135deg,#FCE7F3 0%,#FBCFE8 100%)' : 'var(--surf2)';
+    var border = u.esHoy ? '#F9A8D4' : 'var(--rim)';
+    var avatar = u.esHoy ? '#EC4899' : 'var(--p1)';
+    var diaCol = u.esHoy ? '#BE185D' : 'var(--ink3)';
+    var diaTxt = u.esHoy ? 'HOY' : 'día '+u.dia;
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:'+bg+';border:1px solid '+border+';border-radius:10px">'
+      +'<div style="width:34px;height:34px;border-radius:50%;background:'+avatar+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11.5px">'+_wtInitialsName(u.nom)+'</div>'
+      +'<div style="flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+wtEsc(u.nom)+'</div>'
+      +'<div style="font-family:var(--fd);font-weight:800;font-size:11.5px;letter-spacing:.04em;color:'+diaCol+'">'+diaTxt+'</div>'
+    +'</div>';
+  }).join('');
+
+  return '<div style="padding:18px 22px;background:#fff;border:1px solid var(--rim);border-radius:18px;height:100%;display:flex;flex-direction:column">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
+      +'<div><div style="font-size:14px;font-weight:800;color:var(--ink);letter-spacing:-.3px">Cumpleaños</div>'
+      +'<div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:capitalize;margin-top:2px">'+mes+'</div></div>'
+      +'<span style="background:var(--gs);color:var(--p1);padding:3px 9px;border-radius:50px;font-size:10.5px;font-weight:800">'+cumplesEsteMes.length+'</span>'
+    +'</div>'
+    +'<div style="display:flex;flex-direction:column;gap:7px;flex:1;overflow-y:auto">'+rows+'</div>'
+    +(cumplesHoy.length ? '<button onclick="dispararCotillon()" style="margin-top:12px;width:100%;background:linear-gradient(135deg,#EC4899,#BE185D);color:#fff;border:none;padding:11px;border-radius:11px;font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.04em;box-shadow:0 6px 16px rgba(236,72,153,.32)">Lanzar cotillón</button>' : '')
+  +'</div>';
+}
+
+function wtTopRowHTML(){
+  return '<div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:18px;align-items:stretch">'
+    + wtDailyCardHTML()
+    + wtCumplesHTML()
+  +'</div>';
+}
+
+function wtDailyCardHTML(){
+  var diaDelAnio = (function(){var d=new Date();var i=new Date(d.getFullYear(),0,0);return Math.floor((d-i)/(1000*60*60*24));})();
+  var tipIdx = (typeof window._tipOverride !== 'undefined' && window._tipOverride !== null) ? window._tipOverride : (diaDelAnio % WT_TIPS.length);
+  var tipHoy = WT_TIPS[tipIdx % WT_TIPS.length];
+  var hoyStr = new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long'});
+
+  return ''
+    +'<div class="wt-daily-card" style="background:#fff;border:1px solid var(--rim);border-radius:18px;overflow:hidden;box-shadow:0 4px 18px rgba(37,99,235,.05);height:100%;display:flex;flex-direction:column">'
+    +'<div style="display:flex;border-bottom:1px solid var(--rim);background:var(--surf2)">'
+      +'<button class="dly-tab is-active" data-tab="tip" onclick="dashDailyTab(\'tip\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--ink);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid var(--p1)">Tip del día</button>'
+      +'<button class="dly-tab" data-tab="chiste" onclick="dashDailyTab(\'chiste\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink3);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid transparent">Chiste</button>'
+      +'<button class="dly-tab" data-tab="dato" onclick="dashDailyTab(\'dato\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink3);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid transparent">Dato curioso</button>'
+      +'<button class="dly-tab" data-tab="noticia" onclick="dashDailyTab(\'noticia\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink3);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid transparent">Noticias</button>'
+    +'</div>'
+    +'<div style="padding:32px 36px 28px;min-height:200px;position:relative">'
+
+      // TIP
+      +'<div id="dly-tab-tip" class="dly-content" style="display:block;">'
+        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--p1);margin-bottom:14px">'+hoyStr+'</div>'
+        +'<div id="dly-tip-text" style="font-size:24px;line-height:1.4;color:var(--ink);font-weight:600;letter-spacing:-.3px;padding-right:120px">'+wtEsc(tipHoy)+'</div>'
+        +'<button onclick="dashTipNext()" style="position:absolute;bottom:18px;right:24px;background:var(--p1);color:#fff;border:none;padding:9px 18px;border-radius:50px;cursor:pointer;font-size:12px;font-weight:700;letter-spacing:.02em;box-shadow:0 4px 12px rgba(37,99,235,.28)">Otro tip →</button>'
+      +'</div>'
+
+      // CHISTE
+      +'<div id="dly-tab-chiste" class="dly-content" style="display:none">'
+        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#F97316;margin-bottom:14px">Chiste del día</div>'
+        +'<div id="dly-chiste-text" style="font-size:22px;line-height:1.45;color:var(--ink);font-weight:500;letter-spacing:-.2px;padding-right:120px">Cargando chiste…</div>'
+        +'<button onclick="dashDailyLoad(\'chiste\',true)" style="position:absolute;bottom:18px;right:24px;background:#F97316;color:#fff;border:none;padding:9px 18px;border-radius:50px;cursor:pointer;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(249,115,22,.28)">Otro chiste →</button>'
+      +'</div>'
+
+      // DATO
+      +'<div id="dly-tab-dato" class="dly-content" style="display:none">'
+        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#16A34A;margin-bottom:14px">Dato curioso</div>'
+        +'<div id="dly-dato-text" style="font-size:22px;line-height:1.45;color:var(--ink);font-weight:500;letter-spacing:-.2px;padding-right:120px">Cargando dato…</div>'
+        +'<button onclick="dashDailyLoad(\'dato\',true)" style="position:absolute;bottom:18px;right:24px;background:#16A34A;color:#fff;border:none;padding:9px 18px;border-radius:50px;cursor:pointer;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(22,163,74,.28)">Otro dato →</button>'
+      +'</div>'
+
+      // NOTICIAS
+      +'<div id="dly-tab-noticia" class="dly-content" style="display:none">'
+        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#DC2626;margin-bottom:14px">Noticias del día</div>'
+        +'<div id="dly-noticia-text" style="font-size:15.5px;line-height:1.5;color:var(--ink)">Cargando noticias…</div>'
+        +'<button onclick="dashDailyLoad(\'noticia\',true)" style="position:absolute;bottom:18px;right:24px;background:#DC2626;color:#fff;border:none;padding:9px 18px;border-radius:50px;cursor:pointer;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(220,38,38,.28)">Refrescar →</button>'
+      +'</div>'
+
+    +'</div>'
+  +'</div>';
+}
+
 function wtToday(){ return hoyLocalISO(); }
 function wtDateAdd(days){ var d=new Date(); d.setDate(d.getDate()+days); return fechaLocalISO(d); }
 function wtUserName(){ return (S.currentUser&&(S.currentUser.nombre||S.currentUser.email||S.currentUser.uid))||'Administrador'; }
@@ -84,6 +240,36 @@ function wtHTML(){
   html+=pageBanner('Centro de trabajo','Operación del equipo',
     '<b>'+st.total+'</b> activas · <b style="color:var(--red)">'+st.vencidas+'</b> vencidas · <b style="color:var(--amber)">'+st.proceso+'</b> en proceso',
     [{label:'+ Nueva tarea',onclick:'openWtTask()',primary:true}]);
+
+  // ─── CARD DEL DÍA + CUMPLEAÑOS ──────────────────────────────────
+  html+=wtTopRowHTML();
+  // Pre-cargar contenido de las 4 fuentes al renderizar
+  setTimeout(function(){
+    if(typeof dashDailyLoad==='function'){
+      setTimeout(function(){ dashDailyLoad('chiste', false); }, 200);
+      setTimeout(function(){ dashDailyLoad('dato', false); }, 500);
+      setTimeout(function(){ dashDailyLoad('noticia', false); }, 800);
+    }
+    // Cotillón si es cumpleaños del usuario
+    try {
+      var u = S.currentUser || {};
+      var cumple = u.cumpleanos || u.fechaNacimiento;
+      if(cumple){
+        var s = String(cumple).replace(/\//g,'-');
+        var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if(m){
+          var mes = parseInt(m[2],10), dia = parseInt(m[3],10);
+          var hoy = new Date();
+          if(mes === hoy.getMonth()+1 && dia === hoy.getDate()){
+            if(typeof dispararCotillon === 'function' && !window._cotillonShown){
+              window._cotillonShown = true;
+              setTimeout(function(){ dispararCotillon(u.nombre||''); }, 600);
+            }
+          }
+        }
+      }
+    } catch(e){}
+  }, 100);
   if(st.hoy+st.vencidas>0){
     html+='<div style="background:#FFF6E5;border:1px solid #FAEEDA;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:18px">'
       +'<div style="width:38px;height:38px;background:#FAEEDA;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#BA7517;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>'
