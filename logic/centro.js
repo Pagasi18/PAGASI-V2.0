@@ -450,9 +450,7 @@ function wtHTML(){
     +'</div>';
   }
 
-  // ─── CARD DEL DÍA + CUMPLEAÑOS ──────────────────────────────────
-  html+=wtTopRowHTML();
-  // Pre-cargar contenido de las 4 fuentes al renderizar
+  // ─── Pre-cargar contenido del card diario (el card se renderiza al final, abajo) ──
   setTimeout(function(){
     if(typeof dashDailyLoad==='function'){
       setTimeout(function(){ dashDailyLoad('chiste', false); }, 200);
@@ -550,6 +548,9 @@ function wtHTML(){
       html+='</div>';
     }
   }
+  // ─── CARD DEL DÍA + CUMPLEAÑOS (al final, no distraen del trabajo) ──
+  html+='<div style="margin-top:24px;padding-top:18px;border-top:1px dashed var(--rim)"></div>';
+  html+=wtTopRowHTML();
   return html;
 }
 
