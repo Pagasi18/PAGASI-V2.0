@@ -210,15 +210,39 @@ function wtCumplesHTML(){
     +'</div>';
   }
 
+  // Paletas por género: M=azul, F=rosa, sin género=neutra rosa (default)
+  function _genPalette(genero){
+    var g = String(genero||'').toLowerCase();
+    var male = (g==='m'||g==='masculino'||g==='hombre');
+    if(male) return {
+      hoyBg:'linear-gradient(135deg,#DBEAFE 0%,#BFDBFE 50%,#93C5FD 100%)',
+      hoyBorder:'#3B82F6', hoyAvatar:'linear-gradient(135deg,#3B82F6,#1D4ED8)',
+      hoyDiaCol:'#1E3A8A', hoyBadgeBg:'#fff', hoyBadgeCol:'#1D4ED8',
+      hoyShadow:'box-shadow:0 6px 18px rgba(59,130,246,.22)',
+      futBg:'rgba(255,255,255,.7)', futBorder:'rgba(59,130,246,.22)',
+      futAvatar:'linear-gradient(135deg,#60A5FA,#3B82F6)', futCol:'#1D4ED8'
+    };
+    // Femenino / sin género → rosa (default actual)
+    return {
+      hoyBg:'linear-gradient(135deg,#FCE7F3 0%,#FBCFE8 50%,#F9A8D4 100%)',
+      hoyBorder:'#EC4899', hoyAvatar:'linear-gradient(135deg,#EC4899,#BE185D)',
+      hoyDiaCol:'#831843', hoyBadgeBg:'#fff', hoyBadgeCol:'#BE185D',
+      hoyShadow:'box-shadow:0 6px 18px rgba(236,72,153,.22)',
+      futBg:'rgba(255,255,255,.7)', futBorder:'rgba(236,72,153,.20)',
+      futAvatar:'linear-gradient(135deg,#F472B6,#A855F7)', futCol:'#BE185D'
+    };
+  }
   var rows = cumplesEsteMes.map(function(u){
-    var bg, border, avatar, diaCol, diaTxt, badge;
+    var bg, border, avatar, diaCol, diaTxt, badge, shadowStyle = '';
+    var pal = _genPalette(u.genero);
     if(u.esHoy){
-      bg = 'linear-gradient(135deg,#FCE7F3 0%,#FBCFE8 50%,#F9A8D4 100%)';
-      border = '#EC4899';
-      avatar = 'linear-gradient(135deg,#EC4899,#BE185D)';
-      diaCol = '#831843';
+      bg = pal.hoyBg;
+      border = pal.hoyBorder;
+      avatar = pal.hoyAvatar;
+      diaCol = pal.hoyDiaCol;
       diaTxt = 'HOY';
-      badge = '<span style="background:#fff;color:#BE185D;padding:3px 9px;border-radius:50px;font-size:9.5px;font-weight:900;letter-spacing:.1em;animation:cakePulse 1.8s ease-in-out infinite">🎉 ¡HOY!</span>';
+      badge = '<span style="background:'+pal.hoyBadgeBg+';color:'+pal.hoyBadgeCol+';padding:3px 9px;border-radius:50px;font-size:9.5px;font-weight:900;letter-spacing:.1em;animation:cakePulse 1.8s ease-in-out infinite">🎉 ¡HOY!</span>';
+      shadowStyle = pal.hoyShadow;
     } else if(u.yaPaso){
       bg = '#F8FAFC';
       border = 'var(--rim)';
@@ -227,14 +251,14 @@ function wtCumplesHTML(){
       diaTxt = 'pasó';
       badge = '<span style="color:var(--ink3);font-family:var(--fd);font-weight:700;font-size:11px">día '+u.dia+'</span>';
     } else {
-      bg = 'rgba(255,255,255,.7)';
-      border = 'rgba(236,72,153,.20)';
-      avatar = 'linear-gradient(135deg,#F472B6,#A855F7)';
-      diaCol = '#BE185D';
+      bg = pal.futBg;
+      border = pal.futBorder;
+      avatar = pal.futAvatar;
+      diaCol = pal.futCol;
       diaTxt = 'en '+u.diasFalt+'d';
-      badge = '<span style="color:#BE185D;font-family:var(--fd);font-weight:800;font-size:11px">'+(u.diasFalt===1?'mañana':'en '+u.diasFalt+' días')+'</span>';
+      badge = '<span style="color:'+pal.futCol+';font-family:var(--fd);font-weight:800;font-size:11px">'+(u.diasFalt===1?'mañana':'en '+u.diasFalt+' días')+'</span>';
     }
-    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:'+bg+';border:1.5px solid '+border+';border-radius:12px;'+(u.esHoy?'box-shadow:0 6px 18px rgba(236,72,153,.22)':'')+';transition:transform .15s">'
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:'+bg+';border:1.5px solid '+border+';border-radius:12px;'+(u.esHoy?shadowStyle:'')+';transition:transform .15s">'
       +'<div style="width:36px;height:36px;border-radius:50%;background:'+avatar+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex-shrink:0;box-shadow:0 4px 8px rgba(0,0,0,.08)">'+_wtInitialsName(u.nom)+'</div>'
       +'<div style="flex:1;min-width:0">'
         +'<div style="font-size:13.5px;font-weight:700;color:'+diaCol+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.2px">'+wtEsc(u.nom)+'</div>'
@@ -252,7 +276,36 @@ function wtCumplesHTML(){
       +'<span style="background:#FCE7F3;color:#BE185D;padding:4px 11px;border-radius:50px;font-size:11px;font-weight:800;border:1px solid rgba(236,72,153,.22)">'+cumplesEsteMes.length+'</span>'
     +'</div>'
     +'<div style="display:flex;flex-direction:column;gap:8px;flex:1;overflow-y:auto;position:relative;z-index:1">'+rows+'</div>'
-    +(cumplesHoy.length ? '<button onclick="dispararCotillon('+(cumplesHoy.length===1?'\''+wtEsc(cumplesHoy[0].nom)+'\',false,\''+wtEsc((cumplesHoy[0].genero)||'')+'\'':'')+')" style="margin-top:14px;width:100%;background:linear-gradient(135deg,#EC4899 0%,#BE185D 100%);color:#fff;border:none;padding:13px;border-radius:13px;font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.04em;box-shadow:0 8px 22px rgba(236,72,153,.42);position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px">🎊 Lanzar cotillón ahora</button>' : '')
+    +(cumplesHoy.length ? (function(){
+        // Determinar nombre y género para el botón manual.
+        // Si el logueado es uno de los cumpleañeros, usar su género (será SU cotillón).
+        // Si no, usar el del primero.
+        var meEsCumple = S.currentUser && cumplesHoy.some(function(x){
+          var n1=String(x.nom||'').toLowerCase().trim();
+          var n2=String(S.currentUser.nombre||'').toLowerCase().trim();
+          return n1===n2;
+        });
+        var nombreBtn, generoBtn, esTeammateBtn;
+        if(meEsCumple){
+          nombreBtn = S.currentUser.nombre || cumplesHoy[0].nom;
+          generoBtn = S.currentUser.genero || '';
+          esTeammateBtn = false;
+        } else if(cumplesHoy.length === 1){
+          nombreBtn = cumplesHoy[0].nom;
+          generoBtn = cumplesHoy[0].genero || '';
+          esTeammateBtn = true;
+        } else {
+          // Múltiples compañeros, ninguno soy yo → nombres concatenados
+          var nombres = cumplesHoy.map(function(x){return x.nom;});
+          nombreBtn = nombres.length===1 ? nombres[0]
+            : (nombres.slice(0,-1).join(', ') + ' y ' + nombres[nombres.length-1]);
+          generoBtn = cumplesHoy[0].genero || '';
+          esTeammateBtn = true;
+        }
+        return '<button onclick="dispararCotillon(\''+wtEsc(nombreBtn)+'\','
+          +(esTeammateBtn?'true':'false')+',\''+wtEsc(generoBtn)+'\')" '
+          +'style="margin-top:14px;width:100%;background:linear-gradient(135deg,#EC4899 0%,#BE185D 100%);color:#fff;border:none;padding:13px;border-radius:13px;font-weight:800;font-size:13px;cursor:pointer;letter-spacing:.04em;box-shadow:0 8px 22px rgba(236,72,153,.42);position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px">🎊 Lanzar cotillón ahora</button>';
+      })() : '')
   +'</div>';
 }
 
