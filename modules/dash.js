@@ -233,9 +233,9 @@ PG.dash = function(){
 
 
   <style>
-    .dash-tasa-card .dash-refresh:hover{transform:rotate(180deg);background:rgba(139,92,246,.20)!important}
-    .dash-tasa-card{transition:box-shadow .2s}
-    .dash-tasa-card:hover{box-shadow:0 8px 24px rgba(139,92,246,.18)}
+    .dash-tasa-card .dash-refresh:hover{transform:rotate(180deg);background:var(--p1);color:#fff!important;border-color:var(--p1)}
+    .dash-tasa-card{transition:box-shadow .2s,transform .2s}
+    .dash-tasa-card:hover{box-shadow:0 6px 18px rgba(0,0,0,.08)}
   </style>
   <!-- ROW 1: 6 KPI CARDS -->
   <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;margin-bottom:18px">
@@ -311,53 +311,58 @@ PG.dash = function(){
       </div>
     </div>
 
-    <!-- KPI: TASA DEL DÍA (BCV + Binance + EUR) -->
-    <div class="card dash-kpi dash-tasa-card" id="dash-tasa-card" title="Click ↻ para refrescar las tasas"
-         style="cursor:default;position:relative;overflow:hidden;background:linear-gradient(160deg,#FAFAFE 0%,#F5F3FF 60%,#EDE9FE 100%);border:1px solid rgba(139,92,246,.18)">
-      <!-- Decoración de fondo -->
-      <div style="position:absolute;top:-40px;right:-40px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,.10),transparent 70%);pointer-events:none"></div>
-      <div style="position:absolute;bottom:-50px;left:-20px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(240,185,11,.08),transparent 70%);pointer-events:none"></div>
-
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;position:relative;z-index:1">
-        <div style="display:flex;align-items:center;gap:7px">
-          <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#5B21B6;font-family:var(--fm)">Tasa del día</span>
-        </div>
+    <!-- KPI: TASA DEL DÍA (BCV + EUR + Binance) -->
+    <div class="card dash-kpi dash-tasa-card" id="dash-tasa-card" style="background:#fff;position:relative">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Tasa del día</span>
         <button class="dash-refresh" onclick="event.stopPropagation();bcvForzarActualizacion&&bcvForzarActualizacion()"
                 title="Actualizar tasas"
-                style="background:rgba(139,92,246,.10);border:1px solid rgba(139,92,246,.18);color:#7C3AED;border-radius:50%;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;line-height:1;padding:0;transition:transform .3s">↻</button>
+                style="background:var(--surf2);border:1px solid var(--rim);color:var(--ink2);border-radius:50%;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;line-height:1;padding:0;transition:transform .3s">↻</button>
       </div>
 
       <!-- BCV -->
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(37,99,235,.05);border-radius:9px;border:1px solid rgba(37,99,235,.14);margin-bottom:5px;position:relative;z-index:1">
-        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#1E40AF;color:#fff;font-family:var(--fd);font-weight:900;font-size:9px;letter-spacing:.3px;flex-shrink:0">BCV</span>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 4px;border-bottom:1px solid var(--rim)">
+        <!-- Logo BCV: círculo con líneas estilo seal -->
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#1E40AF;flex-shrink:0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 4v16M11 4v16M16 4v16M3 8h18M3 16h18" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </span>
         <div style="flex:1;min-width:0">
-          <div style="font-size:9.5px;font-weight:800;color:#1E40AF;text-transform:uppercase;letter-spacing:.5px;line-height:1.2">Dólar oficial</div>
+          <div style="font-size:10px;font-weight:800;color:var(--ink);letter-spacing:-.1px;line-height:1.2">BCV</div>
+          <div style="font-size:9px;color:var(--ink3);font-weight:600;line-height:1.2;margin-top:1px">Dólar oficial</div>
         </div>
-        <span id="dash-tasa-bcv" style="font-family:var(--fd);font-weight:900;font-size:15px;color:#1E40AF;letter-spacing:-.4px;white-space:nowrap">${(window._tasaBsGlobal||0)>1?(window._tasaBsGlobal).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
+        <span id="dash-tasa-bcv" style="font-family:var(--fd);font-weight:900;font-size:15px;color:var(--ink);letter-spacing:-.4px;white-space:nowrap">${(window._tasaBsGlobal||0)>1?(window._tasaBsGlobal).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
       </div>
 
       <!-- EUR -->
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(21,128,61,.06);border-radius:9px;border:1px solid rgba(21,128,61,.18);margin-bottom:5px;position:relative;z-index:1">
-        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#15803D;color:#fff;font-family:var(--fd);font-weight:900;font-size:11px;letter-spacing:0;flex-shrink:0">€</span>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 4px;border-bottom:1px solid var(--rim)">
+        <!-- Logo Euro: círculo con € estilizado -->
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#003399;flex-shrink:0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M16 6.5a6 6 0 0 0-9.5 4.5a6 6 0 0 0 9.5 4.5M4 10h7M4 13h7" stroke="#FFD700" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </span>
         <div style="flex:1;min-width:0">
-          <div style="font-size:9.5px;font-weight:800;color:#15803D;text-transform:uppercase;letter-spacing:.5px;line-height:1.2">Euro oficial</div>
+          <div style="font-size:10px;font-weight:800;color:var(--ink);letter-spacing:-.1px;line-height:1.2">Euro</div>
+          <div style="font-size:9px;color:var(--ink3);font-weight:600;line-height:1.2;margin-top:1px">EUR oficial</div>
         </div>
-        <span id="dash-tasa-eur" style="font-family:var(--fd);font-weight:900;font-size:15px;color:#15803D;letter-spacing:-.4px;white-space:nowrap">${(window._tasaEuro||0)>1?(window._tasaEuro).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
+        <span id="dash-tasa-eur" style="font-family:var(--fd);font-weight:900;font-size:15px;color:var(--ink);letter-spacing:-.4px;white-space:nowrap">${(window._tasaEuro||0)>1?(window._tasaEuro).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
       </div>
 
       <!-- Binance -->
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(240,185,11,.07);border-radius:9px;border:1px solid rgba(240,185,11,.22);position:relative;z-index:1">
-        <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#F0B90B;color:#1a1a1a;font-family:var(--fd);font-weight:900;font-size:11px;letter-spacing:0;flex-shrink:0">B</span>
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 4px">
+        <!-- Logo Binance: 4 rombos -->
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#0B0E11;flex-shrink:0">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="#F0B90B"><path d="M12 4l-2.5 2.5L12 9l2.5-2.5L12 4zM5.5 10.5L3 13l2.5 2.5L8 13l-2.5-2.5zm13 0L16 13l2.5 2.5L21 13l-2.5-2.5zM12 15l-2.5 2.5L12 20l2.5-2.5L12 15z"/></svg>
+        </span>
         <div style="flex:1;min-width:0">
-          <div style="font-size:9.5px;font-weight:800;color:#92400E;text-transform:uppercase;letter-spacing:.5px;line-height:1.2">Binance P2P</div>
+          <div style="font-size:10px;font-weight:800;color:var(--ink);letter-spacing:-.1px;line-height:1.2">Binance</div>
+          <div style="font-size:9px;color:var(--ink3);font-weight:600;line-height:1.2;margin-top:1px">P2P paralelo</div>
         </div>
-        <span id="dash-tasa-binance" style="font-family:var(--fd);font-weight:900;font-size:15px;color:#B45309;letter-spacing:-.4px;white-space:nowrap">${(window._tasaBinance||0)>1?(window._tasaBinance).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
+        <span id="dash-tasa-binance" style="font-family:var(--fd);font-weight:900;font-size:15px;color:var(--ink);letter-spacing:-.4px;white-space:nowrap">${(window._tasaBinance||0)>1?(window._tasaBinance).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
       </div>
 
-      <!-- Spread BCV↔Binance -->
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid rgba(139,92,246,.15);display:flex;justify-content:space-between;align-items:center;font-size:10.5px;position:relative;z-index:1">
-        <span style="color:#6B7280;font-weight:600">Brecha BCV↔Bin</span>
-        <span id="dash-tasa-spread" style="color:#7C3AED;font-weight:800;font-family:var(--fd)">${(window._tasaBinance>1&&window._tasaBsGlobal>1)?('+'+(((window._tasaBinance-window._tasaBsGlobal)/window._tasaBsGlobal*100).toFixed(1))+'%'):'—'}</span>
+      <!-- Footer: Brecha BCV↔Binance -->
+      <div style="margin-top:10px;padding:7px 10px;background:var(--surf2);border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-size:10.5px">
+        <span style="color:var(--ink3);font-weight:700">Brecha oficial → paralelo</span>
+        <span id="dash-tasa-spread" style="color:var(--ink);font-weight:800;font-family:var(--fd)">${(window._tasaBinance>1&&window._tasaBsGlobal>1)?('+'+(((window._tasaBinance-window._tasaBsGlobal)/window._tasaBsGlobal*100).toFixed(1))+'%'):'—'}</span>
       </div>
     </div>
   </div>
