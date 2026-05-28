@@ -60,20 +60,9 @@ h2.head{font-size:clamp(34px,4vw,52px);font-weight:800;letter-spacing:-2px;line-
 /* HERO — Centrado con energía visual (blobs animados + gradient + glow) */
 .hero{min-height:calc(100svh - 64px);display:flex;align-items:center;justify-content:center;padding:100px 32px 70px;position:relative;overflow:hidden;background:linear-gradient(180deg,#FCFCFE 0%,#fff 100%);}
 
-/* ── BLOBS de color animados al fondo ── */
-.hero-blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.55;pointer-events:none;z-index:0;}
-.hero-blob.b1{width:580px;height:580px;top:-100px;left:-80px;background:radial-gradient(circle,#5B8DEF 0%,#2563EB 60%,transparent 100%);animation:blobFloat1 18s ease-in-out infinite;}
-.hero-blob.b2{width:520px;height:520px;bottom:-120px;right:-100px;background:radial-gradient(circle,#7C3AED 0%,#5B21B6 50%,transparent 100%);opacity:.4;animation:blobFloat2 22s ease-in-out infinite;}
-.hero-blob.b3{width:380px;height:380px;top:30%;right:15%;background:radial-gradient(circle,#06B6D4 0%,#0EA5E9 50%,transparent 100%);opacity:.28;animation:blobFloat3 25s ease-in-out infinite;}
-@keyframes blobFloat1{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(60px,40px) scale(1.08);}66%{transform:translate(-40px,80px) scale(.95);}}
-@keyframes blobFloat2{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-80px,-60px) scale(1.12);}}
-@keyframes blobFloat3{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-120px,40px) scale(.85);}}
-
-.hero-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 1100px 700px at 50% 35%,rgba(255,255,255,.4) 0%,transparent 65%);z-index:1;}
-.hero-dots{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(37,99,235,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.05) 1px,transparent 1px);background-size:54px 54px;mask-image:radial-gradient(ellipse 80% 75% at 50% 50%,#000 10%,transparent 100%);z-index:1;}
-
-/* Capa de glassmorphism encima de los blobs (para legibilidad) */
-.hero::before{content:'';position:absolute;inset:0;background:rgba(255,255,255,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:1;pointer-events:none;}
+/* Fondo limpio: solo glow azul sutil + grid sutil */
+.hero-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 1000px 600px at 50% 30%,rgba(37,99,235,.10) 0%,transparent 60%);z-index:0;}
+.hero-dots{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(37,99,235,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.045) 1px,transparent 1px);background-size:54px 54px;mask-image:radial-gradient(ellipse 80% 75% at 50% 50%,#000 10%,transparent 100%);z-index:0;}
 
 .hero-inner{position:relative;z-index:3;max-width:1380px;margin:0 auto;animation:fadeUp .85s var(--ease) both;}
 
@@ -82,13 +71,13 @@ h2.head{font-size:clamp(34px,4vw,52px);font-weight:800;letter-spacing:-2px;line-
 .hero-left{text-align:left;}
 .hero-right{position:relative;display:flex;align-items:center;justify-content:center;}
 
-/* Moto destacada — visual impactante a la derecha */
+/* Moto destacada — fondo BLANCO LIMPIO con imagen mix-blend (sin fondo blanco visible) */
 .hero-bike{position:relative;width:100%;}
-.hero-bike-stage{position:relative;background:linear-gradient(160deg,rgba(255,255,255,.85) 0%,rgba(239,243,255,.80) 100%);border:1px solid rgba(37,99,235,.18);border-radius:32px;padding:34px;backdrop-filter:blur(12px);box-shadow:0 40px 80px -30px rgba(37,99,235,.32),0 16px 32px -16px rgba(0,0,0,.10);overflow:hidden;}
-.hero-bike-stage::before{content:'';position:absolute;top:-100px;right:-80px;width:300px;height:300px;background:radial-gradient(circle,rgba(124,58,237,.18) 0%,transparent 70%);pointer-events:none;}
-.hero-bike-stage::after{content:'';position:absolute;bottom:-60px;left:-40px;width:240px;height:240px;background:radial-gradient(circle,rgba(6,182,212,.18) 0%,transparent 70%);pointer-events:none;}
-.hero-bike img{position:relative;z-index:1;display:block;width:100%;height:auto;max-height:380px;object-fit:contain;filter:drop-shadow(0 24px 36px rgba(0,0,0,.20));}
-.hero-bike-badge{position:absolute;top:-14px;left:24px;display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#00C853,#00A045);color:#fff;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:8px 16px;border-radius:50px;box-shadow:0 10px 24px rgba(0,200,83,.35);z-index:3;animation:badgePop 1.5s var(--ease) both .7s;}
+.hero-bike-stage{position:relative;background:#fff;border:1px solid var(--line);border-radius:32px;padding:40px 34px;box-shadow:0 30px 70px -25px rgba(37,99,235,.20),0 12px 28px -16px rgba(0,0,0,.08);overflow:hidden;}
+/* Sutil halo azul Pagasi en el centro detrás de la moto */
+.hero-bike-stage::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80%;height:65%;background:radial-gradient(ellipse,rgba(37,99,235,.10) 0%,transparent 70%);pointer-events:none;z-index:0;}
+.hero-bike img{position:relative;z-index:1;display:block;width:100%;height:auto;max-height:380px;object-fit:contain;mix-blend-mode:multiply;filter:drop-shadow(0 18px 24px rgba(0,0,0,.18));}
+.hero-bike-badge{position:absolute;top:-14px;left:24px;display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#2563EB,#1E40AF);color:#fff;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:8px 16px;border-radius:50px;box-shadow:0 10px 24px rgba(37,99,235,.35);z-index:3;animation:badgePop 1.5s var(--ease) both .7s;}
 @keyframes badgePop{0%{opacity:0;transform:translateY(-12px) scale(.85);}100%{opacity:1;transform:translateY(0) scale(1);}}
 
 /* Card de precio flotante sobre la moto */
@@ -576,10 +565,6 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
   <div class="hbg" onclick="openMob()"><span></span><span></span><span></span></div>
 </nav>
 <section class="hero" id="inicio">
-  <!-- Blobs animados al fondo -->
-  <div class="hero-blob b1"></div>
-  <div class="hero-blob b2"></div>
-  <div class="hero-blob b3"></div>
   <div class="hero-glow"></div>
   <div class="hero-dots"></div>
 
@@ -627,15 +612,15 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
       <div class="hero-right">
         <div class="hero-bike">
           <div class="hero-bike-stage">
-            <div class="hero-bike-badge">★ Más vendida</div>
-            <img src="assets/motos/new-horse-150.jpg" alt="New Horse 150">
+            <div class="hero-bike-badge">★ Destacada</div>
+            <img src="assets/motos/rk-200.jpg" alt="RK 200">
             <div class="hero-bike-price">
               <div class="hero-bike-price-lbl">Desde</div>
               <div class="hero-bike-price-row">
-                <span class="hero-bike-price-num">$65</span>
+                <span class="hero-bike-price-num">$83</span>
                 <span class="hero-bike-price-unit">/ quincena</span>
               </div>
-              <div class="hero-bike-price-sub">Inicial desde $594</div>
+              <div class="hero-bike-price-sub">Inicial desde $788</div>
             </div>
           </div>
         </div>
