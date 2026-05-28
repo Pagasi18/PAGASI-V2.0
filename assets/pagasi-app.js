@@ -2385,6 +2385,50 @@ function requireDeletePermission(){
 // Variables globales de configuración
 var _cuentasBanc = [];
 var _cobradores = ['Juan Admin'];
+
+// ── Helper: lista unificada de cobradores ──
+// Devuelve la UNIÓN de:
+//   1) Lista manual de _cobradores (config/cobradores en Firestore)
+//   2) Usuarios del sistema que tengan comisiones.activo === true
+// Dedupe por nombre (case-insensitive con normalización).
+// Esto garantiza que cualquiera con comisión configurada aparezca en
+// todos los dropdowns de "Recibido por", "Cobrador", "Vendedor", etc.
+function getCobradoresList(){
+  function normN(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim(); }
+  var seen = {}; // mapa normalizado → nombre original a usar
+  var resultado = [];
+  // 1) Lista manual histórica
+  (_cobradores||[]).forEach(function(n){
+    var k = normN(n);
+    if(!k || seen[k]) return;
+    seen[k] = n;
+    resultado.push(n);
+  });
+  // 2) Usuarios con comisión activa
+  try {
+    var lista = (typeof _usersCache !== 'undefined' && _usersCache && _usersCache.length) ? _usersCache :
+                (S && S._wtUsers && S._wtUsers.length ? S._wtUsers : []);
+    lista.forEach(function(u){
+      if(!u || u.eliminado || u.suspendido) return;
+      var tieneComision = u.comisiones && (
+        u.comisiones.activo === true ||
+        (u.comisiones.c1 && parseFloat(u.comisiones.c1.valor)>0) ||
+        (u.comisiones.c2 && parseFloat(u.comisiones.c2.valor)>0) ||
+        (u.comisiones.c3 && parseFloat(u.comisiones.c3.valor)>0) ||
+        (u.comisiones.c4 && parseFloat(u.comisiones.c4.valor)>0)
+      );
+      if(!tieneComision) return;
+      var nombre = u.nombre || u.email || '';
+      if(!nombre) return;
+      var k = normN(nombre);
+      if(seen[k]) return;
+      seen[k] = nombre;
+      resultado.push(nombre);
+    });
+  } catch(e){ console.warn('getCobradoresList:', e); }
+  return resultado;
+}
+window.getCobradoresList = getCobradoresList;
 // Datos de la empresa (nombre, RIF, ciudad, tel, email) — se usan en contratos y reportes
 // Fuente única de verdad que NO depende del DOM (Config solo existe cuando estás en esa página)
 var _empresa = { nombre:'Pagasi', rif:'J-00000000-0', ciudad:'Caracas', tel:'', email:'', direccion:'', representante:'', repCI:'' };
@@ -2902,6 +2946,19 @@ function init() {
   document.body.style.overflow = '';
 
   cargarHistorialNotificaciones();
+
+  // Pre-cargar usuarios desde Firestore para que getCobradoresList() tenga datos
+  // disponibles desde el inicio (ej: al abrir modal de pago sin haber visitado Usuarios)
+  try {
+    if(DB && DB.getUsuarios){
+      DB.getUsuarios().then(function(arr){
+        if(Array.isArray(arr)){
+          if(typeof _usersCache !== 'undefined') _usersCache = arr;
+          if(S && (!S._wtUsers || !S._wtUsers.length)) S._wtUsers = arr;
+        }
+      }).catch(function(e){ console.warn('Pre-carga usuarios init:', e); });
+    }
+  } catch(e){}
 
   // Cargar datos desde Firebase o usar datos locales de demostración
   DB.load().then(function() {

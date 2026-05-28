@@ -1874,7 +1874,7 @@ function _wzGuardar(){
     estado: ((S.currentUser&&S.currentUser.rol)==='Vendedor Concesionario') ? 'pendiente_revision' : 'activo',
     pagado: 0,
     mora: 0,
-    cobrador: (_cobradores&&_cobradores[0])||'Admin',
+    cobrador: (function(){ var l = getCobradoresList(); return (l && l[0]) || 'Admin'; })(),
     score_indexa: WZ.score||0,
     f1:WZ.f1, f2:WZ.f2, f3:WZ.f3, f4:WZ.f4, f5:WZ.f5,
     emp_tipo: WZ.emp||'',
@@ -2286,7 +2286,7 @@ function openEditCred(credId){
     +['activo','mora','completado','recuperado','cancelado'].map(function(s){return '<option value="'+s+'" '+(c.estado===s?'selected':'')+'>'+s.charAt(0).toUpperCase()+s.slice(1)+'</option>';}).join('')
     +'</select></div>'
     +'<div class="fg"><label>Cobrador asignado</label><select class="fs" id="ec_cobrador">'
-    +(_cobradores||[]).map(function(u){return '<option '+(c.cobrador===u?'selected':'')+'>'+u+'</option>';}).join('')
+    +getCobradoresList().map(function(u){return '<option '+(c.cobrador===u?'selected':'')+'>'+u+'</option>';}).join('')
     +'</select></div>'
     +'</div>'
     +'<div class="fgr" style="gap:8px">'

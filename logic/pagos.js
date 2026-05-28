@@ -53,7 +53,7 @@ function openAddPago(preCredId){
       <div class="fg"><label>Monto ($)</label><input class="fi" id="p_monto" type="number" placeholder="0.00"></div>
 <div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">${(_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[]).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}${(!_cuentasBanc||!_cuentasBanc.length)?'<option value="">— Sin cuentas configuradas —</option>':''}</select></div>
       <div class="fg"><label>N° Referencia</label><input class="fi" id="p_ref" placeholder="Número de referencia o comprobante"></div>
-      <div class="fg"><label>Cobrador</label><select class="fs" id="p_cobrador">${(_cobradores||[]).map(u=>`<option>${u}</option>`).join('')}</select></div>
+      <div class="fg"><label>Cobrador</label><select class="fs" id="p_cobrador">${getCobradoresList().map(u=>`<option>${u}</option>`).join('')}</select></div>
     </div>`;
   setTimeout(()=>updPagoMonto($('p_cred')),50);
   // Insertar aviso de saldo a favor
@@ -1164,7 +1164,7 @@ function openEditPago(pagoId){
   var metOpts = (_cuentasBanc||[]).map(function(c){
     return '<option value="'+c.nombre+'" '+(p.metodo===c.nombre?'selected':'')+'>'+c.nombre+'</option>';
   }).join('');
-  var cobrOpts = (_cobradores||[]).map(function(u){
+  var cobrOpts = getCobradoresList().map(function(u){
     return '<option '+(p.cobrador===u?'selected':'')+'>'+u+'</option>';
   }).join('');
   $('mbd').innerHTML = '<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:9px;padding:10px 12px;margin-bottom:12px;font-size:11px">'
