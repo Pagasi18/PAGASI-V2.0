@@ -432,9 +432,19 @@ function wtHTML(){
             ? nombres[0]
             : (nombres.slice(0,-1).join(', ') + ' y ' + nombres[nombres.length-1]);
           var esYo = S.currentUser && cumpleHoy.some(function(u){ return u.uid === S.currentUser.uid; });
-          // Si es UN solo cumpleañero, usar su género para el color
-          var genero = (cumpleHoy.length===1) ? (cumpleHoy[0].genero||'') : '';
-          setTimeout(function(){ dispararCotillon(nombre, !esYo, genero); }, 600);
+          // Determinar el género para el color de la tarjeta:
+          // 1) Si el usuario logueado está entre los cumpleañeros, usar SU género (es "su" cotillón)
+          // 2) Si no, y hay 1 solo cumpleañero, usar el de ese
+          // 3) Si hay varios compañeros, usar el del primero
+          var generoElegido = '';
+          if(esYo && S.currentUser){
+            generoElegido = S.currentUser.genero || '';
+          } else if(cumpleHoy.length === 1){
+            generoElegido = cumpleHoy[0].genero || '';
+          } else if(cumpleHoy.length > 0){
+            generoElegido = cumpleHoy[0].genero || '';
+          }
+          setTimeout(function(){ dispararCotillon(nombre, !esYo, generoElegido); }, 600);
         }
       }
     } catch(e){ console.warn('cotillon trigger:', e); }

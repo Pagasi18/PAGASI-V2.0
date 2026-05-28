@@ -779,13 +779,17 @@ function chequearPerfilIncompleto(){
   try {
     if(!S.currentUser || !S.currentUser.uid) return;
     var u = S.currentUser;
-    // Campos que consideramos "imprescindibles" para que el perfil esté completo
+    // Campos que consideramos "imprescindibles" para que el perfil esté completo.
+    // Las redes sociales se piden "al menos una".
     var faltantes = [];
-    if(!u.tel && !u.telefono) faltantes.push('Teléfono');
-    if(!u.cumpleanos && !u.fechaNacimiento) faltantes.push('Cumpleaños');
+    if(!u.cedula) faltantes.push('Cédula');
     if(!u.genero) faltantes.push('Género');
-    if(!u.instagram) faltantes.push('Instagram');
-    if(!u.facebook) faltantes.push('Facebook');
+    if(!u.cumpleanos && !u.fechaNacimiento) faltantes.push('Cumpleaños');
+    if(!u.tel && !u.telefono) faltantes.push('Teléfono');
+    if(!u.direccion) faltantes.push('Dirección');
+    if(!u.emergencia) faltantes.push('Contacto de emergencia');
+    var algunaRed = !!(u.instagram || u.facebook || u.tiktok || u.twitter || u.linkedin);
+    if(!algunaRed) faltantes.push('Al menos una red social');
     if(!faltantes.length) return; // perfil completo, no molestamos
     // Anti-spam: no mostrar más de una vez por día por usuario
     var hoy = new Date().toISOString().slice(0,10);
@@ -875,21 +879,28 @@ async function guardarMiPerfil(){
     return;
   }
   var btn = document.getElementById('prof-save-btn');
-  var nombre = (document.getElementById('prof-nombre')||{}).value || '';
-  var cumple = (document.getElementById('prof-cumple')||{}).value || '';
-  var tel = (document.getElementById('prof-tel')||{}).value || '';
-  var genero = (document.getElementById('prof-genero')||{}).value || '';
-  var instagram = (document.getElementById('prof-instagram')||{}).value || '';
-  var facebook = (document.getElementById('prof-facebook')||{}).value || '';
+  function val(id){ var el = document.getElementById(id); return el ? (el.value||'') : ''; }
   if(btn){ btn.disabled = true; btn.textContent = 'Guardando…'; }
 
   var update = {
-    nombre: nombre.trim(),
-    cumpleanos: cumple.trim(),
-    tel: tel.trim(),
-    genero: genero.trim(),
-    instagram: instagram.trim().replace(/^@/,''), // normalizar sin @
-    facebook: facebook.trim(),
+    // Datos personales
+    nombre: val('prof-nombre').trim(),
+    cedula: val('prof-cedula').trim(),
+    genero: val('prof-genero').trim(),
+    cumpleanos: val('prof-cumple').trim(),
+    estadoCivil: val('prof-estadocivil').trim(),
+    sede: val('prof-sede').trim(),
+    // Contacto
+    tel: val('prof-tel').trim(),
+    tel2: val('prof-tel2').trim(),
+    direccion: val('prof-direccion').trim(),
+    emergencia: val('prof-emergencia').trim(),
+    // Redes
+    instagram: val('prof-instagram').trim().replace(/^@/,''),
+    facebook: val('prof-facebook').trim(),
+    tiktok: val('prof-tiktok').trim().replace(/^@/,''),
+    twitter: val('prof-twitter').trim().replace(/^@/,''),
+    linkedin: val('prof-linkedin').trim(),
     actualizadoEn: new Date().toISOString()
   };
   console.log('[Mi Perfil] Guardando:', S.currentUser.uid, update);
@@ -3101,9 +3112,13 @@ function showAdminProfile() {
         + '<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">Datos que puedes editar tú mismo</div></div>'
         + '<button id="prof-save-btn" class="btn btn-p btn-sm" onclick="guardarMiPerfil()" style="display:none">Guardar cambios</button>'
       + '</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">'
+      // ─── Datos personales ───
+      + '<div style="font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px">Datos personales</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;margin-bottom:18px">'
         + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Nombre completo</label>'
         +   '<input class="fi" id="prof-nombre" type="text" value="'+(user.nombre||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="Tu nombre completo"></div>'
+        + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Cédula</label>'
+        +   '<input class="fi" id="prof-cedula" type="text" value="'+(user.cedula||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="V-12345678"></div>'
         + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Género</label>'
         +   '<select class="fs" id="prof-genero" onchange="profProfileChanged()">'
         +     '<option value=""'+(!user.genero?' selected':'')+'>— Selecciona —</option>'
@@ -3113,15 +3128,48 @@ function showAdminProfile() {
         +   '<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;line-height:1.4">Personaliza el color del cumpleaños.</div></div>'
         + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Cumpleaños</label>'
         +   '<input class="fi" id="prof-cumple" type="date" value="'+(user.cumpleanos||user.fechaNacimiento||'')+'" oninput="profProfileChanged()">'
-        +   '<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;line-height:1.4">El día que cumplas se lanzará un cotillón con el logo Pagasi.</div></div>'
+        +   '<div style="font-size:10.5px;color:var(--ink3);margin-top:4px;line-height:1.4">El día que cumplas se lanzará un cotillón.</div></div>'
+        + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Estado civil</label>'
+        +   '<select class="fs" id="prof-estadocivil" onchange="profProfileChanged()">'
+        +     '<option value=""'+(!user.estadoCivil?' selected':'')+'>— Selecciona —</option>'
+        +     '<option value="soltero"'+(user.estadoCivil==='soltero'?' selected':'')+'>Soltero/a</option>'
+        +     '<option value="casado"'+(user.estadoCivil==='casado'?' selected':'')+'>Casado/a</option>'
+        +     '<option value="union"'+(user.estadoCivil==='union'?' selected':'')+'>Unión estable</option>'
+        +     '<option value="divorciado"'+(user.estadoCivil==='divorciado'?' selected':'')+'>Divorciado/a</option>'
+        +     '<option value="viudo"'+(user.estadoCivil==='viudo'?' selected':'')+'>Viudo/a</option>'
+        +   '</select></div>'
+        + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Sede / Oficina</label>'
+        +   '<input class="fi" id="prof-sede" type="text" value="'+(user.sede||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="EK Bello Monte, Boleita..."></div>'
+      + '</div>'
+
+      // ─── Contacto ───
+      + '<div style="font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px">Contacto</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;margin-bottom:18px">'
         + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Teléfono</label>'
         +   '<input class="fi" id="prof-tel" type="tel" value="'+(user.tel||user.telefono||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="+58 414 ..."></div>'
+        + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Tel. alternativo</label>'
+        +   '<input class="fi" id="prof-tel2" type="tel" value="'+(user.tel2||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="Casa o familiar (opcional)"></div>'
+        + '<div class="fg" style="grid-column:1 / -1"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Dirección</label>'
+        +   '<input class="fi" id="prof-direccion" type="text" value="'+(user.direccion||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="Sector, calle, residencia, piso..."></div>'
+        + '<div class="fg" style="grid-column:1 / -1"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Contacto de emergencia</label>'
+        +   '<input class="fi" id="prof-emergencia" type="text" value="'+(user.emergencia||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="Nombre y teléfono"></div>'
+        + '<div class="fg" style="grid-column:1 / -1"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Email (no editable)</label>'
+        +   '<input class="fi" type="email" value="'+email+'" disabled style="background:var(--surf2);color:var(--ink3)"></div>'
+      + '</div>'
+
+      // ─── Redes sociales ───
+      + '<div style="font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin-bottom:10px">Redes sociales</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">'
         + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Instagram</label>'
         +   '<input class="fi" id="prof-instagram" type="text" value="'+(user.instagram||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="@tuusuario"></div>'
         + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Facebook</label>'
         +   '<input class="fi" id="prof-facebook" type="text" value="'+(user.facebook||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="usuario o URL"></div>'
-        + '<div class="fg" style="grid-column:1 / -1"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">Email (no editable)</label>'
-        +   '<input class="fi" type="email" value="'+email+'" disabled style="background:var(--surf2);color:var(--ink3)"></div>'
+        + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">TikTok</label>'
+        +   '<input class="fi" id="prof-tiktok" type="text" value="'+(user.tiktok||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="@tuusuario"></div>'
+        + '<div class="fg"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">X (Twitter)</label>'
+        +   '<input class="fi" id="prof-twitter" type="text" value="'+(user.twitter||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="@tuusuario"></div>'
+        + '<div class="fg" style="grid-column:1 / -1"><label style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block">LinkedIn</label>'
+        +   '<input class="fi" id="prof-linkedin" type="text" value="'+(user.linkedin||'').replace(/"/g,'&quot;')+'" oninput="profProfileChanged()" placeholder="linkedin.com/in/tuusuario"></div>'
       + '</div>'
     + '</div>'
 
