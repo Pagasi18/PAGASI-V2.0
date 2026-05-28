@@ -499,11 +499,19 @@ var DB = {
       S.cuentasPendientes = pnd;
       S.facturas = fac;
       S.concesionarios = conc;
-      // Restaurar el concesionario activo desde localStorage si existe
+      // ── Admin total (sin sedes asignadas) → SIEMPRE arranca con "Todos" ──
+      // Solo restauramos el concesionario guardado si el usuario tiene sedes específicas
+      // asignadas (no es admin total). Esto evita que el admin se quede pegado en una sede.
       try{
-        var savedConc = localStorage.getItem('concesionarioActivo');
-        if(savedConc && conc.find(function(c){return c.id === savedConc;})){
-          S.concesionarioActivo = savedConc;
+        var esAdminPuro = !S.currentUser || !(S.currentUser.concesionarios||[]).length;
+        if(esAdminPuro){
+          S.concesionarioActivo = null;
+          try{ localStorage.removeItem('concesionarioActivo'); }catch(e){}
+        } else {
+          var savedConc = localStorage.getItem('concesionarioActivo');
+          if(savedConc && conc.find(function(c){return c.id === savedConc;})){
+            S.concesionarioActivo = savedConc;
+          }
         }
       }catch(e){}
       // Si el usuario tiene UNA sola sede asignada, forzarla como activa (no permitir "Todos")
