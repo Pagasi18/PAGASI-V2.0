@@ -486,16 +486,18 @@ function _facImpRates(){
   return { iva: (iv>0?iv:16), igtf: (ig>0?ig:3) };
 }
 // Desglose de impuestos para la factura. Misma convención que el sistema:
-// el monto pagado YA INCLUYE el IVA (se extrae la base); el IGTF es adicional.
+// El monto pagado es SIEMPRE el TOTAL final (lo que entregó el cliente).
+// Tanto el IVA como el IGTF se extraen "por dentro": total = base × (1+IVA) × (1+IGTF).
 // SOLO LECTURA — no toca créditos, pagos ni cuotas.
 function _facCalcImpuestos(monto, ivaOn, igtfOn){
-  monto = parseFloat(monto)||0;
+  monto = parseFloat(monto)||0;            // = TOTAL pagado
   var r = _facImpRates();
-  var aliv = ivaOn ? r.iva : 0;
-  var base = (aliv>0) ? (monto/(1+aliv/100)) : monto;
-  var iva = ivaOn ? (monto - base) : 0;
-  var igtf = igtfOn ? (monto * r.igtf/100) : 0;
-  return { base: base, iva: iva, igtf: igtf, total: monto + igtf, ivaRate: r.iva, igtfRate: r.igtf };
+  var aliv   = ivaOn  ? (r.iva/100)  : 0;
+  var aligtf = igtfOn ? (r.igtf/100) : 0;
+  var base = monto / ((1+aliv) * (1+aligtf));
+  var iva  = base * aliv;
+  var igtf = (base + iva) * aligtf;
+  return { base: base, iva: iva, igtf: igtf, total: monto, ivaRate: r.iva, igtfRate: r.igtf };
 }
 // Recalcula y refresca lo que se ve en el formulario al mover los toggles.
 function _facRecalcImpuestos(){
