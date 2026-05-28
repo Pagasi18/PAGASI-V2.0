@@ -401,6 +401,32 @@ function cfgRenderLogs(){
     notif_enviada:'envió una notificación'
   };
   function esc(s){ return String(s||'').replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+  // Color determinístico por nombre: hash → índice en paleta
+  var USER_PALETTE = [
+    {bg:'#DBEAFE', col:'#1E40AF'},  // azul
+    {bg:'#FCE7F3', col:'#9D174D'},  // rosa
+    {bg:'#D1FAE5', col:'#065F46'},  // verde
+    {bg:'#FEF3C7', col:'#92400E'},  // ámbar
+    {bg:'#EDE9FE', col:'#5B21B6'},  // violeta
+    {bg:'#FEE2E2', col:'#991B1B'},  // rojo
+    {bg:'#CFFAFE', col:'#155E75'},  // cian
+    {bg:'#FFEDD5', col:'#9A3412'},  // naranja
+    {bg:'#E0E7FF', col:'#3730A3'},  // indigo
+    {bg:'#F3E8FF', col:'#6B21A8'},  // púrpura
+    {bg:'#FFE4E6', col:'#9F1239'},  // pink rosa
+    {bg:'#ECFCCB', col:'#365314'}   // lime
+  ];
+  function userColor(name){
+    var s = String(name||'?').toLowerCase().trim();
+    var hash = 0;
+    for(var i=0;i<s.length;i++){ hash = ((hash<<5) - hash) + s.charCodeAt(i); hash = hash & 0xffffffff; }
+    var idx = Math.abs(hash) % USER_PALETTE.length;
+    return USER_PALETTE[idx];
+  }
+  function userInitials(name){
+    var p = String(name||'?').split(/\s+/).filter(Boolean);
+    return ((p[0]||'')[0]||'?').toUpperCase() + ((p[1]||'')[0]||'').toUpperCase();
+  }
   function fmtTime(ts){
     try {
       var d = new Date(ts);
@@ -425,22 +451,30 @@ function cfgRenderLogs(){
     return parts.join(' · ');
   }
   filt.forEach(function(l){
-    var col = colMap[l.action] || '#6B7280';
+    var actCol = colMap[l.action] || '#6B7280';
     var lbl = labelMap[l.action] || l.action;
     var det = fmtDetalle(l.detalle);
-    var target = l.target ? ' <code style="background:var(--surf2);padding:1px 6px;border-radius:4px;font-size:10.5px;color:var(--ink2)">'+esc(l.target)+'</code>' : '';
+    var target = l.target ? ' <code style="background:var(--surf2);padding:1px 6px;border-radius:4px;font-size:10.5px;color:var(--ink2);vertical-align:middle">'+esc(l.target)+'</code>' : '';
+    var uc = userColor(l.userName);
+    var inits = userInitials(l.userName);
     html +=
       '<div style="display:flex;align-items:flex-start;gap:11px;padding:11px 14px;border-bottom:1px solid var(--rim);background:#fff">'
-        +'<div style="width:9px;height:9px;border-radius:50%;background:'+col+';flex-shrink:0;margin-top:6px"></div>'
+        // Avatar circular con color del usuario
+        +'<div style="width:34px;height:34px;border-radius:50%;background:'+uc.bg+';color:'+uc.col+';display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11.5px;flex-shrink:0;border:1.5px solid '+uc.col+'40;letter-spacing:.3px" title="'+esc(l.userName)+'">'+esc(inits)+'</div>'
         +'<div style="flex:1;min-width:0">'
-          +'<div style="font-size:13px;line-height:1.45;color:var(--ink)">'
-            +'<b>'+esc(l.userName)+'</b> '
-            +'<span style="color:var(--ink2)">'+esc(lbl)+'</span>'
+          +'<div style="font-size:13px;line-height:1.5;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+            // Chip de usuario con color
+            +'<span style="background:'+uc.bg+';color:'+uc.col+';font-weight:800;font-size:12px;padding:2px 10px;border-radius:50px;letter-spacing:-.01em">'+esc(l.userName)+'</span>'
+            // Chip de acción con su propio color
+            +'<span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink2);font-weight:600">'
+              +'<span style="width:7px;height:7px;border-radius:50%;background:'+actCol+';flex-shrink:0"></span>'
+              +esc(lbl)
+            +'</span>'
             +target
           +'</div>'
-          +(det ? '<div style="font-size:11px;color:var(--ink3);margin-top:3px;line-height:1.5">'+esc(det)+'</div>' : '')
+          +(det ? '<div style="font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.5;padding-left:2px">'+esc(det)+'</div>' : '')
         +'</div>'
-        +'<div style="font-size:11px;color:var(--ink3);font-weight:600;white-space:nowrap;flex-shrink:0;font-family:var(--fd)">'+fmtTime(l.timestamp)+'</div>'
+        +'<div style="font-size:11px;color:var(--ink3);font-weight:600;white-space:nowrap;flex-shrink:0;font-family:var(--fd);margin-top:3px">'+fmtTime(l.timestamp)+'</div>'
       +'</div>';
   });
   cont.innerHTML = html;

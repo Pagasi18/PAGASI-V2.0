@@ -38,9 +38,12 @@ PG.notif = function(){
   // CSS limpio y compacto
   var styles = `<style>
     .nf2{display:grid;grid-template-columns:1fr;gap:14px}
+    /* Wrapper de config + preview lado a lado */
+    .nf2-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:14px;align-items:stretch}
+    @media(max-width:980px){.nf2-top{grid-template-columns:1fr}}
     .nf2-cfg{background:#fff;border:1px solid var(--rim);border-radius:14px;padding:16px 18px;display:grid;grid-template-columns:1.4fr 1fr;gap:18px;align-items:start}
     @media(max-width:860px){.nf2-cfg{grid-template-columns:1fr}}
-    .nf2-cfg.nf2-cfg-solo{grid-template-columns:1fr;max-width:640px}
+    .nf2-cfg.nf2-cfg-solo{grid-template-columns:1fr;max-width:none;height:100%}
     .nf2-cfg-section{display:flex;flex-direction:column;gap:10px;min-width:0}
     .nf2-label{font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;gap:7px}
     .nf2-label::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--p1);display:inline-block}
@@ -78,7 +81,7 @@ PG.notif = function(){
     .nf2-list-foot a{color:var(--p1);font-weight:700;cursor:pointer;text-decoration:none}
     .nf2-list-foot a:hover{text-decoration:underline}
 
-    .nf2-prev{background:#fff;border:1px solid var(--rim);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;max-height:280px}
+    .nf2-prev{background:#fff;border:1px solid var(--rim);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:240px;height:100%}
     .nf2-prev-h{padding:12px 16px;background:linear-gradient(180deg,#FAFBFF,#F5F7FF);border-bottom:1px solid var(--rim)}
     .nf2-prev-t{font-size:13px;font-weight:800;color:var(--ink);letter-spacing:-.2px}
     .nf2-prev-s{font-size:10.5px;color:var(--ink3);margin-top:2px;font-weight:600}
@@ -120,6 +123,9 @@ PG.notif = function(){
   )}
 
   <div class="nf2">
+
+    <!-- ░░░ TOP: config (izquierda) + preview (derecha) ░░░ -->
+    <div class="nf2-top">
 
     <!-- ░░░ CONFIG: SOLO mensaje. El grupo se infiere automáticamente. ░░░ -->
     <div class="nf2-cfg nf2-cfg-solo">
@@ -173,10 +179,7 @@ PG.notif = function(){
       </div>
     </div>
 
-    <!-- ░░░ BODY: preview ARRIBA, lista debajo ░░░ -->
-    <div class="nf2-body">
-
-      <!-- PREVIEW (arriba) -->
+      <!-- PREVIEW (derecha del config) -->
       <div class="nf2-prev">
         <div class="nf2-prev-h">
           <div class="nf2-prev-t">Vista previa del mensaje</div>
@@ -190,7 +193,12 @@ PG.notif = function(){
         </div>
       </div>
 
-      <!-- LISTA (abajo) -->
+    </div> <!-- /nf2-top -->
+
+    <!-- ░░░ BODY: solo lista ░░░ -->
+    <div class="nf2-body">
+
+      <!-- LISTA -->
       <div class="nf2-list">
         <div class="nf2-list-head">
           <div class="nf2-list-t" id="nx-ac-list-title">Destinatarios</div>
