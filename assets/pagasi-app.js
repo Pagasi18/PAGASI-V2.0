@@ -2410,13 +2410,10 @@ function getCobradoresList(){
                 (S && S._wtUsers && S._wtUsers.length ? S._wtUsers : []);
     lista.forEach(function(u){
       if(!u || u.eliminado || u.suspendido) return;
-      var tieneComision = u.comisiones && (
-        u.comisiones.activo === true ||
-        (u.comisiones.c1 && parseFloat(u.comisiones.c1.valor)>0) ||
-        (u.comisiones.c2 && parseFloat(u.comisiones.c2.valor)>0) ||
-        (u.comisiones.c3 && parseFloat(u.comisiones.c3.valor)>0) ||
-        (u.comisiones.c4 && parseFloat(u.comisiones.c4.valor)>0)
-      );
+      // Cualquier usuario que tenga el objeto comisiones configurado aparece,
+      // sin importar si los valores son 0 o si activo está en false.
+      // Basta con que el admin haya tocado la sección de comisiones del usuario.
+      var tieneComision = !!u.comisiones;
       if(!tieneComision) return;
       var nombre = u.nombre || u.email || '';
       if(!nombre) return;
