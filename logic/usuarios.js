@@ -985,7 +985,10 @@ function openInviteUser(){
     +'<div style="margin-bottom:16px">'
     + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);margin-bottom:8px">① Datos del usuario</div>'
     + '<div class="fg" style="margin-bottom:10px"><label>Email *</label><input class="fi" id="invu_email" type="email" placeholder="empleado@pagasi.com" autofocus></div>'
-    + '<div class="fg"><label>Nombre</label><input class="fi" id="invu_nombre" placeholder="Nombre completo"></div>'
+    + '<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:10px">'
+    + '<div class="fg"><label>Nombre completo</label><input class="fi" id="invu_nombre" placeholder="Nombre completo"></div>'
+    + '<div class="fg"><label>🎂 Cumpleaños</label><input class="fi" id="invu_cumple" type="date" placeholder="dd/mm/aaaa"></div>'
+    + '</div>'
     +'</div>'
 
     // Sección 2: Rol (tarjetas)
@@ -1018,6 +1021,7 @@ function openInviteUser(){
   S.saveFn=function(){
     var email=(($('invu_email')&&$('invu_email').value)||'').trim();
     var nombre=(($('invu_nombre')&&$('invu_nombre').value)||'').trim();
+    var cumple=(($('invu_cumple')&&$('invu_cumple').value)||'').trim();
     if(!email||!email.includes('@')){ toast('Ingresa un email válido','error'); return false; }
     var rol=($('invu_rol')&&$('invu_rol').value)||'Empleado';
     var permisos=[];
@@ -1037,6 +1041,7 @@ function openInviteUser(){
       token: inviteToken,
       email: email,
       nombre: nombre || email,
+      cumpleanos: cumple || '',
       rol: rol,
       permisos: permisos,
       creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',

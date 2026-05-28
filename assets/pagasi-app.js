@@ -13,6 +13,108 @@ var FIREBASE_CONFIG = {
   appId: '1:951911859002:web:1eb8f0af7bcbd508474603'
 };
 
+// ─── COTILLÓN / CONFETTI (canvas puro, sin libs externas) ───
+function dispararCotillon(){
+  // Crear canvas overlay
+  var existing = document.getElementById('cotillon-canvas');
+  if(existing) existing.remove();
+  var canvas = document.createElement('canvas');
+  canvas.id = 'cotillon-canvas';
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:99999';
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.body.appendChild(canvas);
+  var ctx = canvas.getContext('2d');
+  var colors = ['#EC4899','#F97316','#FACC15','#22C55E','#3B82F6','#A855F7','#EF4444','#06B6D4'];
+  var partis = [];
+  // Disparar 4 ráfagas desde diferentes puntos
+  function rafaga(originX, originY, vx0, vy0, cantidad){
+    for(var i=0;i<cantidad;i++){
+      partis.push({
+        x: originX, y: originY,
+        vx: vx0 + (Math.random()-.5)*4,
+        vy: vy0 + (Math.random()-.5)*3 - 2,
+        size: 6 + Math.random()*6,
+        color: colors[Math.floor(Math.random()*colors.length)],
+        rot: Math.random()*Math.PI*2,
+        vrot: (Math.random()-.5)*.3,
+        shape: Math.random() > .5 ? 'sq' : 'cr',
+        life: 1
+      });
+    }
+  }
+  rafaga(canvas.width*.15, canvas.height*.7, 4, -8, 80);
+  rafaga(canvas.width*.85, canvas.height*.7, -4, -8, 80);
+  setTimeout(function(){ rafaga(canvas.width*.5, canvas.height*.85, 0, -10, 100); }, 350);
+  setTimeout(function(){ rafaga(canvas.width*.3, canvas.height*.6, 2, -7, 60); }, 700);
+  setTimeout(function(){ rafaga(canvas.width*.7, canvas.height*.6, -2, -7, 60); }, 800);
+
+  // Mensaje "FELIZ CUMPLEAÑOS"
+  var msgDiv = document.createElement('div');
+  msgDiv.innerHTML = '<div style="font-size:64px;font-weight:900;color:#fff;-webkit-text-stroke:2px #EC4899;text-shadow:0 8px 24px rgba(236,72,153,.55),0 2px 4px rgba(0,0,0,.2);letter-spacing:-2px;text-align:center;animation:cotillonScale .6s cubic-bezier(.34,1.56,.64,1)">🎉 ¡FELIZ CUMPLEAÑOS! 🎂</div><div style="font-size:18px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.4);margin-top:12px;font-weight:600;text-align:center">Que tengas un día increíble 🎈</div>';
+  msgDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100000;pointer-events:none;text-align:center;animation:cotillonFade 4s ease forwards';
+  // Inject animation styles
+  if(!document.getElementById('cotillon-styles')){
+    var s = document.createElement('style');
+    s.id = 'cotillon-styles';
+    s.textContent = '@keyframes cotillonScale{0%{transform:scale(.5);opacity:0}50%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}@keyframes cotillonFade{0%{opacity:0}10%{opacity:1}80%{opacity:1}100%{opacity:0}}';
+    document.head.appendChild(s);
+  }
+  document.body.appendChild(msgDiv);
+  setTimeout(function(){ if(msgDiv.parentNode) msgDiv.parentNode.removeChild(msgDiv); }, 4500);
+
+  // Animar partículas
+  var gravity = 0.18, drag = 0.992;
+  var startTs = Date.now();
+  function frame(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    var alive = 0;
+    for(var p of partis){
+      if(p.life <= 0) continue;
+      alive++;
+      p.vx *= drag; p.vy = p.vy*drag + gravity;
+      p.x += p.vx; p.y += p.vy;
+      p.rot += p.vrot;
+      var elapsed = (Date.now() - startTs) / 1000;
+      p.life = Math.max(0, 1 - elapsed/5);
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      if(p.shape === 'sq'){
+        ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.size/2, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    if(alive > 0 && (Date.now() - startTs) < 6000){
+      requestAnimationFrame(frame);
+    } else {
+      if(canvas.parentNode) canvas.parentNode.removeChild(canvas);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+// ─── ROTAR TIP DEL DÍA manualmente ───
+function dashTipNext(){
+  try {
+    if(typeof PG === 'undefined' || !PG.dash) return;
+    // Forzar un tip aleatorio diferente al actual
+    var key = '_tipOverride';
+    var prev = window[key] || 0;
+    var next = prev;
+    while(next === prev) next = Math.floor(Math.random()*31);
+    window[key] = next;
+    // Re-render
+    if(typeof nav === 'function') nav('dash');
+  } catch(e){}
+}
+
 // ── Notas de Firestore (consola → Firestore → Reglas): ──────
 // rules_version = '2';
 // service cloud.firestore {

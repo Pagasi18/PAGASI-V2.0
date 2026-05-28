@@ -1452,11 +1452,12 @@ tbody tr:hover td {
 .nx-seg-hint{font-size:10px;color:var(--ink3);margin-top:1px}
 
 .nx-ac-wrap{position:relative;margin-top:6px}
-/* Lista permanente de destinatarios visible bajo el buscador */
-.nx-ac-list-perm{margin-top:10px;background:var(--surf);border:1px solid var(--rim);border-radius:12px;max-height:340px;overflow-y:auto;}
-.nx-ac-list-perm:empty{display:none;}
-.nx-ac-list-head{position:sticky;top:0;background:var(--surf);padding:8px 14px;font-size:10.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--rim);z-index:1;display:flex;justify-content:space-between;align-items:center;}
+/* ─── Lista permanente de destinatarios visible bajo el buscador ─── */
+.nx-ac-list-perm{margin-top:10px;background:var(--surf);border:1px solid var(--rim);border-radius:12px;max-height:380px;overflow-y:auto;position:relative;}
+.nx-ac-list-head{position:sticky;top:0;background:var(--surf);padding:9px 14px;font-size:10.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--rim);z-index:2;display:flex;justify-content:space-between;align-items:center;}
 .nx-ac-list-head .count{background:var(--p1);color:#fff;padding:2px 8px;border-radius:50px;font-size:10px;font-weight:800;letter-spacing:.4px;}
+/* Override fuerte: cuando la lista está DENTRO de la lista permanente, NO usa absolute positioning */
+.nx-ac-list-perm .nx-ac-list{position:static !important;display:block !important;top:auto !important;left:auto !important;right:auto !important;background:transparent !important;border:none !important;box-shadow:none !important;max-height:none !important;z-index:auto !important;border-radius:0 !important;}
 .nx-ac-input{width:100%;padding:10px 36px 10px 34px;background:var(--surf);border:1.5px solid var(--rim);border-radius:10px;font-size:13px;color:var(--ink);font-family:inherit;outline:none;transition:.15s ease;box-sizing:border-box}
 .nx-ac-input:focus{border-color:var(--p1);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
 .nx-ac-input::placeholder{color:var(--ink3)}

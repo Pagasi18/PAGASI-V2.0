@@ -125,6 +125,81 @@ PG.dash = function(){
   })();
 
   // ── HTML ──
+  // ─── TIP DEL DÍA — rotación por día del año (sin red, 100% local) ───
+  var TIPS_DEL_DIA = [
+    {emoji:'💡', txt:'"Lo que se mide, se mejora." — Revisa tu cartera vencida cada lunes a primera hora.'},
+    {emoji:'🏍️', txt:'Una moto se entrega tres veces: en el lote, en el contrato, y en la primera cuota a tiempo.'},
+    {emoji:'📞', txt:'El mejor cliente es el que paga puntual. Premia a los puntuales con un mensaje de "gracias" antes que pidas la siguiente cuota.'},
+    {emoji:'⚡', txt:'No respondas WhatsApp después de las 8pm — protege tu tiempo personal. Los clientes lo respetan.'},
+    {emoji:'💰', txt:'El precio de la moto no es el problema. El problema es no haber explicado bien la cuota.'},
+    {emoji:'🎯', txt:'Cobranza al día = libertad financiera. Un día de atraso es un día de tu plata trabajando para otro.'},
+    {emoji:'🚀', txt:'"El cliente no compra una moto, compra movilidad y libertad." — Vende eso, no las especificaciones.'},
+    {emoji:'🧠', txt:'Un cliente referido vale 5 veces más que uno conseguido por publicidad. Pídeles referencias cuando paguen su última cuota.'},
+    {emoji:'📊', txt:'Si no sabes tu costo de oportunidad, todo te parece barato. Calcula cuánto te cuesta cada día de mora.'},
+    {emoji:'🤝', txt:'Llama al cliente el día antes de su cuota, no después. Convierte el cobro en un servicio.'},
+    {emoji:'🔥', txt:'Una factura emitida es un cliente más conectado. Pide su rif/cédula al emitir y guarda los datos.'},
+    {emoji:'⏰', txt:'Las primeras 3 cuotas predicen las 21 restantes. Si fallan ahí, el patrón se repite.'},
+    {emoji:'🎁', txt:'Sorprende a tus mejores clientes con un casco gratis o una revisión. El boca a boca es tu mejor marketing.'},
+    {emoji:'📱', txt:'Si un cliente no contesta WhatsApp en 24h, llámalo. Si no contesta llamadas en 48h, ve al lote a buscarlo.'},
+    {emoji:'⚖️', txt:'Documenta todo: contratos firmados, fotos de la moto, copias de cédula. La memoria falla, los papeles no.'},
+    {emoji:'💎', txt:'"La calidad no es un acto, es un hábito." — Aristóteles. Revisa cada moto antes de entregarla, sin excepción.'},
+    {emoji:'🎨', txt:'El admin no es para llenarlo de datos, es para tomar decisiones más rápido. Si una pantalla no te ayuda a decidir, sobra.'},
+    {emoji:'🌱', txt:'Un cliente con plan personalizado paga 30% más puntual que uno con plan estándar. Vale la pena la conversación.'},
+    {emoji:'🏆', txt:'Compite contigo, no con la competencia. Si este mes cobraste $20k, la meta del próximo es $22k.'},
+    {emoji:'🛡️', txt:'Un fiador firmado vale más que tres promesas verbales. No bajes ese requisito por presión de cerrar.'},
+    {emoji:'🧭', txt:'Si un cliente tarda más de 1 hora en pensar la oferta, no la va a tomar. Ofrece dos opciones y deja que elija.'},
+    {emoji:'🎓', txt:'Nadie nace sabiendo cobrar. Practica el "guion de cobranza amable" hasta que lo digas natural.'},
+    {emoji:'⚡', txt:'Cada hora que un crédito está en mora cuesta tu margen del día. Cobranza temprana = ganancia real.'},
+    {emoji:'🌟', txt:'El cliente que paga su última cuota merece una llamada de felicitación. Y un descuento si vuelve.'},
+    {emoji:'🔔', txt:'Configura recordatorios automáticos 3 días antes de cada cuota. El olvido es enemigo del cobro.'},
+    {emoji:'📈', txt:'Mide tu APY real cada mes. Si bajó, algo está fallando — ya sea precio, plazo o cobranza.'},
+    {emoji:'🤖', txt:'El sistema solo es tan bueno como los datos que le metes. Llena bien el perfil del cliente desde el primer contacto.'},
+    {emoji:'🎯', txt:'No vendas crédito al primero que entra. Vende al que califica. La mora arruina más negocios que la falta de clientes.'},
+    {emoji:'💪', txt:'"Hay que pensar en grande, pero empezar pequeño." — Cobra una cuota completa antes de pensar en 100.'},
+    {emoji:'🌈', txt:'Cada Lunes es nueva oportunidad. Empieza con la lista de morosos del Viernes, no con emails.'},
+    {emoji:'🎊', txt:'Celebra los logros chiquitos del equipo. 10 cobros perfectos en una semana merecen reconocimiento.'}
+  ];
+  var diaDelAnio = (function(){var d=new Date();var i=new Date(d.getFullYear(),0,0);return Math.floor((d-i)/(1000*60*60*24));})();
+  var tipIdx = (typeof window._tipOverride !== 'undefined' && window._tipOverride !== null) ? window._tipOverride : (diaDelAnio % TIPS_DEL_DIA.length);
+  var tipHoy = TIPS_DEL_DIA[tipIdx % TIPS_DEL_DIA.length];
+
+  // ─── CUMPLEAÑOS — empleados que cumplen este mes ───
+  function _parseCumple(v){
+    if(!v) return null;
+    // Acepta YYYY-MM-DD, DD/MM/YYYY, DD-MM, etc.
+    var s = String(v).replace(/\//g,'-');
+    var m1 = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(m1) return {mes:parseInt(m1[2],10), dia:parseInt(m1[3],10)};
+    var m2 = s.match(/^(\d{1,2})-(\d{1,2})(?:-\d{2,4})?/);
+    if(m2) return {mes:parseInt(m2[2],10), dia:parseInt(m2[1],10)};
+    return null;
+  }
+  var hoyM = new Date().getMonth()+1, hoyD = new Date().getDate();
+  var cumplesEsteMes = (S.usuarios||[]).filter(function(u){
+    if(!u || u.eliminado) return false;
+    var c = _parseCumple(u.cumpleanos || u.fechaNacimiento || u.bday);
+    return c && c.mes === hoyM;
+  }).map(function(u){
+    var c = _parseCumple(u.cumpleanos || u.fechaNacimiento || u.bday);
+    return {nom:u.nombre||u.email||'Usuario', dia:c.dia, esHoy:c.dia===hoyD};
+  }).sort(function(a,b){ return a.dia - b.dia; });
+  var cumplesHoy = cumplesEsteMes.filter(function(u){return u.esHoy;});
+
+  // Si el usuario LOGUEADO es cumpleañero hoy, disparar cotillón
+  setTimeout(function(){
+    try {
+      var miCumple = _parseCumple((S.currentUser||{}).cumpleanos || (S.currentUser||{}).fechaNacimiento);
+      if(miCumple && miCumple.mes === hoyM && miCumple.dia === hoyD){
+        if(typeof dispararCotillon === 'function' && !window._cotillonShown){
+          window._cotillonShown = true;
+          setTimeout(dispararCotillon, 600);
+        }
+      }
+    } catch(e){}
+  }, 400);
+
+  function _initialsName(n){var p=(n||'').split(/\s+/).filter(Boolean);return ((p[0]||'')[0]||'?').toUpperCase()+((p[1]||'')[0]||'').toUpperCase();}
+
   return`<div class="page">
 
   ${pageBanner(
@@ -136,6 +211,48 @@ PG.dash = function(){
       {label:'＋ Nueva Solicitud', onclick:'openAddCred()', primary:true}
     ]
   )}
+
+  <!-- ROW 0: TIP DEL DÍA + CUMPLEAÑOS -->
+  <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card dash-tip" style="background:linear-gradient(135deg,#FFFBEB 0%,#FEF3C7 100%);border:1px solid #FDE68A;display:flex;align-items:center;gap:18px;padding:18px 22px">
+      <div style="width:56px;height:56px;background:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 4px 12px rgba(0,0,0,.06);flex-shrink:0">${tipHoy.emoji}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#B45309;margin-bottom:5px">Tip del día · ${new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long'})}</div>
+        <div style="font-size:13.5px;line-height:1.5;color:#451A03;font-weight:500">${tipHoy.txt}</div>
+      </div>
+      <button onclick="dashTipNext()" title="Otro tip" style="background:#fff;border:1px solid #FDE68A;color:#B45309;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;transition:transform .15s">→</button>
+    </div>
+
+    <div class="card" style="padding:18px 20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">🎂</span>
+          <div>
+            <div style="font-size:13px;font-weight:800;color:var(--ink);letter-spacing:-.2px">Cumpleaños</div>
+            <div style="font-size:10.5px;color:var(--ink3);font-weight:600">${new Date().toLocaleDateString('es-VE',{month:'long'})}</div>
+          </div>
+        </div>
+        <span style="background:var(--gs);color:var(--p1);padding:3px 8px;border-radius:50px;font-size:10px;font-weight:800">${cumplesEsteMes.length}</span>
+      </div>
+      ${cumplesEsteMes.length === 0 ? `
+        <div style="text-align:center;padding:18px 4px;color:var(--ink3);font-size:11.5px;line-height:1.5">
+          <div style="font-size:28px;margin-bottom:6px;opacity:.4">🎈</div>
+          Nadie cumple este mes.<br><span style="font-size:10.5px">Asegúrate de que los empleados llenen su fecha de cumpleaños en su perfil.</span>
+        </div>
+      ` : `
+        <div style="display:flex;flex-direction:column;gap:6px;max-height:140px;overflow-y:auto">
+          ${cumplesEsteMes.map(function(u){
+            return '<div style="display:flex;align-items:center;gap:9px;padding:7px 9px;background:'+(u.esHoy?'linear-gradient(135deg,#FCE7F3 0%,#FBCFE8 100%)':'var(--surf2)')+';border:1px solid '+(u.esHoy?'#F9A8D4':'var(--rim)')+';border-radius:9px">'
+              +'<div style="width:30px;height:30px;border-radius:50%;background:'+(u.esHoy?'#EC4899':'var(--p1)')+';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10.5px">'+_initialsName(u.nom)+'</div>'
+              +'<div style="flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+u.nom+'</div>'
+              +'<div style="font-family:var(--fd);font-weight:800;font-size:12px;color:'+(u.esHoy?'#BE185D':'var(--ink3)')+'">'+(u.esHoy?'🎉 HOY':'día '+u.dia)+'</div>'
+            +'</div>';
+          }).join('')}
+        </div>
+        ${cumplesHoy.length ? '<button onclick="dispararCotillon()" style="margin-top:10px;width:100%;background:linear-gradient(135deg,#EC4899,#BE185D);color:#fff;border:none;padding:9px;border-radius:9px;font-weight:800;font-size:12px;cursor:pointer;letter-spacing:.04em">🎊 Lanzar cotillón</button>' : ''}
+      `}
+    </div>
+  </div>
 
   <!-- ROW 1: 4 KPI CARDS -->
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:18px">
