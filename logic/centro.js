@@ -327,29 +327,29 @@ function wtDailyCardHTML(){
   return ''
     +'<div class="wt-daily-card" style="background:#fff;border:1px solid var(--rim);border-radius:18px;overflow:hidden;box-shadow:0 4px 18px rgba(37,99,235,.05);height:100%;display:flex;flex-direction:column">'
     +'<div style="display:flex;border-bottom:1px solid var(--rim);background:var(--surf2)">'
-      +'<button class="dly-tab is-active" data-tab="noticia" onclick="dashDailyTab(\'noticia\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--ink);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid #DC2626">Noticias</button>'
-      +'<button class="dly-tab" data-tab="chiste" onclick="dashDailyTab(\'chiste\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink3);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid transparent">Chiste</button>'
-      +'<button class="dly-tab" data-tab="dato" onclick="dashDailyTab(\'dato\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink3);padding:14px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid transparent">Dato curioso</button>'
+      +'<button class="dly-tab is-active" data-tab="noticia" onclick="dashDailyTab(\'noticia\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--ink);padding:9px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid #DC2626">Noticias</button>'
+      +'<button class="dly-tab" data-tab="chiste" onclick="dashDailyTab(\'chiste\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink3);padding:9px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid transparent">Chiste</button>'
+      +'<button class="dly-tab" data-tab="dato" onclick="dashDailyTab(\'dato\')" style="flex:1;background:transparent;border:none;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--ink3);padding:9px 8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;border-bottom:3px solid transparent">Dato curioso</button>'
     +'</div>'
-    +'<div style="padding:32px 36px 28px;min-height:230px;position:relative;flex:1">'
+    +'<div style="padding:18px 22px 22px;min-height:140px;position:relative;flex:1">'
 
       // NOTICIAS — primera y única tab activa por defecto
       +'<div id="dly-tab-noticia" class="dly-content" style="display:block">'
-        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#DC2626;margin-bottom:14px;font-family:'+FONT_NOTICIA+'">Noticias del día · '+hoyStr+'</div>'
+        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#DC2626;margin-bottom:8px;font-family:'+FONT_NOTICIA+'">Noticias del día · '+hoyStr+'</div>'
         +'<div id="dly-noticia-text" style="font-size:16px;line-height:1.5;color:var(--ink);font-family:'+FONT_NOTICIA+';font-weight:500">Cargando noticias…</div>'
         +'<button onclick="dashDailyLoad(\'noticia\',true)" style="position:absolute;bottom:18px;right:24px;background:#DC2626;color:#fff;border:none;padding:9px 18px;border-radius:50px;cursor:pointer;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(220,38,38,.28)">Refrescar →</button>'
       +'</div>'
 
       // CHISTE
       +'<div id="dly-tab-chiste" class="dly-content" style="display:none">'
-        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#F97316;margin-bottom:14px;font-family:'+FONT_NOTICIA+'">Chiste del día</div>'
+        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#F97316;margin-bottom:8px;font-family:'+FONT_NOTICIA+'">Chiste del día</div>'
         +'<div id="dly-chiste-text" style="font-size:30px;line-height:1.32;color:var(--ink);font-weight:600;font-family:'+FONT_CHISTE+';padding-right:140px">Cargando chiste…</div>'
         +'<button onclick="dashDailyLoad(\'chiste\',true)" style="position:absolute;bottom:18px;right:24px;background:#F97316;color:#fff;border:none;padding:9px 18px;border-radius:50px;cursor:pointer;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(249,115,22,.28)">Otro chiste →</button>'
       +'</div>'
 
       // DATO
       +'<div id="dly-tab-dato" class="dly-content" style="display:none">'
-        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#16A34A;margin-bottom:14px;font-family:'+FONT_NOTICIA+'">¿Sabías que…?</div>'
+        +'<div style="font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#16A34A;margin-bottom:8px;font-family:'+FONT_NOTICIA+'">¿Sabías que…?</div>'
         +'<div id="dly-dato-text" style="font-size:22px;line-height:1.5;color:var(--ink);font-weight:500;font-family:'+FONT_DATO+';font-style:italic;padding-right:140px">Cargando dato…</div>'
         +'<button onclick="dashDailyLoad(\'dato\',true)" style="position:absolute;bottom:18px;right:24px;background:#16A34A;color:#fff;border:none;padding:9px 18px;border-radius:50px;cursor:pointer;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(22,163,74,.28)">Otro dato →</button>'
       +'</div>'
@@ -440,12 +440,12 @@ function wtHTML(){
 
   // ─── BANNER push notifications (solo si NO está activado) ────────
   if(typeof pushNotifSupported==='function' && pushNotifSupported() && pushNotifState()==='default'){
-    html+='<div style="background:linear-gradient(135deg,#EFF6FF 0%,#DBEAFE 100%);border:1px solid rgba(37,99,235,.20);border-radius:14px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">'
-      +'<div style="width:42px;height:42px;background:var(--p1);color:#fff;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
-        +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>'
+    html+='<div style="background:linear-gradient(135deg,#EFF6FF 0%,#DBEAFE 100%);border:1px solid rgba(37,99,235,.20);border-radius:12px;padding:8px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+      +'<div style="width:32px;height:32px;background:var(--p1);color:#fff;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+        +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>'
       +'</div>'
-      +'<div style="flex:1;min-width:200px"><div style="font-size:13.5px;font-weight:800;color:var(--ink);letter-spacing:-.2px">Activa notificaciones del navegador</div>'
-      +'<div style="font-size:11.5px;color:var(--ink2);margin-top:3px;line-height:1.45">Te avisaremos cuando lleguen leads nuevos, haya cuotas vencidas o clientes con mora grave. Aunque no tengas el admin abierto.</div></div>'
+      +'<div style="flex:1;min-width:200px"><div style="font-size:12.5px;font-weight:800;color:var(--ink);letter-spacing:-.2px">Activa notificaciones del navegador</div>'
+      +'<div style="font-size:10.5px;color:var(--ink2);margin-top:1px;line-height:1.35">Te avisaremos de leads, cuotas vencidas o mora aunque no tengas el admin abierto.</div></div>'
       +'<button onclick="pushNotifRequest()" class="btn btn-p btn-sm" style="white-space:nowrap">Activar</button>'
     +'</div>';
   }
@@ -501,18 +501,15 @@ function wtHTML(){
     } catch(e){ console.warn('cotillon trigger:', e); }
   }, 100);
   if(st.hoy+st.vencidas>0){
-    html+='<div style="background:#FFF6E5;border:1px solid #FAEEDA;border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:18px">'
-      +'<div style="width:38px;height:38px;background:#FAEEDA;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#BA7517;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>'
-      +'<div style="flex:1"><div style="font-weight:800;font-size:14px;color:#854F0B">'+(st.hoy+st.vencidas)+' tarea(s) requieren atención</div>'
-      +'<div style="font-size:12px;color:#946F0B;margin-top:2px">'+st.hoy+' para hoy · '+st.vencidas+' vencidas</div></div>'
+    html+='<div style="background:#FFF6E5;border:1px solid #FAEEDA;border-radius:12px;padding:8px 14px;display:flex;align-items:center;gap:10px;margin-bottom:12px">'
+      +'<div style="width:30px;height:30px;background:#FAEEDA;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#BA7517;flex-shrink:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>'
+      +'<div style="flex:1"><div style="font-weight:800;font-size:13px;color:#854F0B">'+(st.hoy+st.vencidas)+' tarea(s) requieren atención · '+st.hoy+' hoy · '+st.vencidas+' vencidas</div></div>'
       +'<button class="btn btn-sm" style="background:#BA7517;color:#fff;border:none;font-weight:700;cursor:pointer" onclick="wtSetFilter(\'hoy\')">Ver</button></div>';
   }
-  html+='<div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">';
+  html+='<div class="sg" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px">';
   html+=wtM6('Hoy',st.hoy,'',' #E6F1FB','#2563EB')+wtM6('Vencidas',st.vencidas,'','#FCEBEB','#E8335A')+wtM6('En proceso',st.proceso,'','#FAEEDA','#BA7517')+wtM6('Archivadas',st.archivadas,'','#E1F5EE','#00B876');
   html+='</div>';
-  // ─── NOTICIAS + CUMPLEAÑOS arriba para acceso rápido ──
-  html+=wtTopRowHTML();
-  html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px">';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">';
   html+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
   [['kanban','Kanban'],['hoy','Hoy'],['vencidas','Vencidas'],['proceso','En proceso'],['completadas','Completadas'],['todas','Todas'],['archivadas','Archivadas']].forEach(function(f){
     html+='<button class="btn '+(WT_FILTER===f[0]?'btn-p':'btn-g')+' btn-sm" onclick="wtSetFilter(\''+f[0]+'\')">'+f[1]+'</button>';
@@ -527,7 +524,7 @@ function wtHTML(){
     html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start">';
     cols.forEach(function(col){
       var venc=col.tasks.filter(function(t){return t.fecha&&t.fecha<today&&t.estado!=='completada';}).length;
-      html+='<div style="background:var(--surf2);border-radius:14px;padding:11px;min-height:200px;transition:background .15s" ondragover="event.preventDefault();this.style.background=\'var(--gs)\'" ondragleave="this.style.background=\'\'" ondrop="wtDrop(event,\''+col.id+'\')">';
+      html+='<div style="background:var(--surf2);border-radius:12px;padding:8px;min-height:140px;transition:background .15s" ondragover="event.preventDefault();this.style.background=\'var(--gs)\'" ondragleave="this.style.background=\'\'" ondrop="wtDrop(event,\''+col.id+'\')">';
       html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">';
       html+='<div style="width:8px;height:8px;border-radius:50%;background:'+col.color+';flex-shrink:0"></div>';
       html+='<span style="font-size:13px;font-weight:800;color:var(--ink);flex:1">'+col.label+'</span>';
@@ -550,6 +547,9 @@ function wtHTML(){
       html+='</div>';
     }
   }
+  // ─── NOTICIAS + CUMPLE compactos al final ──
+  html+='<div style="margin-top:16px;padding-top:14px;border-top:1px dashed var(--rim)"></div>';
+  html+=wtTopRowHTML();
   return html;
 }
 
@@ -561,9 +561,12 @@ function wtM6(label,val,icon,bg,color){
     'archivadas':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>'
   };
   var svg = icons[label.toLowerCase()] || icon;
-  return '<div class="stat"><div class="st-ic" style="background:'+bg+';color:'+color+'">'+svg+'</div>'
-    +'<div class="st-l" style="margin-top:0;margin-bottom:6px">'+label+'</div>'
-    +'<div class="st-v">'+val+'</div></div>';
+  return '<div class="stat" style="padding:10px 12px;display:flex;align-items:center;gap:10px;min-height:auto">'
+    +'<div class="st-ic" style="background:'+bg+';color:'+color+';width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+svg+'</div>'
+    +'<div style="display:flex;flex-direction:column;min-width:0">'
+      +'<div class="st-v" style="font-size:22px;font-weight:900;line-height:1;color:var(--ink)">'+val+'</div>'
+      +'<div class="st-l" style="margin:2px 0 0;font-size:11px;color:var(--ink3);font-weight:700">'+label+'</div>'
+    +'</div></div>';
 }
 
 function wtKanbanCard(t,today){
@@ -574,7 +577,7 @@ function wtKanbanCard(t,today){
   var comments=(t.comentarios||[]).length;
   var isDone=t.estado==='completada';
   var tid=wtEsc(t.id);
-  var html='<div class="card" style="padding:14px;margin-bottom:10px;cursor:pointer;user-select:none" draggable="true"'
+  var html='<div class="card" style="padding:10px 11px;margin-bottom:7px;cursor:pointer;user-select:none" draggable="true"'
     +' onclick="wtVerTarea(\''+tid+'\')"'
     +' ondragstart="event.stopPropagation();wtDragStart(event,\''+tid+'\')"'
     +' ondragend="document.querySelectorAll(\'[ondrop]\').forEach(function(c){c.style.background=\'\'})">';
