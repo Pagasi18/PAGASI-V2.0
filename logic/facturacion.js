@@ -357,6 +357,43 @@ function abrirDetallePago(pagoId){
   $('ov').style.display = 'flex';
 }
 
+// Devuelve el texto de la(s) cuota(s) que cubre un pago, leyendo el ledger del crédito.
+// SOLO LECTURA — no modifica ningún cálculo. Distingue cuotas completas de abonos parciales.
+// Ej: "cuota 3/24" · "cuotas 3 a 5/24" · "cuota 3 y abono a la 4/24" · "abono a cuota 3/24".
+function _facCuotasDePago(p, cred){
+  if(!p || !cred || !Array.isArray(cred.pagosRegistrados)) return '';
+  var led = cred.pagosRegistrados;
+  var nums = led
+    .filter(function(h){ return h && h.pagoId === p.id; })
+    .map(function(h){ return parseInt(h.cuota, 10); })
+    .filter(function(n){ return n > 0; });
+  if(!nums.length) return '';
+  nums.sort(function(a, b){ return a - b; });
+  var min = nums[0], max = nums[nums.length - 1];
+  var total = (typeof getCreditoTotalCuotas === 'function')
+    ? getCreditoTotalCuotas(cred)
+    : (parseInt(cred.totalCuotas, 10) || 0);
+  var cuotaBase = (typeof getCreditoCuotaBase === 'function')
+    ? getCreditoCuotaBase(cred)
+    : (parseFloat(cred.cuotaQ || cred.cuota || 0) || 0);
+  var sufijo = total > 0 ? ('/' + total) : '';
+  // ¿La última cuota tocada quedó cubierta al 100% o sólo es un abono parcial?
+  function pagadoEnCuota(n){
+    return led.filter(function(h){ return parseInt(h.cuota, 10) === n; })
+              .reduce(function(a, h){ return a + (parseFloat(h.montoPagado) || 0); }, 0);
+  }
+  var ultParcial = cuotaBase > 0 && (pagadoEnCuota(max) < cuotaBase - 0.01);
+  if(min === max){
+    return (ultParcial ? 'abono a cuota ' : 'cuota ') + min + sufijo;
+  }
+  if(ultParcial){
+    // de min..(max-1) completas + abono a la última
+    return (min === max - 1 ? 'cuota ' + min : 'cuotas ' + min + ' a ' + (max - 1))
+      + ' y abono a la ' + max + sufijo;
+  }
+  return 'cuotas ' + min + ' a ' + max + sufijo;
+}
+
 // Modal: generar factura para un pago
 function abrirGenerarFactura(pagoId){
   var p = (S.pagos||[]).find(function(x){ return x.id === pagoId; });
@@ -396,7 +433,7 @@ function abrirGenerarFactura(pagoId){
     + '</div>'
     + '<div style="font-size:10.5px;color:var(--ink3);font-weight:700;letter-spacing:.5px;margin:14px 0 8px">DETALLE DE LA OPERACIÓN</div>'
     + '<div class="fgr c1" style="gap:10px">'
-    + '<div class="fg"><label>Concepto / Descripción</label><textarea class="fi" id="fac_concepto" rows="2" style="resize:vertical">Pago de cuota — Crédito '+(p.cred||'')+(cred?' / '+cred.modelo:'')+'</textarea></div>'
+    + '<div class="fg"><label>Concepto / Descripción</label><textarea class="fi" id="fac_concepto" rows="2" style="resize:vertical">Pago de '+(_facCuotasDePago(p,cred)||'cuota')+' — Crédito '+(p.cred||'')+(cred?' / '+cred.modelo:'')+'</textarea></div>'
     + '</div>'
     + '<div class="fgr" style="gap:10px;margin-top:10px">'
     + '<div class="fg"><label>Subtotal</label><div style="font-family:var(--fd);font-weight:700;font-size:14px;padding:6px 0">'+fmt(p.monto||0)+'</div></div>'
