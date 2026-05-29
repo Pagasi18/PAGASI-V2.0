@@ -344,7 +344,7 @@ function calcSwap(){
   window._calcMonedaDe = a;
   window._calcMonedaA = de;
   // Refresh: re-render full page sections that show de/a
-  PG.show('calculadora');
+  nav('calculadora');
 }
 
 function calcQuick(monto){
@@ -398,7 +398,7 @@ function calcSelect(m){
     else window._calcMonedaDe = (m==='USD'?'Bs':'USD');
   }
   calcCloseSelector();
-  PG.show('calculadora');
+  nav('calculadora');
 }
 
 // ─── RENDER ───
