@@ -430,18 +430,9 @@ function _calcFromUsd(usd, m, fuente, bcv, eur, bin){
 }
 
 function calcOnInput(ev){
-  var el = ev.target;
-  var cursorAtEnd = el.selectionStart === el.value.length;
-  var raw = _calcParseMonto(el.value);
-  window._calcMonto = raw;
-  // Re-formatear el input para mostrar separadores (solo si no está editando decimales)
-  if(raw > 0 && !el.value.endsWith(',') && !el.value.endsWith('.') && !/[,.]\d{0,1}$/.test(el.value)){
-    var formatted = raw.toLocaleString('es-VE',{minimumFractionDigits:0, maximumFractionDigits:2});
-    if(formatted !== el.value){
-      el.value = formatted;
-      if(cursorAtEnd) try{ el.setSelectionRange(formatted.length, formatted.length); }catch(e){}
-    }
-  }
+  // Sin reformateo en vivo: el usuario escribe libre (dígitos, "," o "." para decimales).
+  // El parser interpreta el valor. Así no se rompe al pasar de 3 dígitos.
+  window._calcMonto = _calcParseMonto(ev.target.value);
   calcRender();
 }
 
