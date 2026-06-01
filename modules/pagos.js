@@ -193,6 +193,7 @@ PG.pagos = function(){
         ${_thSort(_cu,'setCuotasSort','estado','Estado')}
         ${_thSort(_cu,'setCuotasSort','vence','Vence')}
         ${_thSort(_cu,'setCuotasSort','monto','Monto')}
+        <th>Notas</th>
         <th></th>
       </tr></thead>
       <tbody>${(()=>{const _cp=pgGet('cuotas');return proximasCuotas.slice((_cp-1)*50,_cp*50).map(function(item){
@@ -208,6 +209,7 @@ PG.pagos = function(){
           <td><span class="bdg ${bcls}" style="font-size:9px">${badge}</span></td>
           <td class="tds" style="color:${col};font-weight:700">${lbl}</td>
           <td style="font-weight:800;font-family:var(--fd);color:var(--ink)">${fmt(c.cuotaQ||c.cuota)}</td>
+          <td>${_cuotaNotaSelect(c)}</td>
           <td><div style="display:flex;gap:4px">
             <button class="btn btn-p btn-xs" onclick="openAddPago('${c.id}')">Cobrar</button>
             <button class="btn btn-g btn-xs" onclick="avisarCuotaProxima('${c.id}')" title="Enviar recordatorio al cliente por WhatsApp">Avisar</button>
@@ -328,3 +330,50 @@ PG.pagos = function(){
   </div>`+(tab!=='archivados'?pgControls('pagos',filtered.length,50,'pgNav'):'');
 };
 
+
+// ─── NOTAS DE COBRANZA (status del cliente en Cuotas Próximas) ───
+var NOTA_COBRANZA = [
+  {v:'',               t:'— Sin nota',            c:'#64748B', bg:'#F1F5F9'},
+  {v:'revision',       t:'En revisión',           c:'#1D4ED8', bg:'#EFF6FF'},
+  {v:'promesa',        t:'Promesa de pago',       c:'#A16207', bg:'#FEF9C3'},
+  {v:'acuerdo',        t:'Acuerdo de pago',       c:'#7C3AED', bg:'#F3E8FF'},
+  {v:'pago_verificar', t:'Pagó — verificar',      c:'#047857', bg:'#D1FAE5'},
+  {v:'avisado',        t:'Avisado / recordado',   c:'#0369A1', bg:'#E0F2FE'},
+  {v:'no_contesta',    t:'No contesta',           c:'#B45309', bg:'#FFEDD5'},
+  {v:'reprogramado',   t:'Reprogramado',          c:'#0F766E', bg:'#CCFBF1'},
+  {v:'gestion',        t:'En gestión de cobro',   c:'#BE185D', bg:'#FCE7F3'},
+  {v:'ilocalizable',   t:'Ilocalizable',          c:'#991B1B', bg:'#FEE2E2'},
+  {v:'problema',       t:'Cliente con problema',  c:'#991B1B', bg:'#FEE2E2'}
+];
+function _notaCobranzaOpt(v){
+  for(var i=0;i<NOTA_COBRANZA.length;i++){ if(NOTA_COBRANZA[i].v===(v||'')) return NOTA_COBRANZA[i]; }
+  return NOTA_COBRANZA[0];
+}
+function _cuotaNotaSelect(c){
+  var cur = c.cobranzaStatus || '';
+  var sel = _notaCobranzaOpt(cur);
+  var opts = NOTA_COBRANZA.map(function(o){
+    return '<option value="'+o.v+'"'+(o.v===cur?' selected':'')+'>'+o.t+'</option>';
+  }).join('');
+  return '<select onchange="setCuotaNota(\''+c.id+'\',this)" '
+    + 'style="font-family:var(--f);font-size:10.5px;font-weight:700;border:1.5px solid '+sel.c+'40;'
+    + 'background:'+sel.bg+';color:'+sel.c+';border-radius:8px;padding:5px 8px;cursor:pointer;'
+    + 'max-width:160px;outline:none;-webkit-appearance:none;appearance:none">'
+    + opts + '</select>';
+}
+window.setCuotaNota = function(credId, selEl){
+  var val = selEl.value;
+  var opt = _notaCobranzaOpt(val);
+  // Recolorear el select en vivo
+  selEl.style.background = opt.bg;
+  selEl.style.color = opt.c;
+  selEl.style.borderColor = opt.c + '40';
+  // Actualizar en memoria
+  if(S && S.creds){
+    for(var i=0;i<S.creds.length;i++){ if(S.creds[i].id===credId){ S.creds[i].cobranzaStatus = val; break; } }
+  }
+  // Persistir en Firestore
+  if(typeof DB!=='undefined' && DB.updateCred){ DB.updateCred(credId, {cobranzaStatus: val}); }
+  if(typeof logActividad==='function'){ logActividad('Nota de cobranza', 'pagos', credId, opt.t); }
+  if(typeof toast==='function'){ toast('Nota: '+opt.t, 'success'); }
+};

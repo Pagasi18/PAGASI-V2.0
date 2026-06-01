@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es-VE">
+<head>
+<meta charset="UTF-8">
+<title>Pagasi · Valuación y proyección de equity</title>
+<style>
+  @page { size: A4; margin: 0; }
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Helvetica Neue','Inter',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  body{background:#fff;color:#0F172A;font-size:11px;line-height:1.45}
+
+  .page{width:210mm;min-height:297mm;padding:15mm 14mm 18mm;position:relative;page-break-after:always;background:#fff}
+  .page:last-child{page-break-after:auto}
+
+  .doc-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1.5px solid #1D4ED8;margin-bottom:18px}
+  .doc-head-l{display:flex;align-items:center;gap:12px}
+  .doc-head-logo{height:40px;width:auto}
+  .doc-head-brand{display:flex;flex-direction:column;line-height:1.1;border-left:1px solid #E5E8F0;padding-left:12px}
+  .doc-head-brand-n{font-size:12.5px;font-weight:900;color:#0F172A;letter-spacing:-.3px}
+  .doc-head-brand-s{font-size:8px;color:#64748B;font-weight:700;letter-spacing:.13em;text-transform:uppercase;margin-top:2px}
+  .doc-head-r{text-align:right}
+  .doc-head-r-t{font-size:8px;color:#64748B;font-weight:800;letter-spacing:.15em;text-transform:uppercase}
+  .doc-head-r-d{font-size:12.5px;color:#0F172A;font-weight:800;margin-top:3px;letter-spacing:-.2px}
+
+  .hero{background:linear-gradient(135deg,#1D4ED8 0%,#1E40AF 60%,#1E3A8A 100%);color:#fff;border-radius:14px;padding:26px 28px;margin-bottom:18px;position:relative;overflow:hidden}
+  .hero::before{content:'';position:absolute;top:-100px;right:-80px;width:280px;height:280px;background:radial-gradient(circle,rgba(255,255,255,.14),transparent 70%);border-radius:50%}
+  .hero::after{content:'';position:absolute;bottom:-100px;left:-60px;width:220px;height:220px;background:radial-gradient(circle,rgba(255,255,255,.07),transparent 70%);border-radius:50%}
+  .hero-tag{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.22em;text-transform:uppercase;background:rgba(255,255,255,.17);padding:5px 12px;border-radius:50px;position:relative;z-index:1}
+  .hero-title{font-size:29px;font-weight:900;letter-spacing:-1.2px;margin:11px 0 6px;position:relative;z-index:1;line-height:1.05}
+  .hero-sub{font-size:11px;font-weight:500;color:rgba(255,255,255,.88);max-width:570px;position:relative;z-index:1;line-height:1.55}
+  .hero-meta{display:flex;gap:16px;margin-top:15px;flex-wrap:wrap;position:relative;z-index:1}
+  .hero-meta-it{display:flex;flex-direction:column;gap:1px}
+  .hero-meta-l{font-size:7.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.62)}
+  .hero-meta-v{font-size:12px;font-weight:900;color:#fff;letter-spacing:-.2px;margin-top:1px}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+  .kpi{background:#fff;border:1px solid #E5E8F0;border-radius:11px;padding:13px 14px}
+  .kpi-l{font-size:8px;font-weight:900;color:#94A3B8;letter-spacing:.13em;text-transform:uppercase;margin-bottom:6px}
+  .kpi-v{font-size:24px;font-weight:900;color:#0F172A;letter-spacing:-1px;line-height:1}
+  .kpi-v small{font-size:11px;color:#64748B;font-weight:700;margin-left:2px;letter-spacing:0}
+  .kpi-sub{font-size:8.5px;color:#64748B;font-weight:600;margin-top:5px;line-height:1.35}
+  .kpi-trend{display:inline-flex;align-items:center;gap:3px;background:#D1FAE5;color:#047857;font-size:8px;font-weight:900;padding:2px 7px;border-radius:50px;margin-top:5px;letter-spacing:.04em}
+  .kpi-trend.warn{background:#FEF3C7;color:#A16207}
+  .kpi-trend svg{width:9px;height:9px}
+
+  .card{background:#fff;border:1px solid #E5E8F0;border-radius:12px;padding:17px 19px;margin-bottom:12px;break-inside:avoid}
+  .card-title{display:flex;align-items:center;gap:9px;font-size:9.5px;font-weight:900;color:#0F172A;letter-spacing:.13em;text-transform:uppercase;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #F1F3F7}
+  .card-title-bar{width:3px;height:15px;background:linear-gradient(180deg,#1D4ED8,#3B82F6);border-radius:3px}
+  .card-title-ic{width:21px;height:21px;border-radius:7px;background:#EFF6FF;color:#1D4ED8;display:inline-flex;align-items:center;justify-content:center}
+  .card-title-ic svg{width:11px;height:11px}
+
+  .sec-sub{font-size:10px;color:#475569;font-weight:600;margin-top:-2px;margin-bottom:12px;line-height:1.5}
+
+  .assum{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .assum-it{display:flex;align-items:flex-start;gap:9px;padding:10px 11px;background:#FAFBFE;border:1px solid #F1F3F7;border-radius:9px}
+  .assum-ic{width:25px;height:25px;border-radius:7px;background:#EFF6FF;color:#1D4ED8;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .assum-ic svg{width:12px;height:12px}
+  .assum-l{font-size:9px;color:#0F172A;font-weight:800;letter-spacing:-.1px}
+  .assum-v{font-size:12.5px;font-weight:900;color:#1D4ED8;letter-spacing:-.3px;margin-top:2px;line-height:1.1}
+  .assum-d{font-size:8px;color:#64748B;font-weight:500;margin-top:3px;line-height:1.4}
+
+  table.t{width:100%;border-collapse:collapse;font-size:9.5px;margin-top:3px}
+  table.t th{text-align:left;padding:7px 9px;font-size:7.5px;font-weight:900;color:#94A3B8;letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid #E5E8F0;background:#FAFBFE}
+  table.t th.right{text-align:right}
+  table.t td{padding:7px 9px;border-bottom:1px solid #F1F3F7;font-weight:600;color:#1f2937;font-size:9.5px}
+  table.t td.right{text-align:right;font-weight:800;letter-spacing:-.2px}
+  table.t tr.is-current{background:#FFFBEB}
+  table.t tr.is-current td{color:#0F172A;font-weight:900}
+  table.t tr.is-target{background:linear-gradient(135deg,#D1FAE5,#A7F3D0)}
+  table.t tr.is-target td{color:#064E3B;font-weight:900}
+  table.t tr.is-future td{color:#1D4ED8}
+  .pill{display:inline-block;font-size:7px;font-weight:900;padding:2px 6px;border-radius:50px;letter-spacing:.05em;text-transform:uppercase;background:#E5E8F0;color:#64748B}
+
+  .pl{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:3px}
+  .pl-box{padding:13px 15px;border-radius:11px;border:1px solid #E5E8F0}
+  .pl-box.a{background:linear-gradient(135deg,#EFF6FF,#DBEAFE);border-color:#BFDBFE}
+  .pl-box.b{background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border-color:#A7F3D0}
+  .pl-box.c{background:linear-gradient(135deg,#FEF3C7,#FDE68A);border-color:#FCD34D}
+  .pl-l{font-size:8px;font-weight:900;color:#475569;letter-spacing:.13em;text-transform:uppercase;margin-bottom:6px}
+  .pl-v{font-size:22px;font-weight:900;color:#0F172A;letter-spacing:-.9px;line-height:1}
+  .pl-v small{font-size:10px;color:#64748B;font-weight:700;margin-left:2px;letter-spacing:0}
+  .pl-sub{font-size:8.5px;color:#475569;font-weight:600;margin-top:6px;line-height:1.4}
+
+  .note{margin-top:12px;padding:11px 13px;background:#FAFBFE;border:1px dashed #CBD5E1;border-radius:9px;font-size:8.8px;color:#475569;line-height:1.5}
+  .note strong{color:#0F172A;font-weight:900}
+
+  .bridge{display:flex;align-items:center;gap:6px;margin:4px 0 6px}
+  .bridge-step{flex:1;text-align:center;padding:12px 8px;border-radius:10px;background:#FAFBFE;border:1px solid #E5E8F0}
+  .bridge-step.now{background:linear-gradient(135deg,#EFF6FF,#DBEAFE);border-color:#93C5FD}
+  .bridge-step.target{background:linear-gradient(135deg,#D1FAE5,#A7F3D0);border-color:#6EE7B7}
+  .bridge-step-l{font-size:7.5px;font-weight:900;color:#64748B;letter-spacing:.12em;text-transform:uppercase}
+  .bridge-step-v{font-size:20px;font-weight:900;color:#0F172A;letter-spacing:-.8px;margin-top:4px;line-height:1}
+  .bridge-step-d{font-size:8px;color:#475569;font-weight:600;margin-top:3px}
+  .bridge-arrow{font-size:18px;color:#1D4ED8;font-weight:900;flex-shrink:0}
+
+  .check{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid #F1F3F7}
+  .check:last-child{border-bottom:none}
+  .check-n{width:22px;height:22px;border-radius:7px;background:#1D4ED8;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;flex-shrink:0}
+  .check-t{font-size:10px;font-weight:800;color:#0F172A;letter-spacing:-.1px}
+  .check-d{font-size:8.5px;color:#64748B;font-weight:500;margin-top:2px;line-height:1.45}
+
+  .doc-foot{position:absolute;bottom:11mm;left:14mm;right:14mm;padding-top:10px;border-top:1px solid #E5E8F0;display:flex;justify-content:space-between;align-items:center;font-size:7.5px;color:#94A3B8;font-weight:600}
+
+  .final{background:linear-gradient(135deg,#1D4ED8,#1E3A8A);color:#fff;border-radius:14px;padding:22px 26px;margin-top:8px;position:relative;overflow:hidden}
+  .final::before{content:'';position:absolute;top:-80px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(255,255,255,.12),transparent 70%);border-radius:50%}
+  .final-l{font-size:9px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.68);position:relative;z-index:1}
+  .final-v{font-size:32px;font-weight:900;letter-spacing:-1.3px;margin:6px 0;position:relative;z-index:1;line-height:1}
+  .final-d{font-size:10px;color:rgba(255,255,255,.86);font-weight:500;position:relative;z-index:1;line-height:1.55}
+  .final-d strong{color:#fff;font-weight:900}
+
+  .risk{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:9px;margin-bottom:8px}
+  .risk-ic{width:24px;height:24px;border-radius:7px;background:#FEF3C7;color:#A16207;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+  .risk-ic svg{width:12px;height:12px}
+  .risk-t{font-size:9.5px;font-weight:800;color:#92400E}
+  .risk-d{font-size:8.3px;color:#78350F;font-weight:500;margin-top:2px;line-height:1.4}
+</style>
+</head>
+<body>
+
+<!-- ════════ PAGE 1 — Resumen ejecutivo ════════ -->
+<div class="page">
+  <div class="doc-head">
+    <div class="doc-head-l">
+      <img class="doc-head-logo" src="" alt="Pagasi">
+      <div class="doc-head-brand">
+        <span class="doc-head-brand-n">Valuación y equity</span>
+        <span class="doc-head-brand-s">Análisis para socio · Estrictamente confidencial</span>
+      </div>
+    </div>
+    <div class="doc-head-r">
+      <div class="doc-head-r-t">Emitido</div>
+      <div class="doc-head-r-d">28 de mayo, 2026</div>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-tag">Análisis de equity · Socio 20%</div>
+    <div class="hero-title">Tu 20% a $1.000.000 — con 10 concesionarios nuevos</div>
+    <div class="hero-sub">Con el plan de abrir <strong>10 concesionarios de aquí a fin de año</strong>, Pagasi escala su motor de valor 10×. Este documento muestra cuándo tu participación del 20% alcanza $1M y cómo convertirla en efectivo.</div>
+    <div class="hero-meta">
+      <div class="hero-meta-it"><span class="hero-meta-l">Tu participación</span><span class="hero-meta-v">20%</span></div>
+      <div class="hero-meta-it"><span class="hero-meta-l">Valuación hoy</span><span class="hero-meta-v">$2.000.000</span></div>
+      <div class="hero-meta-it"><span class="hero-meta-l">Tu 20% hoy</span><span class="hero-meta-v">$400.000</span></div>
+      <div class="hero-meta-it"><span class="hero-meta-l">Meta de tu 20%</span><span class="hero-meta-v">$1.000.000</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="card-title-bar"></span>
+      <span class="card-title-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M19 9l-5 5-4-4-3 3"/></svg></span>
+      El puente de valuación: de $2M a $5M
+    </div>
+    <div class="sec-sub">Tu venta del 3,75% por $75.000 fija el precio de referencia: $75.000 ÷ 3,75% = <strong>$2M</strong>. Para que tu 20% valga $1M, la empresa debe llegar a $5M (múltiplo de <strong>2,5×</strong>). Con 10 concesionarios, eso pasa este mismo año.</div>
+    <div class="bridge">
+      <div class="bridge-step now"><div class="bridge-step-l">Hoy · Jun</div><div class="bridge-step-v">$2,0M</div><div class="bridge-step-d">Tu 20% = $400k</div></div>
+      <div class="bridge-arrow">→</div>
+      <div class="bridge-step"><div class="bridge-step-l">~Sep</div><div class="bridge-step-v">$3,6M</div><div class="bridge-step-d">Tu 20% = $720k</div></div>
+      <div class="bridge-arrow">→</div>
+      <div class="bridge-step target"><div class="bridge-step-l">~Oct</div><div class="bridge-step-v">$5,2M</div><div class="bridge-step-d">Tu 20% = $1,04M</div></div>
+      <div class="bridge-arrow">→</div>
+      <div class="bridge-step"><div class="bridge-step-l">Dic</div><div class="bridge-step-v">$10,9M</div><div class="bridge-step-d">Tu 20% = $2,18M</div></div>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kpi-l">Múltiplo necesario</div>
+      <div class="kpi-v">2,5<small>×</small></div>
+      <div class="kpi-sub">Valor empresa $2M → $5M</div>
+      <div class="kpi-trend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 14l5-5 5 5"/></svg>Alcanzable 2026</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-l">Upside de tu stake</div>
+      <div class="kpi-v">+$600<small>k</small></div>
+      <div class="kpi-sub">De $400k a $1M (2,5×)</div>
+      <div class="kpi-trend"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 14l5-5 5 5"/></svg>+150%</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-l">$5M (caso base)</div>
+      <div class="kpi-v">Oct<small>'26</small></div>
+      <div class="kpi-sub">~5 meses · con 10 conc.</div>
+      <div class="kpi-trend warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Estimado</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-l">Venta efectiva (líquido)</div>
+      <div class="kpi-v">12-24<small>m</small></div>
+      <div class="kpi-sub">Ligada a ronda o comprador</div>
+      <div class="kpi-trend warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Ventana</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="card-title-bar"></span>
+      <span class="card-title-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+      Valor de tu 20% según valuación de la empresa
+    </div>
+    <table class="t">
+      <thead><tr><th>Valuación empresa</th><th class="right">Tu 20% vale</th><th class="right">vs hoy</th><th>Qué se necesita · fecha aprox.</th></tr></thead>
+      <tbody>
+        <tr class="is-current"><td><strong>$2,0M</strong> <span class="pill" style="background:#FED7AA;color:#9A3412">Hoy</span></td><td class="right">$400.000</td><td class="right">—</td><td>1 concesionario · ~60 motos/mes · Jun 2026</td></tr>
+        <tr><td><strong>$3,0M</strong></td><td class="right">$600.000</td><td class="right">+50%</td><td>~5 conc. · ~500 créditos activos · ~Sep 2026</td></tr>
+        <tr><td><strong>$4,0M</strong></td><td class="right">$800.000</td><td class="right">+100%</td><td>~7 conc. · ~750 créditos activos · ~Sep-Oct 2026</td></tr>
+        <tr class="is-target"><td><strong>$5,0M</strong> <span class="pill" style="background:#10B981;color:#fff">Meta</span></td><td class="right">$1.000.000</td><td class="right">+150%</td><td>~8 conc. · ~900 créditos activos · ~Oct 2026</td></tr>
+        <tr class="is-future"><td><strong>$10,9M</strong></td><td class="right">$2.180.000</td><td class="right">+445%</td><td>11 conc. maduros · cartera ~1.900 · Dic 2026</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><strong>Lo clave:</strong> tu 20% hoy vale $400k en papel. Con el plan de 10 concesionarios y la utilidad real de $1.470/moto, la empresa cruza los $5M alrededor de <strong>octubre 2026</strong> — tu participación llega a $1M — y para diciembre el valor puede superar los $2M. El motor ya está probado; ahora es pura ejecución de la expansión.</div>
+  </div>
+
+  <div class="doc-foot"><div>Página 1 de 4 · Resumen ejecutivo</div><div>Pagasi · Confidencial · 28-may-2026</div></div>
+</div>
+
+<!-- ════════ PAGE 2 — Metodología + unit economics ════════ -->
+<div class="page">
+  <div class="doc-head">
+    <div class="doc-head-l">
+      <img class="doc-head-logo" src="" alt="Pagasi">
+      <div class="doc-head-brand"><span class="doc-head-brand-n">Cómo se valora Pagasi</span><span class="doc-head-brand-s">Metodología y economía unitaria</span></div>
+    </div>
+    <div class="doc-head-r"><div class="doc-head-r-t">Página</div><div class="doc-head-r-d">2 de 4</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="card-title-bar"></span>
+      <span class="card-title-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+      Tres métodos para valorar un negocio de financiamiento
+    </div>
+    <div class="sec-sub">Pagasi se valora triangulando tres lentes. Para sostener $5M, las tres deben apuntar a lo mismo.</div>
+    <div class="pl">
+      <div class="pl-box a"><div class="pl-l">1 · Múltiplo de utilidad</div><div class="pl-v">4-6<small>×</small></div><div class="pl-sub">$5M = utilidad neta ~$1M/año × múltiplo. El método principal para un prestamista rentable.</div></div>
+      <div class="pl-box b"><div class="pl-l">2 · Valor de cartera</div><div class="pl-v">1,2-1,5<small>×</small></div><div class="pl-sub">Cartera vigente (saldos por cobrar) × prima. $5M ≈ cartera de ~$3,5M performing.</div></div>
+      <div class="pl-box c"><div class="pl-l">3 · Múltiplo de ingresos</div><div class="pl-v">2-3<small>×</small></div><div class="pl-sub">Ingresos anualizados × múltiplo. $5M ≈ run-rate de ingresos ~$2M/año.</div></div>
+    </div>
+    <div class="note"><strong>Lo que expande el múltiplo:</strong> track record auditado, mora baja sostenida al escalar, modelo replicable documentado y cuotas en USD que neutralizan el riesgo bolívar. Tu <strong>0% de morosidad</strong> es el activo más valioso para defender un múltiplo alto cuando llegue un comprador.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="card-title-bar"></span>
+      <span class="card-title-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-5"/></svg></span>
+      Economía por moto + gastos operativos
+    </div>
+    <div class="sec-sub">El motor de la valuación. Cada moto colocada genera esta utilidad durante la vida del crédito (12 meses).</div>
+    <table class="t">
+      <thead><tr><th>Concepto</th><th class="right">Monto</th><th>Detalle</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Precio financiado total</strong></td><td class="right" style="color:#047857">+$2.820</td><td>Inicial $780 + 24 cuotas × $85</td></tr>
+        <tr><td>Costo de la moto (COGS)</td><td class="right" style="color:#991B1B">−$1.200</td><td>Costo mayoreo Keeway / Toro / Haojin (est.)</td></tr>
+        <tr><td>Comisión de venta</td><td class="right" style="color:#991B1B">−$10</td><td>Pago al vendedor por colocación</td></tr>
+        <tr><td>Provisión por mora (5%)</td><td class="right" style="color:#991B1B">−$140</td><td>Reserva por incobrables (hoy 0%, conservador)</td></tr>
+        <tr><td>Cobranza</td><td class="right" style="color:#64748B">$0</td><td>Ya incluida en la nómina central</td></tr>
+        <tr><td>Costo de capital</td><td class="right" style="color:#64748B">$0</td><td>El capital se reinvierte — no queda inmovilizado</td></tr>
+        <tr class="is-target"><td><strong>Utilidad neta por moto</strong></td><td class="right">+$1.470</td><td><strong>~52% de margen neto sobre el contrato</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="note"><strong>Gastos operativos centrales: $5.000/mes.</strong> Incluyen nómina (cobranza adentro), sistemas y administración. El único costo grande aparte de COGS es la comisión de venta ($10) y la provisión de mora (5%). Al reinvertir el capital de las cuotas, no hay costo de capital inmovilizado. <strong>El único número a validar es el costo real de la moto</strong> — cada $100 de cambio mueve la valuación ~$0,5-0,7M.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="card-title-bar"></span>
+      <span class="card-title-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4"/></svg></span>
+      De utilidad por moto a utilidad de la empresa
+    </div>
+    <div class="assum">
+      <div class="assum-it"><div class="assum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/></svg></div><div style="flex:1"><div class="assum-l">Utilidad mensual por crédito activo</div><div class="assum-v">~$122 / mes</div><div class="assum-d">$1.470 ÷ 12 meses. Cada crédito vigente "rinde" esto cada mes que paga.</div></div></div>
+      <div class="assum-it"><div class="assum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 .01 0"/></svg></div><div style="flex:1"><div class="assum-l">Utilidad ~$1M/año necesita</div><div class="assum-v">~720 activos</div><div class="assum-d">720 créditos × $1.470 − $60k overhead ≈ $1M/año → sostiene una valuación de $5M.</div></div></div>
+    </div>
+  </div>
+
+  <div class="doc-foot"><div>Página 2 de 4 · Metodología y economía unitaria</div><div>Pagasi · Confidencial · 28-may-2026</div></div>
+</div>
+
+<!-- ════════ PAGE 3 — Plan de 10 concesionarios + modelo ════════ -->
+<div class="page">
+  <div class="doc-head">
+    <div class="doc-head-l">
+      <img class="doc-head-logo" src="" alt="Pagasi">
+      <div class="doc-head-brand"><span class="doc-head-brand-n">Plan de expansión</span><span class="doc-head-brand-s">10 concesionarios · modelo mensual 2026</span></div>
+    </div>
+    <div class="doc-head-r"><div class="doc-head-r-t">Página</div><div class="doc-head-r-d">3 de 4</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="card-title-bar"></span>
+      <span class="card-title-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
+      Plan: abrir 10 concesionarios de aquí a diciembre
+    </div>
+    <div class="sec-sub">Cada concesionario es una "copia" del motor que ya funciona (~60 motos/mes maduro). El crecimiento es lineal en concesionarios pero exponencial en cartera, porque cada crédito sigue pagando 12 meses.</div>
+    <div class="bridge">
+      <div class="bridge-step now"><div class="bridge-step-l">Hoy · Jun</div><div class="bridge-step-v">1</div><div class="bridge-step-d">concesionario<br>~60 motos/mes</div></div>
+      <div class="bridge-arrow">→</div>
+      <div class="bridge-step"><div class="bridge-step-l">~Sep</div><div class="bridge-step-v">6</div><div class="bridge-step-d">concesionarios<br>~220 motos/mes</div></div>
+      <div class="bridge-arrow">→</div>
+      <div class="bridge-step target"><div class="bridge-step-l">Dic</div><div class="bridge-step-v">11</div><div class="bridge-step-d">concesionarios<br>~560 motos/mes</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="card-title-bar"></span>
+      <span class="card-title-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M9 4v18"/></svg></span>
+      Proyección mensual 2026 y valuación implícita
+    </div>
+    <table class="t">
+      <thead><tr><th>Mes</th><th class="right">Conc.</th><th class="right">Motos/mes</th><th class="right">Cartera activa</th><th class="right">Utilidad run-rate</th><th class="right">Valuación</th><th class="right">Tu 20%</th></tr></thead>
+      <tbody>
+        <tr class="is-current"><td><strong>Jun</strong> <span class="pill" style="background:#FED7AA;color:#9A3412">Hoy</span></td><td class="right">1</td><td class="right">60</td><td class="right">~124</td><td class="right">—</td><td class="right">$2,0M</td><td class="right">$400k</td></tr>
+        <tr class="is-future"><td><strong>Jul</strong></td><td class="right">2</td><td class="right">90</td><td class="right">~215</td><td class="right">$256k</td><td class="right">$2,2M</td><td class="right">$440k</td></tr>
+        <tr class="is-future"><td><strong>Ago</strong></td><td class="right">4</td><td class="right">150</td><td class="right">~365</td><td class="right">$477k</td><td class="right">$2,7M</td><td class="right">$540k</td></tr>
+        <tr class="is-future"><td><strong>Sep</strong></td><td class="right">6</td><td class="right">220</td><td class="right">~585</td><td class="right">$800k</td><td class="right">$3,6M</td><td class="right">$720k</td></tr>
+        <tr class="is-target"><td><strong>Oct</strong> <span class="pill" style="background:#10B981;color:#fff">Meta $5M</span></td><td class="right">8</td><td class="right">320</td><td class="right">~905</td><td class="right">$1,27M</td><td class="right">$5,2M</td><td class="right">$1,04M</td></tr>
+        <tr class="is-future"><td><strong>Nov</strong></td><td class="right">10</td><td class="right">430</td><td class="right">~1.335</td><td class="right">$1,90M</td><td class="right">$7,6M</td><td class="right">$1,52M</td></tr>
+        <tr class="is-future"><td><strong>Dic</strong></td><td class="right">11</td><td class="right">560</td><td class="right">~1.895</td><td class="right">$2,73M</td><td class="right">$10,9M</td><td class="right">$2,18M</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><strong>Lectura:</strong> con los 10 concesionarios abriendo de forma escalonada, la cartera activa pasa de 124 a <strong>~1.900 créditos</strong> en diciembre. Con la utilidad real de $1.470/moto, la valuación cruza <strong>$5M en octubre</strong> — donde tu 20% vale ~$1,04M — y termina el año cerca de $11M. Múltiplo usado: ~4× la utilidad run-rate (conservador para etapa temprana en Venezuela). "Run-rate" = el ritmo de ese mes anualizado ×12, no lo ganado en el año.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="card-title-bar"></span>
+      <span class="card-title-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l3 8 4-16 3 8h4"/></svg></span>
+      Escenarios: ¿cuándo tu 20% llega a $1M?
+    </div>
+    <table class="t">
+      <thead><tr><th>Escenario</th><th class="right">Qué pasa</th><th class="right">$5M en</th><th class="right">Fecha aprox.</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Conservador</strong> <span class="pill" style="background:#FEE2E2;color:#991B1B">Lento</span></td><td class="right">Solo ~5-6 conc. productivos</td><td class="right">~7 meses</td><td class="right">Dic 2026</td></tr>
+        <tr class="is-current"><td><strong>Base (tu plan)</strong> <span class="pill" style="background:#FEF3C7;color:#A16207">Esperado</span></td><td class="right">10 conc. escalonados</td><td class="right">~5 meses</td><td class="right">Oct 2026</td></tr>
+        <tr class="is-target"><td><strong>Agresivo</strong> <span class="pill" style="background:#10B981;color:#fff">Rápido</span></td><td class="right">10 conc. + mora 0% (múltiplo premium)</td><td class="right">~3 meses</td><td class="right">Ago-Sep 2026</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="doc-foot"><div>Página 3 de 4 · Plan de expansión</div><div>Pagasi · Confidencial · 28-may-2026</div></div>
+</div>
+
+<!-- ════════ PAGE 4 — Reto de capital, liquidez, riesgos ════════ -->
+<div class="page">
+  <div class="doc-head">
+    <div class="doc-head-l">
+      <img class="doc-head-logo" src="" alt="Pagasi">
+      <div class="doc-head-brand"><span class="doc-head-brand-n">Reto, liquidez y riesgos</span><span class="doc-head-brand-s">Cómo se financia y cómo se vende</span></div>
+    </div>
+    <div class="doc-head-r"><div class="doc-head-r-t">Página</div><div class="doc-head-r-d">4 de 4</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="card-title-bar"></span>
+      <span class="card-title-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg></span>
+      El verdadero reto: financiar el inventario
+    </div>
+    <div class="sec-sub">Abrir 10 concesionarios no se limita por demanda — se limita por <strong>cuántas motos podés comprar</strong>. Este es el número que hay que resolver.</div>
+    <div class="pl">
+      <div class="pl-box c"><div class="pl-l">Motos a colocar Jun–Dic</div><div class="pl-v">~1.830</div><div class="pl-sub">Para llegar a 11 concesionarios productivos</div></div>
+      <div class="pl-box c"><div class="pl-l">Capital de inventario</div><div class="pl-v">~$2,2<small>M</small></div><div class="pl-sub">1.830 motos × ~$1.200 costo mayoreo</div></div>
+      <div class="pl-box b"><div class="pl-l">Iniciales que entran</div><div class="pl-v">~$1,4<small>M</small></div><div class="pl-sub">Financian gran parte del restock</div></div>
+    </div>
+    <div class="note"><strong>El gap a resolver:</strong> de los ~$2,2M de inventario, las iniciales cubren ~$1,4M; el resto (~$0,8M) se financia con las cuotas que entran cada mes y/o capital externo. Por eso una <strong>ronda de capital o línea de crédito para inventario</strong> es lo que destraba el plan de 10 concesionarios — y, de paso, crea la ventana natural para que vendas tu 20%.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="card-title-bar"></span>
+      <span class="card-title-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+      Cómo convertir tu 20% en efectivo
+    </div>
+    <div class="sec-sub">Valer $1M en papel no es lo mismo que cobrarlo. Estas son las 4 vías reales, ordenadas por probabilidad:</div>
+    <div class="check"><span class="check-n">1</span><div><div class="check-t">Venta secundaria en la ronda de capital — la más probable</div><div class="check-d">La expansión a 10 concesionarios casi seguro requiere levantar capital. Ahí vendés parte (o todo) tu 20% al precio de la ronda. Es el camino más limpio y fija un precio creíble.</div></div></div>
+    <div class="check"><span class="check-n">2</span><div><div class="check-t">Comprador estratégico — el precio más alto</div><div class="check-d">Con 11 concesionarios y mora baja, una financiera o cadena más grande puede comprar Pagasi al múltiplo más alto. Requiere financieros auditados.</div></div></div>
+    <div class="check"><span class="check-n">3</span><div><div class="check-t">Recompra por los otros socios</div><div class="check-d">Los mayoritarios te compran. Limpio, pero depende de que tengan el efectivo o financiamiento.</div></div></div>
+    <div class="check"><span class="check-n">4</span><div><div class="check-t">Venta estructurada / parcial</div><div class="check-d">Vendés una parte ya (a $4M tu 20% vale $800k) y el resto cuando la valuación madure. Reduce tu riesgo si no querés esperar.</div></div></div>
+    <div class="note"><strong>Recomendación:</strong> la ventana realista para vender tu 20% cerca de $1M es de <strong>12 a 24 meses</strong>, idealmente sincronizada con la ronda de capital que financia la expansión. La buena noticia: el mismo plan que multiplica tu valor (abrir 10 conc.) es el que obliga a levantar capital y crea tu salida.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span class="card-title-bar"></span>
+      <span class="card-title-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg></span>
+      Riesgos del plan de 10 concesionarios
+    </div>
+    <div class="risk"><div class="risk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg></div><div><div class="risk-t">Capital de inventario (#1)</div><div class="risk-d">$2,2M para comprar las motos. Sin línea de crédito o ronda, la expansión se frena aunque haya demanda.</div></div></div>
+    <div class="risk"><div class="risk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4M12 16h.01M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z"/></svg></div><div><div class="risk-t">Mora al escalar 10×</div><div class="risk-d">El 0% se logró con cartera chica y selección cuidadosa. Mantener la disciplina de crédito en 11 concesionarios es el mayor reto operativo. Cada 1% de mora sobre 1.900 créditos ≈ $30k en riesgo.</div></div></div>
+    <div class="risk"><div class="risk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 .01 0"/></svg></div><div><div class="risk-t">Ejecución: abrir 10 conc. en 7 meses</div><div class="risk-d">Es más de uno por mes. Cada uno necesita local, vendedor y supervisión. Si solo 5-6 maduran a tiempo, el escenario pasa de "base" a "conservador" (caes a Q1 2027).</div></div></div>
+  </div>
+
+  <div class="final">
+    <div class="final-l">Conclusión para tu 20%</div>
+    <div class="final-v">$1M en ~5 meses (Oct 2026)</div>
+    <div class="final-d">Con tu economía real ($1.470 de utilidad por moto) y el plan de <strong>10 concesionarios</strong>, Pagasi cruza los <strong>$5M de valuación hacia octubre 2026</strong> y tu 20% alcanza <strong>$1.000.000</strong>, camino a más de $2M para fin de año. El valor en papel llega rápido; la <strong>venta efectiva</strong> es realista en <strong>12-24 meses</strong>, sincronizada con la ronda de capital que financia la expansión. Tu jugada: empujar la apertura de concesionarios, asegurar el capital de inventario y blindar la mora baja.</div>
+  </div>
+
+  <div class="note" style="margin-top:14px"><strong>Aviso importante:</strong> documento interno y confidencial preparado a pedido de un socio de Pagasi. Las valuaciones son <strong>estimaciones</strong> basadas en: precio de referencia de tu venta reciente ($2M), plan de abrir 10 concesionarios, ritmo real (~60 motos/mes/concesionario), gastos operativos $5.000/mes, comisión $10/moto, provisión de mora 5%, cobranza incluida en nómina y capital reinvertido (sin costo de inmovilización). El único supuesto grande pendiente de validar es el costo real de la moto (~$1.200 estimado). No constituye asesoría financiera, legal ni de inversión, ni oferta de compra/venta de acciones. Los múltiplos dependen de condiciones de mercado y del apetito de cada comprador.</div>
+
+  <div class="doc-foot"><div>Página 4 de 4 · Reto, liquidez y conclusión</div><div>Pagasi · Confidencial · 28-may-2026</div></div>
+</div>
+
+</body>
+</html>
