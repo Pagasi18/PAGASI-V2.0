@@ -1581,10 +1581,18 @@ var DB = {
       }
       if(catalogoDoc && catalogoDoc.exists){
         var catData = catalogoDoc.data() || {};
-        if(Array.isArray(catData.items) && catData.items.length){
+        // Solo usar el catálogo de Firestore si está en la versión actual (2).
+        // Si es viejo/sin versión, mantener el catálogo completo hardcoded y re-sembrar Firestore una vez.
+        if(Array.isArray(catData.items) && catData.items.length && (catData.version||0) >= 2){
           CATALOGO.splice(0, CATALOGO.length);
           catData.items.forEach(function(item){ CATALOGO.push(item); });
+        } else {
+          db.collection('config').doc('catalogo').set({items: CATALOGO, version: 2}).catch(function(){});
+          try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); localStorage.setItem('pagasi_catalogo_ver','2'); }catch(e){}
         }
+      } else {
+        db.collection('config').doc('catalogo').set({items: CATALOGO, version: 2}).catch(function(){});
+        try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); localStorage.setItem('pagasi_catalogo_ver','2'); }catch(e){}
       }
       if(planesDoc && planesDoc.exists){
         var extraData = planesDoc.data() || {};
@@ -1868,7 +1876,9 @@ try{
 
 try {
   var _catLs = JSON.parse(localStorage.getItem('pagasi_catalogo_config')||'null');
-  if(Array.isArray(_catLs) && _catLs.length){ CATALOGO.splice(0, CATALOGO.length); _catLs.forEach(function(item){ CATALOGO.push(item); }); }
+  var _catVer = parseInt(localStorage.getItem('pagasi_catalogo_ver')||'0',10);
+  // Solo usar caché local si está en la versión actual (2); si es vieja, se ignora y queda el catálogo completo hardcoded
+  if(Array.isArray(_catLs) && _catLs.length && _catVer >= 2){ CATALOGO.splice(0, CATALOGO.length); _catLs.forEach(function(item){ CATALOGO.push(item); }); }
   var _planLs = JSON.parse(localStorage.getItem('pagasi_config_plan')||'null');
   if(_planLs && typeof _planLs==='object'){
     if(Object.prototype.hasOwnProperty.call(_planLs,'factor')) PLAN.factor = _planLs.factor;

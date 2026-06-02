@@ -249,8 +249,8 @@ function openEditCatalogo(id){
     }
     // Save to Firestore
     if(db){
-      db.collection('config').doc('catalogo').set({items: CATALOGO})
-        .then(function(){ try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); }catch(_e){} })
+      db.collection('config').doc('catalogo').set({items: CATALOGO, version: 2})
+        .then(function(){ try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); localStorage.setItem('pagasi_catalogo_ver','2'); }catch(_e){} })
         .catch(function(){});
     }
     closeM(); nav('plan'); return true;
@@ -280,8 +280,8 @@ function cDelCatalogo(id){
   var i = CATALOGO.findIndex(function(c){return c.id===id;});
   if(i>=0) CATALOGO.splice(i,1);
   if(db){
-    db.collection('config').doc('catalogo').set({items:CATALOGO})
-      .then(function(){ try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); }catch(_e){} })
+    db.collection('config').doc('catalogo').set({items:CATALOGO, version: 2})
+      .then(function(){ try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); localStorage.setItem('pagasi_catalogo_ver','2'); }catch(_e){} })
       .catch(function(){});
   }
   closeM(); nav('plan'); toast('Modelo eliminado','success');

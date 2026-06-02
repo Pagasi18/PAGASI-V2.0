@@ -1627,7 +1627,7 @@ function _wzGuardar(){
     var _wzCatEntry = {id:_wzNewCatId, modelo:_wzCatModelo, precio:_wzCatPrecio};
     if(_wzCatMarca) _wzCatEntry.marca = _wzCatMarca;
     CATALOGO.push(_wzCatEntry);
-    if(db){ db.collection('config').doc('catalogo').set({items:CATALOGO}).then(function(){ try{localStorage.setItem('pagasi_catalogo_config',JSON.stringify(CATALOGO));}catch(e){} }).catch(function(){}); }
+    if(db){ db.collection('config').doc('catalogo').set({items:CATALOGO, version:2}).then(function(){ try{localStorage.setItem('pagasi_catalogo_config',JSON.stringify(CATALOGO));localStorage.setItem('pagasi_catalogo_ver','2');}catch(e){} }).catch(function(){}); }
     WZ.motoModelo = _wzCatModelo;
     WZ.precio = _wzCatPrecio;
     if(_wzCatMarca) WZ.marca = _wzCatMarca;
