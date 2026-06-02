@@ -130,16 +130,16 @@ function _wzRender(motoId){
     ? motosDisp.map(function(m){ return '<option value="'+m.id+'" data-precio="'+m.precio+'"'+(motoId===m.id?' selected':'')+'>'+m.modelo+' — $'+m.precio.toFixed(2)+'</option>'; }).join('')
     : '<option value="">— No hay motos disponibles —</option>';
 
-  // Catálogo COMPLETO del módulo Plan y Precios — todas las motos, organizadas por sede y modelo.
-  // Se incluye la sede en la etiqueta para distinguir el mismo modelo en sedes distintas.
-  var _catOrdenado = (CATALOGO||[]).filter(function(c){ return c && c.modelo; }).slice().sort(function(a,b){
-    var sa = (a.sede||'~~'), sb = (b.sede||'~~');
-    if(sa !== sb) return String(sa).localeCompare(String(sb),'es',{sensitivity:'base'});
-    return String(a.modelo).localeCompare(String(b.modelo),'es',{numeric:true,sensitivity:'base'});
+  // Catálogo COMPLETO del módulo Plan y Precios — TODAS las motos sin excepción (misma fuente: CATALOGO).
+  // No se descarta ningún item; se muestra fallback si faltara modelo/precio. Orden A→Z por modelo (numérico).
+  var _catOrdenado = (CATALOGO||[]).filter(function(c){ return !!c; }).slice().sort(function(a,b){
+    return String(a.modelo||'').localeCompare(String(b.modelo||''),'es',{numeric:true,sensitivity:'base'});
   });
   var catOptions = _catOrdenado.map(function(c){
+    var modelo = c.modelo || ('Modelo '+(c.id||'?'));
+    var precio = parseFloat(c.precio)||0;
     var sede = c.sede ? ' · '+c.sede : '';
-    return '<option value="'+c.precio+'" data-modelo="'+c.modelo+'">'+c.modelo+' — $'+(parseFloat(c.precio)||0).toFixed(2)+sede+'</option>';
+    return '<option value="'+precio+'" data-modelo="'+modelo+'">'+modelo+' — $'+precio.toFixed(2)+sede+'</option>';
   }).join('') + '<option value="__wz_new_cat__">＋ Agregar nueva moto al catálogo...</option>';
 
   var step2 = '<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:14px;margin-bottom:12px">'
