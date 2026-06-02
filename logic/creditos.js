@@ -130,19 +130,16 @@ function _wzRender(motoId){
     ? motosDisp.map(function(m){ return '<option value="'+m.id+'" data-precio="'+m.precio+'"'+(motoId===m.id?' selected':'')+'>'+m.modelo+' — $'+m.precio.toFixed(2)+'</option>'; }).join('')
     : '<option value="">— No hay motos disponibles —</option>';
 
-  // Catálogo completo, organizado: sin duplicados (mismo modelo+precio) y ordenado A→Z por modelo
-  var _catVistos = {};
-  var _catOrdenado = (CATALOGO||[]).filter(function(c){
-    if(!c || !c.modelo) return false;
-    var k = (c.modelo+'|'+c.precio).toUpperCase();
-    if(_catVistos[k]) return false;
-    _catVistos[k] = true;
-    return true;
-  }).slice().sort(function(a,b){
+  // Catálogo COMPLETO del módulo Plan y Precios — todas las motos, organizadas por sede y modelo.
+  // Se incluye la sede en la etiqueta para distinguir el mismo modelo en sedes distintas.
+  var _catOrdenado = (CATALOGO||[]).filter(function(c){ return c && c.modelo; }).slice().sort(function(a,b){
+    var sa = (a.sede||'~~'), sb = (b.sede||'~~');
+    if(sa !== sb) return String(sa).localeCompare(String(sb),'es',{sensitivity:'base'});
     return String(a.modelo).localeCompare(String(b.modelo),'es',{numeric:true,sensitivity:'base'});
   });
   var catOptions = _catOrdenado.map(function(c){
-    return '<option value="'+c.precio+'" data-modelo="'+c.modelo+'">'+c.modelo+' — $'+c.precio.toFixed(2)+'</option>';
+    var sede = c.sede ? ' · '+c.sede : '';
+    return '<option value="'+c.precio+'" data-modelo="'+c.modelo+'">'+c.modelo+' — $'+(parseFloat(c.precio)||0).toFixed(2)+sede+'</option>';
   }).join('') + '<option value="__wz_new_cat__">＋ Agregar nueva moto al catálogo...</option>';
 
   var step2 = '<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:14px;margin-bottom:12px">'
@@ -921,16 +918,23 @@ function _wzActualizarPrecioBaseDesdePrecio(){
 // ── Sincronizar costo objetivo del bloque de pago de moto del wizard ──
 function _wzMpagoSync(){
   var wrap = document.getElementById('wz-mpago-wrap');
-  if(!wrap || wrap.style.display==='none') return;
+  if(!wrap) return;
   var pBaseInp = document.getElementById('wz_precio_base_real');
   var pInp = document.getElementById('wz_precio');
   var costo = pBaseInp && parseFloat(pBaseInp.value)>0
     ? parseFloat(pBaseInp.value)
-    : (pInp && parseFloat(pInp.value)>0 ? parseFloat(pInp.value) : 0);
-  // Si la primera fila aún está vacía, precargar con inicial real
-  var iniReal = 0;
-  try { var pc = getWzPlanConfig(); iniReal = parseFloat(pc&&pc.ini)||0; } catch(e){}
-  _mpagoSetCosto('wzmpago', costo, iniReal>0 ? iniReal : null);
+    : (pInp && parseFloat(pInp.value)>0 ? parseFloat(pInp.value) : (parseFloat(WZ.precio)||0));
+  // El bloque "forma de pago de la moto" aplica solo a motos del catálogo (no de inventario).
+  // Es autoritativo: muestra/oculta según el estado, así no se pierde al cambiar de plan (global/personalizado/APY).
+  var esCatalogo = !WZ.motoInvId;
+  if(esCatalogo && costo>0){
+    wrap.style.display='block';
+    var iniReal = 0;
+    try { var pc = getWzPlanConfig(); iniReal = parseFloat(pc&&pc.ini)||0; } catch(e){}
+    _mpagoSetCosto('wzmpago', costo, iniReal>0 ? iniReal : null);
+  } else if(!esCatalogo){
+    wrap.style.display='none';
+  }
 }
 
 // ── Selección de moto del inventario ──
