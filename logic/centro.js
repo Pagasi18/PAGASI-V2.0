@@ -530,6 +530,7 @@ function wtHTML(){
       html+='<span style="font-size:13px;font-weight:800;color:var(--ink);flex:1">'+col.label+'</span>';
       html+='<span style="background:'+col.bg+';color:'+col.tc+';font-size:11px;font-weight:800;padding:2px 9px;border-radius:20px">'+col.tasks.length+'</span>';
       if(venc>0) html+='<span style="background:rgba(226,75,74,.12);color:#a32d2d;font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px">'+venc+' venc.</span>';
+      if(col.id==='completada' && col.tasks.length>0) html+='<button class="btn btn-g btn-xs" title="Eliminar todas las tareas completadas" onclick="event.stopPropagation();wtDeleteCompletadas()" style="padding:3px 7px;display:inline-flex;align-items:center;gap:4px;color:var(--red);border-color:rgba(226,75,74,.3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/></svg>Limpiar</button>';
       html+='</div>';
       html+='<div style="height:2px;border-radius:2px;background:'+col.bg+';margin-bottom:10px"></div>';
       col.tasks.forEach(function(t){ html+=wtKanbanCard(t,today); });
@@ -643,6 +644,19 @@ function wtDrop(e,nuevoEstado){ e.preventDefault(); e.currentTarget.style.backgr
 function wtNextStatus(id){ var t=(S.tareas||[]).find(function(x){return x.id===id;}); if(!t) return; t.estado=t.estado==='pendiente'?'proceso':(t.estado==='proceso'?'completada':'pendiente'); t.updatedAt=new Date().toISOString(); wtPersist(t); nav('centro'); }
 function wtArchive(id){ var t=(S.tareas||[]).find(function(x){return x.id===id;}); if(!t) return; if(!confirm('Archivar esta tarea?')) return; t.archivado=true; t.archivedAt=new Date().toISOString(); t.updatedAt=new Date().toISOString(); wtPersist(t); closeM(); nav('centro'); toast('Tarea archivada','info'); }
 function wtRestore(id){ var t=(S.tareas||[]).find(function(x){return x.id===id;}); if(!t) return; t.archivado=false; t.updatedAt=new Date().toISOString(); wtPersist(t); nav('centro'); toast('Tarea restaurada','ok'); }
+function wtDeleteCompletadas(){
+  var done=(S.tareas||[]).filter(function(t){ return !t.eliminado && t.estado==='completada' && wtIsMine(t); });
+  if(!done.length){ toast('No hay tareas completadas','info'); return; }
+  if(!confirm('¿Eliminar '+done.length+' tarea(s) completada(s)? Se quitan del tablero.')) return;
+  done.forEach(function(t){
+    t.eliminado=true; t.updatedAt=new Date().toISOString();
+    if(typeof DB!=='undefined' && DB.saveTarea) DB.saveTarea(t);
+  });
+  wtSaveLocal(); updateBadge(); nav('centro');
+  if(typeof logActividad==='function') logActividad('Eliminó completadas','centro','tareas',done.length+' tarea(s)');
+  toast(done.length+' tarea(s) completada(s) eliminada(s)','ok');
+}
+window.wtDeleteCompletadas = wtDeleteCompletadas;
 function wtSetFilter(k){ WT_FILTER=k; nav('centro'); }
 function wtResetDemo(){ S.tareas=wtDemoTasks(); wtSaveLocal(); updateBadge(); nav('centro'); toast('Data demo cargada','ok'); }
 
