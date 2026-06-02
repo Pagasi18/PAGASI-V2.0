@@ -426,210 +426,93 @@ PG.dash = function(){
 
   </div>
 
-  <!-- ROW 2b: Mora + Cuotas -->
-  <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:18px">
+    <!-- ROW 2b: 6 cards de operación (mismo tamaño que la fila superior) -->
+  <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;margin-bottom:18px">
 
-    <div class="card">
-      <div class="ch" style="margin-bottom:14px">
-        <div>
-          <div class="ct" style="color:var(--red)">Mora por Mes</div>
-          <div class="cs">Créditos activos con mora · 6 meses</div>
+    <!-- 1 · Mora por mes -->
+    <div class="card dash-kpi" onclick="nav(&quot;cobranza&quot;)" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--red);font-family:var(--fm)">Mora por mes</span>
+        <span style="font-size:9px;background:var(--reds);color:var(--red);padding:2px 7px;border-radius:20px;font-weight:700">6 meses</span>
+      </div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:${mora>0?'var(--red)':'var(--green)'};margin-bottom:4px">${mora>0?mora:'✓'}</div>
+      <div style="font-size:11px;color:var(--ink3)">${mora>0?'Créditos con atraso':'Sin atrasos'}</div>
+      ${(function(){try{var d=(typeof getMoraMensual==='function')?getMoraMensual():[];if(!d||!d.length)return'';var mx=Math.max(1,...d.map(function(x){return x.mora||0;}));return'<div style="display:flex;align-items:flex-end;gap:4px;height:42px;margin-top:10px;padding-top:9px;border-top:1px solid var(--rim)">'+d.map(function(x){var h=Math.max(3,Math.round((x.mora||0)/mx*26));return'<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end"><div style="width:100%;max-width:13px;background:var(--red);opacity:.8;border-radius:3px 3px 0 0;height:'+h+'px"></div><span style="font-size:7px;color:var(--ink3);font-family:var(--fm)">'+x.label+'</span></div>';}).join('')+'</div>';}catch(e){return'';}})()}
+    </div>
+
+    <!-- 2 · Inventario motos -->
+    <div class="card dash-kpi" onclick="nav(&quot;motos&quot;)" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Inventario motos</span>
+        <span style="font-size:9px;background:var(--gs);color:var(--p1);padding:2px 7px;border-radius:20px;font-weight:700">${mDisp+mFin+mRec+mInv} total</span>
+      </div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:var(--green);margin-bottom:4px">${mDisp}</div>
+      <div style="font-size:11px;color:var(--ink3)">Disponibles para vender</div>
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim)">
+        <div style="display:flex;height:7px;border-radius:4px;overflow:hidden;background:var(--rim);margin-bottom:8px">
+          ${(function(){var t=Math.max(1,mDisp+mFin+mRec+mInv);return [['#06B06A',mDisp],['#2563EB',mFin],['#D93B5A',mRec],['#5B8DEF',mInv]].map(function(p){return '<div style="width:'+(p[1]/t*100)+'%;background:'+p[0]+'"></div>';}).join('');})()}
         </div>
-        <button class="btn btn-g btn-sm" onclick="event.stopPropagation();nav('cobranza')">Ver detalle</button>
-      </div>
-      <div style="position:relative;height:150px">
-        <canvas id="mora-chart" style="width:100%;height:100%"></canvas>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 8px">
+          ${[['#06B06A','Disp',mDisp],['#2563EB','Fin',mFin],['#D93B5A','Rec',mRec],['#5B8DEF','Inv',mInv]].map(function(p){return '<div style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:'+p[0]+';flex-shrink:0"></span><span style="font-size:9px;color:var(--ink3);flex:1">'+p[1]+'</span><span style="font-size:10px;font-weight:700;color:var(--ink);font-family:var(--fm)">'+p[2]+'</span></div>';}).join('')}
+        </div>
       </div>
     </div>
 
-    <div class="card" style="display:flex;flex-direction:column">
-      <div class="ch" style="margin-bottom:10px">
-        <div class="ct">Cuotas Próximas</div>
-        <span class="bdg ${hoy.length>0?'b-a':'b-g'}" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">${hoy.length}</span>
+    <!-- 3 · Cartera por estado -->
+    <div class="card dash-kpi" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Cartera por estado</span>
+        <span style="font-size:9px;background:var(--gs);color:var(--p1);padding:2px 7px;border-radius:20px;font-weight:700">${totalCreds} créd.</span>
       </div>
-      <div style="display:flex;flex-direction:column;gap:7px;flex:1;overflow:auto;max-height:170px">
-        ${hoy.length===0?'<div style="text-align:center;padding:20px;color:var(--ink3);font-size:12px">Sin cuotas próximas</div>':''}
-        ${hoy.slice(0,5).map(c=>{
-          const start=new Date(c.fecha);
-          const cuotaNum=(c.pagado||0)+1;
-          const vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
-          const diff=Math.round((vence-new Date())/(24*60*60*1000));
-          const col = diff<0?'var(--red)':diff<=1?'var(--amber)':'var(--green)';
-          const lbl = diff<0?`${Math.abs(diff)}d atraso`:diff===0?'Hoy':`en ${diff}d`;
-          return`<div onclick="openAddPago()" style="background:var(--surf2);border:1px solid var(--rim);border-radius:9px;padding:8px 11px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all .12s" onmouseover="this.style.background='var(--lift)'" onmouseout="this.style.background='var(--surf2)'">
-            <div>
-              <div style="font-weight:600;color:var(--ink);font-size:12px">${c.cli}</div>
-              <div style="font-size:10px;color:${col};font-weight:700;font-family:var(--fm)">${lbl}</div>
-            </div>
-            <div style="text-align:right">
-              <div style="font-weight:700;font-family:var(--fd);font-size:13px;color:var(--ink)">${fmt(c.cuotaQ||c.cuota)}</div>
-              <div style="font-size:9px;color:var(--p1);font-weight:600">Cobrar →</div>
-            </div>
-          </div>`;
-        }).join('')}
+      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:var(--ink);margin-bottom:4px">${totalCreds}</div>
+      <div style="font-size:11px;color:var(--ink3)">Créditos en total</div>
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:6px">
+        ${[['Activos',cActivos,'#2563EB'],['En mora',cEnMora,'#E8335A'],['Completados',cCompletados,'#00B876']].map(function(b){var pct=cTotal>0?Math.round(b[1]/cTotal*100):0;return '<div><div style="display:flex;justify-content:space-between;font-size:9.5px;margin-bottom:3px"><span style="color:var(--ink3)">'+b[0]+'</span><span style="font-weight:700;color:var(--ink);font-family:var(--fm)">'+b[1]+'</span></div><div style="background:var(--gs);border-radius:3px;height:5px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+b[2]+';border-radius:3px"></div></div></div>';}).join('')}
       </div>
-      <button class="btn btn-g btn-sm" style="width:100%;margin-top:10px" onclick="nav('pagos')">Ver todos los pagos</button>
     </div>
+
+    <!-- 4 · Pagos por método -->
+    <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Pagos por método</span>
+        <span style="font-size:9px;background:var(--gs);color:var(--p1);padding:2px 7px;border-radius:20px;font-weight:700">${metodoTotalReal} pagos</span>
+      </div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:var(--ink);margin-bottom:4px">${metodoEntries.length}</div>
+      <div style="font-size:11px;color:var(--ink3)">Métodos en uso</div>
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:6px">
+        ${metodoEntries.length>0?metodoEntries.slice(0,4).map(function(e,i){var pct=metodoTotal>0?Math.round(e[1]/metodoTotal*100):0;return '<div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:'+metodoColors[i%metodoColors.length]+';flex-shrink:0"></span><span style="font-size:9.5px;color:var(--ink3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e[0]+'</span><span style="font-size:10px;font-weight:700;color:var(--ink);font-family:var(--fm)">'+pct+'%</span></div>';}).join(''):'<div style="font-size:10px;color:var(--ink3);text-align:center;padding:6px 0">Sin pagos confirmados</div>'}
+      </div>
+    </div>
+
+    <!-- 5 · Alerta de cobranza -->
+    <div class="card dash-kpi" onclick="nav(&quot;cobranza&quot;)" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${mora>0?'var(--red)':'var(--green)'};font-family:var(--fm)">Alerta de cobranza</span>
+        <span style="font-size:9px;background:${mora>0?'var(--reds)':'var(--greens)'};color:${mora>0?'var(--red)':'var(--green)'};padding:2px 7px;border-radius:20px;font-weight:700">${mora>0?mora+' en mora':'Al día'}</span>
+      </div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:${mora>0?'var(--red)':'var(--green)'};margin-bottom:4px">${mora>0?mora:'✓'}</div>
+      <div style="font-size:11px;color:var(--ink3)">${mora>0?'Requieren gestión':'Todos al día'}</div>
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:6px">
+        ${mora>0?_SCREDS.filter(function(c){return c.mora>0;}).slice(0,3).map(function(c){return '<div style="display:flex;align-items:center;gap:7px"><span style="font-size:8px;font-weight:900;color:var(--red);font-family:var(--fm);background:var(--reds);padding:2px 5px;border-radius:5px;flex-shrink:0">'+c.mora+'d</span><span style="font-size:10px;color:var(--ink2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.cli+'</span><span style="font-size:10px;font-weight:700;color:var(--red);font-family:var(--fd)">'+fmt(c.cuotaQ||c.cuota)+'</span></div>';}).join(''):'<div style="font-size:10px;color:var(--green);text-align:center;padding:6px 0">✓ Sin clientes en mora</div>'}
+      </div>
+    </div>
+
+    <!-- 6 · Próximas cuotas -->
+    <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--amber);font-family:var(--fm)">Próximas cuotas</span>
+        <span style="font-size:9px;background:${hoy.length>0?'var(--ambers)':'var(--greens)'};color:${hoy.length>0?'var(--amber)':'var(--green)'};padding:2px 7px;border-radius:20px;font-weight:700">${hoy.length}</span>
+      </div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:var(--ink);margin-bottom:4px">${hoy.length}</div>
+      <div style="font-size:11px;color:var(--ink3)">Por cobrar pronto</div>
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:6px">
+        ${hoy.length>0?hoy.slice(0,3).map(function(c){var start=new Date(c.fecha);var cuotaNum=(c.pagado||0)+1;var vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));var diff=Math.round((vence-new Date())/(24*60*60*1000));var col=diff<0?'var(--red)':diff<=1?'var(--amber)':'var(--green)';var lbl=diff<0?Math.abs(diff)+'d':diff===0?'hoy':diff+'d';return '<div style="display:flex;align-items:center;gap:7px"><span style="font-size:8px;font-weight:900;font-family:var(--fm);color:'+col+';background:var(--gs);padding:2px 5px;border-radius:5px;flex-shrink:0">'+lbl+'</span><span style="font-size:10px;color:var(--ink2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.cli+'</span><span style="font-size:10px;font-weight:700;color:var(--ink);font-family:var(--fd)">'+fmt(c.cuotaQ||c.cuota)+'</span></div>';}).join(''):'<div style="font-size:10px;color:var(--ink3);text-align:center;padding:6px 0">Sin cuotas próximas</div>'}
+      </div>
+    </div>
+
   </div>
 
-  <!-- ROW 3: Tres pie charts -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px">
-
-    <!-- PIE: Motos por estado -->
-    <div class="card" onclick="nav(&quot;motos&quot;)" style="cursor:pointer">
-      <div class="ch" style="margin-bottom:12px">
-        <div class="ct">Inventario Motos</div>
-        <span style="font-size:11px;color:var(--p1);font-weight:600">${_SMOTOS.filter(m=>!m.eliminado).length} total</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:16px">
-        <div style="position:relative;flex-shrink:0">
-          <svg viewBox="0 0 100 100" style="width:118px;height:118px;transform:rotate(-90deg)">
-            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--rim)" stroke-width="10"/>
-            ${motoArcs}
-          </svg>
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
-            <div style="font-family:var(--fd);font-weight:900;font-size:26px;color:var(--ink);line-height:1">${mDisp}</div>
-            <div style="font-size:9px;color:var(--ink3);font-weight:600;letter-spacing:.5px">DISP</div>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;flex:1">
-          ${[['#06B06A','Disponibles',mDisp],['#2563EB','Financiadas',mFin],['#D93B5A','Recuperadas',mRec],['#5B8DEF','Inventario',mInv]].map(([c,l,v])=>
-            `<div style="display:flex;align-items:center;gap:6px">
-              <div style="width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0"></div>
-              <span style="font-size:10px;color:var(--ink3);flex:1">${l}</span>
-              <span style="font-size:11px;font-weight:700;color:var(--ink);font-family:var(--fm)">${v}</span>
-            </div>`
-          ).join('')}
-        </div>
-      </div>
-    </div>
-
-    <!-- BARRAS: Créditos por estado -->
-    <div class="card" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer">
-      <div class="ch" style="margin-bottom:14px">
-        <div class="ct">Cartera por Estado</div>
-        <span style="font-size:11px;color:var(--p1);font-weight:600">${totalCreds} créditos</span>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        ${(function(){
-          var bars=[
-            {label:'Activos',    val:cActivos,    color:'#2563EB'},
-            {label:'En mora',    val:cEnMora,     color:'#E8335A'},
-            {label:'Completados',val:cCompletados, color:'#00B876'},
-            {label:'Cancelados', val:cCancelados, color:'#9794BB'},
-          ];
-          return bars.map(function(b){
-            var pct=cTotal>0?Math.round(b.val/cTotal*100):0;
-            return '<div>'
-              +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">'
-              +'<span style="font-size:11.5px;color:var(--ink2);font-weight:600">'+b.label+'</span>'
-              +'<span style="display:flex;align-items:center;gap:7px">'
-              +'<span style="font-size:13px;font-weight:800;color:var(--ink);font-family:var(--fd)">'+b.val+'</span>'
-              +'<span style="font-size:9.5px;font-weight:700;color:'+b.color+';background:'+b.color+'1a;padding:2px 7px;border-radius:20px">'+pct+'%</span>'
-              +'</span>'
-              +'</div>'
-              +'<div style="background:var(--gs);border-radius:4px;height:7px;overflow:hidden">'
-              +'<div style="height:100%;width:'+pct+'%;background:'+b.color+';border-radius:4px"></div>'
-              +'</div></div>';
-          }).join('');
-        })()}
-        <div style="padding-top:8px;border-top:1px solid var(--rim);display:flex;justify-content:space-between;align-items:center;margin-top:2px">
-          <span style="font-size:10px;color:var(--ink3)">Tasa de mora</span>
-          <span style="font-size:14px;font-weight:900;color:${mora>0?'var(--red)':'var(--green)'}">${cTotal>0?Math.round(mora/cTotal*100):0}%</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- PIE: Pagos por método -->
-    <div class="card" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
-      <div class="ch" style="margin-bottom:12px">
-        <div class="ct">Pagos por Método</div>
-        <span style="font-size:11px;color:var(--p1);font-weight:600">${metodoTotalReal} pagos</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:16px">
-        <div style="position:relative;flex-shrink:0">
-          <svg viewBox="0 0 100 100" style="width:118px;height:118px;transform:rotate(-90deg)">
-            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--rim)" stroke-width="10"/>
-            ${metodoEntries.length>0?pagoArcs:'<circle cx="50" cy="50" r="40" fill="none" stroke="var(--rim2)" stroke-width="10"/>'}
-          </svg>
-          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
-            <div style="font-family:var(--fd);font-weight:900;font-size:24px;color:var(--ink);line-height:1">${metodoTotalReal}</div>
-            <div style="font-size:9px;color:var(--ink3);font-weight:600;letter-spacing:.5px">TOTAL</div>
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px;flex:1">
-          ${metodoEntries.length>0
-            ?metodoEntries.map(([m,v],i)=>`
-            <div style="display:flex;align-items:center;gap:6px">
-              <div style="width:9px;height:9px;border-radius:50%;background:${metodoColors[i%metodoColors.length]};flex-shrink:0"></div>
-              <span style="font-size:10px;color:var(--ink3);flex:1">${m}</span>
-              <span style="font-size:11px;font-weight:700;color:var(--ink);font-family:var(--fm)">${v}</span>
-            </div>`).join('')
-            :'<div style="font-size:11px;color:var(--ink3);text-align:center;padding:10px 0">Sin pagos confirmados</div>'
-          }
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ROW 4: Últimos pagos + Alertas mora -->
-  <div style="display:grid;grid-template-columns:1.5fr 1.5fr;gap:16px;margin-bottom:18px">
-
-    <div class="card">
-      <div class="ch" style="margin-bottom:10px">
-        <div class="ct">Últimos Pagos</div>
-        <span style="font-size:11px;font-weight:600;cursor:pointer;color:var(--p1)" onclick="nav('pagos')">Ver todos →</span>
-      </div>
-      <div class="lst">
-        ${_SPAGOS.filter(p=>!p.eliminado).slice(0,5).map(p=>`
-        <div class="li" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
-          <div class="li-ic" style="background:var(--greens);font-size:8px;font-weight:700;color:var(--green);font-family:var(--fm)">PAG</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:600;color:var(--ink)">${p.cli}</div>
-            <div style="font-size:10px;color:var(--ink3);font-family:var(--fm)">${p.fecha} · ${p.metodo||'—'}</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0">
-            <div style="font-weight:700;color:var(--green);font-family:var(--fd);font-size:12.5px">${fmt(p.monto)}</div>
-            <span class="bdg ${sbg(p.estado)}" style="font-size:8.5px">${p.estado}</span>
-          </div>
-        </div>`).join('')}
-        ${_SPAGOS.filter(p=>!p.eliminado).length===0?'<div style="text-align:center;padding:20px;color:var(--ink3);font-size:12px">Sin pagos registrados</div>':''}
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="ch" style="margin-bottom:10px">
-        <div class="ct">Alertas de Cobranza</div>
-        ${mora>0?`<span class="bdg b-r" style="cursor:pointer" onclick="nav('cobranza')">${mora} en mora</span>`:`<span class="bdg b-g">Al día</span>`}
-      </div>
-      ${mora>0
-        ?`<div class="lst">
-          ${_SCREDS.filter(c=>c.mora>0).slice(0,4).map(c=>`
-          <div class="li" onclick="nav(&quot;cobranza&quot;)" style="cursor:pointer">
-            <div style="width:36px;height:36px;border-radius:9px;background:var(--reds);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-              <span style="font-size:10px;font-weight:900;color:var(--red);font-family:var(--fm)">${c.mora}d</span>
-            </div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:600;color:var(--ink)">${c.cli}</div>
-              <div style="font-size:10px;color:var(--ink3)">${c.id} · ${c.modelo}</div>
-            </div>
-            <div style="text-align:right;flex-shrink:0">
-              <div style="font-weight:700;color:var(--red);font-family:var(--fd);font-size:12px">${fmt(c.cuotaQ||c.cuota)}</div>
-              <div style="font-size:9px;color:var(--red);font-weight:600">Gestionar →</div>
-            </div>
-          </div>`).join('')}
-        </div>
-        <button class="btn btn-d btn-sm" style="width:100%;margin-top:10px" onclick="nav('cobranza')">Ir a Cobranza</button>`
-        :`<div style="text-align:center;padding:24px 20px">
-          <div style="width:48px;height:48px;border-radius:50%;background:var(--greens);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:20px;color:var(--green);font-weight:700">✓</div>
-          <div style="font-weight:700;font-size:13px;color:var(--green)">Todo al día</div>
-          <div style="font-size:11px;color:var(--ink3);margin-top:3px">Sin clientes en mora</div>
-          <button class="btn btn-g btn-sm" style="margin-top:12px" onclick="nav('cobranza')">Ver cobranza</button>
-        </div>`}
-    </div>
-  </div>
-
-  <!-- ROW 5: Quick access -->
+<!-- ROW 5: Quick access -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
     ${[
       ['CLI','var(--gs)','var(--p1)','rgba(37,99,235,0.15)','Clientes',_concFiltrarClientes(S.clientes||[]).length,'registrados',"nav('clientes')"],
