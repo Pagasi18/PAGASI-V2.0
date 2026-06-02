@@ -130,7 +130,18 @@ function _wzRender(motoId){
     ? motosDisp.map(function(m){ return '<option value="'+m.id+'" data-precio="'+m.precio+'"'+(motoId===m.id?' selected':'')+'>'+m.modelo+' — $'+m.precio.toFixed(2)+'</option>'; }).join('')
     : '<option value="">— No hay motos disponibles —</option>';
 
-  var catOptions = CATALOGO.map(function(c){
+  // Catálogo completo, organizado: sin duplicados (mismo modelo+precio) y ordenado A→Z por modelo
+  var _catVistos = {};
+  var _catOrdenado = (CATALOGO||[]).filter(function(c){
+    if(!c || !c.modelo) return false;
+    var k = (c.modelo+'|'+c.precio).toUpperCase();
+    if(_catVistos[k]) return false;
+    _catVistos[k] = true;
+    return true;
+  }).slice().sort(function(a,b){
+    return String(a.modelo).localeCompare(String(b.modelo),'es',{numeric:true,sensitivity:'base'});
+  });
+  var catOptions = _catOrdenado.map(function(c){
     return '<option value="'+c.precio+'" data-modelo="'+c.modelo+'">'+c.modelo+' — $'+c.precio.toFixed(2)+'</option>';
   }).join('') + '<option value="__wz_new_cat__">＋ Agregar nueva moto al catálogo...</option>';
 
@@ -152,7 +163,7 @@ function _wzRender(motoId){
     + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:8px">Nueva moto al catálogo</div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
     + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:4px">Marca</label><input class="fi" id="wz_cat_marca" placeholder="Ej: Empire, Bera..."></div>'
-    + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:4px">Modelo *</label><input class="fi" id="wz_cat_modelo" placeholder="Ej: NEW HORSE 150"></div>'
+    + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:4px">Modelo *</label><input class="fi" id="wz_cat_modelo" placeholder="Ej: NEW HORSE 150" oninput="_wzCatPrecioSync()"></div>'
     + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:4px">Precio USD *</label><input class="fi" id="wz_cat_precio" type="number" placeholder="0.00" oninput="_wzCatPrecioSync()"></div>'
     + '</div>'
     + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Se guardará en el catálogo y se usará en este crédito.</div>'
@@ -1029,7 +1040,23 @@ function _wzCatPrecioSync(){
   if(pInp && catPrecio){ pInp.value = catPrecio; }
   WZ.precio = catPrecio;
   WZ.motoModelo = catModelo;
-  if(catPrecio) _wzActualizarFinPreview(catPrecio);
+  WZ.motoInvId = null;
+  // Mostrar/poblar el bloque de forma de pago igual que al elegir del catálogo
+  var wrap = document.getElementById('wz-mpago-wrap');
+  if(wrap){
+    if(catPrecio > 0){
+      wrap.style.display='block';
+      _wzActualizarPrecioBaseDesdePrecio();
+      var pBaseInp = document.getElementById('wz_precio_base_real');
+      var costoBase = pBaseInp && parseFloat(pBaseInp.value)>0 ? parseFloat(pBaseInp.value) : catPrecio;
+      var iniReal = 0;
+      try { var pc = getWzPlanConfig(); iniReal = parseFloat(pc&&pc.ini)||0; } catch(e){}
+      _mpagoSetCosto('wzmpago', costoBase, iniReal>0 ? iniReal : null);
+    } else {
+      wrap.style.display='none';
+    }
+  }
+  if(catPrecio){ _wzActualizarFinPreview(catPrecio); _wzScore(); }
 }
 
 // ── Preview financiero ──
