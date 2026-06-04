@@ -2048,7 +2048,7 @@ function fmtFecha(iso){
 }
 const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a',completado:'b-g',propia:'b-g',cancelado:'b-r'}[s]||'b-x');
-const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',notif:'Notificaciones',calculadora:'Calculadora',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios',aprobaciones:'Aprobaciones',recursos:'Recursos'};
+const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',notif:'Notificaciones',calculadora:'Calculadora',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios',aprobaciones:'Aprobaciones',recursos:'Files'};
 
 const EXTRA_PERMS={perm_delete:'Permiso para eliminar'};
 function getCurrentPerms(){ return (S.currentUser&&Array.isArray(S.currentUser.permisos)) ? S.currentUser.permisos : []; }
@@ -2290,7 +2290,7 @@ function renderSidebar(){
       +'<button type="button" class="si" data-nav="calculadora" onclick="nav(\'calculadora\')"><span class="sic nav-ic">'+pgNavIcon('calculadora')+'</span><span>Calculadora</span></button>'
       +'<button type="button" class="si" data-nav="clientes" onclick="nav(\'clientes\')"><span class="sic nav-ic">'+pgNavIcon('clientes')+'</span><span>Clientes</span></button>'
       +'<button type="button" class="si" data-nav="creditos" onclick="nav(\'creditos\')"><span class="sic nav-ic">'+pgNavIcon('creditos')+'</span><span>Solicitudes</span></button>'
-      +'<button type="button" class="si" data-nav="recursos" onclick="nav(\'recursos\')"><span class="sic nav-ic">'+pgNavIcon('recursos')+'</span><span>Recursos</span></button>'
+      +'<button type="button" class="si" data-nav="recursos" onclick="nav(\'recursos\')"><span class="sic nav-ic">'+pgNavIcon('recursos')+'</span><span>Files</span></button>'
       +'</div>'
       +'</div>';
     sb.innerHTML = sidebarVC;
@@ -2469,7 +2469,13 @@ function updateBadge(){
   if(b) b.textContent=S.creds.filter(c=>c.mora>0).length;
   var wb=$('sb-badge-wt');
   if(wb){
-    var n=(S.tareas||[]).filter(function(t){return !t.eliminado && t.estado!=='completada' && (typeof wtIsMine!=='function' || wtIsMine(t));}).length;
+    var hoyISO = (typeof hoyLocalISO==='function') ? hoyLocalISO() : new Date().toISOString().slice(0,10);
+    // Solo cuenta lo que REQUIERE ATENCIÓN: tareas mías, activas, que vencen hoy o están vencidas.
+    var n=(S.tareas||[]).filter(function(t){
+      if(!t || t.eliminado || t.archivado || t.estado==='completada') return false;
+      if(typeof wtIsMine==='function' && !wtIsMine(t)) return false;
+      return t.fecha && t.fecha <= hoyISO;
+    }).length;
     wb.textContent=n||'';
     wb.style.display=n?'inline-flex':'none';
   }

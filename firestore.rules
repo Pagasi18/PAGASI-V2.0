@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function esAdmin() { return request.auth != null
+      && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'Administrador'; }
+    function logueado() { return request.auth != null; }
+
+    match /usuarios/{uid} {
+      allow read: if logueado();
+      allow write: if esAdmin() || (request.auth != null && request.auth.uid == uid);
+    }
+    match /invitaciones/{id} { allow read: if logueado(); allow write: if esAdmin(); }
+    match /config/{id} { allow read, write: if logueado(); }
+    match /clientes/{id}    { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
+    match /creditos/{id}    { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
+    match /pagos/{id}       { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
+    match /motos/{id}       { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
+    match /facturas/{id}    { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
+    match /cuentas/{id}     { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
+    match /cuentasPendientes/{id} { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
+    match /movimientos/{id} { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
+    match /egresos/{id}     { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
+    match /concesionarios/{id} { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
+    match /tareas/{id}      { allow read, create, update, delete: if logueado(); }
+    match /recursos/{id}    { allow read, create, update, delete: if logueado(); }
+    match /logs/{id} {
+      allow read: if esAdmin();
+      allow create: if logueado();
+      allow update, delete: if false;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

@@ -12,7 +12,7 @@ var REC_CATS = [
   {k:'capacitacion',label:'Capacitación',     color:'#6366F1'},
   {k:'otros',       label:'Otros',            color:'#64748B'}
 ];
-function _recCat(k){ for(var i=0;i<REC_CATS.length;i++){ if(REC_CATS[i].k===(k||'otros')) return REC_CATS[i]; } return REC_CATS[REC_CATS.length-1]; }
+function _recCatInfo(k){ for(var i=0;i<REC_CATS.length;i++){ if(REC_CATS[i].k===(k||'otros')) return REC_CATS[i]; } return REC_CATS[REC_CATS.length-1]; }
 function _recEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
 function _recSize(b){ b=parseFloat(b)||0; if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(0)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
 function _recExt(nombre){ return String(nombre||'').split('.').pop().toLowerCase(); }
@@ -42,7 +42,7 @@ PG.recursos = function(){
 
   var html = pageBanner(
     'Sistema · Material del equipo',
-    'Recursos',
+    'Files',
     '<b>'+all.length+'</b> archivo(s) · Flyers, requisitos y listas de precios para compartir con clientes',
     [{label:'＋ Subir archivo', onclick:'recAbrirSubir()', primary:true}]
   );
@@ -70,7 +70,7 @@ PG.recursos = function(){
 
   html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">';
   lista.forEach(function(r){
-    var c = _recCat(r.categoria);
+    var c = _recCatInfo(r.categoria);
     var puedeBorrar = isAdminUser() || (S.currentUser && r.uploadedBy===S.currentUser.uid);
     var fecha = (r.uploadedAt||'').slice(0,10);
     html += '<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:0">'
