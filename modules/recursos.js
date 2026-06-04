@@ -112,6 +112,7 @@ PG.recursos = function(){
           + '<button class="btn btn-p btn-sm" onclick="recDescargar(\''+r.id+'\')" style="flex:1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;margin-right:4px;vertical-align:-2px"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg>Abrir</button>'
           + '<button class="btn btn-g btn-sm" title="Copiar link" onclick="recCopiarLink(\''+r.id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></button>'
           + '<button class="btn btn-g btn-sm" title="Compartir por WhatsApp" onclick="recCompartirWA(\''+r.id+'\')" style="color:#1FA855;border-color:rgba(31,168,85,.3)"><svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px"><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.9.9-2.7-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.1.1-.2 0-.4 0-.5l-.7-1.7c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.5.1-.7.3-.8.8-.9 1.9-.4 3.1a9 9 0 0 0 4.7 4.3c1.7.6 2.4.5 3.2.4.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1l-.4-.2z"/></svg></button>'
+          + (puedeBorrar?'<button class="btn btn-g btn-sm" title="Editar" onclick="recAbrirEditar(\''+r.id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>':'')
           + (puedeBorrar?'<button class="btn btn-g btn-sm" title="Eliminar" onclick="recEliminar(\''+r.id+'\')" style="color:var(--red);border-color:rgba(226,75,74,.3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>':'')
         + '</div>'
       + '</div>'
@@ -266,6 +267,81 @@ function recSubir(){
   );
 }
 
+// ─── Modal de edición (nombre, categoría, descripción y reemplazar archivo) ───
+function recAbrirEditar(id){
+  var r = _recFind(id); if(!r) return;
+  if(!isAdminUser() && !(S.currentUser && r.uploadedBy===S.currentUser.uid)){ toast('Solo el autor o un admin puede editar','warn'); return; }
+  if(typeof setMicon==='function') setMicon('editar');
+  $('mtt').textContent = 'Editar archivo';
+  if($('msb')) $('msb').textContent = r.nombre||'';
+  if($('modal-box')) $('modal-box').className='modal';
+  var cats = REC_CATS.map(function(c){ return '<option value="'+c.k+'"'+((r.categoria||'otros')===c.k?' selected':'')+'>'+c.label+'</option>'; }).join('');
+  $('mbd').innerHTML = ''
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'
+    +   '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Nombre</label><input class="fi" id="rec_e_nombre" value="'+_recEsc(r.nombre||'')+'"></div>'
+    +   '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Categoría</label><select class="fs" id="rec_e_cat">'+cats+'</select></div>'
+    + '</div>'
+    + '<div class="fg" style="margin-bottom:12px"><label class="fsec" style="display:block;margin-bottom:5px">Descripción</label><input class="fi" id="rec_e_desc" value="'+_recEsc(r.descripcion||'')+'" placeholder="Breve nota"></div>'
+    + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Reemplazar archivo / imagen (opcional)</label>'
+    +   '<input type="file" id="rec_e_file" onchange="_recEFileSel(this)" style="width:100%;padding:11px;border:1px dashed var(--rim);border-radius:10px;font-family:var(--f);font-size:13px;background:var(--surf2);cursor:pointer">'
+    +   '<div id="rec_e_finfo" style="font-size:11px;color:var(--ink3);margin-top:6px">Dejá vacío para mantener el archivo actual.</div>'
+    + '</div>'
+    + '<div id="rec_e_prog_wrap" style="display:none;margin-top:14px"><div style="font-size:11px;color:var(--ink3);margin-bottom:5px" id="rec_e_prog_lbl">Subiendo…</div><div style="background:var(--lift);border-radius:6px;height:8px;overflow:hidden"><div id="rec_e_prog_bar" style="height:100%;width:0%;background:var(--p1);border-radius:6px;transition:width .2s"></div></div></div>';
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    + '<button class="btn btn-p" id="rec_e_btn" onclick="recGuardarEdicion(\''+id+'\')">Guardar cambios</button>';
+  $('ov').style.display='flex';
+}
+function _recEFileSel(input){
+  var f = input.files && input.files[0]; if(!f) return;
+  var info = document.getElementById('rec_e_finfo'); if(info) info.textContent = 'Nuevo: '+f.name+' · '+_recSize(f.size)+' (reemplaza al actual)';
+}
+function recGuardarEdicion(id){
+  var r = _recFind(id); if(!r) return;
+  if(!isAdminUser() && !(S.currentUser && r.uploadedBy===S.currentUser.uid)){ toast('Sin permiso','warn'); return; }
+  var nombre = (document.getElementById('rec_e_nombre')||{}).value || r.nombre || 'Archivo';
+  var categoria = (document.getElementById('rec_e_cat')||{}).value || r.categoria || 'otros';
+  var descripcion = (document.getElementById('rec_e_desc')||{}).value || '';
+  var fileInput = document.getElementById('rec_e_file');
+  var file = fileInput && fileInput.files && fileInput.files[0];
+
+  function aplicar(extra){
+    var meta = Object.assign({}, r, {nombre:nombre, categoria:categoria, descripcion:descripcion}, extra||{});
+    if(typeof DB!=='undefined' && DB.saveRecurso) DB.saveRecurso(meta);
+    S.recursos = (S.recursos||[]).map(function(x){ return x.id===id ? meta : x; });
+    if(typeof logActividad==='function') logActividad('Editó recurso','recursos',id,{nombre:nombre});
+    closeM(); nav('recursos'); toast('Archivo actualizado','success');
+  }
+
+  // Sin archivo nuevo: solo actualizar datos
+  if(!file){ aplicar(); return; }
+
+  // Reemplazar archivo en Storage
+  if(file.size > 25*1048576){ toast('Máximo 25 MB','error'); return; }
+  if(typeof storage==='undefined' || !storage){ toast('Almacenamiento no disponible','error'); return; }
+  var btn = document.getElementById('rec_e_btn'); if(btn){ btn.disabled=true; btn.textContent='Subiendo…'; }
+  var pw = document.getElementById('rec_e_prog_wrap'); if(pw) pw.style.display='block';
+  var oldPath = r.path;
+  var newId = 'REC-'+Date.now()+'-'+Math.floor(Math.random()*9999);
+  var safe = String(file.name).replace(/[^\w.\-]/g,'_');
+  var path = 'recursos/'+newId+'_'+safe;
+  var ref = storage.ref().child(path);
+  var task = ref.put(file, {contentType: file.type || 'application/octet-stream'});
+  task.on('state_changed',
+    function(snap){
+      var pct = snap.totalBytes>0 ? Math.round(snap.bytesTransferred/snap.totalBytes*100) : 0;
+      var bar = document.getElementById('rec_e_prog_bar'); if(bar) bar.style.width = pct+'%';
+      var lbl = document.getElementById('rec_e_prog_lbl'); if(lbl) lbl.textContent = 'Subiendo… '+pct+'%';
+    },
+    function(err){ if(btn){ btn.disabled=false; btn.textContent='Guardar cambios'; } toast('Error al subir: '+(err&&err.code||'desconocido'),'error'); },
+    function(){
+      ref.getDownloadURL().then(function(url){
+        aplicar({url:url, path:path, size:file.size, tipo:file.type||''});
+        if(oldPath){ try{ storage.ref().child(oldPath).delete().catch(function(){}); }catch(e){} }
+      }).catch(function(){ if(btn){ btn.disabled=false; btn.textContent='Guardar cambios'; } toast('Subido pero no se pudo obtener el link','warn'); });
+    }
+  );
+}
+
 window.recSetCat = recSetCat;
 window.recBuscar = recBuscar;
 window.recDescargar = recDescargar;
@@ -275,3 +351,6 @@ window.recEliminar = recEliminar;
 window.recAbrirSubir = recAbrirSubir;
 window._recFileSel = _recFileSel;
 window.recSubir = recSubir;
+window.recAbrirEditar = recAbrirEditar;
+window._recEFileSel = _recEFileSel;
+window.recGuardarEdicion = recGuardarEdicion;
