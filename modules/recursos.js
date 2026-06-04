@@ -16,6 +16,15 @@ function _recCatInfo(k){ for(var i=0;i<REC_CATS.length;i++){ if(REC_CATS[i].k===
 function _recEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
 function _recSize(b){ b=parseFloat(b)||0; if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(0)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
 function _recExt(nombre){ return String(nombre||'').split('.').pop().toLowerCase(); }
+function _recTypeColor(nombre){
+  var e=_recExt(nombre);
+  if(['pdf'].indexOf(e)>=0) return '#E8335A';
+  if(['jpg','jpeg','png','webp','gif','heic','bmp','svg'].indexOf(e)>=0) return '#7C3AED';
+  if(['doc','docx'].indexOf(e)>=0) return '#2563EB';
+  if(['xls','xlsx','csv'].indexOf(e)>=0) return '#00B876';
+  if(['ppt','pptx'].indexOf(e)>=0) return '#F5A623';
+  return '#64748B';
+}
 function _recTipoIcon(nombre){
   var e = _recExt(nombre);
   var c = '#64748B';
@@ -68,35 +77,66 @@ PG.recursos = function(){
     return html;
   }
 
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">';
+  html += '<style>'
+    + '.fl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:16px}'
+    + '.fl-card{background:#fff;border:1px solid var(--rim);border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,.04);transition:transform .18s,box-shadow .18s;display:flex;flex-direction:column}'
+    + '.fl-card:hover{transform:translateY(-3px);box-shadow:0 12px 30px -10px rgba(15,23,42,.16)}'
+    + '.fl-prev{height:152px;position:relative;background:linear-gradient(135deg,#EFF3FF 0%,#DBEAFE 100%);display:flex;align-items:center;justify-content:center;overflow:hidden;border-bottom:1px solid var(--rim)}'
+    + '.fl-prev img{width:100%;height:100%;object-fit:cover;display:block}'
+    + '.fl-prev iframe{width:133%;height:133%;border:0;pointer-events:none;background:#fff;transform:scale(.75);transform-origin:top left}'
+    + '.fl-ph{display:flex;flex-direction:column;align-items:center;gap:8px}'
+    + '.fl-ph svg{width:34px;height:34px}'
+    + '.fl-ph-ext{font-family:var(--fm);font-weight:900;font-size:20px;letter-spacing:1.5px}'
+    + '.fl-chip{position:absolute;top:10px;left:10px;font-size:9px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#fff;padding:4px 10px;border-radius:50px;box-shadow:0 3px 10px rgba(0,0,0,.22)}'
+    + '.fl-body{padding:13px 15px 14px;display:flex;flex-direction:column;flex:1}'
+    + '.fl-name{font-size:13.5px;font-weight:800;color:var(--ink);line-height:1.3;word-break:break-word}'
+    + '.fl-desc{font-size:11.5px;color:var(--ink2);margin-top:6px;line-height:1.45}'
+    + '.fl-meta{font-size:10px;color:var(--ink3);margin-top:auto;padding-top:11px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-weight:600}'
+    + '.fl-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px;padding-top:11px;border-top:1px solid var(--rim)}'
+    + '</style>';
+  html += '<div class="fl-grid">';
   lista.forEach(function(r){
     var c = _recCatInfo(r.categoria);
     var puedeBorrar = isAdminUser() || (S.currentUser && r.uploadedBy===S.currentUser.uid);
     var fecha = (r.uploadedAt||'').slice(0,10);
-    html += '<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:0">'
-      + '<div style="display:flex;gap:12px;align-items:flex-start">'
-        + _recTipoIcon(r.nombre)
-        + '<div style="flex:1;min-width:0">'
-          + '<div style="font-size:13.5px;font-weight:800;color:var(--ink);line-height:1.3;word-break:break-word">'+_recEsc(r.nombre||'Archivo')+'</div>'
-          + '<div style="margin-top:5px"><span style="font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:'+c.color+';background:'+c.color+'18;padding:2px 8px;border-radius:50px">'+c.label+'</span></div>'
+    html += '<div class="fl-card">'
+      + '<div class="fl-prev" onclick="recDescargar(\''+r.id+'\')" style="cursor:pointer">'
+        + _recPreview(r)
+        + '<span class="fl-chip" style="background:'+c.color+'">'+c.label+'</span>'
+      + '</div>'
+      + '<div class="fl-body">'
+        + '<div class="fl-name">'+_recEsc(r.nombre||'Archivo')+'</div>'
+        + (r.descripcion?'<div class="fl-desc">'+_recEsc(r.descripcion)+'</div>':'')
+        + '<div class="fl-meta"><span>'+_recSize(r.size)+'</span><span style="opacity:.5">·</span><span>'+_recEsc(r.uploadedByName||'—')+'</span>'+(fecha?'<span style="opacity:.5">·</span><span>'+fecha+'</span>':'')+'</div>'
+        + '<div class="fl-acts">'
+          + '<button class="btn btn-p btn-sm" onclick="recDescargar(\''+r.id+'\')" style="flex:1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;margin-right:4px;vertical-align:-2px"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg>Abrir</button>'
+          + '<button class="btn btn-g btn-sm" title="Copiar link" onclick="recCopiarLink(\''+r.id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></button>'
+          + '<button class="btn btn-g btn-sm" title="Compartir por WhatsApp" onclick="recCompartirWA(\''+r.id+'\')" style="color:#1FA855;border-color:rgba(31,168,85,.3)"><svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px"><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.9.9-2.7-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.1.1-.2 0-.4 0-.5l-.7-1.7c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.5.1-.7.3-.8.8-.9 1.9-.4 3.1a9 9 0 0 0 4.7 4.3c1.7.6 2.4.5 3.2.4.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1l-.4-.2z"/></svg></button>'
+          + (puedeBorrar?'<button class="btn btn-g btn-sm" title="Eliminar" onclick="recEliminar(\''+r.id+'\')" style="color:var(--red);border-color:rgba(226,75,74,.3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>':'')
         + '</div>'
-      + '</div>'
-      + (r.descripcion?'<div style="font-size:11.5px;color:var(--ink2);margin-top:10px;line-height:1.45">'+_recEsc(r.descripcion)+'</div>':'')
-      + '<div style="font-size:10.5px;color:var(--ink3);margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-        + '<span>'+_recSize(r.size)+'</span><span style="opacity:.5">·</span>'
-        + '<span>'+_recEsc(r.uploadedByName||'—')+'</span>'+(fecha?'<span style="opacity:.5">·</span><span>'+fecha+'</span>':'')
-      + '</div>'
-      + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--rim)">'
-        + '<button class="btn btn-p btn-sm" onclick="recDescargar(\''+r.id+'\')" style="flex:1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;margin-right:4px;vertical-align:-2px"><path d="M12 3v12M7 11l5 5 5-5M5 21h14"/></svg>Abrir</button>'
-        + '<button class="btn btn-g btn-sm" title="Copiar link" onclick="recCopiarLink(\''+r.id+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></button>'
-        + '<button class="btn btn-g btn-sm" title="Compartir por WhatsApp" onclick="recCompartirWA(\''+r.id+'\')" style="color:#1FA855;border-color:rgba(31,168,85,.3)"><svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px"><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.9.9-2.7-.2-.3A8 8 0 1 1 12 20zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.1.1-.2 0-.4 0-.5l-.7-1.7c-.2-.5-.4-.4-.5-.4h-.5c-.2 0-.5.1-.7.3-.8.8-.9 1.9-.4 3.1a9 9 0 0 0 4.7 4.3c1.7.6 2.4.5 3.2.4.5-.1 1.4-.6 1.6-1.1.2-.6.2-1 .1-1.1l-.4-.2z"/></svg></button>'
-        + (puedeBorrar?'<button class="btn btn-g btn-sm" title="Eliminar" onclick="recEliminar(\''+r.id+'\')" style="color:var(--red);border-color:rgba(226,75,74,.3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>':'')
       + '</div>'
     + '</div>';
   });
   html += '</div>';
   return html;
 };
+
+// Preview del archivo dentro de la tarjeta (imagen real, página 1 del PDF, o placeholder)
+function _recPreview(r){
+  var e = _recExt(r.nombre);
+  var url = r.url || '';
+  if(url && ['jpg','jpeg','png','webp','gif','bmp','svg','heic'].indexOf(e)>=0){
+    return '<img src="'+url+'" loading="lazy" alt="" onerror="this.style.display=\'none\'">';
+  }
+  if(url && e==='pdf'){
+    return '<iframe src="'+url+'#toolbar=0&navpanes=0&scrollbar=0&view=FitH" loading="lazy" title="preview"></iframe>';
+  }
+  var col = _recTypeColor(r.nombre);
+  return '<div class="fl-ph" style="color:'+col+'">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>'
+    + '<span class="fl-ph-ext">'+((e||'FILE').toUpperCase().slice(0,4))+'</span>'
+  + '</div>';
+}
 
 function recSetCat(k){ window._recCat = k; nav('recursos'); }
 function recBuscar(v){ window._recQuery = v; var lista=document.getElementById('cnt'); window._recCat=window._recCat||'todos'; /* re-render preservando foco */ nav('recursos'); var inp=document.getElementById('rec_q'); if(inp){ inp.focus(); try{inp.setSelectionRange(inp.value.length,inp.value.length);}catch(e){} } }
