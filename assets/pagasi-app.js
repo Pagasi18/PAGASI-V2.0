@@ -1440,7 +1440,8 @@ function startRealtime(){
     {col:'cuentasPendientes', key:'cuentasPendientes'},
     {col:'facturas', key:'facturas'},
     {col:'concesionarios', key:'concesionarios'},
-    {col:'tareas', key:'tareas'}
+    {col:'tareas', key:'tareas'},
+    {col:'recursos', key:'recursos'}
   ].forEach(function(spec){
     try{
       var unsub = db.collection(spec.col).onSnapshot(function(snap){
@@ -1760,6 +1761,9 @@ DB.delMovimiento = function(id){ if(!db)return Promise.resolve(false); return _d
 DB.saveTarea = function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('tareas').doc(String(o.id)).set(clean(o),{merge:true}); }); };
 DB.delTarea = function(id){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('tareas').doc(String(id)).delete(); }); };
 DB.getTareas = function(){ if(!db) return Promise.resolve([]); return db.collection('tareas').get().then(function(s){return s.docs.map(function(d){return Object.assign({id:d.id},d.data());});}); };
+DB.saveRecurso = function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('recursos').doc(String(o.id)).set(clean(o),{merge:true}); }); };
+DB.delRecurso = function(id){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('recursos').doc(String(id)).delete(); }); };
+DB.getRecursos = function(){ if(!db) return Promise.resolve([]); return db.collection('recursos').get().then(function(s){return s.docs.map(function(d){return Object.assign({id:d.id},d.data());});}); };
 
 // ══════════════════════════════════════════
 // AUDIT LOG / BITÁCORA DE ACTIVIDADES
@@ -2044,7 +2048,7 @@ function fmtFecha(iso){
 }
 const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a',completado:'b-g',propia:'b-g',cancelado:'b-r'}[s]||'b-x');
-const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',notif:'Notificaciones',calculadora:'Calculadora',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios',aprobaciones:'Aprobaciones'};
+const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',notif:'Notificaciones',calculadora:'Calculadora',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios',aprobaciones:'Aprobaciones',recursos:'Recursos'};
 
 const EXTRA_PERMS={perm_delete:'Permiso para eliminar'};
 function getCurrentPerms(){ return (S.currentUser&&Array.isArray(S.currentUser.permisos)) ? S.currentUser.permisos : []; }
@@ -2104,7 +2108,9 @@ function getPermsEfectivos(){
 
 function hasModuleAccess(key){
   if(isAdminUser()) return true;
-  // Vendedor Concesionario: solo 3 módulos permitidos
+  // Recursos: repositorio de material disponible para TODOS los usuarios logueados
+  if(key === 'recursos') return true;
+  // Vendedor Concesionario: solo 3 módulos permitidos + recursos
   if(isVendedorConcesionarioRole()){
     return key === 'motos' || key === 'clientes' || key === 'creditos';
   }
@@ -2221,7 +2227,8 @@ var PG_NAVICONS = {
   config:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
   scores:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg>',
   users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg>',
-  concesionarios:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg>'
+  concesionarios:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg>',
+  recursos:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M12 11v5M9.5 13.5h5"/></svg>'
 };
 function pgNavIcon(k){ return PG_NAVICONS[k] || ''; }
 function renderSidebar(){
@@ -2236,7 +2243,7 @@ function renderSidebar(){
     var grposEmp = [
       {label:'Mi Trabajo', keys:['dash','centro']},
       {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
-      {label:'Operaciones',keys:['cobranza','contratos','notif','calculadora']},
+      {label:'Operaciones',keys:['cobranza','contratos','notif','calculadora','recursos']},
       {label:'Análisis', keys:['reportes','cuentas','comisiones']},
       {label:'Sistema', keys:['plan','config','scores','users']},
     ];
@@ -2254,7 +2261,7 @@ function renderSidebar(){
       +'<span style="font-size:16px;font-weight:900;line-height:1">＋</span><span>Nueva Solicitud</span></button>'
       +'</div>'
       + grposEmp.map(function(g){
-          var items = g.keys.filter(function(k){ return permsEmp.includes(k); });
+          var items = g.keys.filter(function(k){ return k==='recursos' || permsEmp.includes(k); });
           if(!items.length) return '';
           return '<div class="sb-grp"><div class="sb-lbl">'+g.label+'</div>'
             +items.map(function(k){
@@ -2283,6 +2290,7 @@ function renderSidebar(){
       +'<button type="button" class="si" data-nav="calculadora" onclick="nav(\'calculadora\')"><span class="sic nav-ic">'+pgNavIcon('calculadora')+'</span><span>Calculadora</span></button>'
       +'<button type="button" class="si" data-nav="clientes" onclick="nav(\'clientes\')"><span class="sic nav-ic">'+pgNavIcon('clientes')+'</span><span>Clientes</span></button>'
       +'<button type="button" class="si" data-nav="creditos" onclick="nav(\'creditos\')"><span class="sic nav-ic">'+pgNavIcon('creditos')+'</span><span>Solicitudes</span></button>'
+      +'<button type="button" class="si" data-nav="recursos" onclick="nav(\'recursos\')"><span class="sic nav-ic">'+pgNavIcon('recursos')+'</span><span>Recursos</span></button>'
       +'</div>'
       +'</div>';
     sb.innerHTML = sidebarVC;
@@ -2295,7 +2303,7 @@ function renderSidebar(){
   var grupos = [
     {label:'Principal', keys:['dash','centro']},
     {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
-    {label:'Operaciones',keys:['cobranza','contratos','notif','calculadora','aprobaciones']},
+    {label:'Operaciones',keys:['cobranza','contratos','notif','calculadora','recursos','aprobaciones']},
     {label:'Análisis', keys:['reportes','cuentas','comisiones']},
     {label:'Sistema', keys:['plan','config','concesionarios','scores','users']},
   ];
@@ -2307,7 +2315,7 @@ function renderSidebar(){
   var extraMap = {cobranza:'<span class="si-bx" id="sb-badge-cob"></span>', centro:'<span class="si-bx" id="sb-badge-wt"></span>'};
 
   sb.innerHTML = grupos.map(function(g){
-    var items = g.keys.filter(function(k){ return isAdminUser() || perms.includes(k); });
+    var items = g.keys.filter(function(k){ return isAdminUser() || k==='recursos' || perms.includes(k); });
     if(!items.length) return '';
     return '<div class="sb-grp"><div class="sb-lbl">'+g.label+'</div>'
       +items.map(function(k){
