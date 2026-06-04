@@ -2241,9 +2241,9 @@ function renderSidebar(){
   if(isEmpleadoRole()){
     var permsEmp = getCurrentPerms();
     var grposEmp = [
-      {label:'Mi Trabajo', keys:['dash','centro']},
+      {label:'Mi Trabajo', keys:['dash','centro','recursos']},
       {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
-      {label:'Operaciones',keys:['cobranza','contratos','notif','calculadora','recursos']},
+      {label:'Operaciones',keys:['cobranza','contratos','notif','calculadora']},
       {label:'Análisis', keys:['reportes','cuentas','comisiones']},
       {label:'Sistema', keys:['plan','config','scores','users']},
     ];
@@ -2301,9 +2301,9 @@ function renderSidebar(){
   // Otros roles: filtrar módulos según permisos
   var perms = getCurrentPerms();
   var grupos = [
-    {label:'Principal', keys:['dash','centro']},
+    {label:'Principal', keys:['dash','centro','recursos']},
     {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
-    {label:'Operaciones',keys:['cobranza','contratos','notif','calculadora','recursos','aprobaciones']},
+    {label:'Operaciones',keys:['cobranza','contratos','notif','calculadora','aprobaciones']},
     {label:'Análisis', keys:['reportes','cuentas','comisiones']},
     {label:'Sistema', keys:['plan','config','concesionarios','scores','users']},
   ];
