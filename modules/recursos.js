@@ -121,17 +121,36 @@ PG.recursos = function(){
   return html;
 };
 
+// Extensión REAL del archivo (no del nombre editable): prioriza el path subido y el MIME
+function _recRealExt(r){
+  var fromPath = r && r.path ? _recExt(r.path) : '';
+  if(fromPath && fromPath.length>=2 && fromPath.length<=5 && /^[a-z0-9]+$/.test(fromPath)) return fromPath;
+  var t = (r && r.tipo || '').toLowerCase();
+  if(t.indexOf('pdf')>=0) return 'pdf';
+  if(t.indexOf('png')>=0) return 'png';
+  if(t.indexOf('jpeg')>=0 || t.indexOf('jpg')>=0) return 'jpg';
+  if(t.indexOf('webp')>=0) return 'webp';
+  if(t.indexOf('gif')>=0) return 'gif';
+  if(t.indexOf('svg')>=0) return 'svg';
+  if(t.indexOf('image/')>=0) return 'png';
+  if(t.indexOf('sheet')>=0 || t.indexOf('excel')>=0) return 'xlsx';
+  if(t.indexOf('word')>=0 || t.indexOf('document')>=0) return 'docx';
+  return _recExt(r && r.nombre);
+}
 // Preview del archivo dentro de la tarjeta (imagen real, página 1 del PDF, o placeholder)
 function _recPreview(r){
-  var e = _recExt(r.nombre);
   var url = r.url || '';
-  if(url && ['jpg','jpeg','png','webp','gif','bmp','svg','heic'].indexOf(e)>=0){
+  var mime = (r.tipo||'').toLowerCase();
+  var e = _recRealExt(r);
+  var isImg = mime.indexOf('image/')===0 || ['jpg','jpeg','png','webp','gif','bmp','svg','heic'].indexOf(e)>=0;
+  var isPdf = mime.indexOf('pdf')>=0 || e==='pdf';
+  if(url && isImg){
     return '<img src="'+url+'" loading="lazy" alt="" onerror="this.style.display=\'none\'">';
   }
-  if(url && e==='pdf'){
+  if(url && isPdf){
     return '<iframe src="'+url+'#toolbar=0&navpanes=0&scrollbar=0&view=FitH" loading="lazy" title="preview"></iframe>';
   }
-  var col = _recTypeColor(r.nombre);
+  var col = _recTypeColor(e);
   return '<div class="fl-ph" style="color:'+col+'">'
     + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>'
     + '<span class="fl-ph-ext">'+((e||'FILE').toUpperCase().slice(0,4))+'</span>'
