@@ -202,12 +202,14 @@ PG.pagos = function(){
         const lbl = diff<0?`${Math.abs(diff)}d de atraso`:diff===0?'Vence hoy':diff===1?'Vence mañana':`Vence en ${diff}d`;
         const badge = diff<0?'ATRASO':diff<=1?'URGENTE':'PRÓXIMO';
         const bcls = diff<0?'b-r':diff<=1?'b-a':'b-g';
+        const _vd = (item.venceStr||'').split('-');
+        const fechaFmt = _vd.length===3 ? new Date(+_vd[0],+_vd[1]-1,+_vd[2]).toLocaleDateString('es-VE',{weekday:'short',day:'numeric',month:'short'}) : '';
         return `<tr>
           <td class="tdm">${c.cli}</td>
           <td class="tds" style="font-family:var(--fd)">${c.id}</td>
           <td class="tds">${item.cuotaNum}/${c.totalCuotas||c.plazo*2||24}</td>
           <td><span class="bdg ${bcls}" style="font-size:9px">${badge}</span></td>
-          <td class="tds" style="color:${col};font-weight:700">${lbl}</td>
+          <td class="tds"><div style="color:${col};font-weight:700">${lbl}</div>${fechaFmt?`<div style="font-size:10px;color:var(--ink3);font-weight:600;margin-top:2px;text-transform:capitalize">${fechaFmt}</div>`:''}</td>
           <td style="font-weight:800;font-family:var(--fd);color:var(--ink)">${fmt(c.cuotaQ||c.cuota)}</td>
           <td>${_cuotaNotaSelect(c)}</td>
           <td><div style="display:flex;gap:4px">
