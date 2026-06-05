@@ -266,7 +266,7 @@ function nxAcGetAllClients(){
     if(cr && cr.fecha){
       try {
         var cuotasPag = (typeof getCreditoCuotasPagadas==='function') ? getCreditoCuotasPagadas(cr) : (cr.pagado||0);
-        var inicio = new Date(cr.fecha);
+        var inicio = parseFechaLocal(cr.fecha);
         var siguiente = new Date(inicio.getTime() + ((cuotasPag+1) * 15 * 24 * 60 * 60 * 1000));
         var hoy = new Date(); hoy.setHours(0,0,0,0);
         diasProx = Math.ceil((siguiente - hoy) / (24*60*60*1000));
@@ -596,7 +596,7 @@ function getDestinatariosNotif(dest){
   if(dest==='proximas'){
     return (S.creds||[]).filter(function(c){
       if(c.eliminado || c.estado!=='activo' || !c.fecha) return false;
-      var sig = new Date(new Date(c.fecha).getTime() + ((getCreditoCuotasPagadas(c)+1)*15*24*60*60*1000));
+      var sig = new Date(parseFechaLocal(c.fecha).getTime() + ((getCreditoCuotasPagadas(c)+1)*15*24*60*60*1000));
       var diff = Math.floor((sig - new Date())/(24*60*60*1000));
       return diff>=0 && diff<=7;
     }).map(function(c){ return mkDest(findCliente(c), c); });
@@ -646,13 +646,13 @@ function buildMensajeNotif(tipo, d){
   var cuotasRest = totalCuotas - cuotasPagadas;
   var montoTotal = cr ? parseFloat(cr.total||cr.fin||0) : 0;
   var pct = totalCuotas > 0 ? Math.round(cuotasPagadas/totalCuotas*100) : 0;
-  var fechaInicio = cr&&cr.fecha ? new Date(cr.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
+  var fechaInicio = cr&&cr.fecha ? parseFechaLocal(cr.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
   var fechaProx = '';
   var fechaVencFin = '';
   if(cr&&cr.fecha){
-    var sig=new Date(new Date(cr.fecha).getTime()+((cuotasPagadas+1)*15*24*60*60*1000));
+    var sig=new Date(parseFechaLocal(cr.fecha).getTime()+((cuotasPagadas+1)*15*24*60*60*1000));
     fechaProx=sig.toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'});
-    var fin=new Date(new Date(cr.fecha).getTime()+(totalCuotas*15*24*60*60*1000));
+    var fin=new Date(parseFechaLocal(cr.fecha).getTime()+(totalCuotas*15*24*60*60*1000));
     fechaVencFin=fin.toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'});
   }
 

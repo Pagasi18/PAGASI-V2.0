@@ -438,7 +438,7 @@ function renderCredCobrosChart(){
       buckets.push({ label: d.getDate()+'/'+(d.getMonth()+1), dayTs: new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime(), monto:0, cuotas:0 });
     }
     activos.forEach(function(c){
-      var inicio = new Date(c.fecha).getTime();
+      var inicio = parseFechaLocal(c.fecha).getTime();
       if(isNaN(inicio)) return;
       var totalCuotas = c.totalCuotas || (c.plazo*2) || 24;
       var pagadas = c.pagado || 0;
@@ -461,7 +461,7 @@ function renderCredCobrosChart(){
       buckets.push({ label: (d.getMonth()+1)+'/Q'+q, ini: tFut, fin: tFut+MS_QUINCENA, monto:0, cuotas:0 });
     }
     activos.forEach(function(c){
-      var inicio = new Date(c.fecha).getTime();
+      var inicio = parseFechaLocal(c.fecha).getTime();
       if(isNaN(inicio)) return;
       var totalCuotas = c.totalCuotas || (c.plazo*2) || 24;
       var pagadas = c.pagado || 0;
@@ -483,7 +483,7 @@ function renderCredCobrosChart(){
       buckets.push({ label: d.toLocaleDateString('es-VE',{month:'short'}), ini: d.getTime(), fin: nextD.getTime(), monto:0, cuotas:0 });
     }
     activos.forEach(function(c){
-      var inicio = new Date(c.fecha).getTime();
+      var inicio = parseFechaLocal(c.fecha).getTime();
       if(isNaN(inicio)) return;
       var totalCuotas = c.totalCuotas || (c.plazo*2) || 24;
       var pagadas = c.pagado || 0;

@@ -1461,11 +1461,22 @@ function startRealtime(){
   });
 }
 
+// Parsea una fecha 'YYYY-MM-DD' como hora LOCAL (mediodía) para evitar el corrimiento
+// de un día por zona horaria: new Date('2026-06-04') se interpreta como UTC y en VE (UTC-4)
+// retrocede al día anterior. Con mediodía local nunca cambia el día.
+function parseFechaLocal(v){
+  if(!v) return new Date();
+  if(v instanceof Date) return v;
+  var s = String(v);
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s + 'T12:00:00');
+  return new Date(s);
+}
 function fechaLocalISO(value){
-  var d = value ? new Date(value) : new Date();
+  var d = value ? parseFechaLocal(value) : new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 function hoyLocalISO(){ return fechaLocalISO(); }
+window.parseFechaLocal = parseFechaLocal;
 
 // Cache local específica para motos — evita perder unidades nuevas entre sesiones
 var MOTOS_CACHE_KEY='pagasi_motos_cache_v1';
@@ -2028,7 +2039,7 @@ window.fmt = fmt;
 function fmtFechaHora(iso){
   if(!iso) return '';
   try{
-    var d = new Date(iso);
+    var d = parseFechaLocal(iso);
     if(isNaN(d.getTime())) return '';
     var dd = String(d.getDate()).padStart(2,'0');
     var mm = String(d.getMonth()+1).padStart(2,'0');
@@ -2041,7 +2052,7 @@ function fmtFechaHora(iso){
 function fmtFecha(iso){
   if(!iso) return '';
   try{
-    var d = new Date(iso);
+    var d = parseFechaLocal(iso);
     if(isNaN(d.getTime())) return '';
     return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
   }catch(e){ return ''; }

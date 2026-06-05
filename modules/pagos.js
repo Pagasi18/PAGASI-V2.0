@@ -69,13 +69,13 @@ PG.pagos = function(){
   var proximasCuotas = _concFiltrar(S.creds||[]).filter(function(c){
     if(c.eliminado) return false;
     if(c.estado!=='activo'||!c.fecha) return false;
-    const start=new Date(c.fecha);
+    const start=parseFechaLocal(c.fecha);
     const cuotaNum=(c.pagado||0)+1;
     const vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
     const diff=Math.round((vence-new Date())/(24*60*60*1000));
     return diff<=30 && diff>=-30; // muestra hasta 30 días de atraso y próximas 30 días
   }).map(function(c){
-    const start=new Date(c.fecha);
+    const start=parseFechaLocal(c.fecha);
     const cuotaNum=(c.pagado||0)+1;
     const vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
     const diff=Math.round((vence-new Date())/(24*60*60*1000));

@@ -239,7 +239,7 @@ function verCliente(id){
     pagosConf.forEach(function(p){
       var cred = creditos.find(function(cr){ return cr.id === p.cred; });
       if(!cred || !cred.fecha || !p.fecha) { pagosPuntuales++; return; }
-      var inicio = new Date(cred.fecha);
+      var inicio = parseFechaLocal(cred.fecha);
       var numCuota = parseInt(p.numCuota || 1, 10);
       var fechaEsperada = new Date(inicio.getTime() + numCuota * 15 * 24*60*60*1000);
       var fechaPago = new Date(p.fecha);
@@ -998,7 +998,7 @@ function empleadoDashHTML(){
   // ─── A COBRAR ESTA SEMANA ───
   function proximaCuota(c){
     if(!c.fecha) return null;
-    const inicio = new Date(c.fecha);
+    const inicio = parseFechaLocal(c.fecha);
     if(isNaN(inicio.getTime())) return null;
     const pagadas = c.pagado||0;
     const proxima = new Date(inicio);

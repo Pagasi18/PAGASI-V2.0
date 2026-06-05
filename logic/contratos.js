@@ -351,7 +351,7 @@ function _renderPagare(){
   var cuotaQ = parseFloat(c.cuotaQ||c.cuota)||0;
   var totalCuotas = c.totalCuotas || (plazoMeses*2);
   // Fecha de vencimiento (estimación: fecha inicio + plazo en meses)
-  var fechaBase = c.fecha ? new Date(c.fecha) : new Date();
+  var fechaBase = c.fecha ? parseFechaLocal(c.fecha) : new Date();
   var fechaVenc = new Date(fechaBase); fechaVenc.setMonth(fechaVenc.getMonth()+plazoMeses);
   var fechaVencStr = fechaVenc.toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
 

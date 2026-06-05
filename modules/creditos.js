@@ -57,7 +57,7 @@ PG.creditos = function(){
   ];
   activos.forEach(c=>{
     if(!c.fecha) return;
-    const inicio = new Date(c.fecha).getTime();
+    const inicio = parseFechaLocal(c.fecha).getTime();
     if(isNaN(inicio)) return;
     const totalCuotas = c.totalCuotas || (c.plazo*2) || 24;
     const pagadas = c.pagado || 0;
@@ -94,7 +94,7 @@ PG.creditos = function(){
   const agingMeses = {'<3m':0, '3-6m':0, '6-12m':0, '>12m':0};
   activos.forEach(c=>{
     if(!c.fecha) return;
-    const dias = (ahora - new Date(c.fecha).getTime()) / MS_DIA;
+    const dias = (ahora - parseFechaLocal(c.fecha).getTime()) / MS_DIA;
     if(dias < 90) agingMeses['<3m']++;
     else if(dias < 180) agingMeses['3-6m']++;
     else if(dias < 365) agingMeses['6-12m']++;
@@ -311,7 +311,7 @@ PG.creditos = function(){
         ? `<span class="bdg ${c.mora>60?'b-r':c.mora>30?'b-a':'b-b'}">${c.mora}d</span>`
         : `<span style="color:var(--ink3);font-size:11px">—</span>`;
       var apyVal = Number.isFinite(parseFloat(c.apy)) ? parseFloat(c.apy) : (Number.isFinite(parseFloat((c.plan||{}).apy)) ? parseFloat((c.plan||{}).apy) : parseFloat(PLAN.apy||0));
-      var fechaFmt = c.fecha ? new Date(c.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+      var fechaFmt = c.fecha ? parseFechaLocal(c.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
       var precio = parseFloat(c.precioBaseReal||c.precio||0);
       var totalC = parseFloat(c.total||0);
       return`<tr style="cursor:pointer" onclick="openAmort('${c.id}')">

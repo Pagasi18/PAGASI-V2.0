@@ -115,7 +115,7 @@ PG.dash = function(){
   const hoy=(function(){
     var prox=_SCREDS.filter(function(c){
       if(c.estado!=='activo'||!c.fecha) return false;
-      var start=new Date(c.fecha);
+      var start=parseFechaLocal(c.fecha);
       var cuotaNum=(c.pagado||0)+1;
       var vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
       var diff=Math.round((vence-new Date())/(24*60*60*1000));
@@ -506,7 +506,7 @@ PG.dash = function(){
       <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:var(--ink);margin-bottom:4px">${hoy.length}</div>
       <div style="font-size:11px;color:var(--ink3)">Por cobrar pronto</div>
       <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:6px">
-        ${hoy.length>0?hoy.slice(0,3).map(function(c){var start=new Date(c.fecha);var cuotaNum=(c.pagado||0)+1;var vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));var diff=Math.round((vence-new Date())/(24*60*60*1000));var col=diff<0?'var(--red)':diff<=1?'var(--amber)':'var(--green)';var lbl=diff<0?Math.abs(diff)+'d':diff===0?'hoy':diff+'d';return '<div style="display:flex;align-items:center;gap:7px"><span style="font-size:8px;font-weight:900;font-family:var(--fm);color:'+col+';background:var(--gs);padding:2px 5px;border-radius:5px;flex-shrink:0">'+lbl+'</span><span style="font-size:10px;color:var(--ink2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.cli+'</span><span style="font-size:10px;font-weight:700;color:var(--ink);font-family:var(--fd)">'+fmt(c.cuotaQ||c.cuota)+'</span></div>';}).join(''):'<div style="font-size:10px;color:var(--ink3);text-align:center;padding:6px 0">Sin cuotas próximas</div>'}
+        ${hoy.length>0?hoy.slice(0,3).map(function(c){var start=parseFechaLocal(c.fecha);var cuotaNum=(c.pagado||0)+1;var vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));var diff=Math.round((vence-new Date())/(24*60*60*1000));var col=diff<0?'var(--red)':diff<=1?'var(--amber)':'var(--green)';var lbl=diff<0?Math.abs(diff)+'d':diff===0?'hoy':diff+'d';return '<div style="display:flex;align-items:center;gap:7px"><span style="font-size:8px;font-weight:900;font-family:var(--fm);color:'+col+';background:var(--gs);padding:2px 5px;border-radius:5px;flex-shrink:0">'+lbl+'</span><span style="font-size:10px;color:var(--ink2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.cli+'</span><span style="font-size:10px;font-weight:700;color:var(--ink);font-family:var(--fd)">'+fmt(c.cuotaQ||c.cuota)+'</span></div>';}).join(''):'<div style="font-size:10px;color:var(--ink3);text-align:center;padding:6px 0">Sin cuotas próximas</div>'}
       </div>
     </div>
 

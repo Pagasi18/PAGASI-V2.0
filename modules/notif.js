@@ -7,7 +7,7 @@ PG.notif = function(){
   });
   var proximasCuotas = _concFiltrar(S.creds||[]).filter(function(c){
     if(c.estado!=='activo'||!c.fecha) return false;
-    var inicio=new Date(c.fecha);
+    var inicio=parseFechaLocal(c.fecha);
     var siguiente=new Date(inicio.getTime()+((c.pagado+1)*15*24*60*60*1000));
     var diff=Math.floor((siguiente-new Date())/(24*60*60*1000));
     return diff>=0&&diff<=7;

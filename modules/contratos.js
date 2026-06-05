@@ -8,7 +8,7 @@ PG.contratos = function(){
   var enMora = credsActivos.filter(function(c){return c.mora>0;}).length;
   var porVencer30d = credsActivos.filter(function(c){
     if(!c.fecha) return false;
-    var dias = Math.floor((new Date(c.fecha).getTime() + (c.plazo||12)*30*24*60*60*1000 - Date.now())/(1000*60*60*24));
+    var dias = Math.floor((parseFechaLocal(c.fecha).getTime() + (c.plazo||12)*30*24*60*60*1000 - Date.now())/(1000*60*60*24));
     return dias>0 && dias<=30;
   }).length;
 

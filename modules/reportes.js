@@ -69,7 +69,7 @@ PG.reportes = function(){
     }).reduce((a,e)=>a+(e.monto||0),0);
     const nuevosMes = creds.filter(c=>{
       if(!c.fecha) return false;
-      const cd = new Date(c.fecha);
+      const cd = parseFechaLocal(c.fecha);
       return cd.getFullYear()===y && cd.getMonth()===m;
     }).length;
     serie.push({label, y, m, ingresos:ingMes, egresos:egMes, utilidad:ingMes-egMes, nuevos:nuevosMes});
@@ -91,7 +91,7 @@ PG.reportes = function(){
   }
   credsActivos.forEach(c=>{
     if(!c.fecha) return;
-    const inicio = new Date(c.fecha);
+    const inicio = parseFechaLocal(c.fecha);
     if(isNaN(inicio.getTime())) return;
     const totalCuotasCred = c.totalCuotas || (c.plazo*2) || 24;
     const pagadas = c.pagado || 0;

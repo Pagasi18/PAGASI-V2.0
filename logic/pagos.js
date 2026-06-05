@@ -568,9 +568,9 @@ function whatsappCliente(credId){
   var pct2 = totalCuotas2>0?Math.round(cuotasPagadas2/totalCuotas2*100):0;
   var fechaProxima='', fechaVencFin2='';
   if(c.fecha){
-    var sig2=new Date(new Date(c.fecha).getTime()+((cuotasPagadas2+1)*15*24*60*60*1000));
+    var sig2=new Date(parseFechaLocal(c.fecha).getTime()+((cuotasPagadas2+1)*15*24*60*60*1000));
     fechaProxima=sig2.toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'});
-    var fin2=new Date(new Date(c.fecha).getTime()+(totalCuotas2*15*24*60*60*1000));
+    var fin2=new Date(parseFechaLocal(c.fecha).getTime()+(totalCuotas2*15*24*60*60*1000));
     fechaVencFin2=fin2.toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'});
   }
   var sep2='--------------------------------';
@@ -1308,7 +1308,7 @@ function calcularMoraAuto(){
       }
       return;
     }
-    var inicio=new Date(c.fecha);
+    var inicio=parseFechaLocal(c.fecha);
     inicio.setHours(0,0,0,0);
     var cuotaSiguiente=cuotasPagadas+1;
     var fechaVence=new Date(inicio.getTime()+(cuotaSiguiente*15*24*60*60*1000));
