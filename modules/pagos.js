@@ -1,5 +1,6 @@
 // Pagasi module: pagos
 PG.pagos = function(){
+  _ensureNotasCob();
   const allPagos = _concFiltrar(S.pagos||[]).filter(p=>!p.eliminado);
   const confs = allPagos.filter(p=>p.estado==='confirmado');
   const pends = allPagos.filter(p=>p.estado==='pendiente');
@@ -194,6 +195,7 @@ PG.pagos = function(){
         ${_thSort(_cu,'setCuotasSort','vence','Vence')}
         ${_thSort(_cu,'setCuotasSort','monto','Monto')}
         <th>Notas</th>
+        <th>Gestión de cobro</th>
         <th></th>
       </tr></thead>
       <tbody>${(()=>{const _cp=pgGet('cuotas');return proximasCuotas.slice((_cp-1)*50,_cp*50).map(function(item){
@@ -212,6 +214,7 @@ PG.pagos = function(){
           <td class="tds"><div style="color:${col};font-weight:700">${lbl}</div>${fechaFmt?`<div style="font-size:10px;color:var(--ink3);font-weight:600;margin-top:2px;text-transform:capitalize">${fechaFmt}</div>`:''}</td>
           <td style="font-weight:800;font-family:var(--fd);color:var(--ink)">${fmt(c.cuotaQ||c.cuota)}</td>
           <td>${_cuotaNotaSelect(c)}</td>
+          <td>${_gestionCobroCell(c)}</td>
           <td><div style="display:flex;gap:4px">
             <button class="btn btn-p btn-xs" onclick="openAddPago('${c.id}')">Cobrar</button>
             <button class="btn btn-g btn-xs" onclick="avisarCuotaProxima('${c.id}')" title="Enviar recordatorio al cliente por WhatsApp">Avisar</button>
@@ -379,3 +382,49 @@ window.setCuotaNota = function(credId, selEl){
   if(typeof logActividad==='function'){ logActividad('Nota de cobranza', 'pagos', credId, opt.t); }
   if(typeof toast==='function'){ toast('Nota: '+opt.t, 'success'); }
 };
+
+// ─── GESTIÓN DE COBRO: resumen por crédito desde notas_cobranza ───
+// Carga perezosa con .catch para que un fallo NUNCA rompa el render.
+function _ensureNotasCob(){
+  if(typeof window._notasCobCache === 'undefined') window._notasCobCache = null;
+  if(window._notasCobCache !== null || window._notasCobLoading) return;
+  if(typeof db === 'undefined' || !db){ window._notasCobCache = {}; return; }
+  window._notasCobLoading = true;
+  db.collection('notas_cobranza').get().then(function(snap){
+    var map = {};
+    snap.forEach(function(d){ var n=d.data(); if(!n||!n.credId) return; (map[n.credId]=map[n.credId]||[]).push(n); });
+    Object.keys(map).forEach(function(k){ map[k].sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); }); });
+    window._notasCobCache = map;
+    window._notasCobLoading = false;
+    if(S.page === 'pagos' && typeof nav === 'function'){ try { nav('pagos'); } catch(e){} }
+  }).catch(function(){ window._notasCobCache = {}; window._notasCobLoading = false; });
+}
+function _gestionCobroCell(c){
+  var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+  var addBtn = function(txt){ return '<button class="btn btn-g btn-xs" onclick="openNota(\''+c.id+'\')" title="Registrar llamada / gestión de cobro" style="margin-top:6px;white-space:nowrap">'+txt+'</button>'; };
+  var cache = (typeof window._notasCobCache !== 'undefined') ? window._notasCobCache : null;
+  if(cache === null){ return '<span style="font-size:10.5px;color:var(--ink3)">Cargando…</span>'; }
+  var list = cache[c.id] || [];
+  if(!list.length){ return '<div style="font-size:10.5px;color:var(--ink3)">Sin gestiones aún</div>'+addBtn('＋ Gestión'); }
+  var empleados = {}; list.forEach(function(n){ if(n.cobrador) empleados[n.cobrador]=(empleados[n.cobrador]||0)+1; });
+  var empNames = Object.keys(empleados);
+  var nContactos = list.length;
+  var nLlamadas = list.filter(function(n){ return /llamada/i.test(n.tipo||''); }).length;
+  var u = list[0];
+  var ultTxt = esc((u.resultado||'').trim()); if(ultTxt.length>96) ultTxt = ultTxt.slice(0,96)+'…';
+  var empChips = empNames.slice(0,3).map(function(nm){
+    var ini = nm.split(/\s+/).filter(Boolean).slice(0,2).map(function(w){return w[0];}).join('').toUpperCase()||'?';
+    return '<span title="'+esc(nm)+'" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--gs);color:var(--p1);font-size:9px;font-weight:800;border:1.5px solid var(--surf);margin-left:-5px">'+ini+'</span>';
+  }).join('');
+  if(empNames.length>3) empChips += '<span style="font-size:9px;color:var(--ink3);margin-left:4px">+'+(empNames.length-3)+'</span>';
+  return '<div style="min-width:210px;max-width:300px">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+      +'<div style="display:flex;padding-left:5px">'+empChips+'</div>'
+      +'<span style="font-size:10px;color:var(--ink3);font-weight:700">'+nContactos+' contacto'+(nContactos!==1?'s':'')+(nLlamadas?' · '+nLlamadas+' llam.':'')+'</span>'
+    +'</div>'
+    +'<div style="font-size:10.5px;color:var(--ink2);line-height:1.45"><span style="color:var(--p1);font-weight:700">'+esc(u.tipo||'Gestión')+':</span> "'+ultTxt+'" <span style="color:var(--ink3)">· '+esc(u.fecha||'')+(u.cobrador?' · '+esc(u.cobrador):'')+'</span></div>'
+    +(u.proximaAccion?'<div style="font-size:10px;color:var(--amber);font-weight:700;margin-top:2px">→ '+esc(u.proximaAccion)+'</div>':'')
+    +(u.fechaCompromiso?'<div style="font-size:10px;color:var(--green);font-weight:700;margin-top:1px">Compromiso: '+esc(u.fechaCompromiso)+'</div>':'')
+    +addBtn('Ver / ＋ gestión')
+  +'</div>';
+}

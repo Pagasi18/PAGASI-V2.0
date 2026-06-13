@@ -23,6 +23,7 @@ service cloud.firestore {
     match /concesionarios/{id} { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
     match /tareas/{id}      { allow read, create, update, delete: if logueado(); }
     match /recursos/{id}    { allow read, create, update, delete: if logueado(); }
+    match /notas_cobranza/{id} { allow read, create: if logueado(); allow update, delete: if esAdmin(); }
     match /logs/{id} {
       allow read: if esAdmin();
       allow create: if logueado();
