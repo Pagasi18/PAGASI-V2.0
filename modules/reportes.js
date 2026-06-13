@@ -166,8 +166,10 @@ PG.reportes = function(){
   // ══════════ HTML ══════════
   var tabs = [
     {k:'resumen', lbl:'Resumen', sub:'Estado general · KPIs'},
+    {k:'periodicos', lbl:'Reportes', sub:'Diario · Semanal · Quincenal · Mensual'},
     {k:'proyecciones', lbl:'Proyecciones', sub:'Flujo futuro · 12 meses'},
     {k:'egresos', lbl:'Egresos', sub:'Gastos · categorías'},
+    {k:'inventario', lbl:'Inventario de oficina', sub:'Activos · equipos · mobiliario'},
     {k:'exportar', lbl:'Exportar', sub:'Reportes · CSV · Backup'},
     {k:'libroseniat', lbl:'Libro SENIAT', sub:'Ventas · IVA · IGTF'},
     {k:'contador', lbl:'📋 Contador', sub:'Reporte semanal · Tributario'}
@@ -739,7 +741,7 @@ PG.reportes = function(){
     </div>
   </div>
 
-  ` : `
+  ` : tab==='exportar' ? `
   <!-- ════════ TAB: EXPORTAR ════════ -->
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
@@ -793,7 +795,11 @@ PG.reportes = function(){
       </div>
     </div>
   </div>
-  `}
+  ` : ''}
+
+  ${tab==='periodicos' ? _renderTabReportesPeriodicos() : ''}
+
+  ${tab==='inventario' ? _renderTabInventario() : ''}
 
   ${tab==='libroseniat' ? _renderLibroSeniat() : ''}
 
@@ -807,7 +813,160 @@ PG.reportes = function(){
   </div>`;
 };
 
+// ══════════════════════════════════════════════════════════════
+// TAB: REPORTES PERIÓDICOS — diario / semanal / quincenal / mensual
+// ══════════════════════════════════════════════════════════════
+function _renderTabReportesPeriodicos(){
+  var defs=[
+    {k:'diario', lbl:'Diario', desc:'Cierre del día de hoy'},
+    {k:'semanal', lbl:'Semanal', desc:'Resumen de los últimos 7 días'},
+    {k:'quincenal', lbl:'Quincenal', desc:'Resumen de los últimos 15 días'},
+    {k:'mensual', lbl:'Mensual', desc:'Mes calendario en curso'}
+  ];
+  var calSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+  var cards=defs.map(function(d){
+    var r=(typeof generarReportePeriodo==='function')?generarReportePeriodo(d.k):null;
+    var ing=r?r.fmtUsd(r.cobrado):'$0', eg=r?r.fmtUsd(r.totalEgresos):'$0';
+    var ut=r?r.fmtUsd(r.utilidad):'$0', utc=(r&&r.utilidad<0)?'var(--red)':'var(--green)';
+    var np=r?r.pagosCount:0, rango=r?r.rangoLabel:'';
+    return '<div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column">'
+      +'<div style="padding:15px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--rim)">'
+        +'<div style="width:42px;height:42px;border-radius:11px;background:rgba(37,99,235,.10);color:var(--p1);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+calSvg+'</div>'
+        +'<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--ink);letter-spacing:-.2px">Reporte '+d.lbl+'</div><div style="font-size:11px;color:var(--ink3);font-weight:600;margin-top:1px">'+d.desc+'</div></div>'
+        +'<span style="font-size:8px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:#b91c1c;background:#fde8ec;border:1px solid #f5c2cb;padding:3px 8px;border-radius:5px;flex-shrink:0">Confidencial</span>'
+      +'</div>'
+      +'<div style="padding:14px 18px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px">'
+        +'<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)">Ingresos</div><div style="font-family:var(--fd);font-weight:900;font-size:16px;color:var(--green);margin-top:2px">'+ing+'</div></div>'
+        +'<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)">Egresos</div><div style="font-family:var(--fd);font-weight:900;font-size:16px;color:var(--red);margin-top:2px">'+eg+'</div></div>'
+        +'<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)">Utilidad</div><div style="font-family:var(--fd);font-weight:900;font-size:16px;color:'+utc+';margin-top:2px">'+ut+'</div></div>'
+      +'</div>'
+      +'<div style="padding:0 18px 16px;margin-top:auto">'
+        +'<div style="font-size:10.5px;color:var(--ink3);font-weight:600;margin-bottom:10px;text-transform:capitalize">'+rango+' · '+np+' pago'+(np!==1?'s':'')+'</div>'
+        +'<button class="btn btn-p" onclick="reportePeriodoAbrir(\''+d.k+'\')" style="width:100%;justify-content:center;font-weight:800;display:inline-flex;align-items:center;gap:8px;padding:10px">'
+          +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Generar reporte</button>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+  return '<div>'
+    +'<div style="display:flex;align-items:flex-start;gap:11px;padding:13px 16px;background:rgba(37,99,235,.05);border:1px solid rgba(37,99,235,.14);border-radius:12px;margin-bottom:16px">'
+      +'<svg viewBox="0 0 24 24" fill="none" stroke="var(--p1)" stroke-width="2" width="18" height="18" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01" stroke-linecap="round"/></svg>'
+      +'<div style="font-size:12px;color:var(--ink2);line-height:1.55">Cada reporte se genera con el <b>logo de Pagasi</b>, marca de agua <b>CONFIDENCIAL</b> y el detalle completo de ingresos, egresos, cartera, mora y rankings. Se abre en una pestaña nueva, listo para <b>imprimir o guardar en PDF</b>.</div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">'+cards+'</div>'
+  +'</div>';
+}
 
+// ══════════════════════════════════════════════════════════════
+// TAB: INVENTARIO DE OFICINA — activos / equipos / mobiliario
+// Se guarda en config/inventarioOficina (permitido por las reglas)
+// ══════════════════════════════════════════════════════════════
+var INV_CATS=['Computadora','Laptop','Monitor','Impresora','Teléfono / Celular','Tablet','Silla','Escritorio','Mueble / Mobiliario','Aire acondicionado','Cámara / Seguridad','Router / Red','UPS / Batería','Herramienta','Vehículo','Otro'];
+var INV_ESTADOS=['Nuevo','Bueno','Regular','Para reparar','Dañado'];
+
+function _renderTabInventario(){
+  var items = Array.isArray(S.inventarioOficina) ? S.inventarioOficina : [];
+  var ed = window._invEdit ? items.find(function(x){return x.id===window._invEdit;}) : null;
+  var v = function(s){ return (s==null?'':String(s)).replace(/"/g,'&quot;'); };
+  var hoyISO = (typeof fechaLocalISO==='function') ? fechaLocalISO(new Date()) : new Date().toISOString().slice(0,10);
+  var lineN = function(x){ return parseInt(x.cantidad,10)||0; };
+  var lineV = function(x){ return (parseFloat(x.valorUnit)||0)*lineN(x); };
+  var valorTotal = items.reduce(function(a,x){return a+lineV(x);},0);
+  var unidades = items.reduce(function(a,x){return a+lineN(x);},0);
+
+  var porCat={}; items.forEach(function(x){var c=x.categoria||'Otro'; if(!porCat[c])porCat[c]={n:0,val:0}; porCat[c].n+=lineN(x); porCat[c].val+=lineV(x);});
+  var catKeys=Object.keys(porCat).sort(function(a,b){return porCat[b].val-porCat[a].val;});
+  var catChips=catKeys.map(function(c){return '<span style="display:inline-flex;align-items:center;gap:7px;background:var(--surf2);border:1px solid var(--rim);border-radius:50px;padding:5px 12px;font-size:11px;font-weight:700;color:var(--ink2)">'+c+' <b style="color:var(--p1);font-family:var(--fd)">'+porCat[c].n+'</b> · <span style="font-family:var(--fd);color:var(--green)">'+fmt(porCat[c].val)+'</span></span>';}).join('');
+
+  var optsCat = INV_CATS.map(function(c){return '<option value="'+c+'"'+((ed&&ed.categoria===c)?' selected':'')+'>'+c+'</option>';}).join('');
+  var optsEst = INV_ESTADOS.map(function(s){var sel=ed?(ed.estado===s):(s==='Bueno'); return '<option value="'+s+'"'+(sel?' selected':'')+'>'+s+'</option>';}).join('');
+
+  var rows = items.slice().sort(function(a,b){return lineV(b)-lineV(a);}).map(function(x){
+    var cant=lineN(x), vu=parseFloat(x.valorUnit)||0, vt=lineV(x);
+    var estCol=(x.estado==='Dañado'||x.estado==='Para reparar')?'var(--red)':(x.estado==='Regular'?'var(--amber)':'var(--green)');
+    return '<tr>'
+      +'<td class="tdm" style="font-weight:700">'+(x.nombre||'—')+(x.nota?'<div style="font-size:10px;color:var(--ink3);font-weight:500;white-space:normal;margin-top:2px">'+x.nota+'</div>':'')+'</td>'
+      +'<td><span style="display:inline-block;background:var(--gs);color:var(--p1);font-size:10px;font-weight:700;padding:2px 9px;border-radius:50px;white-space:nowrap">'+(x.categoria||'Otro')+'</span></td>'
+      +'<td style="text-align:center;font-family:var(--fd);font-weight:700">'+cant+'</td>'
+      +'<td style="text-align:right;font-family:var(--fd);color:var(--ink2)">'+fmt(vu)+'</td>'
+      +'<td style="text-align:right;font-family:var(--fd);font-weight:900;color:var(--ink)">'+fmt(vt)+'</td>'
+      +'<td><span style="font-size:11px;font-weight:700;color:'+estCol+'">'+(x.estado||'—')+'</span></td>'
+      +'<td class="tds" style="font-size:11px;color:var(--ink3);white-space:nowrap">'+(x.fecha||'—')+'</td>'
+      +'<td style="white-space:nowrap;text-align:right"><div style="display:inline-flex;gap:4px"><button class="btn btn-g btn-xs" onclick="invEditar(\''+x.id+'\')">Editar</button><button class="btn btn-d btn-xs" onclick="invEliminar(\''+x.id+'\')" style="padding:4px 8px">✕</button></div></td>'
+    +'</tr>';
+  }).join('');
+
+  return '<div>'
+    // Resumen
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'
+      +'<div class="stat"><div class="st-v" style="color:var(--p1);font-size:24px">'+items.length+'</div><div class="st-l">Artículos</div><div style="font-size:10px;color:var(--ink3);margin-top:2px">Registros distintos</div></div>'
+      +'<div class="stat"><div class="st-v" style="color:var(--ink);font-size:24px">'+unidades+'</div><div class="st-l">Unidades</div><div style="font-size:10px;color:var(--ink3);margin-top:2px">Suma de cantidades</div></div>'
+      +'<div class="stat"><div class="st-v" style="color:var(--green);font-size:24px">'+fmt(valorTotal)+'</div><div class="st-l">Valor total</div><div style="font-size:10px;color:var(--ink3);margin-top:2px">Inventario valorizado</div></div>'
+      +'<div class="stat"><div class="st-v" style="color:var(--amber);font-size:24px">'+catKeys.length+'</div><div class="st-l">Categorías</div><div style="font-size:10px;color:var(--ink3);margin-top:2px">En uso</div></div>'
+    +'</div>'
+    +(catChips?'<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px">'+catChips+'</div>':'')
+    // Formulario agregar / editar
+    +'<div class="card" style="margin-bottom:14px;border:'+(ed?'1.5px solid var(--p1)':'1px solid var(--rim)')+'">'
+      +'<div class="ch"><div><div class="ct">'+(ed?'Editar artículo':'Agregar artículo')+'</div><div class="cs">'+(ed?'Modificá los datos y guardá los cambios':'Computadoras, impresoras, sillas, monitores, escritorios y más')+'</div></div></div>'
+      +'<div class="fgr" style="grid-template-columns:repeat(3,1fr);gap:12px;margin-top:6px">'
+        +'<div class="fg"><label>Artículo</label><input class="fi" id="inv-nombre" placeholder="Ej: Laptop Dell Latitude" value="'+(ed?v(ed.nombre):'')+'"></div>'
+        +'<div class="fg"><label>Categoría</label><select class="fs" id="inv-cat">'+optsCat+'</select></div>'
+        +'<div class="fg"><label>Estado</label><select class="fs" id="inv-estado">'+optsEst+'</select></div>'
+        +'<div class="fg"><label>Cantidad</label><input class="fi" id="inv-cant" type="number" min="1" step="1" value="'+(ed?(parseInt(ed.cantidad,10)||1):1)+'"></div>'
+        +'<div class="fg"><label>Valor unitario (USD)</label><input class="fi" id="inv-valor" type="number" min="0" step="0.01" placeholder="0.00" value="'+(ed?(parseFloat(ed.valorUnit)||''):'')+'"></div>'
+        +'<div class="fg"><label>Fecha de adquisición</label><input class="fi" id="inv-fecha" type="date" value="'+(ed&&ed.fecha?v(ed.fecha):hoyISO)+'"></div>'
+        +'<div class="fg" style="grid-column:1/-1"><label>Nota / serial / ubicación (opcional)</label><input class="fi" id="inv-nota" placeholder="Ej: Serial ABC123 · Oficina principal" value="'+(ed?v(ed.nota):'')+'"></div>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:12px">'
+        +'<button class="btn btn-p btn-sm" onclick="invAgregar()" style="font-weight:800">'+(ed?'Guardar cambios':'＋ Agregar al inventario')+'</button>'
+        +(ed?'<button class="btn btn-g btn-sm" onclick="invCancelarEdicion()">Cancelar</button>':'')
+      +'</div>'
+    +'</div>'
+    // Tabla
+    +'<div class="card">'
+      +'<div class="ch"><div><div class="ct">Artículos registrados</div><div class="cs">'+items.length+' artículo'+(items.length!==1?'s':'')+' · valor total '+fmt(valorTotal)+'</div></div></div>'
+      +(items.length
+        ? '<div class="tw tw-compact" style="margin-top:6px"><table><thead><tr><th>Artículo</th><th>Categoría</th><th style="text-align:center">Cant.</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Valor total</th><th>Estado</th><th>Adquirido</th><th></th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr><td colspan="4" style="padding-top:10px;font-weight:800;border-top:2px solid var(--ink)">TOTAL INVENTARIO</td><td style="padding-top:10px;text-align:right;font-weight:900;font-family:var(--fd);color:var(--green);font-size:15px;border-top:2px solid var(--ink)">'+fmt(valorTotal)+'</td><td colspan="3" style="border-top:2px solid var(--ink)"></td></tr></tfoot></table></div>'
+        : '<div style="text-align:center;padding:34px 12px;color:var(--ink3)"><div style="font-size:13px;font-weight:700;margin-bottom:4px">Aún no hay artículos registrados</div><div style="font-size:12px">Agregá tu primer activo de oficina con el formulario de arriba.</div></div>')
+    +'</div>'
+  +'</div>';
+}
+
+function invAgregar(){
+  var g=function(id){var el=document.getElementById(id);return el?el.value:'';};
+  var nombre=(g('inv-nombre')||'').trim();
+  if(!nombre){ if(typeof toast==='function') toast('Ponle un nombre al artículo','warn'); return; }
+  var cant=parseInt(g('inv-cant'),10); if(!cant||cant<1) cant=1;
+  var valor=parseFloat(g('inv-valor'))||0;
+  var fecha=g('inv-fecha')|| ((typeof fechaLocalISO==='function')?fechaLocalISO(new Date()):new Date().toISOString().slice(0,10));
+  var obj={categoria:g('inv-cat')||'Otro', cantidad:cant, valorUnit:valor, fecha:fecha, estado:g('inv-estado')||'Bueno', nota:(g('inv-nota')||'').trim(), nombre:nombre};
+  if(!Array.isArray(S.inventarioOficina)) S.inventarioOficina=[];
+  if(window._invEdit){
+    var it=S.inventarioOficina.find(function(x){return x.id===window._invEdit;});
+    if(it){ it.nombre=obj.nombre; it.categoria=obj.categoria; it.cantidad=obj.cantidad; it.valorUnit=obj.valorUnit; it.fecha=obj.fecha; it.estado=obj.estado; it.nota=obj.nota; }
+    window._invEdit=null;
+    if(typeof toast==='function') toast('Artículo actualizado','success');
+  } else {
+    obj.id='inv_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    obj.creado=new Date().toISOString();
+    S.inventarioOficina.push(obj);
+    if(typeof toast==='function') toast('Artículo agregado al inventario','success');
+  }
+  if(typeof DB!=='undefined' && DB.saveInventarioOficina) DB.saveInventarioOficina();
+  try{ localStorage.setItem('pagasi_inv_oficina', JSON.stringify(S.inventarioOficina)); }catch(e){}
+  if(typeof logActividad==='function') logActividad('inventario','finanzas',nombre,'Inventario de oficina');
+  S.reportesTab='inventario'; nav('reportes');
+}
+function invEditar(id){ window._invEdit=id; S.reportesTab='inventario'; nav('reportes'); setTimeout(function(){var el=document.getElementById('inv-nombre'); if(el){el.focus(); try{el.scrollIntoView({behavior:'smooth',block:'center'});}catch(e){}}},120); }
+function invCancelarEdicion(){ window._invEdit=null; S.reportesTab='inventario'; nav('reportes'); }
+function invEliminar(id){
+  if(!confirm('¿Eliminar este artículo del inventario de oficina?')) return;
+  S.inventarioOficina=(S.inventarioOficina||[]).filter(function(x){return x.id!==id;});
+  if(window._invEdit===id) window._invEdit=null;
+  if(typeof DB!=='undefined' && DB.saveInventarioOficina) DB.saveInventarioOficina();
+  try{ localStorage.setItem('pagasi_inv_oficina', JSON.stringify(S.inventarioOficina)); }catch(e){}
+  if(typeof toast==='function') toast('Artículo eliminado','success');
+  S.reportesTab='inventario'; nav('reportes');
+}
 
 // ══════════════════════════════════════════════════════════════
 // TAB: CONTADOR — Reporte Semanal para el Contador
