@@ -49,119 +49,6 @@ PG.contratos = function(){
     ]
   )}
 
-  <!-- ═══ KPIs ═══ -->
-  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px">
-    <div class="stat">
-      <div class="st-v" style="color:var(--p1);font-size:26px">${credsActivos.length}</div>
-      <div class="st-l">Activos</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:3px">En vigencia</div>
-    </div>
-    <div class="stat">
-      <div class="st-v" style="color:var(--green);font-size:26px">${fmt(valorActivos)}</div>
-      <div class="st-l">Valor cartera</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:3px">En contratos activos</div>
-    </div>
-    <div class="stat">
-      <div class="st-v" style="color:var(--amber);font-size:26px">${nuevosMes}</div>
-      <div class="st-l">Nuevos este mes</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:3px">Firmas recientes</div>
-    </div>
-    <div class="stat">
-      <div class="st-v" style="color:var(--red);font-size:26px">${enMora}</div>
-      <div class="st-l">Con mora</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:3px">Requieren seguimiento</div>
-    </div>
-    <div class="stat">
-      <div class="st-v" style="color:var(--blue,#3b82f6);font-size:22px">${porVencer30d}</div>
-      <div class="st-l">Por vencer 30d</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:3px">Próximas finalizaciones</div>
-    </div>
-    <div class="stat">
-      <div class="st-v" style="font-size:22px">${plazoProm}m</div>
-      <div class="st-l">Plazo promedio</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:3px">Cuota: ${fmt(cuotaProm)}</div>
-    </div>
-  </div>
-
-  <!-- ═══ ESTADO PORTFOLIO + TIPOS DE DOCUMENTO ═══ -->
-  <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px;margin-bottom:14px">
-    <div class="card">
-      <div class="ch">
-        <div>
-          <div class="ct"> Estado del portfolio de contratos</div>
-          <div class="cs">Distribución actual de ${totalContratos} contratos</div>
-        </div>
-      </div>
-      <div style="margin-top:12px">
-        <div style="display:flex;height:40px;border-radius:10px;overflow:hidden;background:var(--surf2)">
-          ${activos>0?`<div style="flex:${activos};background:linear-gradient(135deg,#05a060,#10c878);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;min-width:36px">${activos}</div>`:''}
-          ${activosMora>0?`<div style="flex:${activosMora};background:linear-gradient(135deg,#e8980a,#ffa94d);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;min-width:36px">${activosMora}</div>`:''}
-          ${completados>0?`<div style="flex:${completados};background:linear-gradient(135deg,#2563EB,#60A5FA);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;min-width:36px">${completados}</div>`:''}
-          ${recuperados>0?`<div style="flex:${recuperados};background:linear-gradient(135deg,#d93b5a,#f04b6a);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;min-width:36px">${recuperados}</div>`:''}
-          ${cancelados>0?`<div style="flex:${cancelados};background:linear-gradient(135deg,#6b7280,#9ca3af);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:800;min-width:36px">${cancelados}</div>`:''}
-          ${totalContratos===0?`<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:11px">Sin contratos</div>`:''}
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:10px;font-size:10.5px">
-          <div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:#05a060"></span><span>Al día · ${activos}</span></div>
-          <div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:#e8980a"></span><span>Mora · ${activosMora}</span></div>
-          <div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:#2563EB"></span><span>Comp. · ${completados}</span></div>
-          <div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:#d93b5a"></span><span>Recup. · ${recuperados}</span></div>
-          <div style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:#6b7280"></span><span>Canc. · ${cancelados}</span></div>
-        </div>
-      </div>
-
-      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--rim2);display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-        <div style="padding:10px 12px;background:rgba(5,160,96,.06);border-radius:8px;">
-          <div style="font-size:10px;color:var(--ink3);font-weight:700;text-transform:uppercase">Tasa de éxito</div>
-          <div style="font-size:18px;font-weight:900;color:var(--green);margin-top:2px">${totalContratos?Math.round(completados/totalContratos*100):0}%</div>
-        </div>
-        <div style="padding:10px 12px;background:rgba(217,59,90,.06);border-radius:8px;">
-          <div style="font-size:10px;color:var(--ink3);font-weight:700;text-transform:uppercase">Tasa recuperación</div>
-          <div style="font-size:18px;font-weight:900;color:var(--red);margin-top:2px">${totalContratos?Math.round(recuperados/totalContratos*100):0}%</div>
-        </div>
-        <div style="padding:10px 12px;background:rgba(37,99,235,.06);border-radius:8px;">
-          <div style="font-size:10px;color:var(--ink3);font-weight:700;text-transform:uppercase">Vigentes</div>
-          <div style="font-size:18px;font-weight:900;color:var(--p1);margin-top:2px">${totalContratos?Math.round(credsActivos.length/totalContratos*100):0}%</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tipos de documentos disponibles -->
-    <div class="card">
-      <div class="ch">
-        <div>
-          <div class="ct"> Tipos de documentos</div>
-          <div class="cs">Plantillas disponibles</div>
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
-        <div style="display:flex;align-items:center;gap:10px;padding:12px;background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(124,109,255,.04));border:1px solid rgba(37,99,235,.2);border-radius:10px">
-          <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--p1),#60A5FA);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;flex-shrink:0"></div>
-          <div style="flex:1">
-            <div style="font-size:12.5px;font-weight:800">Contrato de Arrendamiento</div>
-            <div style="font-size:10.5px;color:var(--ink3);margin-top:1px">Con Opción a Compra</div>
-          </div>
-          <span style="background:var(--green);color:#fff;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:800">ACTIVO</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--surf2);border:1px solid var(--rim2);border-radius:10px">
-          <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--amber),#ffa94d);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;flex-shrink:0"></div>
-          <div style="flex:1">
-            <div style="font-size:12.5px;font-weight:800">Pagaré</div>
-            <div style="font-size:10.5px;color:var(--ink3);margin-top:1px">Documento ejecutivo de deuda</div>
-          </div>
-          <span style="background:var(--green);color:#fff;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:800">ACTIVO</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--surf2);border:1px solid var(--rim2);border-radius:10px">
-          <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--blue,#3b82f6),#60a5fa);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;flex-shrink:0">️</div>
-          <div style="flex:1">
-            <div style="font-size:12.5px;font-weight:800">Carta de Instrucciones</div>
-            <div style="font-size:10.5px;color:var(--ink3);margin-top:1px">Instrucciones de pago y cobro</div>
-          </div>
-          <span style="background:var(--green);color:#fff;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:800">ACTIVO</span>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- ═══ LISTADO DE CONTRATOS (en lista, como Clientes y Créditos) ═══ -->
   ${totalContratos?`<div class="card" style="margin-bottom:14px">
@@ -287,6 +174,42 @@ PG.contratos = function(){
       </div>
     </div>
 
+  </div>
+
+  <!-- ═══ TIPOS DE DOCUMENTOS (al fondo) ═══ -->
+  <div class="card" style="margin-top:14px">
+    <div class="ch">
+      <div>
+        <div class="ct">Tipos de documentos</div>
+        <div class="cs">Plantillas disponibles</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px">
+      <div style="display:flex;align-items:center;gap:10px;padding:12px;background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(124,109,255,.04));border:1px solid rgba(37,99,235,.2);border-radius:10px">
+        <div style="width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--p1),#60A5FA);flex-shrink:0"></div>
+        <div style="flex:1">
+          <div style="font-size:12.5px;font-weight:800">Contrato de Arrendamiento</div>
+          <div style="font-size:10.5px;color:var(--ink3);margin-top:1px">Con Opción a Compra</div>
+        </div>
+        <span style="background:var(--green);color:#fff;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:800">ACTIVO</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--surf2);border:1px solid var(--rim2);border-radius:10px">
+        <div style="width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--amber),#ffa94d);flex-shrink:0"></div>
+        <div style="flex:1">
+          <div style="font-size:12.5px;font-weight:800">Pagaré</div>
+          <div style="font-size:10.5px;color:var(--ink3);margin-top:1px">Documento ejecutivo de deuda</div>
+        </div>
+        <span style="background:var(--green);color:#fff;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:800">ACTIVO</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--surf2);border:1px solid var(--rim2);border-radius:10px">
+        <div style="width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--blue,#3b82f6),#60a5fa);flex-shrink:0"></div>
+        <div style="flex:1">
+          <div style="font-size:12.5px;font-weight:800">Carta de Instrucciones</div>
+          <div style="font-size:10.5px;color:var(--ink3);margin-top:1px">Instrucciones de pago y cobro</div>
+        </div>
+        <span style="background:var(--green);color:#fff;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:800">ACTIVO</span>
+      </div>
+    </div>
   </div>
   </div>`;
 };

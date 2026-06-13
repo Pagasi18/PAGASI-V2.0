@@ -382,7 +382,25 @@ PG.dash = function(){
       </div>
     </div>
 
-    <!-- INGRESOS CHART — segundo -->
+    <!-- CUOTAS COBRADAS CHART — segundo -->
+    <div class="card">
+      <div class="ch" style="margin-bottom:12px;flex-wrap:wrap;row-gap:6px">
+        <div>
+          <div class="ct" style="color:#0E9488">Cuotas cobradas</div>
+          <div class="cs" id="dash-cuo-sub">Últimos 30 días</div>
+        </div>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-xs btn-p" id="dash-cuo-d"  onclick="setDashPeriodo('cuotas','diario')"    style="font-size:10px;padding:4px 9px">Diario</button>
+          <button class="btn btn-xs" id="dash-cuo-q"  onclick="setDashPeriodo('cuotas','quincenal')" style="font-size:10px;padding:4px 9px">Quincenal</button>
+          <button class="btn btn-xs" id="dash-cuo-m" onclick="setDashPeriodo('cuotas','mensual')"   style="font-size:10px;padding:4px 9px">Mensual</button>
+        </div>
+      </div>
+      <div style="position:relative;height:160px;min-height:160px">
+        <canvas id="dash-cuo-chart" style="width:100%;height:100%"></canvas>
+      </div>
+    </div>
+
+    <!-- INGRESOS CHART — tercero -->
     <div class="card">
       <div class="ch" style="margin-bottom:12px">
         <div>
@@ -400,7 +418,7 @@ PG.dash = function(){
       </div>
     </div>
 
-    <!-- EGRESOS CHART — tercero -->
+    <!-- EGRESOS CHART — cuarto -->
     <div class="card">
       <div class="ch" style="margin-bottom:12px">
         <div>
@@ -415,24 +433,6 @@ PG.dash = function(){
       </div>
       <div style="position:relative;height:160px;min-height:160px">
         <canvas id="dash-egr-chart" style="width:100%;height:100%"></canvas>
-      </div>
-    </div>
-
-    <!-- CUOTAS COBRADAS CHART — cuarto -->
-    <div class="card">
-      <div class="ch" style="margin-bottom:12px;flex-wrap:wrap;row-gap:6px">
-        <div>
-          <div class="ct" style="color:#0E9488">Cuotas cobradas</div>
-          <div class="cs" id="dash-cuo-sub">Últimos 30 días</div>
-        </div>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-xs btn-p" id="dash-cuo-d"  onclick="setDashPeriodo('cuotas','diario')"    style="font-size:10px;padding:4px 9px">Diario</button>
-          <button class="btn btn-xs" id="dash-cuo-q"  onclick="setDashPeriodo('cuotas','quincenal')" style="font-size:10px;padding:4px 9px">Quincenal</button>
-          <button class="btn btn-xs" id="dash-cuo-m" onclick="setDashPeriodo('cuotas','mensual')"   style="font-size:10px;padding:4px 9px">Mensual</button>
-        </div>
-      </div>
-      <div style="position:relative;height:160px;min-height:160px">
-        <canvas id="dash-cuo-chart" style="width:100%;height:100%"></canvas>
       </div>
     </div>
 
