@@ -145,6 +145,7 @@ function toggleDark(){
   setTimeout(function(){
     if(typeof renderDashChart==='function') renderDashChart();
     if(typeof renderDashEgrChart==='function') renderDashEgrChart();
+    if(typeof renderDashCuotasChart==='function') renderDashCuotasChart();
     if(typeof renderMoraChart==='function') renderMoraChart();
     if(typeof renderCredChart==='function') renderCredChart();
     if(typeof renderFinIngChart==='function') renderFinIngChart();
@@ -275,7 +276,7 @@ function renderFinIngChart(){
 var _dashChart = null;
 var _moraChart = null;
 var _credChart = null;
-var _dashPeriodo = { ingresos: 'diario', creditos: 'diario', egresos: 'diario' };
+var _dashPeriodo = { ingresos: 'diario', creditos: 'diario', egresos: 'diario', cuotas: 'diario' };
 
 function getDashData(tipo, periodo){
   var now = new Date();
@@ -336,6 +337,14 @@ function getDashData(tipo, periodo){
       var f = toDateStr(e.fecha);
       buckets.forEach(function(b){ if(f && matchFn(f,b)){ b.total+=parseFloat(e.monto)||0; b.count++; } });
     });
+  } else if(tipo === 'cuotas'){
+    // Cuotas cobradas = pagos confirmados que NO son la inicial (mismo criterio que el KPI "Cobrado")
+    var pagosCuo = _concFiltrar(S.pagos||[]);
+    if(!pagosCuo.length) pagosCuo = S.pagos||[];
+    pagosCuo.filter(function(p){ return !p.eliminado&&p.estado==='confirmado'&&!p.esInicial&&p.tipoOperacion!=='inicial_credito'&&p.fecha; }).forEach(function(p){
+      var f = toDateStr(p.fecha);
+      buckets.forEach(function(b){ if(f && matchFn(f,b)){ b.total+=parseFloat(p.monto)||0; b.count++; } });
+    });
   } else {
     var credsData = _concFiltrar(S.creds||[]);
     if(!credsData.length) credsData = S.creds||[];
@@ -349,7 +358,7 @@ function getDashData(tipo, periodo){
 
 function setDashPeriodo(tipo, periodo){
   _dashPeriodo[tipo] = periodo;
-  var pre = tipo==='ingresos'?'ing':tipo==='egresos'?'egr':'cred';
+  var pre = tipo==='ingresos'?'ing':tipo==='egresos'?'egr':tipo==='cuotas'?'cuo':'cred';
   ['d','q','m'].forEach(function(k){
     var p = k==='d'?'diario':k==='q'?'quincenal':'mensual';
     var btn = document.getElementById('dash-'+pre+'-'+k);
@@ -360,6 +369,7 @@ function setDashPeriodo(tipo, periodo){
     var sub=document.getElementById('dash-egr-sub'); if(sub) sub.textContent=subLabels[periodo];
     renderDashEgrChart();
   } else if(tipo==='ingresos') renderDashChart();
+  else if(tipo==='cuotas') renderDashCuotasChart();
   else renderCredChart();
 }
 
@@ -589,6 +599,44 @@ function renderDashEgrChart(){
         callbacks: { label: function(ctx){ return ' $' + (ctx.raw||0).toLocaleString('es-VE',{minimumFractionDigits:0,maximumFractionDigits:0}); } } } },
       scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: ink3, font: { size: 9 } } },
         y: { grid: { color: isDark?'rgba(217,59,90,0.08)':'rgba(217,59,90,0.06)', drawBorder: false },
+          border: { display: false, dash: [4,4] },
+          ticks: { color: ink3, font: { size: 9 }, callback: function(v){ return v>0 ? '$'+Math.round(v/1000)+'k' : '$0'; }, maxTicksLimit: 5 } } } }
+  });
+}
+
+// ══════════════════════════════════════════
+// CHART.JS — DASHBOARD CUOTAS COBRADAS
+// ══════════════════════════════════════════
+var _dashCuotasChart = null;
+function renderDashCuotasChart(){
+  var canvas = document.getElementById('dash-cuo-chart');
+  if(!canvas || typeof Chart === 'undefined') return;
+  var wrapper = canvas.parentElement; if(wrapper) wrapper.style.height='160px';
+  var periodo = _dashPeriodo.cuotas || 'diario';
+  var data = getDashData('cuotas', periodo);
+  var labels = data.map(function(x){ return x.label; });
+  var counts = data.map(function(x){ return x.count; });
+  var montos = data.map(function(x){ return x.total; });
+  var isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  var tl  = isDark ? '#2DD4BF' : '#14B8A6';
+  var tlt = isDark ? 'rgba(45,212,191,0.18)' : 'rgba(20,184,166,0.12)';
+  var ink3 = isDark ? '#6B6896' : '#9794BB';
+  var subLabels = {diario:'Últimos 30 días', quincenal:'Últimas 8 quincenas', mensual:'Últimos 7 meses'};
+  var sub = document.getElementById('dash-cuo-sub');
+  if(sub) sub.textContent = subLabels[periodo];
+  if(_dashCuotasChart){ _dashCuotasChart.destroy(); _dashCuotasChart=null; }
+  _dashCuotasChart = new Chart(canvas, {
+    type: 'bar',
+    data: { labels: labels, datasets: [{ label: 'Cuotas cobradas', data: montos,
+      backgroundColor: montos.map(function(v,i){ return i===montos.length-1 ? tl : tlt; }),
+      borderColor: 'transparent', borderWidth: 0, borderRadius: 6, borderSkipped: false }] },
+    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: isDark?'#252844':'#fff',
+        borderColor: isDark?'rgba(20,184,166,0.3)':'rgba(20,184,166,0.2)', borderWidth: 1,
+        titleColor: isDark?'#E8E6FF':'#0B0B1E', bodyColor: isDark?'#B0ADDB':'#4A4870', padding: 10,
+        callbacks: { label: function(ctx){ var i=ctx.dataIndex; var m=montos[i]||0; var n=counts[i]||0; return [' $'+m.toLocaleString('es-VE',{minimumFractionDigits:0,maximumFractionDigits:0})+' cobrado', ' '+n+' cuota'+(n!==1?'s':'')+' cobrada'+(n!==1?'s':'')]; } } } },
+      scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: ink3, font: { size: 9 } } },
+        y: { grid: { color: isDark?'rgba(20,184,166,0.08)':'rgba(20,184,166,0.06)', drawBorder: false },
           border: { display: false, dash: [4,4] },
           ticks: { color: ink3, font: { size: 9 }, callback: function(v){ return v>0 ? '$'+Math.round(v/1000)+'k' : '$0'; }, maxTicksLimit: 5 } } } }
   });

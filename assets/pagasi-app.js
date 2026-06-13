@@ -1728,6 +1728,7 @@ var DB = {
         if(typeof renderFinIngChart==='function') renderFinIngChart();
         // Re-render egresos chart if on dashboard
         if(typeof renderDashEgrChart==='function') renderDashEgrChart();
+        if(typeof renderDashCuotasChart==='function') renderDashCuotasChart();
       }, 300);
       setTimeout(mostrarAlertaMora, 800); // pequeño delay para que el dashboard cargue
     }).catch(function(e){
@@ -2586,13 +2587,16 @@ function nav(p){
           setTimeout(function(){ if(typeof renderCredChart==='function') renderCredChart(); }, 50);
           setTimeout(function(){ if(typeof renderMoraChart==='function') renderMoraChart(); }, 80);
           setTimeout(function(){ if(typeof renderDashEgrChart==='function') renderDashEgrChart(); }, 200);
+          setTimeout(function(){ if(typeof renderDashCuotasChart==='function') renderDashCuotasChart(); }, 220);
           setTimeout(function(){
             if(typeof renderCredChart==='function') renderCredChart();
             if(typeof renderDashChart==='function' && !_dashChart) renderDashChart();
             if(typeof renderDashEgrChart==='function') renderDashEgrChart();
+            if(typeof renderDashCuotasChart==='function' && !_dashCuotasChart) renderDashCuotasChart();
           }, 900);
           setTimeout(function(){
             if(typeof renderDashEgrChart==='function') renderDashEgrChart();
+            if(typeof renderDashCuotasChart==='function' && !_dashCuotasChart) renderDashCuotasChart();
           }, 2500);
         }
       },80);
