@@ -253,6 +253,19 @@ PG.dash = function(){
       </div>
     </div>
 
+    <!-- Créditos Activos (estado de la cartera) -->
+    <div class="card dash-kpi" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Créditos Activos</span>
+        <span style="font-size:9px;background:var(--gs);color:var(--p1);padding:2px 7px;border-radius:20px;font-weight:700">${totalCreds} total</span>
+      </div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:28px;letter-spacing:-1px;color:var(--p1);margin-bottom:4px">${activos}</div>
+      <div style="font-size:11px;color:var(--ink3)">Créditos activos en cartera</div>
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:6px">
+        ${[['Activos',cActivos,'#2563EB'],['En mora',cEnMora,'#E8335A'],['Completados',cCompletados,'#00B876']].map(function(b){var pct=cTotal>0?Math.round(b[1]/cTotal*100):0;return '<div><div style="display:flex;justify-content:space-between;font-size:9.5px;margin-bottom:3px"><span style="color:var(--ink3)">'+b[0]+'</span><span style="font-weight:700;color:var(--ink);font-family:var(--fm)">'+b[1]+'</span></div><div style="background:var(--gs);border-radius:3px;height:5px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+b[2]+';border-radius:3px"></div></div></div>';}).join('')}
+      </div>
+    </div>
+
     <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);font-family:var(--fm)">Cobrado (Mes)</span>
@@ -276,25 +289,6 @@ PG.dash = function(){
       <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:4px">
         <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Cuotas recibidas</span><span style="color:var(--green);font-weight:700">${fmt(cuotasCobradas)}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Iniciales recibidas</span><span style="color:var(--p1);font-weight:700">${fmt(inicialesCobradas)}</span></div>
-      </div>
-    </div>
-
-    <div class="card dash-kpi" onclick="nav(&quot;cobranza&quot;)" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${mora>0?'var(--red)':'var(--green)'};font-family:var(--fm)">En Mora</span>
-        <span style="font-size:9px;background:${mora>0?'var(--reds)':'var(--greens)'};color:${mora>0?'var(--red)':'var(--green)'};padding:2px 7px;border-radius:20px;font-weight:700">${mora>0?mora+' clientes':'Sin mora'}</span>
-      </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:28px;letter-spacing:-1px;color:${mora>0?'var(--red)':'var(--green)'};margin-bottom:4px">${mora>0?mora:'✓'}</div>
-      <div style="font-size:11px;color:var(--ink3)">${mora>0?'Requieren gestión de cobro':'Todos los clientes al día'}</div>
-      <div style="margin-top:10px;display:flex;flex-direction:column;gap:3px">
-        ${Object.entries(moraBuckets).map(([k,v])=>v>0?`
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:9px;color:var(--ink3);width:28px;font-family:var(--fm)">${k}d</span>
-          <div style="flex:1;background:var(--rim);border-radius:3px;height:4px"><div style="height:100%;width:${v/Math.max(1,mora)*100}%;background:var(--red);border-radius:3px"></div></div>
-          <span style="font-size:9px;font-weight:700;color:var(--red);width:12px;text-align:right">${v}</span>
-        </div>`:''
-        ).join('')}
-        ${mora===0?'<div style="font-size:10px;color:var(--green);text-align:center;padding:3px 0">✓ Sin atrasos</div>':''}
       </div>
     </div>
 
@@ -444,8 +438,8 @@ PG.dash = function(){
 
   </div>
 
-    <!-- ROW 2b: 6 cards de operación (mismo tamaño que la fila superior) -->
-  <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;margin-bottom:18px">
+    <!-- ROW 2b: 5 cards de operación -->
+  <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:18px">
 
     <!-- 1 · Mora por mes -->
     <div class="card dash-kpi" onclick="nav(&quot;cobranza&quot;)" style="cursor:pointer">
@@ -476,20 +470,7 @@ PG.dash = function(){
       </div>
     </div>
 
-    <!-- 3 · Cartera por estado -->
-    <div class="card dash-kpi" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Cartera por estado</span>
-        <span style="font-size:9px;background:var(--gs);color:var(--p1);padding:2px 7px;border-radius:20px;font-weight:700">${totalCreds} créd.</span>
-      </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:var(--ink);margin-bottom:4px">${totalCreds}</div>
-      <div style="font-size:11px;color:var(--ink3)">Créditos en total</div>
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:6px">
-        ${[['Activos',cActivos,'#2563EB'],['En mora',cEnMora,'#E8335A'],['Completados',cCompletados,'#00B876']].map(function(b){var pct=cTotal>0?Math.round(b[1]/cTotal*100):0;return '<div><div style="display:flex;justify-content:space-between;font-size:9.5px;margin-bottom:3px"><span style="color:var(--ink3)">'+b[0]+'</span><span style="font-weight:700;color:var(--ink);font-family:var(--fm)">'+b[1]+'</span></div><div style="background:var(--gs);border-radius:3px;height:5px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+b[2]+';border-radius:3px"></div></div></div>';}).join('')}
-      </div>
-    </div>
-
-    <!-- 4 · Pagos por método -->
+    <!-- 3 · Pagos por método -->
     <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Pagos por método</span>
@@ -502,7 +483,7 @@ PG.dash = function(){
       </div>
     </div>
 
-    <!-- 5 · Alerta de cobranza -->
+    <!-- 4 · Alerta de cobranza -->
     <div class="card dash-kpi" onclick="nav(&quot;cobranza&quot;)" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${mora>0?'var(--red)':'var(--green)'};font-family:var(--fm)">Alerta de cobranza</span>
@@ -515,7 +496,7 @@ PG.dash = function(){
       </div>
     </div>
 
-    <!-- 6 · Próximas cuotas -->
+    <!-- 5 · Próximas cuotas -->
     <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--amber);font-family:var(--fm)">Próximas cuotas</span>

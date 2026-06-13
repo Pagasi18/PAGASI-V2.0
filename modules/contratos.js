@@ -163,37 +163,38 @@ PG.contratos = function(){
     </div>
   </div>
 
-  <!-- ═══ CONTRATOS RECIENTES (destacados) ═══ -->
-  ${credsRecientes.length?`<div class="card" style="margin-bottom:14px">
+  <!-- ═══ LISTADO DE CONTRATOS (en lista, como Clientes y Créditos) ═══ -->
+  ${totalContratos?`<div class="card" style="margin-bottom:14px">
     <div class="ch">
       <div>
-        <div class="ct">🆕 Contratos recientes</div>
-        <div class="cs">Los 6 últimos firmados · click para ver detalle</div>
+        <div class="ct">Listado de contratos</div>
+        <div class="cs">${totalContratos} contrato${totalContratos!==1?'s':''} · click en una fila para ver el detalle</div>
       </div>
+      <div class="srch" style="width:260px"><span class="srch-i">◆</span><input type="text" id="ctrQ" placeholder="Buscar por ID, cliente, modelo..." oninput="var q=this.value.toLowerCase();var rs=document.querySelectorAll('#ctr-tbody tr');for(var i=0;i&lt;rs.length;i++){rs[i].style.display=(rs[i].getAttribute('data-s')||'').indexOf(q)>=0?'':'none';}" style="width:100%"></div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px">
-      ${credsRecientes.map(function(c){
-        var estColor = c.mora>0 ? 'var(--red)' : c.estado==='completado' ? 'var(--green)' : 'var(--p1)';
-        var estLabel = c.mora>0 ? 'En mora' : c.estado==='completado' ? 'Completado' : 'Activo';
-        var estBg = c.mora>0 ? 'rgba(217,59,90,.08)' : c.estado==='completado' ? 'rgba(5,160,96,.08)' : 'rgba(37,99,235,.08)';
-        return '<div style="padding:14px;background:'+estBg+';border:1px solid var(--rim2);border-radius:12px;cursor:pointer;transition:transform .15s" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'\'" onclick="openAmort(\''+c.id+'\')">'
-          +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'
-          +'<span style="font-size:10.5px;font-weight:800;color:var(--p1);letter-spacing:.5px">'+c.id+'</span>'
-          +'<span style="background:'+estColor+';color:#fff;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:800">'+estLabel+'</span>'
-          +'</div>'
-          +'<div style="font-size:13px;font-weight:800;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.cli+'</div>'
-          +'<div style="font-size:10.5px;color:var(--ink3);margin-bottom:8px">'+c.modelo+'</div>'
-          +'<div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid var(--rim2);font-size:10.5px">'
-          +'<span><span style="color:var(--ink3)">Fecha:</span> <b>'+(c.fecha||'—')+'</b></span>'
-          +'<span><span style="color:var(--ink3)">Total:</span> <b style="color:var(--green)">'+fmt(c.total||0)+'</b></span>'
-          +'</div>'
-          +'<div style="display:flex;gap:4px;margin-top:8px">'
-          +'<button class="btn btn-g btn-xs" style="flex:1" onclick="event.stopPropagation();descargarContratoPDFById(\''+c.id+'\')">↓ PDF</button>'
-          +'<button class="btn btn-p btn-xs" style="flex:1" onclick="event.stopPropagation();openAmort(\''+c.id+'\')">Ver</button>'
-          +'</div>'
-          +'</div>';
-      }).join('')}
-    </div>
+    <div class="tw tw-compact"><table>
+      <thead><tr>
+        <th>ID</th><th>Cliente</th><th>Modelo</th><th>Fecha</th><th style="white-space:nowrap">Total</th><th>Estado</th><th style="text-align:right">Acciones</th>
+      </tr></thead>
+      <tbody id="ctr-tbody">${credsActivos.concat(credsArchivados).sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');}).map(function(c){
+        var estColor = c.mora>0 ? 'var(--red)' : (c.estado==='completado' ? 'var(--green)' : ((c.estado==='cancelado'||c.estado==='recuperado'||c.estado==='recuperada') ? '#6b7280' : 'var(--p1)'));
+        var estLabel = c.mora>0 ? ('En mora '+c.mora+'d') : (c.estado==='completado' ? 'Completado' : (c.estado==='cancelado' ? 'Cancelado' : ((c.estado==='recuperado'||c.estado==='recuperada') ? 'Recuperado' : 'Activo')));
+        var fechaFmt = c.fecha ? parseFechaLocal(c.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+        var s = (c.id+' '+(c.cli||'')+' '+(c.modelo||'')+' '+estLabel).toLowerCase().replace(/"/g,'');
+        return '<tr data-s="'+s+'" style="cursor:pointer" onclick="openAmort(\''+c.id+'\')">'
+          +'<td class="tdm" style="font-family:var(--fd)">'+c.id+'</td>'
+          +'<td style="max-width:180px"><div class="tdm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(c.cli||'')+'">'+(c.cli||'—')+'</div></td>'
+          +'<td class="tds">'+(c.modelo||'—')+'</td>'
+          +'<td class="tds" style="font-family:var(--fd);font-size:11px;color:var(--ink3);white-space:nowrap">'+fechaFmt+'</td>'
+          +'<td style="font-family:var(--fd);font-weight:700;white-space:nowrap">'+fmt(c.total||0)+'</td>'
+          +'<td><span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:9.5px;font-weight:800;color:#fff;background:'+estColor+';white-space:nowrap">'+estLabel+'</span></td>'
+          +'<td onclick="event.stopPropagation()" style="white-space:nowrap;text-align:right"><div style="display:inline-flex;gap:4px">'
+            +'<button class="btn btn-g btn-xs" onclick="openAmort(\''+c.id+'\')" title="Ver detalle">Ver</button>'
+            +'<button class="btn btn-p btn-xs" onclick="descargarContratoPDFById(\''+c.id+'\')" title="Descargar PDF">↓ PDF</button>'
+          +'</div></td>'
+          +'</tr>';
+      }).join('')}</tbody>
+    </table></div>
   </div>`:''}
 
   <!-- ═══ GENERADOR + VISTA PREVIA ═══ -->
