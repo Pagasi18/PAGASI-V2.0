@@ -88,26 +88,25 @@ PG.cobranza = function(){
   var topCobradores = Object.keys(cobradoresStats).map(function(k){return {nombre:k, cnt:cobradoresStats[k].cnt, tot:cobradoresStats[k].tot};}).sort(function(a,b){return b.tot-a.tot;}).slice(0,3);
 
   setTimeout(function(){
-    var el=$('cobranza-notas-list');
-    if(!el||!db) return;
-    db.collection('notas_cobranza').orderBy('fecha','desc').limit(30).get()
-      .then(function(snap){
-        if(!$('cobranza-notas-list')) return;
-        if(snap.empty){$('cobranza-notas-list').innerHTML='<div style="color:var(--ink3);font-size:12px;padding:12px 0">Sin gestiones registradas aún</div>';return;}
-        $('cobranza-notas-list').innerHTML=snap.docs.map(function(d){
-          var n=d.data();
-          var typeColor={Llamada:'var(--p1)',WhatsApp:'var(--green)',Visita:'var(--amber)',Acuerdo:'var(--blue)'}[n.tipo]||'var(--ink3)';
-          return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--rim2)">'
-            +'<div style="width:32px;height:32px;border-radius:8px;background:var(--surf2);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:'+typeColor+';flex-shrink:0">'+( n.tipo||'Nota').slice(0,3).toUpperCase()+'</div>'
-            +'<div style="flex:1;min-width:0">'
-              +'<div style="font-size:12.5px;font-weight:700">'+n.tipo+' — <span style="color:var(--p1)">'+n.credId+'</span></div>'
-              +'<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">'+n.resultado+'</div>'
-              +(n.fechaCompromiso?'<div style="font-size:11px;color:var(--p1);margin-top:3px;font-weight:700">Compromiso: '+n.fechaCompromiso+'</div>':'')
-            +'</div>'
-            +'<div style="text-align:right;flex-shrink:0"><div style="font-size:11px;font-weight:600;color:var(--ink2)">'+n.cobrador+'</div><div style="font-size:10px;color:var(--ink3)">'+n.fecha+'</div></div>'
-            +'</div>';
-        }).join('');
-      }).catch(function(){});
+    var el=$('cobranza-notas-list'); if(!el) return;
+    var all=[];
+    (S.creds||[]).forEach(function(c){ if(Array.isArray(c.gestiones)) c.gestiones.forEach(function(n){ all.push(Object.assign({credId:n.credId||c.id}, n)); }); });
+    all.sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
+    all=all.slice(0,30);
+    if(!all.length){ el.innerHTML='<div style="color:var(--ink3);font-size:12px;padding:12px 0">Sin gestiones registradas aún</div>'; return; }
+    var esc=function(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+    el.innerHTML=all.map(function(n){
+      var typeColor={Llamada:'var(--p1)',WhatsApp:'var(--green)',Visita:'var(--amber)',Acuerdo:'var(--blue)'}[n.tipo]||'var(--ink3)';
+      return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--rim2)">'
+        +'<div style="width:32px;height:32px;border-radius:8px;background:var(--surf2);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:'+typeColor+';flex-shrink:0">'+esc((n.tipo||'Nota').slice(0,3).toUpperCase())+'</div>'
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:12.5px;font-weight:700">'+esc(n.tipo||'Gestión')+' — <span style="color:var(--p1)">'+esc(n.credId)+'</span></div>'
+          +'<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">'+esc(n.resultado)+'</div>'
+          +(n.fechaCompromiso?'<div style="font-size:11px;color:var(--p1);margin-top:3px;font-weight:700">Compromiso: '+esc(n.fechaCompromiso)+'</div>':'')
+        +'</div>'
+        +'<div style="text-align:right;flex-shrink:0"><div style="font-size:11px;font-weight:600;color:var(--ink2)">'+esc(n.cobrador)+'</div><div style="font-size:10px;color:var(--ink3)">'+esc(n.fecha)+'</div></div>'
+        +'</div>';
+    }).join('');
   }, 120);
 
   function moraRow(c){
@@ -446,4 +445,25 @@ PG.cobranza = function(){
 
   </div>`;
 };
+
+// Guardar gestión desde la pestaña Gestiones del módulo Cobranza
+// (se persiste en el crédito; no usa la colección bloqueada notas_cobranza)
+function guardarNotaCobranza(){
+  var tipo=($('nota-tipo')&&$('nota-tipo').value)||'Gestión';
+  var credId=($('nota-cred')&&$('nota-cred').value.trim())||'';
+  var result=($('nota-resultado')&&$('nota-resultado').value.trim())||'';
+  var comp=($('nota-compromiso')&&$('nota-compromiso').value)||'';
+  if(!credId){ if(typeof toast==='function') toast('Indicá el ID del crédito (ej: CRED-007)','error'); return; }
+  if(!result){ if(typeof toast==='function') toast('Describí el resultado de la gestión','error'); return; }
+  var c=(S.creds||[]).find(function(x){ return String(x.id)===String(credId); });
+  if(!c){ if(typeof toast==='function') toast('No se encontró el crédito '+credId,'error'); return; }
+  var nota={ id:'NOTA-'+Date.now(), credId:credId, tipo:tipo, resultado:result, montoAcordado:null,
+    fechaCompromiso:comp, proximaAccion:'', fecha:(typeof hoyLocalISO==='function'?hoyLocalISO():new Date().toISOString().slice(0,10)),
+    cobrador:(S.currentUser&&S.currentUser.nombre)||'Admin' };
+  if(typeof DB!=='undefined' && DB.addGestion){ DB.addGestion(credId, nota); }
+  if(typeof logActividad==='function'){ logActividad('Gestión de cobranza','cobranza',credId,tipo); }
+  if(typeof toast==='function') toast('Gestión guardada ✓','success');
+  window._cobTab='gestiones';
+  if(typeof nav==='function') nav('cobranza');
+}
 

@@ -1357,28 +1357,24 @@ function openNota(id){
   // Load previous notes for this credit
   setTimeout(function(){
     var el=$('nota_historial'); if(!el) return;
-    if(!db){ el.innerHTML='<div style="color:var(--ink3);font-size:11px">Sin conexión Firebase</div>'; return; }
-    db.collection('notas_cobranza').where('credId','==',id).orderBy('fecha','desc').get()
-      .then(function(snap){
-        if(!$('nota_historial')) return;
-        if(snap.empty){
-          $('nota_historial').innerHTML='<div style="color:var(--ink3);font-size:11px;padding:8px 0">Sin gestiones previas para este crédito</div>';
-          return;
-        }
-        $('nota_historial').innerHTML=snap.docs.map(function(d){
-          var n=d.data();
-          return '<div style="padding:7px 0;border-bottom:1px solid var(--rim)">'
-            +'<div style="display:flex;justify-content:space-between;margin-bottom:2px">'
-            +'<span style="font-size:11px;font-weight:700;color:var(--p1)">'+n.tipo+'</span>'
-            +'<span style="font-size:10px;color:var(--ink3)">'+n.fecha+'</span></div>'
-            +'<div style="font-size:11.5px;color:var(--ink)">'+n.resultado+'</div>'
-            +(n.fechaCompromiso?'<div style="font-size:10px;color:var(--green);margin-top:2px">$ Compromiso: '+n.fechaCompromiso+'</div>':'')
-            +(n.montoAcordado?'<div style="font-size:10px;color:var(--ink3)">Monto: $'+n.montoAcordado+'</div>':'')
-            +'<div style="font-size:10px;color:var(--ink3)">'+n.cobrador+'</div>'
-            +'</div>';
-        }).join('');
-      }).catch(function(e){ $('nota_historial').innerHTML='<div style="color:var(--red);font-size:11px">'+e.message+'</div>'; });
-  }, 80);
+    var c=(S.creds||[]).find(function(x){return String(x.id)===String(id);});
+    var list=(c&&Array.isArray(c.gestiones))?c.gestiones.slice():[];
+    list.sort(function(a,b){return String(b.fecha||'').localeCompare(String(a.fecha||''));});
+    if(!list.length){ el.innerHTML='<div style="color:var(--ink3);font-size:11px;padding:8px 0">Sin gestiones previas para este crédito</div>'; return; }
+    var esc=function(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+    el.innerHTML=list.map(function(n){
+      return '<div style="padding:7px 0;border-bottom:1px solid var(--rim)">'
+        +'<div style="display:flex;justify-content:space-between;margin-bottom:2px">'
+        +'<span style="font-size:11px;font-weight:700;color:var(--p1)">'+esc(n.tipo)+'</span>'
+        +'<span style="font-size:10px;color:var(--ink3)">'+esc(n.fecha)+'</span></div>'
+        +'<div style="font-size:11.5px;color:var(--ink)">'+esc(n.resultado)+'</div>'
+        +(n.fechaCompromiso?'<div style="font-size:10px;color:var(--green);margin-top:2px">Compromiso: '+esc(n.fechaCompromiso)+'</div>':'')
+        +(n.montoAcordado?'<div style="font-size:10px;color:var(--ink3)">Monto acordado: $'+esc(n.montoAcordado)+'</div>':'')
+        +(n.proximaAccion?'<div style="font-size:10px;color:var(--amber);margin-top:2px">Próxima acción: '+esc(n.proximaAccion)+'</div>':'')
+        +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+esc(n.cobrador)+'</div>'
+        +'</div>';
+    }).join('');
+  }, 60);
 
   S.saveFn=()=>{
     var tipo = ($('nota_tipo')&&$('nota_tipo').value)||'Gestión';
@@ -1398,13 +1394,9 @@ function openNota(id){
       fecha: hoyLocalISO(),
       cobrador: (S.currentUser&&S.currentUser.nombre)||'Admin'
     };
-    if(db){
-      db.collection('notas_cobranza').add(nota)
-        .then(function(){ toast('Nota guardada ✓','success'); })
-        .catch(function(e){ toast('Error al guardar: '+e.message,'error'); });
-    } else {
-      toast('Nota guardada (sin conexión)','info');
-    }
+    if(typeof DB!=='undefined' && DB.addGestion){ DB.addGestion(id, nota); }
+    if(typeof logActividad==='function'){ logActividad('Gestión de cobranza','cobranza',id,tipo); }
+    toast('Gestión guardada ✓','success');
     closeM(); return true;
   };
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar</button>`;

@@ -2021,6 +2021,17 @@ DB.saveRecurso = function(o){ if(!db)return Promise.resolve(false); return _dbSi
 DB.delRecurso = function(id){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('recursos').doc(String(id)).delete(); }); };
 DB.getRecursos = function(){ if(!db) return Promise.resolve([]); return db.collection('recursos').get().then(function(s){return s.docs.map(function(d){return Object.assign({id:d.id},d.data());});}); };
 DB.saveInventarioOficina = function(){ if(!db) return Promise.resolve(false); return _dbSilent(function(){ return db.collection('config').doc('inventarioOficina').set({items:(S.inventarioOficina||[]), actualizado:new Date().toISOString()}); }); };
+// Gestiones de cobranza guardadas en el propio crédito (creditos/{id}.gestiones)
+// — evita una colección aparte bloqueada por las reglas; cargan junto con S.creds.
+DB.addGestion = function(credId, nota){
+  var c = (S.creds||[]).find(function(x){ return String(x.id)===String(credId); });
+  if(c){ if(!Array.isArray(c.gestiones)) c.gestiones=[]; c.gestiones.push(nota); }
+  if(!db) return Promise.resolve(false);
+  return _dbSilent(function(){
+    try { return db.collection('creditos').doc(String(credId)).update({ gestiones: firebase.firestore.FieldValue.arrayUnion(nota) }); }
+    catch(e){ return db.collection('creditos').doc(String(credId)).update({ gestiones: (c?c.gestiones:[nota]) }); }
+  });
+};
 
 // ══════════════════════════════════════════
 // AUDIT LOG / BITÁCORA DE ACTIVIDADES

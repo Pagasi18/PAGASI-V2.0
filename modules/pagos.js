@@ -1,6 +1,5 @@
 // Pagasi module: pagos
 PG.pagos = function(){
-  _ensureNotasCob();
   const allPagos = _concFiltrar(S.pagos||[]).filter(p=>!p.eliminado);
   const confs = allPagos.filter(p=>p.estado==='confirmado');
   const pends = allPagos.filter(p=>p.estado==='pendiente');
@@ -383,28 +382,11 @@ window.setCuotaNota = function(credId, selEl){
   if(typeof toast==='function'){ toast('Nota: '+opt.t, 'success'); }
 };
 
-// ─── GESTIÓN DE COBRO: resumen por crédito desde notas_cobranza ───
-// Carga perezosa con .catch para que un fallo NUNCA rompa el render.
-function _ensureNotasCob(){
-  if(typeof window._notasCobCache === 'undefined') window._notasCobCache = null;
-  if(window._notasCobCache !== null || window._notasCobLoading) return;
-  if(typeof db === 'undefined' || !db){ window._notasCobCache = {}; return; }
-  window._notasCobLoading = true;
-  db.collection('notas_cobranza').get().then(function(snap){
-    var map = {};
-    snap.forEach(function(d){ var n=d.data(); if(!n||!n.credId) return; (map[n.credId]=map[n.credId]||[]).push(n); });
-    Object.keys(map).forEach(function(k){ map[k].sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); }); });
-    window._notasCobCache = map;
-    window._notasCobLoading = false;
-    if(S.page === 'pagos' && typeof nav === 'function'){ try { nav('pagos'); } catch(e){} }
-  }).catch(function(){ window._notasCobCache = {}; window._notasCobLoading = false; });
-}
+// ─── GESTIÓN DE COBRO: resumen por crédito (gestiones guardadas en el crédito) ───
 function _gestionCobroCell(c){
   var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
   var addBtn = function(txt){ return '<button class="btn btn-g btn-xs" onclick="openNota(\''+c.id+'\')" title="Registrar llamada / gestión de cobro" style="margin-top:6px;white-space:nowrap">'+txt+'</button>'; };
-  var cache = (typeof window._notasCobCache !== 'undefined') ? window._notasCobCache : null;
-  if(cache === null){ return '<span style="font-size:10.5px;color:var(--ink3)">Cargando…</span>'; }
-  var list = cache[c.id] || [];
+  var list = (Array.isArray(c.gestiones) ? c.gestiones.slice() : []).sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
   if(!list.length){ return '<div style="font-size:10.5px;color:var(--ink3)">Sin gestiones aún</div>'+addBtn('＋ Gestión'); }
   var empleados = {}; list.forEach(function(n){ if(n.cobrador) empleados[n.cobrador]=(empleados[n.cobrador]||0)+1; });
   var empNames = Object.keys(empleados);
