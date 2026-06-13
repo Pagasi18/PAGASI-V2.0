@@ -842,6 +842,7 @@ function _renderTabReportesPeriodicos(){
   }).join('');
   var hoyISO=(typeof fechaLocalISO==='function')?fechaLocalISO(new Date()):new Date().toISOString().slice(0,10);
   var mesISO=hoyISO.slice(0,7);
+  var hoyDia=new Date().getDate();
   var bxStyle='background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:13px 14px';
   var lblStyle='font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);margin-bottom:8px';
   return '<div>'
@@ -857,12 +858,12 @@ function _renderTabReportesPeriodicos(){
         +'<div style="'+bxStyle+'">'
           +'<div style="'+lblStyle+'">Por día</div>'
           +'<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap"><button class="btn btn-g btn-xs" onclick="reporteDiaRapido(0)">Hoy</button><button class="btn btn-g btn-xs" onclick="reporteDiaRapido(1)">Ayer</button><button class="btn btn-g btn-xs" onclick="reporteDiaRapido(2)">Antier</button></div>'
-          +'<input class="fi" type="date" id="rep-dia" value="'+hoyISO+'" style="width:100%;margin-bottom:8px">'
+          +'<div style="display:flex;gap:8px;margin-bottom:8px"><select class="fs" id="rep-dia-mes" onchange="_repRebuildDias()" style="flex:1.6">'+_repMesOpts(mesISO)+'</select><select class="fs" id="rep-dia-dia" style="flex:.8">'+_repDiaOpts(mesISO,hoyDia)+'</select></div>'
           +'<button class="btn btn-p btn-sm" onclick="reportePeriodoCustom(\'dia\')" style="width:100%;justify-content:center;font-weight:800">Generar reporte</button>'
         +'</div>'
         +'<div style="'+bxStyle+'">'
           +'<div style="'+lblStyle+'">Por mes</div>'
-          +'<input class="fi" type="month" id="rep-mes" value="'+mesISO+'" style="width:100%;margin-bottom:8px">'
+          +'<select class="fs" id="rep-mes" style="width:100%;margin-bottom:8px">'+_repMesOpts(mesISO)+'</select>'
           +'<div style="font-size:10.5px;color:var(--ink3);font-weight:600;margin-bottom:8px">Reporte mensual completo del mes elegido.</div>'
           +'<button class="btn btn-p btn-sm" onclick="reportePeriodoCustom(\'mes\')" style="width:100%;justify-content:center;font-weight:800">Generar reporte</button>'
         +'</div>'
@@ -877,11 +878,34 @@ function _renderTabReportesPeriodicos(){
 }
 function reportePeriodoCustom(tipo){
   var g=function(id){var el=document.getElementById(id);return el?el.value:'';};
-  if(tipo==='dia'){ var f=g('rep-dia'); if(!f){ if(typeof toast==='function') toast('Elegí una fecha','warn'); return; } reportePeriodoAbrir('dia',{fecha:f}); }
+  if(tipo==='dia'){ var mv=g('rep-dia-mes'), dv=parseInt(g('rep-dia-dia'),10); if(!mv||!dv){ if(typeof toast==='function') toast('Elegí mes y día','warn'); return; } reportePeriodoAbrir('dia',{fecha:mv+'-'+String(dv).padStart(2,'0')}); }
   else if(tipo==='mes'){ var m=g('rep-mes'); if(!m){ if(typeof toast==='function') toast('Elegí un mes','warn'); return; } reportePeriodoAbrir('mes',{mes:m}); }
   else if(tipo==='rango'){ var d=g('rep-desde'), h=g('rep-hasta'); if(!d||!h){ if(typeof toast==='function') toast('Elegí desde y hasta','warn'); return; } reportePeriodoAbrir('rango',{desde:d,hasta:h}); }
 }
 function reporteDiaRapido(off){ var dt=new Date(); dt.setDate(dt.getDate()-off); var f=(typeof fechaLocalISO==='function')?fechaLocalISO(dt):dt.toISOString().slice(0,10); reportePeriodoAbrir('dia',{fecha:f}); }
+// Opciones de meses (últimos 18) y días (según el mes elegido) para los desplegables
+function _repMesOpts(sel){
+  var out=[], base=new Date();
+  for(var i=0;i<18;i++){ var d=new Date(base.getFullYear(), base.getMonth()-i, 1);
+    var val=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    var lbl=d.toLocaleDateString('es-VE',{month:'long',year:'numeric'}); lbl=lbl.charAt(0).toUpperCase()+lbl.slice(1);
+    out.push('<option value="'+val+'"'+(val===sel?' selected':'')+'>'+lbl+'</option>'); }
+  return out.join('');
+}
+function _repDiaOpts(mesVal, selDia){
+  var y=parseInt(String(mesVal).slice(0,4),10), m=parseInt(String(mesVal).slice(5,7),10)-1;
+  var n=new Date(y,m+1,0).getDate(); var out=[];
+  for(var i=1;i<=n;i++){ out.push('<option value="'+i+'"'+(i===selDia?' selected':'')+'>'+i+'</option>'); }
+  return out.join('');
+}
+function _repRebuildDias(){
+  var ms=document.getElementById('rep-dia-mes'), ds=document.getElementById('rep-dia-dia');
+  if(!ms||!ds) return;
+  var cur=parseInt(ds.value,10)||1;
+  var y=parseInt(ms.value.slice(0,4),10), m=parseInt(ms.value.slice(5,7),10)-1;
+  var n=new Date(y,m+1,0).getDate(); if(cur>n) cur=n;
+  ds.innerHTML=_repDiaOpts(ms.value, cur);
+}
 
 // ══════════════════════════════════════════════════════════════
 // TAB: INVENTARIO DE OFICINA — activos / equipos / mobiliario
