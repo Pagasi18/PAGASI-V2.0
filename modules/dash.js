@@ -44,6 +44,14 @@ PG.dash = function(){
   const cuotaEsperada = _SCREDS.filter(c=>c.estado==='activo').reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
   const pctCobro = cuotaEsperada > 0 ? Math.min(100, Math.round(cuotasCobradas / cuotaEsperada * 100)) : 0;
 
+  // ── Promedios de crédito (inicial y cuota) ──
+  const credsProm = _SCREDS.filter(c=>!c.eliminado && c.estado!=='cancelado' && c.estado!=='recuperado' && c.estado!=='recuperada');
+  const _iniVals = credsProm.map(c=>parseFloat(c.ini)||0).filter(v=>v>0);
+  const _cuoVals = credsProm.map(c=>parseFloat(c.cuotaQ||c.cuota||0)||0).filter(v=>v>0);
+  const inicialProm = _iniVals.length ? _iniVals.reduce((a,v)=>a+v,0)/_iniVals.length : 0;
+  const cuotaProm = _cuoVals.length ? _cuoVals.reduce((a,v)=>a+v,0)/_cuoVals.length : 0;
+  const cuotaPromMes = cuotaProm*2;
+
   // ── Moto inventory ──
   const mDisp = _SMOTOS.filter(m=>!m.eliminado&&m.estado==='disponible').length;
   const mFin = _SMOTOS.filter(m=>!m.eliminado&&m.estado==='financiada').length;
@@ -452,21 +460,17 @@ PG.dash = function(){
       ${(function(){try{var d=(typeof getMoraMensual==='function')?getMoraMensual():[];if(!d||!d.length)return'';var mx=Math.max(1,...d.map(function(x){return x.mora||0;}));return'<div style="display:flex;align-items:flex-end;gap:4px;height:42px;margin-top:10px;padding-top:9px;border-top:1px solid var(--rim)">'+d.map(function(x){var h=Math.max(3,Math.round((x.mora||0)/mx*26));return'<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end"><div style="width:100%;max-width:13px;background:var(--red);opacity:.8;border-radius:3px 3px 0 0;height:'+h+'px"></div><span style="font-size:7px;color:var(--ink3);font-family:var(--fm)">'+x.label+'</span></div>';}).join('')+'</div>';}catch(e){return'';}})()}
     </div>
 
-    <!-- 2 · Inventario motos -->
-    <div class="card dash-kpi" onclick="nav(&quot;motos&quot;)" style="cursor:pointer">
+    <!-- 2 · Promedios de crédito (inicial y cuota) -->
+    <div class="card dash-kpi" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Inventario motos</span>
-        <span style="font-size:9px;background:var(--gs);color:var(--p1);padding:2px 7px;border-radius:20px;font-weight:700">${mDisp+mFin+mRec+mInv} total</span>
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Promedios de crédito</span>
+        <span style="font-size:9px;background:var(--gs);color:var(--p1);padding:2px 7px;border-radius:20px;font-weight:700">${credsProm.length} créd.</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:var(--green);margin-bottom:4px">${mDisp}</div>
-      <div style="font-size:11px;color:var(--ink3)">Disponibles para vender</div>
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim)">
-        <div style="display:flex;height:7px;border-radius:4px;overflow:hidden;background:var(--rim);margin-bottom:8px">
-          ${(function(){var t=Math.max(1,mDisp+mFin+mRec+mInv);return [['#06B06A',mDisp],['#2563EB',mFin],['#D93B5A',mRec],['#5B8DEF',mInv]].map(function(p){return '<div style="width:'+(p[1]/t*100)+'%;background:'+p[0]+'"></div>';}).join('');})()}
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 8px">
-          ${[['#06B06A','Disp',mDisp],['#2563EB','Fin',mFin],['#D93B5A','Rec',mRec],['#5B8DEF','Inv',mInv]].map(function(p){return '<div style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:'+p[0]+';flex-shrink:0"></span><span style="font-size:9px;color:var(--ink3);flex:1">'+p[1]+'</span><span style="font-size:10px;font-weight:700;color:var(--ink);font-family:var(--fm)">'+p[2]+'</span></div>';}).join('')}
-        </div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:var(--p1);margin-bottom:4px">${fmt(inicialProm)}</div>
+      <div style="font-size:11px;color:var(--ink3)">Inicial promedio</div>
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10.5px"><span style="color:var(--ink3)">Cuota promedio · quincena</span><span style="font-weight:800;color:var(--green);font-family:var(--fd)">${fmt(cuotaProm)}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10.5px"><span style="color:var(--ink3)">Equivalente mensual</span><span style="font-weight:700;color:var(--ink);font-family:var(--fd)">${fmt(cuotaPromMes)}</span></div>
       </div>
     </div>
 
