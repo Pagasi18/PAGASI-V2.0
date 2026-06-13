@@ -42,7 +42,7 @@ PG.notif = function(){
     .nf2-top{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:stretch}
     @media(max-width:1180px){.nf2-top{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:760px){.nf2-top{grid-template-columns:1fr}}
-    .nf2-cfg{background:#fff;border:1px solid var(--rim);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:14px;min-height:520px}
+    .nf2-cfg{background:#fff;border:1px solid var(--rim);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:14px;min-height:430px}
     .nf2-cfg.nf2-cfg-solo{height:100%}
     .nf2-cfg-section{display:flex;flex-direction:column;gap:10px;min-width:0}
     .nf2-label{font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;gap:7px}
@@ -60,7 +60,7 @@ PG.notif = function(){
     .nf2-sel optgroup{font-weight:800;color:var(--ink3);font-style:normal}
     .nf2-desc{font-size:11.5px;color:var(--ink3);padding:8px 12px;background:rgba(37,99,235,.06);border-left:3px solid var(--p1);border-radius:8px;line-height:1.5;min-height:18px}
     .nf2-body{display:flex;flex-direction:column;gap:14px}
-    .nf2-list{background:#fff;border:1px solid var(--rim);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;height:520px;min-height:520px}
+    .nf2-list{background:#fff;border:1px solid var(--rim);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;height:430px;min-height:430px}
     .nf2-list-head{padding:12px 16px;background:linear-gradient(180deg,#FAFBFF,#F5F7FF);border-bottom:1px solid var(--rim);display:flex;justify-content:space-between;align-items:center;gap:10px}
     .nf2-list-t{font-size:13px;font-weight:800;color:var(--ink);letter-spacing:-.2px}
     .nf2-list-c{background:var(--p1);color:#fff;padding:3px 10px;border-radius:50px;font-size:11px;font-weight:800;letter-spacing:.04em}
@@ -81,7 +81,7 @@ PG.notif = function(){
     .nf2-list-foot a{color:var(--p1);font-weight:700;cursor:pointer;text-decoration:none}
     .nf2-list-foot a:hover{text-decoration:underline}
 
-    .nf2-prev{background:#fff;border:1px solid var(--rim);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:520px;height:100%}
+    .nf2-prev{background:#fff;border:1px solid var(--rim);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-height:430px;height:100%}
     .nf2-prev-h{padding:12px 16px;background:linear-gradient(180deg,#FAFBFF,#F5F7FF);border-bottom:1px solid var(--rim)}
     .nf2-prev-t{font-size:13px;font-weight:800;color:var(--ink);letter-spacing:-.2px}
     .nf2-prev-s{font-size:10.5px;color:var(--ink3);margin-top:2px;font-weight:600}
@@ -100,11 +100,11 @@ PG.notif = function(){
     .nf2-custom-vars code{background:#fff;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700;color:var(--p1);border:1px solid var(--rim)}
     .nf2-custom textarea{width:100%;background:#fff;border:1.5px solid var(--rim);border-radius:8px;padding:9px 11px;font-family:inherit;font-size:12.5px;color:var(--ink);outline:none;resize:vertical;min-height:60px}
 
-    .nf2-send{background:linear-gradient(135deg,#25D366 0%,#1FAD55 100%);border-radius:14px;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;box-shadow:0 8px 22px rgba(37,211,102,.30);flex-wrap:wrap}
+    .nf2-send{background:linear-gradient(135deg,#25D366 0%,#1FAD55 100%);border-radius:14px;padding:11px 18px;display:flex;align-items:center;justify-content:space-between;gap:14px;box-shadow:0 6px 18px rgba(37,211,102,.26);flex-wrap:wrap}
     .nf2-send-info{color:#fff;display:flex;align-items:baseline;gap:8px}
-    .nf2-send-info b{font-size:22px;font-weight:900;font-family:var(--fd);line-height:1}
-    .nf2-send-info span{font-size:12.5px;opacity:.94;font-weight:600}
-    .nf2-send-btn{background:#fff;color:#1FAD55;border:none;font-family:inherit;font-weight:800;font-size:14px;padding:11px 22px;border-radius:50px;cursor:pointer;display:inline-flex;align-items:center;gap:9px;transition:all .2s;box-shadow:0 4px 14px rgba(0,0,0,.12);letter-spacing:-.01em}
+    .nf2-send-info b{font-size:19px;font-weight:900;font-family:var(--fd);line-height:1}
+    .nf2-send-info span{font-size:12px;opacity:.94;font-weight:600}
+    .nf2-send-btn{background:#fff;color:#1FAD55;border:none;font-family:inherit;font-weight:800;font-size:13.5px;padding:9px 20px;border-radius:50px;cursor:pointer;display:inline-flex;align-items:center;gap:9px;transition:all .2s;box-shadow:0 4px 14px rgba(0,0,0,.12);letter-spacing:-.01em}
     .nf2-send-btn:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(0,0,0,.22)}
     .nf2-send-btn svg{width:15px;height:15px;fill:#1FAD55}
     .nf2-hint{text-align:center;font-size:10.5px;color:var(--ink3);font-weight:600;margin-top:-6px}
@@ -162,6 +162,24 @@ PG.notif = function(){
           <textarea class="fta" id="notif-msg" rows="3" placeholder="Estimado/a {nombre}, le recordamos su próxima cuota de {cuota} con fecha {fechaProx}..."></textarea>
         </div>
       </div>
+
+      <!-- Footer informativo: llena la columna y le da sinergia con la página -->
+      <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;background:var(--surf2);border:1px solid var(--rim);border-radius:11px">
+          <div style="width:34px;height:34px;border-radius:9px;background:rgba(37,211,102,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#1FAD55"><path d="M12 2a10 10 0 0 0-8.5 15.2L2 22l4.9-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.9.9-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-5.6c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.5.1-.6.8-.7.9-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7.2 7.2 0 0 1-1.3-1.7c-.1-.2 0-.3.1-.4l.4-.4.2-.4v-.4l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5a.9.9 0 0 0-.7.3 2.8 2.8 0 0 0-.9 2.1A4.9 4.9 0 0 0 7 11.9a11 11 0 0 0 4.2 3.7c.6.3 1 .4 1.4.5a3.3 3.3 0 0 0 1.5.1c.5-.1 1.4-.6 1.6-1.1s.2-1 .1-1.1-.2-.2-.5-.3z"/></svg>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:var(--fd);font-weight:900;font-size:16px;color:var(--ink);line-height:1">${conTelefono.length} <span style="font-size:11px;color:var(--ink3);font-weight:700">con WhatsApp</span></div>
+            <div style="font-size:10.5px;color:var(--ink3);font-weight:600;margin-top:2px">${pctCobertura}% de cobertura · ${clientesActivos.length} clientes activos</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:9px;padding:11px 13px;background:rgba(37,99,235,.05);border:1px solid rgba(37,99,235,.12);border-radius:11px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--p1)" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01" stroke-linecap="round"/></svg>
+          <div style="font-size:11px;color:var(--ink2);line-height:1.5">El grupo de destinatarios se elige <b>solo</b> según la plantilla. Revisá quiénes lo recibirán en la lista de al lado.</div>
+        </div>
+      </div>
+
       <!-- select de destino oculto, lo setea setNotifTipo automáticamente -->
       <select class="fs" id="notif-dest" style="display:none">
         <option value="leads">Leads sin cuenta activa</option>

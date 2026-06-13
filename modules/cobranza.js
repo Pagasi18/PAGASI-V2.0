@@ -112,40 +112,44 @@ PG.cobranza = function(){
 
   function moraRow(c){
     const cl=S.clientes.find(x=>x.nombre===c.cli)||{};
-    const sevColor=c.mora>60?'var(--red)':c.mora>30?'var(--red)':c.mora>15?'var(--amber)':'var(--amber)';
-    const sevBg =c.mora>60?'var(--reds)':c.mora>30?'rgba(217,59,90,.07)':c.mora>15?'var(--ambers)':'rgba(232,152,10,.05)';
-    const sevIcon =c.mora>60?'':c.mora>30?'️':'⏰';
+    const critico = c.mora>60, grave = c.mora>30;
+    const sevColor = grave ? 'var(--red)' : 'var(--amber)';
+    const sevTint  = grave ? 'rgba(232,51,90,.10)' : 'rgba(245,166,35,.14)';
     const cuotasVencidas = Math.ceil(c.mora/15);
-    return `<div style="background:${sevBg};border:1px solid ${c.mora>30?'rgba(217,59,90,.2)':'rgba(232,152,10,.2)'};border-radius:12px;padding:13px 14px;margin-bottom:8px;position:relative;overflow:hidden">
-      ${c.mora>60?'<div style="position:absolute;top:0;right:0;background:#8B0000;color:#fff;font-size:9px;font-weight:800;padding:3px 10px;border-bottom-left-radius:8px;letter-spacing:.5px">CRÍTICO</div>':''}
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
+    const adeuda = parseFloat(c.cuotaQ||c.cuota||0)*cuotasVencidas;
+    const ini = ((c.cli||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(function(w){return w[0];}).join('')||'?').toUpperCase();
+    const ibtn = 'width:36px;height:36px;border-radius:9px;border:1px solid var(--rim);background:var(--surf2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s,border-color .15s;padding:0';
+    return `<div style="background:var(--surf);border:1px solid var(--rim);border-left:4px solid ${sevColor};border-radius:14px;padding:13px 15px;margin-bottom:10px;box-shadow:var(--shadow);transition:transform .15s,box-shadow .2s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 24px rgba(15,23,42,.10)'" onmouseout="this.style.transform='';this.style.boxShadow='var(--shadow)'">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:42px;height:42px;border-radius:12px;background:${sevTint};color:${sevColor};display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-weight:900;font-size:15px;flex-shrink:0">${ini}</div>
         <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-            <span style="font-size:14px">${sevIcon}</span>
-            <span style="font-weight:800;font-size:13.5px">${c.cli}</span>
+          <div style="display:flex;align-items:center;gap:7px">
+            <span style="font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.cli}</span>
+            ${critico?'<span class="bdg b-r" style="font-size:8.5px;padding:1px 7px;flex-shrink:0">CRÍTICO</span>':''}
           </div>
-          <div style="font-size:11.5px;color:var(--ink3)">${c.id} · ${c.modelo}</div>
-          <div style="display:flex;gap:10px;margin-top:4px;font-size:11px;color:var(--ink2)">
-            <span> ${cl.tel||'—'}</span>
-            ${cl.ciudad?`<span> ${cl.ciudad}</span>`:''}
-          </div>
-          <div style="margin-top:5px;font-size:10.5px;color:var(--ink3)">
-            ${cuotasVencidas} cuota${cuotasVencidas>1?'s':''} vencida${cuotasVencidas>1?'s':''} · Adeuda aprox. ${fmt(parseFloat(c.cuotaQ||c.cuota||0)*cuotasVencidas)}
-          </div>
+          <div style="font-size:11px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">${c.id} · ${c.modelo||'—'}${cl.tel?' · '+cl.tel:''}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:28px;font-weight:900;color:${sevColor};letter-spacing:-1px;line-height:1">${c.mora}d</div>
-          <div style="font-size:10px;color:var(--ink3)">mora</div>
-          <div style="font-weight:800;color:${sevColor};font-size:13px;margin-top:2px">${fmt(c.cuotaQ||c.cuota||0)}</div>
-          <div style="font-size:9.5px;color:var(--ink3)">cuota</div>
+          <div style="font-family:var(--fd);font-weight:900;font-size:21px;color:${sevColor};letter-spacing:-.5px;line-height:1">${fmt(adeuda)}</div>
+          <div style="margin-top:4px;white-space:nowrap"><span style="font-size:10px;color:var(--ink3)">${cuotasVencidas} cuota${cuotasVencidas>1?'s':''} · </span><span style="background:${sevColor};color:#fff;font-size:9.5px;font-weight:800;padding:1px 7px;border-radius:20px">${c.mora}d</span></div>
         </div>
       </div>
-      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-        <button class="btn btn-p btn-sm" onclick="openPagoRapido('${c.id}')" style="flex:1;min-width:80px"> Cobrar</button>
-        <button class="btn btn-g btn-sm" onclick="whatsappCliente('${c.id}')" style="gap:5px"> WhatsApp</button>
-        <button class="btn btn-g btn-sm" onclick="llamarCliente('${c.id}')" style="gap:5px"> Llamar</button>
-        <button class="btn btn-g btn-sm" onclick="openNota('${c.id}')"> Nota</button>
-        <button class="btn btn-d btn-sm" onclick="confirmarRecuperacion('${c.id}')"> Recuperar</button>
+      <div style="display:flex;gap:7px;margin-top:11px;align-items:center">
+        <button class="btn btn-p" onclick="openPagoRapido('${c.id}')" style="flex:1;font-weight:800;font-size:12.5px;padding:9px 12px;display:inline-flex;align-items:center;justify-content:center;gap:7px">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.4"/></svg>Cobrar ahora
+        </button>
+        <button onclick="whatsappCliente('${c.id}')" title="Enviar WhatsApp" style="${ibtn};color:var(--green)" onmouseover="this.style.background='var(--greens)';this.style.borderColor='var(--green)'" onmouseout="this.style.background='var(--surf2)';this.style.borderColor='var(--rim)'">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.5 15.2L2 22l4.9-1.5A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-2.9.9.9-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-5.6c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.5.1-.6.8-.7.9-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7.2 7.2 0 0 1-1.3-1.7c-.1-.2 0-.3.1-.4l.4-.4.2-.4v-.4l-.8-1.8c-.2-.5-.4-.4-.5-.4h-.5a.9.9 0 0 0-.7.3 2.8 2.8 0 0 0-.9 2.1A4.9 4.9 0 0 0 7 11.9a11 11 0 0 0 4.2 3.7c.6.3 1 .4 1.4.5a3.3 3.3 0 0 0 1.5.1c.5-.1 1.4-.6 1.6-1.1s.2-1 .1-1.1-.2-.2-.5-.3z"/></svg>
+        </button>
+        <button onclick="llamarCliente('${c.id}')" title="Llamar" style="${ibtn};color:var(--p1)" onmouseover="this.style.background='var(--lift)';this.style.borderColor='var(--p1)'" onmouseout="this.style.background='var(--surf2)';this.style.borderColor='var(--rim)'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8a15.5 15.5 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.2 11.4 11.4 0 0 0 3.6.6 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.4 11.4 0 0 0 .6 3.6 1 1 0 0 1-.2 1z"/></svg>
+        </button>
+        <button onclick="openNota('${c.id}')" title="Agregar nota" style="${ibtn};color:var(--ink2)" onmouseover="this.style.background='var(--lift)'" onmouseout="this.style.background='var(--surf2)'">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.2V21h3.8L17.8 9.9l-3.8-3.8L3 17.2zM20.7 7a1 1 0 0 0 0-1.4l-2.3-2.3a1 1 0 0 0-1.4 0l-1.8 1.8 3.8 3.8L20.7 7z"/></svg>
+        </button>
+        <button onclick="confirmarRecuperacion('${c.id}')" title="Recuperar moto" style="${ibtn};color:var(--red);border-color:rgba(232,51,90,.28)" onmouseover="this.style.background='var(--reds)'" onmouseout="this.style.background='var(--surf2)'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>
+        </button>
       </div>
     </div>`;
   }
