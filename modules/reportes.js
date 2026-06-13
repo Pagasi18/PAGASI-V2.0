@@ -821,40 +821,67 @@ function _renderTabReportesPeriodicos(){
     {k:'diario', lbl:'Diario', desc:'Cierre del día de hoy'},
     {k:'semanal', lbl:'Semanal', desc:'Resumen de los últimos 7 días'},
     {k:'quincenal', lbl:'Quincenal', desc:'Resumen de los últimos 15 días'},
-    {k:'mensual', lbl:'Mensual', desc:'Mes calendario en curso'}
+    {k:'mensual', lbl:'Mensual', desc:'Mes calendario en curso'},
+    {k:'anual', lbl:'Anual', desc:'Acumulado del año en curso'}
   ];
-  var calSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
-  var cards=defs.map(function(d){
+  var cal='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="19" height="19"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+  var docIc='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+  var rows=defs.map(function(d){
     var r=(typeof generarReportePeriodo==='function')?generarReportePeriodo(d.k):null;
-    var ing=r?r.fmtUsd(r.cobrado):'$0', eg=r?r.fmtUsd(r.totalEgresos):'$0';
-    var ut=r?r.fmtUsd(r.utilidad):'$0', utc=(r&&r.utilidad<0)?'var(--red)':'var(--green)';
-    var np=r?r.pagosCount:0, rango=r?r.rangoLabel:'';
-    return '<div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column">'
-      +'<div style="padding:15px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--rim)">'
-        +'<div style="width:42px;height:42px;border-radius:11px;background:rgba(37,99,235,.10);color:var(--p1);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+calSvg+'</div>'
-        +'<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800;color:var(--ink);letter-spacing:-.2px">Reporte '+d.lbl+'</div><div style="font-size:11px;color:var(--ink3);font-weight:600;margin-top:1px">'+d.desc+'</div></div>'
-        +'<span style="font-size:8px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:#b91c1c;background:#fde8ec;border:1px solid #f5c2cb;padding:3px 8px;border-radius:5px;flex-shrink:0">Confidencial</span>'
+    var ing=r?r.fmtUsd(r.cobrado):'$0', ut=r?r.fmtUsd(r.utilidad):'$0', utc=(r&&r.utilidad<0)?'var(--red)':'var(--green)';
+    var rango=r?r.rangoLabel:'', np=r?r.pagosCount:0;
+    return '<div class="card" style="display:flex;align-items:center;gap:14px;padding:13px 16px;margin-bottom:9px;flex-wrap:wrap">'
+      +'<div style="width:40px;height:40px;border-radius:11px;background:rgba(37,99,235,.10);color:var(--p1);display:flex;align-items:center;justify-content:center;flex-shrink:0">'+cal+'</div>'
+      +'<div style="flex:1;min-width:150px"><div style="font-size:14.5px;font-weight:800;color:var(--ink)">Reporte '+d.lbl+'</div><div style="font-size:11px;color:var(--ink3);font-weight:600;margin-top:1px;text-transform:capitalize">'+d.desc+(rango?' · '+rango:'')+' · '+np+' pago'+(np!==1?'s':'')+'</div></div>'
+      +'<div style="display:flex;gap:20px;align-items:center">'
+        +'<div style="text-align:right"><div style="font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)">Ingresos</div><div style="font-family:var(--fd);font-weight:900;font-size:15px;color:var(--green)">'+ing+'</div></div>'
+        +'<div style="text-align:right"><div style="font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)">Utilidad</div><div style="font-family:var(--fd);font-weight:900;font-size:15px;color:'+utc+'">'+ut+'</div></div>'
       +'</div>'
-      +'<div style="padding:14px 18px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px">'
-        +'<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)">Ingresos</div><div style="font-family:var(--fd);font-weight:900;font-size:16px;color:var(--green);margin-top:2px">'+ing+'</div></div>'
-        +'<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)">Egresos</div><div style="font-family:var(--fd);font-weight:900;font-size:16px;color:var(--red);margin-top:2px">'+eg+'</div></div>'
-        +'<div><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)">Utilidad</div><div style="font-family:var(--fd);font-weight:900;font-size:16px;color:'+utc+';margin-top:2px">'+ut+'</div></div>'
-      +'</div>'
-      +'<div style="padding:0 18px 16px;margin-top:auto">'
-        +'<div style="font-size:10.5px;color:var(--ink3);font-weight:600;margin-bottom:10px;text-transform:capitalize">'+rango+' · '+np+' pago'+(np!==1?'s':'')+'</div>'
-        +'<button class="btn btn-p" onclick="reportePeriodoAbrir(\''+d.k+'\')" style="width:100%;justify-content:center;font-weight:800;display:inline-flex;align-items:center;gap:8px;padding:10px">'
-          +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Generar reporte</button>'
-      +'</div>'
+      +'<button class="btn btn-p btn-sm" onclick="reportePeriodoAbrir(\''+d.k+'\')" style="font-weight:800;display:inline-flex;align-items:center;gap:7px;white-space:nowrap">'+docIc+'Generar</button>'
     +'</div>';
   }).join('');
+  var hoyISO=(typeof fechaLocalISO==='function')?fechaLocalISO(new Date()):new Date().toISOString().slice(0,10);
+  var mesISO=hoyISO.slice(0,7);
+  var bxStyle='background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:13px 14px';
+  var lblStyle='font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);margin-bottom:8px';
   return '<div>'
     +'<div style="display:flex;align-items:flex-start;gap:11px;padding:13px 16px;background:rgba(37,99,235,.05);border:1px solid rgba(37,99,235,.14);border-radius:12px;margin-bottom:16px">'
       +'<svg viewBox="0 0 24 24" fill="none" stroke="var(--p1)" stroke-width="2" width="18" height="18" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01" stroke-linecap="round"/></svg>'
       +'<div style="font-size:12px;color:var(--ink2);line-height:1.55">Cada reporte se genera con el <b>logo de Pagasi</b>, marca de agua <b>CONFIDENCIAL</b> y el detalle completo de ingresos, egresos, cartera, mora y rankings. Se abre en una pestaña nueva, listo para <b>imprimir o guardar en PDF</b>.</div>'
     +'</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">'+cards+'</div>'
+    +'<div style="display:flex;align-items:center;gap:10px;margin:2px 0 10px"><span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3)">Reportes estándar</span><div style="flex:1;height:1px;background:var(--rim)"></div></div>'
+    +rows
+    +'<div class="card" style="margin-top:16px">'
+      +'<div class="ch"><div><div class="ct">Buscar un reporte específico</div><div class="cs">Generá el reporte de un día exacto (ej. ayer), un mes o un rango de fechas</div></div></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1.3fr;gap:12px;margin-top:10px">'
+        +'<div style="'+bxStyle+'">'
+          +'<div style="'+lblStyle+'">Por día</div>'
+          +'<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap"><button class="btn btn-g btn-xs" onclick="reporteDiaRapido(0)">Hoy</button><button class="btn btn-g btn-xs" onclick="reporteDiaRapido(1)">Ayer</button><button class="btn btn-g btn-xs" onclick="reporteDiaRapido(2)">Antier</button></div>'
+          +'<input class="fi" type="date" id="rep-dia" value="'+hoyISO+'" style="width:100%;margin-bottom:8px">'
+          +'<button class="btn btn-p btn-sm" onclick="reportePeriodoCustom(\'dia\')" style="width:100%;justify-content:center;font-weight:800">Generar reporte</button>'
+        +'</div>'
+        +'<div style="'+bxStyle+'">'
+          +'<div style="'+lblStyle+'">Por mes</div>'
+          +'<input class="fi" type="month" id="rep-mes" value="'+mesISO+'" style="width:100%;margin-bottom:8px">'
+          +'<div style="font-size:10.5px;color:var(--ink3);font-weight:600;margin-bottom:8px">Reporte mensual completo del mes elegido.</div>'
+          +'<button class="btn btn-p btn-sm" onclick="reportePeriodoCustom(\'mes\')" style="width:100%;justify-content:center;font-weight:800">Generar reporte</button>'
+        +'</div>'
+        +'<div style="'+bxStyle+'">'
+          +'<div style="'+lblStyle+'">Por rango de fechas</div>'
+          +'<div style="display:flex;gap:8px;margin-bottom:8px"><div style="flex:1"><label style="font-size:9px;font-weight:700;color:var(--ink3)">Desde</label><input class="fi" type="date" id="rep-desde" value="'+hoyISO+'" style="width:100%"></div><div style="flex:1"><label style="font-size:9px;font-weight:700;color:var(--ink3)">Hasta</label><input class="fi" type="date" id="rep-hasta" value="'+hoyISO+'" style="width:100%"></div></div>'
+          +'<button class="btn btn-p btn-sm" onclick="reportePeriodoCustom(\'rango\')" style="width:100%;justify-content:center;font-weight:800">Generar reporte</button>'
+        +'</div>'
+      +'</div>'
+    +'</div>'
   +'</div>';
 }
+function reportePeriodoCustom(tipo){
+  var g=function(id){var el=document.getElementById(id);return el?el.value:'';};
+  if(tipo==='dia'){ var f=g('rep-dia'); if(!f){ if(typeof toast==='function') toast('Elegí una fecha','warn'); return; } reportePeriodoAbrir('dia',{fecha:f}); }
+  else if(tipo==='mes'){ var m=g('rep-mes'); if(!m){ if(typeof toast==='function') toast('Elegí un mes','warn'); return; } reportePeriodoAbrir('mes',{mes:m}); }
+  else if(tipo==='rango'){ var d=g('rep-desde'), h=g('rep-hasta'); if(!d||!h){ if(typeof toast==='function') toast('Elegí desde y hasta','warn'); return; } reportePeriodoAbrir('rango',{desde:d,hasta:h}); }
+}
+function reporteDiaRapido(off){ var dt=new Date(); dt.setDate(dt.getDate()-off); var f=(typeof fechaLocalISO==='function')?fechaLocalISO(dt):dt.toISOString().slice(0,10); reportePeriodoAbrir('dia',{fecha:f}); }
 
 // ══════════════════════════════════════════════════════════════
 // TAB: INVENTARIO DE OFICINA — activos / equipos / mobiliario
