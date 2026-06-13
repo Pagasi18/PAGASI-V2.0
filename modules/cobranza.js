@@ -91,7 +91,7 @@ PG.cobranza = function(){
     var el=$('cobranza-notas-list'); if(!el) return;
     var all=[];
     (S.creds||[]).forEach(function(c){ if(Array.isArray(c.gestiones)) c.gestiones.forEach(function(n){ all.push(Object.assign({credId:n.credId||c.id}, n)); }); });
-    all.sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
+    all.sort(function(a,b){ return String(b.creadoEn||b.fecha||'').localeCompare(String(a.creadoEn||a.fecha||'')); });
     all=all.slice(0,30);
     if(!all.length){ el.innerHTML='<div style="color:var(--ink3);font-size:12px;padding:12px 0">Sin gestiones registradas aún</div>'; return; }
     var esc=function(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
@@ -104,7 +104,7 @@ PG.cobranza = function(){
           +'<div style="font-size:11.5px;color:var(--ink3);margin-top:2px">'+esc(n.resultado)+'</div>'
           +(n.fechaCompromiso?'<div style="font-size:11px;color:var(--p1);margin-top:3px;font-weight:700">Compromiso: '+esc(n.fechaCompromiso)+'</div>':'')
         +'</div>'
-        +'<div style="text-align:right;flex-shrink:0"><div style="font-size:11px;font-weight:600;color:var(--ink2)">'+esc(n.cobrador)+'</div><div style="font-size:10px;color:var(--ink3)">'+esc(n.fecha)+'</div></div>'
+        +'<div style="text-align:right;flex-shrink:0"><div style="font-size:11px;font-weight:600;color:var(--ink2)">'+esc(n.cobrador)+'</div><div style="font-size:10px;color:var(--ink3)">'+esc(n.fecha)+(n.hora?' · '+esc(n.hora):'')+'</div></div>'
         +'</div>';
     }).join('');
   }, 120);
@@ -457,8 +457,10 @@ function guardarNotaCobranza(){
   if(!result){ if(typeof toast==='function') toast('Describí el resultado de la gestión','error'); return; }
   var c=(S.creds||[]).find(function(x){ return String(x.id)===String(credId); });
   if(!c){ if(typeof toast==='function') toast('No se encontró el crédito '+credId,'error'); return; }
-  var nota={ id:'NOTA-'+Date.now(), credId:credId, tipo:tipo, resultado:result, montoAcordado:null,
-    fechaCompromiso:comp, proximaAccion:'', fecha:(typeof hoyLocalISO==='function'?hoyLocalISO():new Date().toISOString().slice(0,10)),
+  var _now=new Date();
+  var nota={ id:'NOTA-'+_now.getTime(), credId:credId, tipo:tipo, resultado:result, montoAcordado:null,
+    fechaCompromiso:comp, proximaAccion:'', fecha:(typeof hoyLocalISO==='function'?hoyLocalISO():_now.toISOString().slice(0,10)),
+    hora:(typeof _fmtHora==='function'?_fmtHora(_now):''), creadoEn:_now.toISOString(),
     cobrador:(S.currentUser&&S.currentUser.nombre)||'Admin' };
   if(typeof DB!=='undefined' && DB.addGestion){ DB.addGestion(credId, nota); }
   if(typeof logActividad==='function'){ logActividad('Gestión de cobranza','cobranza',credId,tipo); }

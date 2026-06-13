@@ -1355,26 +1355,7 @@ function openNota(id){
     +'<div id="nota_historial" class="lst" style="max-height:280px"><div style="color:var(--ink3);font-size:11px">Cargando...</div></div>'
     +'</div></div>';
   // Load previous notes for this credit
-  setTimeout(function(){
-    var el=$('nota_historial'); if(!el) return;
-    var c=(S.creds||[]).find(function(x){return String(x.id)===String(id);});
-    var list=(c&&Array.isArray(c.gestiones))?c.gestiones.slice():[];
-    list.sort(function(a,b){return String(b.fecha||'').localeCompare(String(a.fecha||''));});
-    if(!list.length){ el.innerHTML='<div style="color:var(--ink3);font-size:11px;padding:8px 0">Sin gestiones previas para este crédito</div>'; return; }
-    var esc=function(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-    el.innerHTML=list.map(function(n){
-      return '<div style="padding:7px 0;border-bottom:1px solid var(--rim)">'
-        +'<div style="display:flex;justify-content:space-between;margin-bottom:2px">'
-        +'<span style="font-size:11px;font-weight:700;color:var(--p1)">'+esc(n.tipo)+'</span>'
-        +'<span style="font-size:10px;color:var(--ink3)">'+esc(n.fecha)+'</span></div>'
-        +'<div style="font-size:11.5px;color:var(--ink)">'+esc(n.resultado)+'</div>'
-        +(n.fechaCompromiso?'<div style="font-size:10px;color:var(--green);margin-top:2px">Compromiso: '+esc(n.fechaCompromiso)+'</div>':'')
-        +(n.montoAcordado?'<div style="font-size:10px;color:var(--ink3)">Monto acordado: $'+esc(n.montoAcordado)+'</div>':'')
-        +(n.proximaAccion?'<div style="font-size:10px;color:var(--amber);margin-top:2px">Próxima acción: '+esc(n.proximaAccion)+'</div>':'')
-        +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+esc(n.cobrador)+'</div>'
-        +'</div>';
-    }).join('');
-  }, 60);
+  setTimeout(function(){ _renderNotaHistorial(id); }, 60);
 
   S.saveFn=()=>{
     var tipo = ($('nota_tipo')&&$('nota_tipo').value)||'Gestión';
@@ -1383,8 +1364,9 @@ function openNota(id){
     var fechaComp = ($('nota_fecha')&&$('nota_fecha').value)||'';
     var prox = ($('nota_prox')&&$('nota_prox').value.trim())||'';
     if(!result){ toast('Describe el resultado de la gestión','error'); return false; }
+    var _now = new Date();
     var nota = {
-      id: 'NOTA-'+Date.now(),
+      id: 'NOTA-'+_now.getTime(),
       credId: id,
       tipo: tipo,
       resultado: result,
@@ -1392,6 +1374,8 @@ function openNota(id){
       fechaCompromiso: fechaComp,
       proximaAccion: prox,
       fecha: hoyLocalISO(),
+      hora: _fmtHora(_now),
+      creadoEn: _now.toISOString(),
       cobrador: (S.currentUser&&S.currentUser.nombre)||'Admin'
     };
     if(typeof DB!=='undefined' && DB.addGestion){ DB.addGestion(id, nota); }
@@ -1401,6 +1385,43 @@ function openNota(id){
   };
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar</button>`;
   $('ov').style.display='flex';
+}
+
+function _fmtHora(d){ var h=d.getHours(), m=d.getMinutes(), ap=h<12?'am':'pm', h12=h%12; if(h12===0) h12=12; return h12+':'+String(m).padStart(2,'0')+' '+ap; }
+
+// Render del historial de gestiones de un crédito (reutilizable: openNota + tras borrar)
+function _renderNotaHistorial(id){
+  var el=$('nota_historial'); if(!el) return;
+  var c=(S.creds||[]).find(function(x){return String(x.id)===String(id);});
+  var list=(c&&Array.isArray(c.gestiones))?c.gestiones.slice():[];
+  list.sort(function(a,b){return String(b.creadoEn||b.fecha||'').localeCompare(String(a.creadoEn||a.fecha||''));});
+  if(!list.length){ el.innerHTML='<div style="color:var(--ink3);font-size:11px;padding:8px 0">Sin gestiones previas para este crédito</div>'; return; }
+  var esc=function(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+  var admin=(typeof isAdminUser==='function')&&isAdminUser();
+  el.innerHTML=list.map(function(n){
+    var when=esc(n.fecha)+(n.hora?' · '+esc(n.hora):'');
+    var del=admin?'<button onclick="borrarGestion(\''+esc(id)+'\',\''+esc(n.id)+'\')" title="Borrar gestión (solo admin)" style="border:none;background:none;color:var(--ink3);cursor:pointer;font-size:13px;line-height:1;padding:0 2px" onmouseover="this.style.color=\'var(--red)\'" onmouseout="this.style.color=\'var(--ink3)\'">✕</button>':'';
+    return '<div style="padding:7px 0;border-bottom:1px solid var(--rim)">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:2px">'
+      +'<span style="font-size:11px;font-weight:700;color:var(--p1)">'+esc(n.tipo)+'</span>'
+      +'<span style="display:flex;align-items:center;gap:6px"><span style="font-size:10px;color:var(--ink3)">'+when+'</span>'+del+'</span></div>'
+      +'<div style="font-size:11.5px;color:var(--ink)">'+esc(n.resultado)+'</div>'
+      +(n.fechaCompromiso?'<div style="font-size:10px;color:var(--green);margin-top:2px">Compromiso: '+esc(n.fechaCompromiso)+'</div>':'')
+      +(n.montoAcordado?'<div style="font-size:10px;color:var(--ink3)">Monto acordado: $'+esc(n.montoAcordado)+'</div>':'')
+      +(n.proximaAccion?'<div style="font-size:10px;color:var(--amber);margin-top:2px">Próxima acción: '+esc(n.proximaAccion)+'</div>':'')
+      +'<div style="font-size:10px;color:var(--ink3);margin-top:2px">'+esc(n.cobrador)+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+// Borrar una gestión del historial — SOLO administradores
+function borrarGestion(credId, gestionId){
+  if(!(typeof isAdminUser==='function' && isAdminUser())){ if(typeof toast==='function') toast('Solo un administrador puede borrar gestiones','error'); return; }
+  if(!confirm('¿Borrar esta gestión del historial? No se puede deshacer.')) return;
+  if(typeof DB!=='undefined' && DB.delGestion){ DB.delGestion(credId, gestionId); }
+  if(typeof logActividad==='function'){ logActividad('Borró gestión de cobranza','cobranza',credId,gestionId); }
+  if(typeof toast==='function') toast('Gestión eliminada','success');
+  _renderNotaHistorial(credId);
 }
 
 // CONTRATO - Dispatcher por tipo de documento

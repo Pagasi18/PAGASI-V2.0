@@ -2032,6 +2032,12 @@ DB.addGestion = function(credId, nota){
     catch(e){ return db.collection('creditos').doc(String(credId)).update({ gestiones: (c?c.gestiones:[nota]) }); }
   });
 };
+DB.delGestion = function(credId, gestionId){
+  var c = (S.creds||[]).find(function(x){ return String(x.id)===String(credId); });
+  if(c && Array.isArray(c.gestiones)){ c.gestiones = c.gestiones.filter(function(g){ return g && g.id!==gestionId; }); }
+  if(!db) return Promise.resolve(false);
+  return _dbSilent(function(){ return db.collection('creditos').doc(String(credId)).update({ gestiones: (c?c.gestiones:[]) }); });
+};
 
 // ══════════════════════════════════════════
 // AUDIT LOG / BITÁCORA DE ACTIVIDADES

@@ -382,31 +382,29 @@ window.setCuotaNota = function(credId, selEl){
   if(typeof toast==='function'){ toast('Nota: '+opt.t, 'success'); }
 };
 
-// ─── GESTIÓN DE COBRO: resumen por crédito (gestiones guardadas en el crédito) ───
+// ─── GESTIÓN DE COBRO: resumen compacto por crédito (gestiones en el crédito) ───
 function _gestionCobroCell(c){
   var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
-  var addBtn = function(txt){ return '<button class="btn btn-g btn-xs" onclick="openNota(\''+c.id+'\')" title="Registrar llamada / gestión de cobro" style="margin-top:6px;white-space:nowrap">'+txt+'</button>'; };
-  var list = (Array.isArray(c.gestiones) ? c.gestiones.slice() : []).sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
-  if(!list.length){ return '<div style="font-size:10.5px;color:var(--ink3)">Sin gestiones aún</div>'+addBtn('＋ Gestión'); }
-  var empleados = {}; list.forEach(function(n){ if(n.cobrador) empleados[n.cobrador]=(empleados[n.cobrador]||0)+1; });
-  var empNames = Object.keys(empleados);
-  var nContactos = list.length;
+  var btn = function(txt){ return '<button class="btn btn-g btn-xs" onclick="openNota(\''+c.id+'\')" title="Ver historial y registrar gestión" style="padding:3px 9px;white-space:nowrap">'+txt+'</button>'; };
+  var list = (Array.isArray(c.gestiones) ? c.gestiones.slice() : []).sort(function(a,b){ return String(b.creadoEn||b.fecha||'').localeCompare(String(a.creadoEn||a.fecha||'')); });
+  if(!list.length){ return '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:10.5px;color:var(--ink3)">Sin gestiones</span>'+btn('＋ Gestión')+'</div>'; }
+  var empNames = Object.keys(list.reduce(function(o,n){ if(n.cobrador) o[n.cobrador]=1; return o; },{}));
   var nLlamadas = list.filter(function(n){ return /llamada/i.test(n.tipo||''); }).length;
   var u = list[0];
-  var ultTxt = esc((u.resultado||'').trim()); if(ultTxt.length>96) ultTxt = ultTxt.slice(0,96)+'…';
-  var empChips = empNames.slice(0,3).map(function(nm){
+  var snippet = esc((u.resultado||'').trim()); if(snippet.length>34) snippet = snippet.slice(0,34)+'…';
+  var when = esc(u.fecha||'')+(u.hora?' '+esc(u.hora):'');
+  var full = esc((u.tipo?u.tipo+': ':'')+(u.resultado||'')+(u.proximaAccion?'  →  Próxima acción: '+u.proximaAccion:'')+(u.fechaCompromiso?'  ·  Compromiso: '+u.fechaCompromiso:''));
+  var chips = empNames.slice(0,3).map(function(nm){
     var ini = nm.split(/\s+/).filter(Boolean).slice(0,2).map(function(w){return w[0];}).join('').toUpperCase()||'?';
-    return '<span title="'+esc(nm)+'" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--gs);color:var(--p1);font-size:9px;font-weight:800;border:1.5px solid var(--surf);margin-left:-5px">'+ini+'</span>';
+    return '<span title="'+esc(nm)+'" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--gs);color:var(--p1);font-size:8.5px;font-weight:800;border:1.5px solid var(--surf);margin-left:-5px">'+ini+'</span>';
   }).join('');
-  if(empNames.length>3) empChips += '<span style="font-size:9px;color:var(--ink3);margin-left:4px">+'+(empNames.length-3)+'</span>';
-  return '<div style="min-width:210px;max-width:300px">'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
-      +'<div style="display:flex;padding-left:5px">'+empChips+'</div>'
-      +'<span style="font-size:10px;color:var(--ink3);font-weight:700">'+nContactos+' contacto'+(nContactos!==1?'s':'')+(nLlamadas?' · '+nLlamadas+' llam.':'')+'</span>'
+  if(empNames.length>3) chips += '<span style="font-size:8.5px;color:var(--ink3);margin-left:3px">+'+(empNames.length-3)+'</span>';
+  return '<div title="'+full+'" style="min-width:180px;max-width:240px;display:flex;flex-direction:column;gap:3px">'
+    +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<div style="display:flex;padding-left:5px">'+chips+'</div>'
+      +'<span style="font-size:10px;color:var(--ink2);font-weight:700;white-space:nowrap">'+list.length+' gest.'+(nLlamadas?' · '+nLlamadas+' llam.':'')+'</span>'
+      +btn('Ver / ＋')
     +'</div>'
-    +'<div style="font-size:10.5px;color:var(--ink2);line-height:1.45"><span style="color:var(--p1);font-weight:700">'+esc(u.tipo||'Gestión')+':</span> "'+ultTxt+'" <span style="color:var(--ink3)">· '+esc(u.fecha||'')+(u.cobrador?' · '+esc(u.cobrador):'')+'</span></div>'
-    +(u.proximaAccion?'<div style="font-size:10px;color:var(--amber);font-weight:700;margin-top:2px">→ '+esc(u.proximaAccion)+'</div>':'')
-    +(u.fechaCompromiso?'<div style="font-size:10px;color:var(--green);font-weight:700;margin-top:1px">Compromiso: '+esc(u.fechaCompromiso)+'</div>':'')
-    +addBtn('Ver / ＋ gestión')
+    +'<div style="font-size:10px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Últ: "'+snippet+'" · '+when+'</div>'
   +'</div>';
 }
