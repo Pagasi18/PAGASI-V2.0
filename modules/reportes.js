@@ -879,6 +879,11 @@ function _renderTabInventario(){
 
   var optsCat = INV_CATS.map(function(c){return '<option value="'+c+'"'+((ed&&ed.categoria===c)?' selected':'')+'>'+c+'</option>';}).join('');
   var optsEst = INV_ESTADOS.map(function(s){var sel=ed?(ed.estado===s):(s==='Bueno'); return '<option value="'+s+'"'+(sel?' selected':'')+'>'+s+'</option>';}).join('');
+  var ubicList = ['Oficina'];
+  (S.concesionarios||[]).filter(function(c){return !c.eliminado;}).forEach(function(c){ ubicList.push('Concesionario: '+(c.nombre||c.id)); });
+  ubicList.push('Otro lugar');
+  if(ed && ed.ubicacion && ubicList.indexOf(ed.ubicacion)<0) ubicList.unshift(ed.ubicacion);
+  var optsUbic = ubicList.map(function(u){var sel=ed?(ed.ubicacion===u):(u==='Oficina'); return '<option value="'+v(u)+'"'+(sel?' selected':'')+'>'+u+'</option>';}).join('');
 
   var rows = items.slice().sort(function(a,b){return lineV(b)-lineV(a);}).map(function(x){
     var cant=lineN(x), vu=parseFloat(x.valorUnit)||0, vt=lineV(x);
@@ -886,6 +891,7 @@ function _renderTabInventario(){
     return '<tr>'
       +'<td class="tdm" style="font-weight:700">'+(x.nombre||'—')+(x.nota?'<div style="font-size:10px;color:var(--ink3);font-weight:500;white-space:normal;margin-top:2px">'+x.nota+'</div>':'')+'</td>'
       +'<td><span style="display:inline-block;background:var(--gs);color:var(--p1);font-size:10px;font-weight:700;padding:2px 9px;border-radius:50px;white-space:nowrap">'+(x.categoria||'Otro')+'</span></td>'
+      +'<td class="tds" style="font-size:11px;color:var(--ink2)">'+(x.ubicacion||'—')+'</td>'
       +'<td style="text-align:center;font-family:var(--fd);font-weight:700">'+cant+'</td>'
       +'<td style="text-align:right;font-family:var(--fd);color:var(--ink2)">'+fmt(vu)+'</td>'
       +'<td style="text-align:right;font-family:var(--fd);font-weight:900;color:var(--ink)">'+fmt(vt)+'</td>'
@@ -910,11 +916,12 @@ function _renderTabInventario(){
       +'<div class="fgr" style="grid-template-columns:repeat(3,1fr);gap:12px;margin-top:6px">'
         +'<div class="fg"><label>Artículo</label><input class="fi" id="inv-nombre" placeholder="Ej: Laptop Dell Latitude" value="'+(ed?v(ed.nombre):'')+'"></div>'
         +'<div class="fg"><label>Categoría</label><select class="fs" id="inv-cat">'+optsCat+'</select></div>'
-        +'<div class="fg"><label>Estado</label><select class="fs" id="inv-estado">'+optsEst+'</select></div>'
+        +'<div class="fg"><label>Ubicación · dónde está</label><select class="fs" id="inv-ubicacion">'+optsUbic+'</select></div>'
         +'<div class="fg"><label>Cantidad</label><input class="fi" id="inv-cant" type="number" min="1" step="1" value="'+(ed?(parseInt(ed.cantidad,10)||1):1)+'"></div>'
         +'<div class="fg"><label>Valor unitario (USD)</label><input class="fi" id="inv-valor" type="number" min="0" step="0.01" placeholder="0.00" value="'+(ed?(parseFloat(ed.valorUnit)||''):'')+'"></div>'
+        +'<div class="fg"><label>Estado</label><select class="fs" id="inv-estado">'+optsEst+'</select></div>'
         +'<div class="fg"><label>Fecha de adquisición</label><input class="fi" id="inv-fecha" type="date" value="'+(ed&&ed.fecha?v(ed.fecha):hoyISO)+'"></div>'
-        +'<div class="fg" style="grid-column:1/-1"><label>Nota / serial / ubicación (opcional)</label><input class="fi" id="inv-nota" placeholder="Ej: Serial ABC123 · Oficina principal" value="'+(ed?v(ed.nota):'')+'"></div>'
+        +'<div class="fg" style="grid-column:2/-1"><label>Nota / serial (opcional)</label><input class="fi" id="inv-nota" placeholder="Ej: Serial ABC123 · responsable" value="'+(ed?v(ed.nota):'')+'"></div>'
       +'</div>'
       +'<div style="display:flex;gap:8px;margin-top:12px">'
         +'<button class="btn btn-p btn-sm" onclick="invAgregar()" style="font-weight:800">'+(ed?'Guardar cambios':'＋ Agregar al inventario')+'</button>'
@@ -925,7 +932,7 @@ function _renderTabInventario(){
     +'<div class="card">'
       +'<div class="ch"><div><div class="ct">Artículos registrados</div><div class="cs">'+items.length+' artículo'+(items.length!==1?'s':'')+' · valor total '+fmt(valorTotal)+'</div></div></div>'
       +(items.length
-        ? '<div class="tw tw-compact" style="margin-top:6px"><table><thead><tr><th>Artículo</th><th>Categoría</th><th style="text-align:center">Cant.</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Valor total</th><th>Estado</th><th>Adquirido</th><th></th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr><td colspan="4" style="padding-top:10px;font-weight:800;border-top:2px solid var(--ink)">TOTAL INVENTARIO</td><td style="padding-top:10px;text-align:right;font-weight:900;font-family:var(--fd);color:var(--green);font-size:15px;border-top:2px solid var(--ink)">'+fmt(valorTotal)+'</td><td colspan="3" style="border-top:2px solid var(--ink)"></td></tr></tfoot></table></div>'
+        ? '<div class="tw tw-compact" style="margin-top:6px"><table><thead><tr><th>Artículo</th><th>Categoría</th><th>Ubicación</th><th style="text-align:center">Cant.</th><th style="text-align:right">Valor unit.</th><th style="text-align:right">Valor total</th><th>Estado</th><th>Adquirido</th><th></th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr><td colspan="5" style="padding-top:10px;font-weight:800;border-top:2px solid var(--ink)">TOTAL INVENTARIO</td><td style="padding-top:10px;text-align:right;font-weight:900;font-family:var(--fd);color:var(--green);font-size:15px;border-top:2px solid var(--ink)">'+fmt(valorTotal)+'</td><td colspan="3" style="border-top:2px solid var(--ink)"></td></tr></tfoot></table></div>'
         : '<div style="text-align:center;padding:34px 12px;color:var(--ink3)"><div style="font-size:13px;font-weight:700;margin-bottom:4px">Aún no hay artículos registrados</div><div style="font-size:12px">Agregá tu primer activo de oficina con el formulario de arriba.</div></div>')
     +'</div>'
   +'</div>';
@@ -938,11 +945,11 @@ function invAgregar(){
   var cant=parseInt(g('inv-cant'),10); if(!cant||cant<1) cant=1;
   var valor=parseFloat(g('inv-valor'))||0;
   var fecha=g('inv-fecha')|| ((typeof fechaLocalISO==='function')?fechaLocalISO(new Date()):new Date().toISOString().slice(0,10));
-  var obj={categoria:g('inv-cat')||'Otro', cantidad:cant, valorUnit:valor, fecha:fecha, estado:g('inv-estado')||'Bueno', nota:(g('inv-nota')||'').trim(), nombre:nombre};
+  var obj={categoria:g('inv-cat')||'Otro', ubicacion:g('inv-ubicacion')||'Oficina', cantidad:cant, valorUnit:valor, fecha:fecha, estado:g('inv-estado')||'Bueno', nota:(g('inv-nota')||'').trim(), nombre:nombre};
   if(!Array.isArray(S.inventarioOficina)) S.inventarioOficina=[];
   if(window._invEdit){
     var it=S.inventarioOficina.find(function(x){return x.id===window._invEdit;});
-    if(it){ it.nombre=obj.nombre; it.categoria=obj.categoria; it.cantidad=obj.cantidad; it.valorUnit=obj.valorUnit; it.fecha=obj.fecha; it.estado=obj.estado; it.nota=obj.nota; }
+    if(it){ it.nombre=obj.nombre; it.categoria=obj.categoria; it.ubicacion=obj.ubicacion; it.cantidad=obj.cantidad; it.valorUnit=obj.valorUnit; it.fecha=obj.fecha; it.estado=obj.estado; it.nota=obj.nota; }
     window._invEdit=null;
     if(typeof toast==='function') toast('Artículo actualizado','success');
   } else {
