@@ -3380,6 +3380,46 @@ async function doLogin() {
 }
 window.doLogin = doLogin;
 
+// Restablecer contraseña desde la pantalla de login (envía email de reset).
+// Clave para recuperar cuentas "huérfanas": al resetear y entrar, el doc de
+// Firestore se recrea automáticamente en onAuthStateChanged.
+function resetPasswordLogin() {
+  var email = (($('l_user') || {}).value || '').trim();
+  var errEl = $('login-err');
+  if (errEl) { errEl.style.background=''; errEl.style.borderColor=''; errEl.style.color=''; }
+  if (!auth) {
+    if (errEl) { errEl.textContent = 'Firebase Auth no está disponible.'; errEl.style.display='block'; }
+    return;
+  }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (errEl) { errEl.textContent = 'Escribe tu email arriba y toca de nuevo «¿Olvidaste tu contraseña?».'; errEl.style.display='block'; }
+    return;
+  }
+  showLoader('Enviando email de recuperación...', '');
+  auth.sendPasswordResetEmail(email)
+    .then(function() {
+      hideLoader();
+      if (errEl) {
+        errEl.textContent = 'Te enviamos un correo a ' + email + ' para restablecer tu contraseña. Revisa tu bandeja (y la carpeta de spam).';
+        errEl.style.background = 'rgba(0,184,118,0.08)';
+        errEl.style.borderColor = 'rgba(0,184,118,0.3)';
+        errEl.style.color = 'var(--green)';
+        errEl.style.display = 'block';
+      }
+    })
+    .catch(function(e) {
+      hideLoader();
+      if (errEl) {
+        errEl.textContent = (e.code === 'auth/user-not-found')
+          ? 'No hay ninguna cuenta con ese email.'
+          : ('Error: ' + (e.message || e.code));
+        errEl.style.display = 'block';
+      }
+      console.warn('Reset password error:', e.code, e.message);
+    });
+}
+window.resetPasswordLogin = resetPasswordLogin;
+
 
 // ══════════════════════════════════════════════════
 // BACKUP — Exportar e Importar datos

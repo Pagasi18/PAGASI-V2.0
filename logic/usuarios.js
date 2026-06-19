@@ -1622,7 +1622,7 @@ function aceptarInvitacion() {
     hideLoader();
     if (btn) btn.disabled = false;
     var msg = e.message || 'Error al activar la cuenta';
-    if(e.code === 'auth/email-already-in-use') msg = 'Este email ya tiene una cuenta activa. Inicia sesión normalmente.';
+    if(e.code === 'auth/email-already-in-use') msg = 'Este email ya tiene una cuenta. Inicia sesión con tu contraseña, o usa «¿Olvidaste tu contraseña?» en la pantalla de inicio para restablecerla y entrar.';
     if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
   });
 }
@@ -1678,6 +1678,11 @@ if (auth) {
               Object.assign(data, needsUpdate);
             }
           }
+          // ── Registrar ÚLTIMO ACCESO (alimenta la columna "Último acceso") ──
+          // Antes nunca se escribía, por eso todos mostraban "Nunca".
+          var _lastLoginISO = new Date().toISOString();
+          data.lastLogin = _lastLoginISO;
+          db.collection('usuarios').doc(user.uid).set({ lastLogin: _lastLoginISO }, {merge:true}).catch(function(){});
           // Copiamos PRIMERO todos los campos del doc (cumpleanos, tel, genero, instagram, facebook, etc.)
           // y después sobre-escribimos los críticos con defaults seguros.
           S.currentUser = Object.assign({}, data, {
