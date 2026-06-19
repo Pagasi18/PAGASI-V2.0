@@ -11,7 +11,7 @@ function _docCtx(){
   var credId=($('sel-cred')&&$('sel-cred').value);
   var c=S.creds.find(function(x){return String(x.id)===String(credId);})||S.creds[0];
   if(!c){ return null; }
-  var logoSrc=(document.querySelector('.sb-logo img')||{}).src||'';
+  var logoSrc=(typeof _PAGASI_LOGO_BLUE!=='undefined'&&_PAGASI_LOGO_BLUE)||(document.querySelector('.sb-logo img')||{}).src||'';
   var emp = getEmpresa();
   var empresaUp = (emp.nombre||'PAGASI').toUpperCase();
   var cli = S.clientes.find(function(x){return x.nombre===c.cli;}) || S.clientes.find(function(x){return String(x.id)===String(c.clienteId);}) || {};

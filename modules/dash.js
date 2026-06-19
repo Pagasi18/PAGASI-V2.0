@@ -348,23 +348,16 @@ PG.dash = function(){
         <span id="dash-tasa-eur" style="font-family:var(--fd);font-weight:900;font-size:15px;color:var(--ink);letter-spacing:-.4px;white-space:nowrap">${(window._tasaEuro||0)>1?(window._tasaEuro).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
       </div>
 
-      <!-- Binance -->
+      <!-- Paralelo estimado (oficial + 30%) -->
       <div style="display:flex;align-items:center;gap:9px;padding:7px 4px">
-        <!-- Logo Binance: 4 rombos -->
-        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#0B0E11;flex-shrink:0">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="#F0B90B"><path d="M12 4l-2.5 2.5L12 9l2.5-2.5L12 4zM5.5 10.5L3 13l2.5 2.5L8 13l-2.5-2.5zm13 0L16 13l2.5 2.5L21 13l-2.5-2.5zM12 15l-2.5 2.5L12 20l2.5-2.5L12 15z"/></svg>
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#2563EB;flex-shrink:0">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-7"/><path d="M17 8h4v4"/></svg>
         </span>
         <div style="flex:1;min-width:0">
-          <div style="font-size:10px;font-weight:800;color:var(--ink);letter-spacing:-.1px;line-height:1.2">Binance</div>
-          <div style="font-size:9px;color:var(--ink3);font-weight:600;line-height:1.2;margin-top:1px">P2P paralelo</div>
+          <div style="font-size:10px;font-weight:800;color:var(--ink);letter-spacing:-.1px;line-height:1.2">Paralelo</div>
+          <div style="font-size:9px;color:var(--ink3);font-weight:600;line-height:1.2;margin-top:1px">Oficial + 30%</div>
         </div>
-        <span id="dash-tasa-binance" style="font-family:var(--fd);font-weight:900;font-size:15px;color:var(--ink);letter-spacing:-.4px;white-space:nowrap">${(window._tasaBinance||0)>1?(window._tasaBinance).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
-      </div>
-
-      <!-- Footer: Brecha BCV↔Binance -->
-      <div style="margin-top:10px;padding:7px 10px;background:var(--surf2);border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-size:10.5px">
-        <span style="color:var(--ink3);font-weight:700">Brecha oficial → paralelo</span>
-        <span id="dash-tasa-spread" style="color:var(--ink);font-weight:800;font-family:var(--fd)">${(window._tasaBinance>1&&window._tasaBsGlobal>1)?('+'+(((window._tasaBinance-window._tasaBsGlobal)/window._tasaBinance*100).toFixed(1))+'%'):'—'}</span>
+        <span id="dash-tasa-binance" style="font-family:var(--fd);font-weight:900;font-size:15px;color:var(--ink);letter-spacing:-.4px;white-space:nowrap">${(window._tasaBsGlobal||0)>1?(window._tasaBsGlobal*1.30).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
       </div>
     </div>
   </div>

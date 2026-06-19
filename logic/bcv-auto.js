@@ -335,8 +335,9 @@ function _bcvActualizarUI(){
   }
   var dashBinance = document.getElementById('dash-tasa-binance');
   if(dashBinance){
-    var bin = _binanceTasa || window._tasaBinance || 0;
-    dashBinance.textContent = bin > 1 ? _fmtTasa(bin) : '—';
+    // Paralelo estimado = tasa oficial + 30% de brecha
+    var bcvP = _bcvAutoTasa || window._tasaBsGlobal || 0;
+    dashBinance.textContent = bcvP > 1 ? _fmtTasa(bcvP * 1.30) : '—';
   }
   var dashEur = document.getElementById('dash-tasa-eur');
   if(dashEur){
