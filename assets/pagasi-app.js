@@ -1974,6 +1974,7 @@ var DB = {
         // Re-render egresos chart if on dashboard
         if(typeof renderDashEgrChart==='function') renderDashEgrChart();
         if(typeof renderDashCuotasChart==='function') renderDashCuotasChart();
+        if(typeof renderDashCobrospChart==='function') renderDashCobrospChart();
       }, 300);
       setTimeout(mostrarAlertaMora, 800); // pequeño delay para que el dashboard cargue
     }).catch(function(e){
@@ -2851,11 +2852,13 @@ function nav(p){
           setTimeout(function(){ if(typeof renderMoraChart==='function') renderMoraChart(); }, 80);
           setTimeout(function(){ if(typeof renderDashEgrChart==='function') renderDashEgrChart(); }, 200);
           setTimeout(function(){ if(typeof renderDashCuotasChart==='function') renderDashCuotasChart(); }, 220);
+          setTimeout(function(){ if(typeof renderDashCobrospChart==='function') renderDashCobrospChart(); }, 240);
           setTimeout(function(){
             if(typeof renderCredChart==='function') renderCredChart();
             if(typeof renderDashChart==='function' && !_dashChart) renderDashChart();
             if(typeof renderDashEgrChart==='function') renderDashEgrChart();
             if(typeof renderDashCuotasChart==='function' && !_dashCuotasChart) renderDashCuotasChart();
+            if(typeof renderDashCobrospChart==='function' && !_dashCobrospChart) renderDashCobrospChart();
           }, 900);
           setTimeout(function(){
             if(typeof renderDashEgrChart==='function') renderDashEgrChart();

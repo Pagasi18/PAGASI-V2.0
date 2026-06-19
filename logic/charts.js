@@ -146,6 +146,7 @@ function toggleDark(){
     if(typeof renderDashChart==='function') renderDashChart();
     if(typeof renderDashEgrChart==='function') renderDashEgrChart();
     if(typeof renderDashCuotasChart==='function') renderDashCuotasChart();
+    if(typeof renderDashCobrospChart==='function') renderDashCobrospChart();
     if(typeof renderMoraChart==='function') renderMoraChart();
     if(typeof renderCredChart==='function') renderCredChart();
     if(typeof renderFinIngChart==='function') renderFinIngChart();
@@ -518,6 +519,130 @@ function renderCredCobrosChart(){
 
   if(_credCobrosChart){ _credCobrosChart.destroy(); _credCobrosChart=null; }
   _credCobrosChart = new Chart(canvas, {
+    type: 'bar',
+    data: { labels: labels, datasets: [{
+      label: 'Cobros',
+      data: values,
+      backgroundColor: values.map(function(v,i){ return i===0 ? p1 : p1t; }),
+      borderColor: 'transparent',
+      borderWidth: 0, borderRadius: 6, borderSkipped: false
+    }]},
+    options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:isDark?'#252844':'#fff',
+        borderColor:isDark?'rgba(37,99,235,0.3)':'rgba(37,99,235,0.2)', borderWidth:1,
+        titleColor:isDark?'#E8E6FF':'#0B0B1E', bodyColor:isDark?'#B0ADDB':'#4A4870', padding:10,
+        callbacks:{ label:function(ctx){ var i=ctx.dataIndex; return [' '+fmt(ctx.raw),' '+counts[i]+' cuota'+(counts[i]!==1?'s':'')]; } } } },
+      scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:{color:ink3,font:{size:9}} },
+        y:{ grid:{color:isDark?'rgba(37,99,235,0.08)':'rgba(37,99,235,0.06)'}, border:{display:false,dash:[4,4]},
+          ticks:{color:ink3, font:{size:9}, callback:function(v){ return v>0?'$'+Math.round(v/1000)+'k':'$0'; }, maxTicksLimit:5} } } }
+  });
+}
+// ── Cobros programados — DASHBOARD (reusa la lógica de buckets) ──
+function _cobrosProgramadosBuckets(periodo){
+  var activos = _concFiltrar(S.creds||[]).filter(function(c){ return !c.eliminado && c.estado==='activo' && c.fecha; });
+  var ahora = Date.now();
+  var MS_DIA = 24*60*60*1000;
+  var MS_QUINCENA = 15*MS_DIA;
+  var now = new Date();
+  var buckets = [];
+  var subTxt = '';
+  if(periodo === 'diario'){
+    subTxt = 'Próximos 30 días';
+    for(var i=0; i<30; i++){
+      var d = new Date(now.getFullYear(), now.getMonth(), now.getDate()+i);
+      buckets.push({ label: d.getDate()+'/'+(d.getMonth()+1), dayTs: new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime(), monto:0, cuotas:0 });
+    }
+    activos.forEach(function(c){
+      var inicio = parseFechaLocal(c.fecha).getTime();
+      if(isNaN(inicio)) return;
+      var totalCuotas = c.totalCuotas || (c.plazo*2) || 24;
+      var pagadas = c.pagado || 0;
+      var cuotaV = parseFloat(c.cuotaQ||c.cuota||0)||0;
+      if(cuotaV<=0) return;
+      for(var k=pagadas+1; k<=totalCuotas; k++){
+        var t = inicio + k*MS_QUINCENA;
+        if(t > ahora + 30*MS_DIA) break;
+        var dTs = new Date(new Date(t).getFullYear(), new Date(t).getMonth(), new Date(t).getDate()).getTime();
+        var b = buckets.find(function(bk){ return bk.dayTs === dTs; });
+        if(b){ b.monto += cuotaV; b.cuotas++; }
+      }
+    });
+  } else if(periodo === 'quincenal'){
+    subTxt = 'Próximas 8 quincenas';
+    for(var i=0; i<8; i++){
+      var tFut = ahora + i*MS_QUINCENA;
+      var d = new Date(tFut);
+      var q = d.getDate() <= 15 ? 1 : 2;
+      buckets.push({ label: (d.getMonth()+1)+'/Q'+q, ini: tFut, fin: tFut+MS_QUINCENA, monto:0, cuotas:0 });
+    }
+    activos.forEach(function(c){
+      var inicio = parseFechaLocal(c.fecha).getTime();
+      if(isNaN(inicio)) return;
+      var totalCuotas = c.totalCuotas || (c.plazo*2) || 24;
+      var pagadas = c.pagado || 0;
+      var cuotaV = parseFloat(c.cuotaQ||c.cuota||0)||0;
+      if(cuotaV<=0) return;
+      for(var k=pagadas+1; k<=totalCuotas; k++){
+        var t = inicio + k*MS_QUINCENA;
+        if(t > ahora + 8*MS_QUINCENA) break;
+        for(var bi=0; bi<buckets.length; bi++){
+          if(t >= buckets[bi].ini && t < buckets[bi].fin){ buckets[bi].monto += cuotaV; buckets[bi].cuotas++; break; }
+        }
+      }
+    });
+  } else {
+    subTxt = 'Próximos 7 meses';
+    for(var i=0; i<7; i++){
+      var d = new Date(now.getFullYear(), now.getMonth()+i, 1);
+      var nextD = new Date(now.getFullYear(), now.getMonth()+i+1, 1);
+      buckets.push({ label: d.toLocaleDateString('es-VE',{month:'short'}), ini: d.getTime(), fin: nextD.getTime(), monto:0, cuotas:0 });
+    }
+    activos.forEach(function(c){
+      var inicio = parseFechaLocal(c.fecha).getTime();
+      if(isNaN(inicio)) return;
+      var totalCuotas = c.totalCuotas || (c.plazo*2) || 24;
+      var pagadas = c.pagado || 0;
+      var cuotaV = parseFloat(c.cuotaQ||c.cuota||0)||0;
+      if(cuotaV<=0) return;
+      for(var k=pagadas+1; k<=totalCuotas; k++){
+        var t = inicio + k*MS_QUINCENA;
+        if(t > buckets[buckets.length-1].fin) break;
+        for(var bi=0; bi<buckets.length; bi++){
+          if(t >= buckets[bi].ini && t < buckets[bi].fin){ buckets[bi].monto += cuotaV; buckets[bi].cuotas++; break; }
+        }
+      }
+    });
+  }
+  return { buckets: buckets, subTxt: subTxt };
+}
+
+var _dashCobrospChart = null;
+var _dashCobrospPeriodo = 'diario';
+function setDashCobrospPeriodo(periodo){
+  _dashCobrospPeriodo = periodo;
+  ['d','q','m'].forEach(function(k){
+    var p = k==='d'?'diario':k==='q'?'quincenal':'mensual';
+    var btn = document.getElementById('dash-cobrosp-'+k);
+    if(btn){ btn.className='btn btn-xs'+(p===periodo?' btn-p':''); btn.style.fontSize='10px'; btn.style.padding='4px 9px'; }
+  });
+  renderDashCobrospChart();
+}
+function renderDashCobrospChart(){
+  var canvas = document.getElementById('dash-cobrosp-chart');
+  if(!canvas || typeof Chart==='undefined') return;
+  var periodo = _dashCobrospPeriodo || 'diario';
+  var isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  var p1 = isDark ? '#3B82F6' : '#2563EB';
+  var p1t = isDark ? 'rgba(59,130,246,0.18)' : 'rgba(37,99,235,0.12)';
+  var ink3 = isDark ? '#6B6896' : '#9794BB';
+  var r = _cobrosProgramadosBuckets(periodo);
+  var buckets = r.buckets;
+  var sub = document.getElementById('dash-cobrosp-sub'); if(sub) sub.textContent = r.subTxt;
+  var labels = buckets.map(function(b){ return b.label; });
+  var values = buckets.map(function(b){ return b.monto; });
+  var counts = buckets.map(function(b){ return b.cuotas; });
+  if(_dashCobrospChart){ _dashCobrospChart.destroy(); _dashCobrospChart=null; }
+  _dashCobrospChart = new Chart(canvas, {
     type: 'bar',
     data: { labels: labels, datasets: [{
       label: 'Cobros',
