@@ -801,6 +801,53 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
 .btn-req{margin-top:auto!important;}
 @media(max-width:768px){#nav{height:58px!important;}#nav>a img,.nav-logo img{height:36px!important;}.brand-logo{height:36px!important;}.cat-sec{padding:76px 0!important;}.mcard-img{height:210px!important;}}
 
+
+/* ═══════════════ REDISEÑO "VELOCIDAD CONTROLADA" — hero dark + dinamismo pro ═══════════════ */
+:root{--volt:#D4FF00;--asfalto:#0A0A0F;}
+/* — HERO oscuro — */
+.hero{background:#0A0A0F !important;}
+.hero-glow{background:radial-gradient(ellipse 1100px 680px at 60% 34%,rgba(37,99,235,.30) 0%,rgba(37,99,235,.07) 38%,transparent 64%) !important;}
+.hero-dots{background-image:linear-gradient(rgba(96,165,250,.11) 1px,transparent 1px),linear-gradient(90deg,rgba(96,165,250,.11) 1px,transparent 1px) !important;mask-image:radial-gradient(ellipse 88% 82% at 55% 42%,#000 5%,transparent 96%) !important;}
+.hero h1{color:#fff !important;}
+.hero h1 i{background:none !important;-webkit-text-fill-color:#D4FF00 !important;color:#D4FF00 !important;}
+.hero-desc{color:rgba(255,255,255,.66) !important;}
+.hero-desc b{color:#fff !important;}
+.hero-pill{background:rgba(255,255,255,.06) !important;border:1px solid rgba(255,255,255,.16) !important;color:#fff !important;box-shadow:0 8px 24px rgba(0,0,0,.4) !important;}
+.hero-stats-row{border-top:1px solid rgba(255,255,255,.13) !important;}
+.hero-stat-mini-n{color:#fff !important;}
+.hero-stat-mini-n .accent{color:#60A5FA !important;}
+.hero-stat-mini-l{color:rgba(255,255,255,.5) !important;}
+.hero-stat-sep{background:rgba(255,255,255,.13) !important;}
+.hero-actions .btn-s{background:rgba(255,255,255,.08) !important;color:#fff !important;border:1px solid rgba(255,255,255,.2) !important;box-shadow:none !important;}
+.hero-actions .btn-s:hover{background:rgba(255,255,255,.15) !important;}
+.hero-offer{box-shadow:0 26px 64px -22px rgba(0,0,0,.62) !important;}
+/* — NAV sobre dark — */
+#nav .nav-links a{color:rgba(255,255,255,.74);}
+#nav .nav-links a:hover,#nav .nav-links a.active{color:#fff;}
+#nav .hbg span{background:#fff;}
+#nav>a img{filter:brightness(0) invert(1) !important;}
+#nav.s{background:rgba(10,10,15,.74) !important;backdrop-filter:blur(20px) saturate(160%);box-shadow:0 1px 0 rgba(37,99,235,.3) !important;}
+/* — MARQUEE de prueba (kinético, suave) — */
+.mq{background:#0A0A0F;border-top:1px solid rgba(37,99,235,.32);border-bottom:1px solid rgba(37,99,235,.32);overflow:hidden;padding:15px 0;white-space:nowrap;}
+.mq-track{display:inline-flex;align-items:center;animation:mqMove 34s linear infinite;will-change:transform;}
+.mq-track span{font-size:13.5px;font-weight:700;letter-spacing:2.2px;text-transform:uppercase;color:#fff;padding:0 24px;}
+.mq-track .g{color:#00C853;}
+.mq-track .dia{color:#2563EB;font-size:10px;padding:0 2px;}
+@keyframes mqMove{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+.mq:hover .mq-track{animation-play-state:paused;}
+/* — PROOF: contadores que se ganan — */
+.proof{background:#0A0A0F;padding:66px 32px 74px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1080px;margin:0 auto;position:relative;}
+.proof::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 90% at 50% 50%,rgba(37,99,235,.13),transparent 72%);pointer-events:none;}
+.proof-item{text-align:center;position:relative;}
+.proof-item+.proof-item{border-left:1px solid rgba(255,255,255,.1);}
+.proof-n{font-family:Georgia,'Times New Roman',serif;font-weight:900;font-size:clamp(52px,7vw,86px);letter-spacing:-2px;color:#fff;line-height:1;font-variant-numeric:tabular-nums;}
+.proof-n.g{color:#00C853;text-shadow:0 0 44px rgba(0,200,83,.45);}
+.proof-l{margin-top:10px;font-size:11.5px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#60A5FA;}
+@media(max-width:620px){.proof{grid-template-columns:1fr;gap:34px;}.proof-item+.proof-item{border-left:none;border-top:1px solid rgba(255,255,255,.1);padding-top:34px;}}
+/* — WHATSAPP rediseñado: sin rebote, limpio — */
+.wa-btn{animation:none !important;width:60px !important;height:60px !important;box-shadow:0 8px 28px rgba(37,211,102,.45) !important;}
+.wa-btn:hover{transform:scale(1.08) !important;box-shadow:0 14px 38px rgba(37,211,102,.6) !important;}
+.wa-lbl{font-weight:700 !important;}
 </style>
 </head>
 <body><div id="mob">
@@ -935,6 +982,18 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
 </section>
 
 <!-- FEATURED MOTO SHOWCASE -->
+<!-- ░░░ MARQUEE DE PRUEBA (kinético) ░░░ -->
+<div class="mq" aria-hidden="true"><div class="mq-track">
+  <span>+100 motos financiadas</span><span class="dia">◆</span><span class="g">0% morosidad</span><span class="dia">◆</span><span>Aprobación en 24h</span><span class="dia">◆</span><span>Cuotas fijas</span><span class="dia">◆</span><span>Sin bancos</span><span class="dia">◆</span><span>Te la llevás el mismo día</span><span class="dia">◆</span><span>3 sedes en Caracas</span><span class="dia">◆</span><span>+100 motos financiadas</span><span class="dia">◆</span><span class="g">0% morosidad</span><span class="dia">◆</span><span>Aprobación en 24h</span><span class="dia">◆</span><span>Cuotas fijas</span><span class="dia">◆</span><span>Sin bancos</span><span class="dia">◆</span><span>Te la llevás el mismo día</span><span class="dia">◆</span><span>3 sedes en Caracas</span><span class="dia">◆</span>
+</div></div>
+
+<!-- ░░░ PRUEBA REAL — contadores ░░░ -->
+<section class="proof reveal">
+  <div class="proof-item"><div class="proof-n" data-count="100" data-suffix="+">0</div><div class="proof-l">Motos financiadas</div></div>
+  <div class="proof-item"><div class="proof-n g">0%</div><div class="proof-l">Morosidad</div></div>
+  <div class="proof-item"><div class="proof-n" data-count="24" data-suffix="h">0</div><div class="proof-l">Aprobación</div></div>
+</section>
+
 <section class="featured-sec" id="featured">
   <div class="featured-wrap">
     <div class="reveal">
@@ -1311,6 +1370,23 @@ document.querySelectorAll('.reveal').forEach(function(el){obs.observe(el);});
   }
 
   imgs.forEach(processImage);
+})();
+</script>
+<script>
+/* Count-up de la banda de prueba (una sola vez, al entrar en viewport) */
+(function(){
+  var fired=false;
+  function run(){
+    if(fired)return; fired=true;
+    document.querySelectorAll('.proof-n[data-count]').forEach(function(el){
+      var end=parseInt(el.getAttribute('data-count'),10)||0, suf=el.getAttribute('data-suffix')||'', t0=null, dur=1400;
+      function step(ts){ if(!t0)t0=ts; var p=Math.min((ts-t0)/dur,1); var e=1-Math.pow(1-p,3); el.textContent=Math.round(e*end)+suf; if(p<1)requestAnimationFrame(step); }
+      requestAnimationFrame(step);
+    });
+  }
+  var pf=document.querySelector('.proof');
+  if(pf&&'IntersectionObserver'in window){ var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){run();io.disconnect();}});},{threshold:.4}); io.observe(pf); }
+  else run();
 })();
 </script>
 </body></html>
