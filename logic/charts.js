@@ -649,7 +649,8 @@ function renderDashCobrospChart(){
       data: values,
       backgroundColor: values.map(function(v,i){ return i===0 ? p1 : p1t; }),
       borderColor: 'transparent',
-      borderWidth: 0, borderRadius: 6, borderSkipped: false
+      borderWidth: 0, borderRadius: 4, borderSkipped: false,
+      barPercentage: 0.6, categoryPercentage: 0.82, maxBarThickness: 18
     }]},
     options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
       plugins:{ legend:{display:false}, tooltip:{ backgroundColor:isDark?'#252844':'#fff',

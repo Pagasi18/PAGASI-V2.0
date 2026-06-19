@@ -369,24 +369,6 @@ PG.dash = function(){
     </div>
   </div>
 
-  <!-- ROW 1b: COBROS PROGRAMADOS (full width) — proyección de caja entrante -->
-  <div class="card" style="margin-bottom:18px">
-    <div class="ch" style="margin-bottom:12px;flex-wrap:wrap;row-gap:6px">
-      <div>
-        <div class="ct">Cobros programados</div>
-        <div class="cs" id="dash-cobrosp-sub">Próximos 30 días</div>
-      </div>
-      <div style="display:flex;gap:4px">
-        <button class="btn btn-xs btn-p" id="dash-cobrosp-d" onclick="setDashCobrospPeriodo('diario')"    style="font-size:10px;padding:4px 9px">Diario</button>
-        <button class="btn btn-xs"       id="dash-cobrosp-q" onclick="setDashCobrospPeriodo('quincenal')" style="font-size:10px;padding:4px 9px">Quincenal</button>
-        <button class="btn btn-xs"       id="dash-cobrosp-m" onclick="setDashCobrospPeriodo('mensual')"   style="font-size:10px;padding:4px 9px">Mensual</button>
-      </div>
-    </div>
-    <div style="position:relative;height:200px;min-height:200px">
-      <canvas id="dash-cobrosp-chart" style="width:100%;height:100%"></canvas>
-    </div>
-  </div>
-
   <!-- ROW 2: Analytics charts -->
   <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px">
 
@@ -531,6 +513,24 @@ PG.dash = function(){
       </div>
     </div>
 
+  </div>
+
+  <!-- COBROS PROGRAMADOS (full width) — proyección de caja entrante -->
+  <div class="card" style="margin-bottom:18px">
+    <div class="ch" style="margin-bottom:12px;flex-wrap:wrap;row-gap:6px">
+      <div>
+        <div class="ct">Cobros programados</div>
+        <div class="cs" id="dash-cobrosp-sub">Próximos 30 días</div>
+      </div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-xs btn-p" id="dash-cobrosp-d" onclick="setDashCobrospPeriodo('diario')"    style="font-size:10px;padding:4px 9px">Diario</button>
+        <button class="btn btn-xs"       id="dash-cobrosp-q" onclick="setDashCobrospPeriodo('quincenal')" style="font-size:10px;padding:4px 9px">Quincenal</button>
+        <button class="btn btn-xs"       id="dash-cobrosp-m" onclick="setDashCobrospPeriodo('mensual')"   style="font-size:10px;padding:4px 9px">Mensual</button>
+      </div>
+    </div>
+    <div style="position:relative;height:200px;min-height:200px">
+      <canvas id="dash-cobrosp-chart" style="width:100%;height:100%"></canvas>
+    </div>
   </div>
 
 <!-- ROW 5: Quick access -->
