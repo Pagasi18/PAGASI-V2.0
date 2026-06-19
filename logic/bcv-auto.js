@@ -335,9 +335,8 @@ function _bcvActualizarUI(){
   }
   var dashBinance = document.getElementById('dash-tasa-binance');
   if(dashBinance){
-    // Paralelo estimado = tasa oficial + 30% de brecha
-    var bcvP = _bcvAutoTasa || window._tasaBsGlobal || 0;
-    dashBinance.textContent = bcvP > 1 ? _fmtTasa(bcvP * 1.30) : '—';
+    var bin = _binanceTasa || window._tasaBinance || 0;
+    dashBinance.textContent = bin > 1 ? _fmtTasa(bin) : '—';
   }
   var dashEur = document.getElementById('dash-tasa-eur');
   if(dashEur){
@@ -349,9 +348,8 @@ function _bcvActualizarUI(){
     var b1 = _bcvAutoTasa || window._tasaBsGlobal || 0;
     var b2 = _binanceTasa || window._tasaBinance || 0;
     if(b1 > 1 && b2 > 1){
-      // Brecha cambiaria venezolana: (paralelo - oficial) / paralelo
-      // Representa cuánto está el oficial por debajo del paralelo (uso común en VE)
-      var pct = ((b2 - b1) / b2) * 100;
+      // Brecha cambiaria: (paralelo - oficial) / oficial — cuánto está el paralelo por encima del oficial
+      var pct = ((b2 - b1) / b1) * 100;
       dashSpread.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%';
       dashSpread.style.color = pct > 30 ? '#E8335A' : (pct > 15 ? '#BA7517' : '#15803D');
     } else {
