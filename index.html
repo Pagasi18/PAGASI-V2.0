@@ -827,6 +827,24 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
 .wa-btn{animation:none !important;width:60px !important;height:60px !important;box-shadow:0 8px 28px rgba(37,211,102,.45) !important;}
 .wa-btn:hover{transform:scale(1.08) !important;box-shadow:0 14px 38px rgba(37,211,102,.6) !important;}
 .wa-lbl{font-weight:700 !important;}
+/* ═══════════════ MÓVIL — legibilidad y layout ═══════════════ */
+@media(max-width:640px){
+  .hero{padding:82px 18px 44px !important;min-height:auto !important;}
+  .hero-grid{gap:26px !important;margin-bottom:22px !important;}
+  h1{font-size:clamp(31px,8.4vw,46px) !important;letter-spacing:-1.5px !important;word-break:normal !important;}
+  .hero-desc{font-size:15px !important;margin-left:auto !important;margin-right:auto !important;}
+  .hero-actions{justify-content:center !important;width:100% !important;}
+  .hero-actions .btn-p{width:100% !important;max-width:330px !important;height:58px !important;font-size:18px !important;padding:0 20px !important;justify-content:center !important;}
+  .hero-stats-row{gap:14px !important;}
+  .hero-stat-mini-n{font-size:24px !important;letter-spacing:-1px !important;}
+  .hero-stat-mini-l{font-size:10px !important;}
+  .hero-bike-stage{padding:20px 16px 22px !important;border-radius:24px !important;}
+  .hero-bike-bottom{flex-direction:column !important;align-items:stretch !important;gap:12px !important;}
+  .hero-bike-feats{flex-direction:row !important;flex-wrap:wrap !important;gap:8px !important;}
+  .hero-bike-price{min-width:0 !important;width:100% !important;padding:16px 18px !important;}
+  .hero-bike-price-num{font-size:48px !important;}
+  .hero-offers{grid-template-columns:1fr !important;gap:14px !important;margin-bottom:0 !important;}
+}
 </style>
 </head>
 <body><div id="mob">
