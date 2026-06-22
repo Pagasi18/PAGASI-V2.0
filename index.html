@@ -827,6 +827,10 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
 .wa-btn{animation:none !important;width:60px !important;height:60px !important;box-shadow:0 8px 28px rgba(37,211,102,.45) !important;}
 .wa-btn:hover{transform:scale(1.08) !important;box-shadow:0 14px 38px rgba(37,211,102,.6) !important;}
 .wa-lbl{font-weight:700 !important;}
+/* Efecto "shine" en el botón Solicitar ya (igual que la badge Destacada) */
+.hero-actions .btn-p{overflow:hidden;}
+.hero-actions .btn-p::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.40) 50%,transparent 70%);transform:translateX(-100%);animation:badgeShine 3.5s ease-in-out infinite 2s;pointer-events:none;z-index:1;}
+.hero-actions .btn-p{z-index:0;}
 /* ═══════════════ MÓVIL — legibilidad y layout ═══════════════ */
 @media(max-width:640px){
   .hero{padding:82px 18px 44px !important;min-height:auto !important;}
@@ -886,7 +890,7 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
         <p class="hero-desc">Sin bancos, sin enredos y con <b>aprobación en 24 horas</b>. Cuotas fijas en quincenas — llevátela el <b>mismo día</b> desde nuestras 3 sedes en Caracas.</p>
 
         <div class="hero-actions">
-          <a href="solicitar.html" class="btn btn-p" style="height:72px;padding:0 56px;font-size:20px;font-weight:800;border-radius:16px;box-shadow:0 16px 38px -8px rgba(37,99,235,.42);">Solicitar ya →</a>
+          <a href="solicitar.html" class="btn btn-p" style="height:72px;padding:0 56px;font-size:20px;font-weight:800;border-radius:16px;box-shadow:0 16px 38px -8px rgba(37,99,235,.42);"><span style="position:relative;z-index:2">Solicitar ya →</span></a>
         </div>
 
         <!-- Stats inline -->
