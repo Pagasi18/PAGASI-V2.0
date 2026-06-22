@@ -1704,8 +1704,7 @@ if (auth) {
           if(typeof _attachCurrentUserListener === 'function') _attachCurrentUserListener(user.uid);
           // ── Log de inicio de sesión ──
           if(typeof logActividad === 'function') logActividad('login','auth',user.uid,{rol:S.currentUser.rol});
-          // ── Bienvenida: si el perfil está incompleto, pedir datos ──
-          if(typeof chequearPerfilIncompleto === 'function') chequearPerfilIncompleto();
+          // (Desactivado) El modal de "completar perfil" ya no aparece al iniciar sesión.
         }).catch(function(){
           S.currentUser = { uid: user.uid, email: user.email, nombre: user.email, rol: 'Administrador', permisos: ['perm_delete'] };
         }).finally(function(){
