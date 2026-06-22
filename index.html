@@ -831,6 +831,8 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
 .hero-actions .btn-p{overflow:hidden;}
 .hero-actions .btn-p::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.40) 50%,transparent 70%);transform:translateX(-100%);animation:badgeShine 3.5s ease-in-out infinite 2s;pointer-events:none;z-index:1;}
 .hero-actions .btn-p{z-index:0;}
+/* Quitar el shine de la badge Destacada (queda solo en el botón) */
+.hero-bike-badge::before{display:none !important;}
 /* ═══════════════ MÓVIL — legibilidad y layout ═══════════════ */
 @media(max-width:640px){
   .hero{padding:82px 18px 44px !important;min-height:auto !important;}
