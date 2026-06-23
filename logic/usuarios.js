@@ -1639,44 +1639,39 @@ if (auth) {
       if (!user) return;
     }
     if (user) {
+      // ── SEGURIDAD: una sesión ANÓNIMA (la que crea el formulario público
+      // solicitar.html con signInAnonymously) NO debe entrar al admin. Se cierra. ──
+      if (user.isAnonymous) { try{ auth.signOut(); }catch(e){} return; }
       $('login-screen').style.display = 'none';
       var invSc = $('invite-screen');
       if (invSc && !inviteToken) invSc.style.display = 'none';
       // Cargar datos del usuario desde Firestore
       if (db) {
         db.collection('usuarios').doc(user.uid).get().then(function(doc) {
-          var data = doc.exists ? doc.data() : {};
-          // BUG FIX: si el doc no existe en Firestore (usuario creado antes de la
-          // colección, o que nunca pasó por el flujo de invitación), lo creamos
-          // automáticamente para que aparezca en la lista de Usuarios.
+          // ── SEGURIDAD (FIX CRÍTICO): si NO existe ficha en 'usuarios', NO es un
+          // administrador legítimo. Antes se auto-creaba una cuenta Administrador con
+          // TODOS los permisos para cualquier usuario autenticado (incluido un lead del
+          // formulario público) — agujero gravísimo. Ahora se DENIEGA y se cierra sesión.
           if (!doc.exists) {
-            var defaultRol = 'Administrador';
-            var defaultPerms = ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','conta','plan','config','users','perm_delete'];
-            var defaultData = {
-              nombre: user.displayName || (user.email||'').split('@')[0] || 'Usuario',
-              email: user.email,
-              rol: defaultRol,
-              permisos: defaultPerms,
-              creado: new Date().toISOString(),
-              autoCreado: true // marca para saber que se creó aquí, no por invitación
-            };
-            db.collection('usuarios').doc(user.uid).set(defaultData, {merge:true})
-              .then(function(){ console.log('Usuario creado en Firestore:', user.email); })
-              .catch(function(){});
-            data = defaultData;
-          } else {
-            // Si existe pero le faltan campos críticos (nombre, rol, permisos), completarlos
-            var needsUpdate = {};
-            if (!data.email) needsUpdate.email = user.email;
-            if (!data.nombre) needsUpdate.nombre = user.displayName || (user.email||'').split('@')[0] || 'Usuario';
-            if (!data.rol || data.rol === 'admin') needsUpdate.rol = 'Administrador'; // normalizar minúscula legacy
-            if (!Array.isArray(data.permisos) || data.permisos.length === 0) {
-              needsUpdate.permisos = ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','conta','plan','config','users','perm_delete'];
-            }
-            if (Object.keys(needsUpdate).length > 0) {
-              db.collection('usuarios').doc(user.uid).set(needsUpdate, {merge:true}).catch(function(){});
-              Object.assign(data, needsUpdate);
-            }
+            try{ auth.signOut(); }catch(e){}
+            S.currentUser = null;
+            var _lsD = $('login-screen'); if (_lsD) _lsD.style.display = 'flex';
+            var _arD = $('app-root'); if (_arD) _arD.style.display = 'none';
+            var _erD = $('login-err'); if (_erD) { _erD.textContent = 'Esta cuenta no tiene acceso al sistema. Pedile a un administrador que te dé acceso.'; _erD.style.display = 'block'; }
+            return;
+          }
+          var data = doc.data() || {};
+          // El doc existe: completar solo campos faltantes (nombre/rol/permisos) si hace falta.
+          var needsUpdate = {};
+          if (!data.email) needsUpdate.email = user.email;
+          if (!data.nombre) needsUpdate.nombre = user.displayName || (user.email||'').split('@')[0] || 'Usuario';
+          if (!data.rol || data.rol === 'admin') needsUpdate.rol = 'Administrador'; // normalizar minúscula legacy
+          if (!Array.isArray(data.permisos) || data.permisos.length === 0) {
+            needsUpdate.permisos = ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','conta','plan','config','users','perm_delete'];
+          }
+          if (Object.keys(needsUpdate).length > 0) {
+            db.collection('usuarios').doc(user.uid).set(needsUpdate, {merge:true}).catch(function(){});
+            Object.assign(data, needsUpdate);
           }
           // ── Registrar ÚLTIMO ACCESO (alimenta la columna "Último acceso") ──
           // Antes nunca se escribía, por eso todos mostraban "Nunca".
@@ -1704,15 +1699,21 @@ if (auth) {
           if(typeof _attachCurrentUserListener === 'function') _attachCurrentUserListener(user.uid);
           // ── Log de inicio de sesión ──
           if(typeof logActividad === 'function') logActividad('login','auth',user.uid,{rol:S.currentUser.rol});
-          // (Desactivado) El modal de "completar perfil" ya no aparece al iniciar sesión.
-        }).catch(function(){
-          S.currentUser = { uid: user.uid, email: user.email, nombre: user.email, rol: 'Administrador', permisos: ['perm_delete'] };
-        }).finally(function(){
+          // Inicializar la app SOLO para usuarios autorizados (con ficha válida en 'usuarios').
           if (!window._appInited) { window._appInited = true; init(); }
+        }).catch(function(){
+          // ── SEGURIDAD: ante un error validando la ficha, NO conceder admin: denegar acceso. ──
+          try{ auth.signOut(); }catch(e){}
+          S.currentUser = null;
+          var _lsE = $('login-screen'); if (_lsE) _lsE.style.display = 'flex';
+          var _arE = $('app-root'); if (_arE) _arE.style.display = 'none';
         });
       } else {
-        S.currentUser = { uid: user.uid, email: user.email, nombre: user.displayName || user.email, rol: 'Administrador', permisos: ['perm_delete'] };
-        if (!window._appInited) { window._appInited = true; init(); }
+        // ── SEGURIDAD: sin Firestore disponible no se puede validar la ficha del
+        // usuario; NO conceder admin. Se muestra el login. ──
+        S.currentUser = null;
+        var _lsN = $('login-screen'); if (_lsN) _lsN.style.display = 'flex';
+        var _arN = $('app-root'); if (_arN) _arN.style.display = 'none';
       }
     } else {
       window._appInited = false;

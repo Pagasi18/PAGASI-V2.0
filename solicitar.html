@@ -827,6 +827,9 @@ async function submitF(){
     }else{
       await db.collection('clientes').doc(String(payload.id)).set(payload,{merge:true});
     }
+    // SEGURIDAD: cerrar la sesión anónima para que no quede activa en el navegador
+    // (evita que ese mismo navegador entre luego a /admin con una sesión autenticada).
+    try{ await fbAuth.signOut(); }catch(_e){}
     document.getElementById('fs2').classList.remove('on');
     document.getElementById('fOK').style.display='block';
     document.getElementById('pd2').classList.remove('on');
