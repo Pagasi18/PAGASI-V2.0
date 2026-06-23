@@ -1,34 +1,94 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function esAdmin() { return request.auth != null
-      && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'Administrador'; }
-    function logueado() { return request.auth != null; }
 
-    match /usuarios/{uid} {
-      allow read: if logueado();
-      allow write: if esAdmin() || (request.auth != null && request.auth.uid == uid);
+    // ── Identidad ──────────────────────────────────────────────────────────
+    // "Staff" = sesión REAL (no anónima) que YA tiene su ficha en /usuarios.
+    // Antes se usaba solo request.auth != null ("logueado"), lo que dejaba
+    // entrar a cualquier sesión anónima (las que crea el formulario público).
+    function noAnonimo() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
-    match /invitaciones/{id} { allow read: if logueado(); allow write: if esAdmin(); }
-    match /config/{id} { allow read, write: if logueado(); }
-    match /clientes/{id}    { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
-    match /creditos/{id}    { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
-    match /pagos/{id}       { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
-    match /motos/{id}       { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
-    match /facturas/{id}    { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
-    match /cuentas/{id}     { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
-    match /cuentasPendientes/{id} { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
-    match /movimientos/{id} { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
-    match /egresos/{id}     { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
-    match /concesionarios/{id} { allow read, create, update: if logueado(); allow delete: if esAdmin(); }
-    match /tareas/{id}      { allow read, create, update, delete: if logueado(); }
-    match /recursos/{id}    { allow read, create, update, delete: if logueado(); }
-    match /notas_cobranza/{id} { allow read, create: if logueado(); allow update, delete: if esAdmin(); }
+    function esStaff() {
+      return noAnonimo()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+    function esAdmin() {
+      return esStaff()
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'Administrador';
+    }
+    // Un lead del formulario público: sólo se permite CREAR con esta forma.
+    function esLeadWeb() {
+      return request.resource.data.estado == 'lead'
+        && request.resource.data.origen == 'web';
+    }
+
+    // ── Usuarios ───────────────────────────────────────────────────────────
+    // Crear la ficha propia SÓLO al aceptar una invitación válida (el email del
+    // doc debe coincidir con el de la cuenta, y debe existir una invitación
+    // para ese email). Así, aunque el registro email/clave esté abierto, nadie
+    // puede auto-asignarse acceso sin haber sido invitado por un admin.
+    match /usuarios/{uid} {
+      allow read: if esStaff();
+      allow create: if esAdmin()
+        || ( noAnonimo()
+             && request.auth.uid == uid
+             && request.resource.data.email == request.auth.token.email
+             && request.resource.data.inviteToken is string
+             && exists(/databases/$(database)/documents/invitaciones/$(request.resource.data.inviteToken))
+             && get(/databases/$(database)/documents/invitaciones/$(request.resource.data.inviteToken)).data.email == request.auth.token.email );
+      // Editar la ficha propia, pero SIN poder cambiarse el rol uno mismo.
+      allow update: if esAdmin()
+        || ( noAnonimo()
+             && request.auth.uid == uid
+             && request.resource.data.rol == resource.data.rol );
+      allow delete: if esAdmin();
+    }
+
+    // ── Invitaciones ─────────────────────────────────────────────────────────
+    // get(): el invitado abre su link (el token es un secreto en la URL).
+    // list(): sólo staff puede enumerarlas. Crear/editar/borrar: sólo admin.
+    match /invitaciones/{token} {
+      allow get: if true;
+      allow list: if esStaff();
+      allow create, update, delete: if esAdmin();
+    }
+
+    // ── Configuración ────────────────────────────────────────────────────────
+    match /config/{id} { allow read, write: if esStaff(); }
+
+    // ── Clientes ───────────────────────────────────────────────────────────
+    // Lectura y edición: sólo staff. El formulario público puede CREAR un lead
+    // (no leer, no editar, no borrar datos existentes).
+    match /clientes/{id} {
+      allow read:   if esStaff();
+      allow create: if esStaff() || (request.auth != null && esLeadWeb());
+      allow update: if esStaff();
+      allow delete: if esAdmin();
+    }
+
+    // ── Resto de colecciones internas: sólo staff ──────────────────────────
+    match /creditos/{id}          { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
+    match /pagos/{id}             { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
+    match /motos/{id}             { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
+    match /facturas/{id}          { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
+    match /cuentas/{id}           { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
+    match /cuentasPendientes/{id} { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
+    match /movimientos/{id}       { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
+    match /egresos/{id}           { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
+    match /concesionarios/{id}    { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
+    match /tareas/{id}            { allow read, create, update, delete: if esStaff(); }
+    match /recursos/{id}          { allow read, create, update, delete: if esStaff(); }
+    match /notas_cobranza/{id}    { allow read, create: if esStaff(); allow update, delete: if esAdmin(); }
+
     match /logs/{id} {
       allow read: if esAdmin();
-      allow create: if logueado();
+      allow create: if esStaff();
       allow update, delete: if false;
     }
+
+    // Todo lo demás, bloqueado.
     match /{document=**} { allow read, write: if false; }
   }
 }

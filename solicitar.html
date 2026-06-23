@@ -707,7 +707,7 @@ function calcCrediScore(){
   return {score:score,f1:Math.round(f1),f2:Math.round(f2),f3:Math.round(f3),f4:Math.round(f4),f5:Math.round(f5),ratio:ratio};
 }
 
-function _v(id){ var e=document.getElementById(id); return e ? String(e.value||'').trim() : ''; }
+function _v(id){ var e=document.getElementById(id); return e ? String(e.value||'').replace(/[<>]/g,'').trim() : ''; }
 function _n(id){ var e=document.getElementById(id); return e ? (parseFloat(e.value)||0) : 0; }
 function _i(id){ var e=document.getElementById(id); return e ? (parseInt(e.value,10)||0) : 0; }
 
@@ -818,15 +818,12 @@ async function submitF(){
   try{
     if((!FIREBASE_READY||!fbAuth||!db) && !initFirebaseSolicitar()) throw new Error('Firebase no disponible');
     if(!fbAuth.currentUser) await fbAuth.signInAnonymously();
-    var dup=await db.collection('clientes').where('cedula','==',payload.cedula).limit(1).get();
-    if(!dup.empty){
-      var old2=dup.docs[0].data()||{};
-      payload.id=old2.id||dup.docs[0].id;
-      payload.creado=old2.creado||payload.creado;
-      await dup.docs[0].ref.set(payload,{merge:true});
-    }else{
-      await db.collection('clientes').doc(String(payload.id)).set(payload,{merge:true});
-    }
+    // El formulario público SÓLO puede crear un lead nuevo. Las reglas de
+    // Firestore ya no dejan que una sesión anónima LEA ni EDITE clientes
+    // existentes, así que no buscamos duplicados desde aquí (eso expondría la
+    // base). Si la misma persona envía dos veces, el equipo unifica el lead
+    // duplicado desde el panel.
+    await db.collection('clientes').doc(String(payload.id)).set(payload);
     // SEGURIDAD: cerrar la sesión anónima para que no quede activa en el navegador
     // (evita que ese mismo navegador entre luego a /admin con una sesión autenticada).
     try{ await fbAuth.signOut(); }catch(_e){}

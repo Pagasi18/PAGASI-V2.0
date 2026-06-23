@@ -91,6 +91,8 @@ function renderClienteList(q=''){
     return `<th onclick="setCliSort('${col}')" style="cursor:pointer;user-select:none;white-space:nowrap">${label}${on?` <span style="color:var(--p1);font-size:10px">${arrow}</span>`:'<span style="color:var(--ink3);font-size:9px;opacity:.4"> ⇅</span>'}</th>`;
   }
 
+  // Escapa texto que viene del cliente/lead (puede llegar del formulario público).
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
   var rows=page.map(c=>{
     const credsCli=getCreditosCliente(c).filter(x=>x.estado!=='cancelado');
     const activo=credsCli.find(x=>x.estado==='activo');
@@ -139,11 +141,11 @@ function renderClienteList(q=''){
       : (esLead ? ' <span title="Lead — sin crédito activo aún" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(37,99,235,.5);margin-left:6px;vertical-align:middle"></span>' : '');
 
     return `<tr onclick="verCliente('${c.id}')" style="${rowStyle}">
-      <td class="tdm" style="white-space:nowrap">${c.nombre}${c.premium?` <span style="color:var(--amber)">★</span>`:''}${leadDot}</td>
-      <td class="tds">${c.cedula||'—'}</td>
+      <td class="tdm" style="white-space:nowrap">${esc(c.nombre)}${c.premium?` <span style="color:var(--amber)">★</span>`:''}${leadDot}</td>
+      <td class="tds">${esc(c.cedula)||'—'}</td>
       <td>${fechaCell}</td>
-      <td><div class="tdm">${c.tel||'—'}</div><div class="tds">${c.ciudad||'—'}</div></td>
-      <td><div class="tdm">${c.trabajo||'—'}</div><div class="tds" style="color:var(--green);font-weight:700">${c.ingreso?fmt(c.ingreso)+'/mes':'—'}</div></td>
+      <td><div class="tdm">${esc(c.tel)||'—'}</div><div class="tds">${esc(c.ciudad)||'—'}</div></td>
+      <td><div class="tdm">${esc(c.trabajo)||'—'}</div><div class="tds" style="color:var(--green);font-weight:700">${c.ingreso?fmt(c.ingreso)+'/mes':'—'}</div></td>
       <td style="min-width:90px">${scNum?`<div style="display:flex;align-items:baseline;gap:2px"><span style="font-weight:900;font-size:13px;color:${scoreCol}">${scNum}</span><span style="font-size:9px;color:var(--ink3)">/850</span></div><div style="background:var(--lift);border-radius:3px;height:3px;width:60px;margin-top:3px;overflow:hidden"><div style="height:100%;width:${scoreBarW}%;background:${scoreCol};border-radius:3px"></div></div><div style="font-size:9px;color:${scoreCol};font-weight:700;margin-top:2px">${scoreLbl}</div>`:'<span style="color:var(--ink3)">—</span>'}</td>
       <td><div class="tdm">${activo?activo.id:'—'}</div><div class="tds">${activo?activo.modelo||'—':'sin activo'}</div></td>
       <td>${moraCell}</td>
@@ -159,8 +161,8 @@ function renderClienteList(q=''){
     ?`<div style="margin-top:10px;padding:9px 12px;background:var(--surf2);border-radius:10px;border:1px solid rgba(240,75,106,0.2)">
         <div style="font-size:10px;font-weight:800;text-transform:uppercase;color:var(--red);margin-bottom:6px">Eliminados (${S.clientes.filter(c=>c.eliminado).length})</div>
         ${S.clientes.filter(c=>c.eliminado).map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--rim);font-size:11px">
-          <span style="flex:1;font-weight:700;opacity:.5;text-decoration:line-through">${c.nombre}</span>
-          <span style="color:var(--ink3)">${c.cedula}</span>
+          <span style="flex:1;font-weight:700;opacity:.5;text-decoration:line-through">${esc(c.nombre)}</span>
+          <span style="color:var(--ink3)">${esc(c.cedula)}</span>
           <button class="btn btn-g btn-xs" onclick="restaurarCliente('${c.id}')">↩ Restaurar</button>
         </div>`).join('')}
       </div>`:'';

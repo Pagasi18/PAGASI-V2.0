@@ -1571,6 +1571,9 @@ function aceptarInvitacion() {
       .then(function(){
         var updateData = {
           uid: user.uid,
+          // El token queda en la ficha para que las reglas de Firestore puedan
+          // verificar que esta cuenta fue realmente invitada por un admin.
+          inviteToken: token,
           nombre: nombre,
           email: user.email,
           rol: pending.rol || 'Empleado',
