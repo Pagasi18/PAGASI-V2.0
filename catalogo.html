@@ -402,16 +402,17 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
       <div>
         <div class="tag">Catalogo</div>
         <h2 class="head">Motos disponibles</h2>
-        <p class="sub">41 modelos disponibles en nuestras 3 sedes: EK Bello Monte, Boleita y Toro Sabana Grande. Llevátela con tu inicial y pagá el resto en cómodas cuotas quincenales.</p>
+        <p class="sub">46 modelos disponibles en nuestras 4 sedes: EK Bello Monte, Boleita, Toro Sabana Grande y Benmo Motos Andrés Bello. Llevátela con tu inicial y pagá el resto en cómodas cuotas quincenales.</p>
       </div>
       <a href="simulador.html" class="btn btn-s" style="white-space:nowrap;">Calcular cuota &rarr;</a>
     </div>
 
     <div class="sede-bar reveal" id="sedeBar">
-      <button class="sede-chip is-active" data-sede="all" onclick="filterSede('all',this)">Todas <span class="sede-n">41</span></button>
+      <button class="sede-chip is-active" data-sede="all" onclick="filterSede('all',this)">Todas <span class="sede-n">46</span></button>
       <button class="sede-chip" data-sede="ek" onclick="filterSede('ek',this)">EK Bello Monte <span class="sede-n">17</span></button>
       <button class="sede-chip" data-sede="boleita" onclick="filterSede('boleita',this)">Boleita <span class="sede-n">9</span></button>
       <button class="sede-chip" data-sede="toro" onclick="filterSede('toro',this)">Toro Sabana Grande <span class="sede-n">15</span></button>
+      <button class="sede-chip" data-sede="benmo" onclick="filterSede('benmo',this)">Benmo Motos Andrés Bello <span class="sede-n">5</span></button>
     </div>
 
     <div class="cat-grid" id="catGrid"></div>
@@ -464,6 +465,12 @@ const MOTOS = [
   {id:39, sede:'toro',    sedeName:'Toro Sabana Grande',  modelo:'TANK',                precio:1920, cat:'Tank · Trail',       tag:''},
   {id:40, sede:'toro',    sedeName:'Toro Sabana Grande',  modelo:'CAPPUCINO',           precio:1890, cat:'Scooter Premium',    tag:''},
   {id:41, sede:'toro',    sedeName:'Toro Sabana Grande',  modelo:'TYPHOON',             precio:1690, cat:'Sport',              tag:''},
+  // Benmo Motos Andrés Bello (5)
+  {id:42, sede:'benmo',   sedeName:'Benmo Motos Andrés Bello', modelo:'HJ150-8',          precio:1520, cat:'150cc · Urbana',    tag:''},
+  {id:43, sede:'benmo',   sedeName:'Benmo Motos Andrés Bello', modelo:'GTL 150',          precio:1230, cat:'150cc · Urbana',    tag:''},
+  {id:44, sede:'benmo',   sedeName:'Benmo Motos Andrés Bello', modelo:'JB STREET 150',    precio:1150, cat:'150cc · Clásica',   tag:'Económica'},
+  {id:45, sede:'benmo',   sedeName:'Benmo Motos Andrés Bello', modelo:'STREET SPORT 150', precio:1320, cat:'150cc · Sport',     tag:''},
+  {id:46, sede:'benmo',   sedeName:'Benmo Motos Andrés Bello', modelo:'HM 150 LONCIN',    precio:1110, cat:'150cc · Urbana',    tag:'Económica'}
 ];
 
 function calcMoto(precio){
