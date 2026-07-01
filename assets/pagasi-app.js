@@ -1834,16 +1834,16 @@ var DB = {
         var catData = catalogoDoc.data() || {};
         // Solo usar el catálogo de Firestore si está en la versión actual (2).
         // Si es viejo/sin versión, mantener el catálogo completo hardcoded y re-sembrar Firestore una vez.
-        if(Array.isArray(catData.items) && catData.items.length && (catData.version||0) >= 2){
+        if(Array.isArray(catData.items) && catData.items.length && (catData.version||0) >= 3){
           CATALOGO.splice(0, CATALOGO.length);
           catData.items.forEach(function(item){ CATALOGO.push(item); });
         } else {
-          db.collection('config').doc('catalogo').set({items: CATALOGO, version: 2}).catch(function(){});
-          try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); localStorage.setItem('pagasi_catalogo_ver','2'); }catch(e){}
+          db.collection('config').doc('catalogo').set({items: CATALOGO, version: 3}).catch(function(){});
+          try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); localStorage.setItem('pagasi_catalogo_ver','3'); }catch(e){}
         }
       } else {
-        db.collection('config').doc('catalogo').set({items: CATALOGO, version: 2}).catch(function(){});
-        try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); localStorage.setItem('pagasi_catalogo_ver','2'); }catch(e){}
+        db.collection('config').doc('catalogo').set({items: CATALOGO, version: 3}).catch(function(){});
+        try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); localStorage.setItem('pagasi_catalogo_ver','3'); }catch(e){}
       }
       if(planesDoc && planesDoc.exists){
         var extraData = planesDoc.data() || {};
@@ -2158,7 +2158,7 @@ try {
   var _catLs = JSON.parse(localStorage.getItem('pagasi_catalogo_config')||'null');
   var _catVer = parseInt(localStorage.getItem('pagasi_catalogo_ver')||'0',10);
   // Solo usar caché local si está en la versión actual (2); si es vieja, se ignora y queda el catálogo completo hardcoded
-  if(Array.isArray(_catLs) && _catLs.length && _catVer >= 2){ CATALOGO.splice(0, CATALOGO.length); _catLs.forEach(function(item){ CATALOGO.push(item); }); }
+  if(Array.isArray(_catLs) && _catLs.length && _catVer >= 3){ CATALOGO.splice(0, CATALOGO.length); _catLs.forEach(function(item){ CATALOGO.push(item); }); }
   var _planLs = JSON.parse(localStorage.getItem('pagasi_config_plan')||'null');
   if(_planLs && typeof _planLs==='object'){
     if(Object.prototype.hasOwnProperty.call(_planLs,'factor')) PLAN.factor = _planLs.factor;
@@ -2221,7 +2221,13 @@ const CATALOGO = [
   {id:38, sede:'Toro Sabana Grande', modelo:'TANK III',            precio:2500.00},
   {id:39, sede:'Toro Sabana Grande', modelo:'TANK',                precio:1920.00},
   {id:40, sede:'Toro Sabana Grande', modelo:'CAPPUCINO',           precio:1890.00},
-  {id:41, sede:'Toro Sabana Grande', modelo:'TYPHOON',             precio:1690.00}
+  {id:41, sede:'Toro Sabana Grande', modelo:'TYPHOON',             precio:1690.00},
+  // ─── Benmo Motos Andrés Bello (5) ───────────────────────────
+  {id:42, sede:'Benmo Motos Andrés Bello', modelo:'HJ150-8',         precio:1520.00},
+  {id:43, sede:'Benmo Motos Andrés Bello', modelo:'GTL 150',         precio:1230.00},
+  {id:44, sede:'Benmo Motos Andrés Bello', modelo:'JB STREET 150',   precio:1150.00},
+  {id:45, sede:'Benmo Motos Andrés Bello', modelo:'STREET SPORT 150',precio:1320.00},
+  {id:46, sede:'Benmo Motos Andrés Bello', modelo:'HM 150 LONCIN',   precio:1110.00}
 ];
 
 // Calculos financieros y helpers de planes movidos a logic/financiero.js.
