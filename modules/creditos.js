@@ -129,6 +129,7 @@ PG.creditos = function(){
     if(col==='id') { va=parseInt(String(a.id).replace(/\D/g,''),10)||0; vb=parseInt(String(b.id).replace(/\D/g,''),10)||0; return dir*(va<vb?-1:va>vb?1:0); }
     if(col==='cli') { va=(a.cli||'').toLowerCase(); vb=(b.cli||'').toLowerCase(); return dir*(va<vb?-1:va>vb?1:0); }
     if(col==='modelo') { va=(a.modelo||'').toLowerCase(); vb=(b.modelo||'').toLowerCase(); return dir*(va<vb?-1:va>vb?1:0); }
+    if(col==='sede') { va=(((_concGetById(a.concesionarioId)||{}).nombre)||'').toLowerCase(); vb=(((_concGetById(b.concesionarioId)||{}).nombre)||'').toLowerCase(); return dir*(va<vb?-1:va>vb?1:0); }
     if(col==='fecha') { va=a.fecha||''; vb=b.fecha||''; return dir*(va<vb?-1:va>vb?1:0); }
     if(col==='precio') return dir*(parseFloat(a.precioBaseReal||a.precio||0)-parseFloat(b.precioBaseReal||b.precio||0));
     if(col==='total') return dir*(parseFloat(a.total||0)-parseFloat(b.total||0));
@@ -289,8 +290,8 @@ PG.creditos = function(){
     </div>
     <div class="tw tw-compact tw-creditos"><table>
     <thead><tr>
-      ${['id','cli','modelo','fecha','precio','total','cuota','progreso','saldo','mora','apy','estado'].map(function(col){
-        var labels={id:'ID',cli:'Cliente',modelo:'Modelo',fecha:'Fecha inicio',precio:'Precio',total:'Total',cuota:'Cuota Q.',progreso:'Progreso',saldo:'Saldo',mora:'Mora',apy:'APY',estado:'Estado'};
+      ${['id','cli','modelo','sede','fecha','precio','total','cuota','progreso','saldo','mora','apy','estado'].map(function(col){
+        var labels={id:'ID',cli:'Cliente',modelo:'Modelo',sede:'Concesionario',fecha:'Fecha inicio',precio:'Precio',total:'Total',cuota:'Cuota Q.',progreso:'Progreso',saldo:'Saldo',mora:'Mora',apy:'APY',estado:'Estado'};
         if(col==='progreso') return '<th>Progreso</th>';
         var isActive=(_cs.col===col);
         var arrow=isActive?(_cs.dir==='asc'?'↑':'↓'):'';
@@ -315,10 +316,12 @@ PG.creditos = function(){
       var fechaFmt = c.fecha ? parseFechaLocal(c.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
       var precio = parseFloat(c.precioBaseReal||c.precio||0);
       var totalC = parseFloat(c.total||0);
+      var sedeName = c.concesionarioId ? (((_concGetById(c.concesionarioId)||{}).nombre)||'—') : '—';
       return`<tr style="cursor:pointer" onclick="openAmort('${c.id}')">
       <td class="tdm" style="font-family:var(--fd)">${c.id}</td>
       <td style="max-width:140px"><div class="tdm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px" title="${c.cli}">${c.cli}</div></td>
       <td class="tds">${c.modelo||'—'}</td>
+      <td class="tds" style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${sedeName}">${sedeName}</td>
       <td class="tds" style="font-family:var(--fd);font-size:11px;color:var(--ink3);white-space:nowrap">${fechaFmt}</td>
       <td style="font-family:var(--fd);font-size:11.5px;color:var(--ink3)">${fmt(precio)}</td>
       <td style="font-family:var(--fd);font-size:11.5px;font-weight:700">${fmt(totalC)}</td>
@@ -338,7 +341,7 @@ PG.creditos = function(){
         </div>
       </td>
     </tr>`;}).join('')})()}
-    ${filtered.length===0?`<tr><td colspan="13" style="text-align:center;padding:30px 0;color:var(--ink3);font-size:13px">Sin resultados para este filtro</td></tr>`:''}
+    ${filtered.length===0?`<tr><td colspan="14" style="text-align:center;padding:30px 0;color:var(--ink3);font-size:13px">Sin resultados para este filtro</td></tr>`:''}
     </tbody>
   </table></div>
   </div>
