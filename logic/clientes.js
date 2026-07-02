@@ -1338,6 +1338,8 @@ function _cliInitFromCliente(c){
   WZ.ifam = WZ.wz_ifam = c.ingreso_familiar || '';
   WZ.conocio = WZ.wz_conocio = c.conocio || '';
   WZ.viv = WZ.wz_viv = c.vivienda || '';
+  WZ.terremoto = WZ.wz_terremoto = c.terremoto_afectado || 'no';
+  WZ.terremotoDanos = WZ.wz_terremoto_danos = c.terremoto_danos || '';
   WZ.tdir = WZ.wz_tdir = c.tiempo_dir || '';
   WZ.estado_ubi = WZ.wz_estado = c.estado_ubi || '';
   WZ.ciudad_res = WZ.wz_ciudad_res = c.ciudad || '';
@@ -1480,6 +1482,10 @@ function _cliStep2(){
   +_row2(
     _fg('Tiempo en esta dirección',_sel('wz_tdir','<option value="0">Seleccionar...</option><option value="1">Menos de 1 año</option><option value="2">1–3 años</option><option value="3">3–5 años</option><option value="4">Más de 5 años</option>','_wzScore()')),
     _fg('Tipo de vivienda',_sel('wz_viv','<option value="propia">Propia</option><option value="alquilada">Alquilada</option><option value="familiar">Familiar / prestada</option><option value="otro">Otro</option>','_wzScore()'))
+  )
+  +_row2(
+    _fg('¿Fue afectado por el terremoto?',_sel('wz_terremoto','<option value="no">No</option><option value="si">Sí</option>','_wzTerremotoToggle()')),
+    '<div id="wz_terremoto_danos_wrap" style="'+((typeof WZ!=='undefined'&&WZ&&WZ.terremoto)==='si'?'':'display:none')+'">'+_fg('Nivel de daños',_sel('wz_terremoto_danos','<option value="leves">Daños leves</option><option value="moderados">Daños moderados</option><option value="graves">Daños graves</option>'))+'</div>'
   )
   +_s('Empleo e Ingresos')
   +'<div style="margin-bottom:10px">'+_fg('Tipo de empleo *',
@@ -1639,6 +1645,8 @@ function _cliCollectStep(step){
   if(step===2){
     WZ.obs = WZ.wz_obs = g('wz_obs');
     WZ.viv = WZ.wz_viv = g('wz_viv');
+    WZ.terremoto = WZ.wz_terremoto = g('wz_terremoto');
+    WZ.terremotoDanos = WZ.wz_terremoto_danos = g('wz_terremoto_danos');
     WZ.tdir = WZ.wz_tdir = g('wz_tdir');
     WZ.estado_ubi = WZ.wz_estado = g('wz_estado');
     WZ.ciudad_res = WZ.wz_ciudad_res = g('wz_ciudad_res');
@@ -1769,6 +1777,8 @@ function _cliGuardar(){
     dependientes: WZ.dep||0,
     vivienda: WZ.viv||'',
     tiempo_dir: WZ.tdir||'',
+    terremoto_afectado: WZ.terremoto||'no',
+    terremoto_danos: (WZ.terremoto==='si') ? (WZ.terremotoDanos||'leves') : '',
     historial: WZ.hist||'',
     deudas: WZ.deuda||'',
     banco_estado: WZ.banco||'',

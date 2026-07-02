@@ -259,6 +259,10 @@ function _wzRender(motoId){
     _fg('Tiempo en esta dirección',_sel('wz_tdir','<option value="0">Seleccionar...</option><option value="1">Menos de 1 año</option><option value="2">1–3 años</option><option value="3">3–5 años</option><option value="4">Más de 5 años</option>','_wzScore()')),
     _fg('Tipo de vivienda',_sel('wz_viv','<option value="propia">Propia</option><option value="alquilada">Alquilada</option><option value="familiar">Familiar / prestada</option><option value="otro">Otro</option>','_wzScore()'))
   )
+  +_row2(
+    _fg('¿Fue afectado por el terremoto?',_sel('wz_terremoto','<option value="no">No</option><option value="si">Sí</option>','_wzTerremotoToggle()')),
+    '<div id="wz_terremoto_danos_wrap" style="'+((typeof WZ!=='undefined'&&WZ&&WZ.terremoto)==='si'?'':'display:none')+'">'+_fg('Nivel de daños',_sel('wz_terremoto_danos','<option value="leves">Daños leves</option><option value="moderados">Daños moderados</option><option value="graves">Daños graves</option>'))+'</div>'
+  )
 
   // ── EMPLEO E INGRESOS ──
   +_s('Empleo e Ingresos')
@@ -697,7 +701,7 @@ function _wzCliHidratar(){
 }
 
 function _wzHydrate(){
-  var ids=['wz_cliente_sel','wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs',
+  var ids=['wz_cliente_sel','wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_terremoto','wz_terremoto_danos','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs',
     // Paso 3: moto
     'wz_vin','wz_color','wz_marca','wz_anio','wz_placa','wz_serial_motor','wz_serial_chasis','wz_gps_num','wz_uso',
     // Paso 3: plan financiero
@@ -711,7 +715,8 @@ function _wzHydrate(){
     if(id==='wz_cliente_sel' && WZ.clienteSel!=null && WZ.clienteSel!==''){ el.value=String(WZ.clienteSel); return; }
     if(WZ[id]!=null && WZ[id]!=='') el.value=WZ[id];
   });
-  ['wz_emp','wz_ant','wz_conocio','wz_estado','wz_tdir','wz_viv','wz_rem','wz_banco','wz_banco_cobro','wz_ahorro','wz_cashea_nivel','wz_cashea_estado','wz_cashea_deuda','wz_cashea_total_compras','wz_r1r','wz_r2r','wz_fiador_rel'].forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null && WZ[id]!=='') el.value=WZ[id]; });
+  ['wz_emp','wz_ant','wz_conocio','wz_estado','wz_tdir','wz_viv','wz_terremoto','wz_terremoto_danos','wz_rem','wz_banco','wz_banco_cobro','wz_ahorro','wz_cashea_nivel','wz_cashea_estado','wz_cashea_deuda','wz_cashea_total_compras','wz_r1r','wz_r2r','wz_fiador_rel'].forEach(function(id){ var el=document.getElementById(id); if(el && WZ[id]!=null && WZ[id]!=='') el.value=WZ[id]; });
+  if(typeof _wzTerremotoToggle==='function') _wzTerremotoToggle();
   var cashea = WZ.cashea||'no';
   var casheaRadio=document.querySelector('input[name="wz_cashea"][value="'+cashea+'"]'); if(casheaRadio) casheaRadio.checked=true; if(document.getElementById('wz_cashea_det')) _wzToggleCashea(cashea); if(WZ.cashea_deuda==='si') _wzToggleCasheaDeuda('si');
   var fiador = WZ.fiador_tiene||'no';
@@ -759,7 +764,7 @@ function _wzCollectVisibleValues(){
     wz_nom:'nom', wz_ci:'ci', wz_tel:'tel', wz_wa:'wa', wz_email:'email', wz_ciudad:'ciudad',
     wz_emp:'emp', wz_ant:'ant', wz_ing:'ing', wz_ifam:'ifam', wz_conocio:'conocio',
     wz_estado:'estado_ubi', wz_ciudad_res:'ciudad_res', wz_dir_det:'dir_det', wz_dir_q:'dir_q',
-    wz_tdir:'tdir', wz_viv:'viv', wz_empresa:'empresa', wz_cargo:'cargo', wz_rem:'rem',
+    wz_tdir:'tdir', wz_viv:'viv', wz_terremoto:'terremoto', wz_terremoto_danos:'terremotoDanos', wz_empresa:'empresa', wz_cargo:'cargo', wz_rem:'rem',
     wz_banco:'banco', wz_banco_nm:'banco_nm', wz_banco_cobro:'banco_cobro', wz_cuenta:'cuenta',
     wz_ahorro:'ahorro', wz_cashea_nivel:'cashea_nivel', wz_cashea_pago:'cashea_pago',
     wz_cashea_estado:'cashea_estado', wz_cashea_deuda:'cashea_deuda', wz_cashea_monto:'cashea_monto',
@@ -818,7 +823,7 @@ function _wzPickCliente(sel){
     var keys = ['nom','ci','tel','wa','email','ciudad','emp','ant','ing','ifam','conocio','viv','tdir','estado_ubi','ciudad_res','dir_det','dir_q','empresa','cargo','rem','dep','hist','deuda','banco','banco_nm','banco_cobro','cuenta','ahorro','cashea','cashea_nivel','cashea_pago','cashea_estado','cashea_deuda','cashea_monto','cashea_cuotas_pend','cashea_ultimo_art','cashea_ultimo_monto','cashea_ultima_fecha','cashea_total_compras','cashea_obs','fiador_tiene','fiador_nom','fiador_tel','fiador_ci','fiador_rel','r1n','r1t','r1r','r1obs','r2n','r2t','r2r','r2obs','impresion','obs'];
     keys.forEach(function(k){ WZ[k]=''; });
     // Limpiar también todos los aliases wz_*
-    var wzKeys = ['wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_viv','wz_tdir','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_impresion','wz_obs'];
+    var wzKeys = ['wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_viv','wz_tdir','wz_terremoto','wz_terremoto_danos','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_impresion','wz_obs'];
     wzKeys.forEach(function(k){ WZ[k]=''; });
     // Limpiar chips
     WZ['_chip_wz_emp_g']=WZ['_chip_wz_dep_g']=WZ['_chip_wz_hist_g']=WZ['_chip_wz_deuda_g']=WZ['_chip_wz_impresion_g']='';
@@ -838,6 +843,8 @@ function _wzPickCliente(sel){
   // Residencia
   WZ.viv = WZ.wz_viv = c.vivienda || '';
   WZ.tdir = WZ.wz_tdir = c.tiempo_dir || '';
+  WZ.terremoto = WZ.wz_terremoto = c.terremoto_afectado || 'no';
+  WZ.terremotoDanos = WZ.wz_terremoto_danos = c.terremoto_danos || '';
   WZ.estado_ubi = WZ.wz_estado = c.estado_ubi || '';
   WZ.ciudad_res = WZ.wz_ciudad_res = c.ciudad || '';
   WZ.dir_det = WZ.wz_dir_det = c.dir || '';
@@ -1415,6 +1422,8 @@ function _wzValidar(){
   if(s===2){
     WZ.obs = g('wz_obs'); WZ.wz_obs = WZ.obs;
     WZ.viv = g('wz_viv'); WZ.wz_viv = WZ.viv;
+    WZ.terremoto = g('wz_terremoto'); WZ.wz_terremoto = WZ.terremoto;
+    WZ.terremotoDanos = g('wz_terremoto_danos'); WZ.wz_terremoto_danos = WZ.terremotoDanos;
     WZ.tdir = g('wz_tdir'); WZ.wz_tdir = WZ.tdir;
     WZ.estado_ubi = g('wz_estado'); WZ.wz_estado = WZ.estado_ubi;
     WZ.ciudad_res = g('wz_ciudad_res'); WZ.wz_ciudad_res = WZ.ciudad_res;
@@ -1708,6 +1717,8 @@ function _wzGuardar(){
     dependientes: WZ.dep||0,
     vivienda: WZ.viv||'',
     tiempo_dir: WZ.tdir||'',
+    terremoto_afectado: WZ.terremoto||'no',
+    terremoto_danos: (WZ.terremoto==='si') ? (WZ.terremotoDanos||'leves') : '',
     historial: WZ.hist||'',
     deudas: WZ.deuda||'',
     banco_estado: WZ.banco||'',
@@ -2668,4 +2679,11 @@ function auditarIniciales(){
   $('mbd').innerHTML = body;
   $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cerrar</button>';
   $('ov').style.display='flex';
+}
+
+// Toggle del campo "Nivel de daños" según la respuesta de terremoto (wizard)
+function _wzTerremotoToggle(){
+  var sel = document.getElementById('wz_terremoto');
+  var wrap = document.getElementById('wz_terremoto_danos_wrap');
+  if(wrap) wrap.style.display = (sel && sel.value==='si') ? '' : 'none';
 }
