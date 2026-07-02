@@ -71,17 +71,76 @@ function _aprRender(){
   return html;
 }
 
-// Aprobar un crédito → pasa a 'activo'
+// Aprobar un crédito → pasa a 'activo'.
+// Abre un modal que EXIGE registrar la inicial (monto + método) en el momento
+// de aprobar, para que nunca queden créditos activos sin su pago inicial
+// (raíz de las discrepancias detectadas: antes se aprobaba sin registrar la
+// inicial y luego se cargaba a mano, pudiendo diferir del plan).
 function _aprAprobar(credId){
   var c = (S.creds||[]).find(function(x){return x.id === credId;});
   if(!c){ toast('Crédito no encontrado','error'); return; }
   if(c.estado !== 'pendiente_revision'){ toast('Este crédito no está pendiente','error'); return; }
-  if(!confirm('¿Aprobar el crédito '+credId+' de '+(c.cli||'—')+'?\n\nPasará a estado ACTIVO y se cobrarán comisiones al vendedor (si aplica).')) return;
+  var iniPlan = parseFloat(c.ini)||0;
+  var cuentas = (typeof _cuentasBanc !== 'undefined' && _cuentasBanc && _cuentasBanc.length) ? _cuentasBanc : [];
+  var opts = '<option value="Efectivo USD">Efectivo USD</option>'
+    + cuentas.map(function(cu){ return '<option value="'+String(cu.nombre).replace(/"/g,'')+'">'+String(cu.nombre).replace(/[<>]/g,'')+'</option>'; }).join('');
+  $('mic').textContent='OK';
+  $('mtt').textContent='Aprobar crédito '+credId;
+  $('msb').textContent=(c.cli||'—')+' · '+(c.modelo||'—');
+  $('modal-box').className='modal';
+  $('mbd').innerHTML = '<div style="font-size:12px;color:var(--ink2);line-height:1.6;margin-bottom:12px">Al aprobar, el crédito pasa a <b>ACTIVO</b>. Registra la <b>inicial real recibida</b> para que quede asentada como pago (sin esto, el crédito quedaría activo sin inicial registrada).</div>'
+    + '<div style="background:var(--gs);border:1px solid var(--rim2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">Inicial según el plan ('+((parseFloat(c.inicialPct)||0)*100).toFixed(0)+'%): <b style="font-family:var(--fd)">'+fmt(iniPlan)+'</b></div>'
+    + '<div class="fg"><label>Inicial recibida (USD) *</label><input class="fi" id="apr_ini_monto" type="number" step="0.01" value="'+iniPlan.toFixed(2)+'"></div>'
+    + '<div class="fg" style="margin-top:8px"><label>Método / cuenta de la inicial *</label><select class="fs" id="apr_ini_metodo">'+opts+'</select></div>'
+    + '<div class="fg" style="margin-top:8px"><label>Referencia (opcional)</label><input class="fi" id="apr_ini_ref" type="text" placeholder="N° de referencia, Zelle, etc."></div>'
+    + '<div id="apr_ini_warn" style="font-size:11px;color:var(--amber);margin-top:8px;display:none"></div>';
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    + '<button class="btn btn-p" onclick="_aprAprobarConfirm(\''+credId+'\')">✓ Aprobar y registrar inicial</button>';
+  $('ov').style.display='flex';
+  setTimeout(function(){
+    var inp=$('apr_ini_monto'), warn=$('apr_ini_warn');
+    if(inp&&inp.addEventListener){ inp.addEventListener('input',function(){
+      var v=parseFloat(inp.value)||0; var d=Math.round((iniPlan-v)*100)/100;
+      if(Math.abs(d)>0.01){ warn.style.display='block'; warn.textContent=(d>0?'La inicial recibida es '+fmt(d)+' MENOR al plan. Se registrará lo recibido; el faltante seguirá pendiente.':'La inicial recibida es '+fmt(-d)+' MAYOR al plan.'); }
+      else { warn.style.display='none'; }
+    }); }
+  },60);
+}
+
+// Confirmar aprobación: cambia estado y registra pago inicial + movimiento.
+function _aprAprobarConfirm(credId){
+  var c = (S.creds||[]).find(function(x){return x.id === credId;});
+  if(!c){ toast('Crédito no encontrado','error'); return; }
+  if(c.estado !== 'pendiente_revision'){ toast('Este crédito ya no está pendiente','error'); closeM(); return; }
+  var monto = parseFloat(($('apr_ini_monto')&&$('apr_ini_monto').value)||'0');
+  var metodo = ($('apr_ini_metodo')&&$('apr_ini_metodo').value) || 'Efectivo USD';
+  var ref = ($('apr_ini_ref')&&$('apr_ini_ref').value) || '';
+  if(!(monto>0)){ toast('Indica la inicial recibida','error'); return; }
+  var nombreUser = (S.currentUser&&S.currentUser.nombre)||'Admin';
   c.estado = 'activo';
   c.aprobadoEn = new Date().toISOString();
-  c.aprobadoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
+  c.aprobadoPor = nombreUser;
   if(DB && DB.saveCred) DB.saveCred(c);
-  toast('Crédito aprobado · '+credId,'success');
+  // Registrar la inicial como pago (mismo formato que la creación directa)
+  var pagoIniId = 'PAG-'+Date.now();
+  var pagoIni = {
+    id:pagoIniId, cli:c.cli, cred:c.id, fecha:(typeof hoyLocalISO==='function'?hoyLocalISO():new Date().toISOString().slice(0,10)),
+    monto:monto, metodo:metodo, cuenta:metodo, cobrador:nombreUser, referencia:ref,
+    estado:'confirmado', tipoOperacion:'inicial_credito', esInicial:true, realizadoPor:nombreUser,
+    tasaBs:window._tasaBsGlobal||1, concesionarioId: c.concesionarioId || (typeof _concDefaultId==='function'?_concDefaultId():null)
+  };
+  S.pagos.push(pagoIni);
+  if(DB && DB.savePago) DB.savePago(pagoIni);
+  var movIni = {
+    id:'MOV-'+Date.now(), tipo:'deposito', tipoOperacion:'inicial_credito', conceptoPago:pagoIniId,
+    creditoId:c.id, conceptoCredito:c.id, concepto:'Inicial · '+c.cli+' · '+c.id+' ('+(c.modelo||'')+')',
+    monto:monto, cuentaDestino:metodo, fecha:pagoIni.fecha, referencia:ref, realizadoPor:nombreUser,
+    hora:new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false})
+  };
+  S.movimientos.push(movIni);
+  if(DB && DB.saveMovimiento) DB.saveMovimiento(movIni);
+  closeM();
+  toast('Crédito aprobado · '+credId+' · Inicial '+fmt(monto)+' → '+metodo,'success');
   nav('aprobaciones');
 }
 
