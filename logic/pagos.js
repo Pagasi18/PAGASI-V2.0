@@ -1429,3 +1429,20 @@ function borrarGestion(credId, gestionId){
 }
 
 // CONTRATO - Dispatcher por tipo de documento
+
+// ── Buscador de "Cuotas Próximas" ─────────────────────────────
+// Debounce + re-render del módulo + restaurar el foco del input
+// (nav() reconstruye todo el DOM del módulo, así que sin esto el
+// usuario perdería el cursor en cada tecla).
+function liveSearchCuotas(q){
+  S.cuotasQ = q;
+  pgSet('cuotas',1);
+  clearTimeout(window._cuotasQTimer);
+  window._cuotasQTimer = setTimeout(function(){
+    nav('pagos');
+    setTimeout(function(){
+      var i = $('cuotasQ');
+      if(i){ i.focus(); try{ var v=i.value; i.setSelectionRange(v.length, v.length); }catch(e){} }
+    }, 40);
+  }, 350);
+}

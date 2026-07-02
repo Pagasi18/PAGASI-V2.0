@@ -73,7 +73,7 @@ PG.pagos = function(){
     const cuotaNum=(c.pagado||0)+1;
     const vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
     const diff=Math.round((vence-new Date())/(24*60*60*1000));
-    return diff<=30 && diff>=-30; // muestra hasta 30 días de atraso y próximas 30 días
+    return diff<=30; // próximas 30 días + TODOS los atrasados (la mora nunca saca al cliente de la lista)
   }).map(function(c){
     const start=parseFechaLocal(c.fecha);
     const cuotaNum=(c.pagado||0)+1;
@@ -84,6 +84,14 @@ PG.pagos = function(){
   // Filtro por fecha de vencimiento
   if(_cuDesde) proximasCuotas = proximasCuotas.filter(function(it){ return it.venceStr >= _cuDesde; });
   if(_cuHasta) proximasCuotas = proximasCuotas.filter(function(it){ return it.venceStr <= _cuHasta; });
+  // Buscador: cliente, crédito o modelo
+  var _cuQ = String(S.cuotasQ||'').toLowerCase().trim();
+  if(_cuQ) proximasCuotas = proximasCuotas.filter(function(it){
+    var c = it.cred;
+    return String(c.cli||'').toLowerCase().indexOf(_cuQ)>-1
+        || String(c.id||'').toLowerCase().indexOf(_cuQ)>-1
+        || String(c.modelo||'').toLowerCase().indexOf(_cuQ)>-1;
+  });
   // Ordenamiento configurable (por defecto: más urgentes/atrasados primero)
   var _cu = S.cuotasSort||{col:'vence',dir:'asc'};
   proximasCuotas = proximasCuotas.slice().sort(function(a,b){
@@ -174,15 +182,16 @@ PG.pagos = function(){
   <!-- Cuotas Próximas -->
   <div class="card" style="margin-bottom:12px">
     <div class="ch" style="margin-bottom:10px">
-      <div><div class="ct">Cuotas Próximas</div><div class="cs">Clientes a cobrar en los próximos 30 días · atrasados primero</div></div>
+      <div><div class="ct">Cuotas Próximas</div><div class="cs">Próximos 30 días + todos los atrasados · más urgentes primero</div></div>
       <span class="bdg ${proximasCuotas.length>0?'b-a':'b-g'}">${proximasCuotas.length}</span>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <input type="text" id="cuotasQ" value="${String(S.cuotasQ||'').replace(/</g,'&lt;').replace(/"/g,'&quot;')}" placeholder="Buscar cliente, crédito o modelo..." oninput="liveSearchCuotas(this.value)" style="flex:1;min-width:190px;border:1px solid var(--rim);border-radius:8px;padding:6px 10px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
       <label style="font-size:11px;color:var(--ink3);font-weight:700">Vence desde:</label>
       <input type="date" value="${S.cuotasDesde||''}" onchange="S.cuotasDesde=this.value;pgSet('cuotas',1);nav('pagos')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
       <label style="font-size:11px;color:var(--ink3);font-weight:700">Hasta:</label>
       <input type="date" value="${S.cuotasHasta||''}" onchange="S.cuotasHasta=this.value;pgSet('cuotas',1);nav('pagos')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
-      ${(S.cuotasDesde||S.cuotasHasta)?`<button class="btn btn-g btn-sm" onclick="S.cuotasDesde='';S.cuotasHasta='';pgSet('cuotas',1);nav('pagos')">✕ Limpiar</button>`:''}
+      ${(S.cuotasDesde||S.cuotasHasta||S.cuotasQ)?`<button class="btn btn-g btn-sm" onclick="S.cuotasDesde='';S.cuotasHasta='';S.cuotasQ='';pgSet('cuotas',1);nav('pagos')">✕ Limpiar</button>`:''}
     </div>
     ${proximasCuotas.length===0 ? '<div style="text-align:center;padding:20px 0;color:var(--ink3);font-size:12px">Sin cuotas próximas ni atrasadas</div>' :
       `<div class="tw"><table>
