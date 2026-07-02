@@ -319,18 +319,18 @@ function _renderContratoArrendamiento(){
           <div style="border-top:1px solid #444;padding-top:6px;font-size:11px;color:#555;text-align:center">Firma del comprador</div>
         </td>
       </tr>
-      ${tieneFiador ? `<tr>
+      <tr>
         <td colspan="2" style="padding:16px 20px;border-top:1px solid #EAE5F7">
-          <div style="font-weight:700;font-size:11px;margin-bottom:8px;color:${purple}">FIADOR / GARANTE</div>
+          <div style="font-weight:700;font-size:11px;margin-bottom:8px;color:${purple}">FIADOR / GARANTE${tieneFiador?'':' (si aplica)'}</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin-bottom:20px">
-            <div>Nombre: <strong>${fiadNom}</strong></div>
-            <div>C.I.: <strong>${fiadCi}</strong></div>
-            <div>RIF: <strong>${fiadRif}</strong></div>
+            <div>Nombre: <strong>${fiadNom||'________________________'}</strong></div>
+            <div>C.I.: <strong>${fiadCi||'____________________'}</strong></div>
+            <div>RIF: <strong>${fiadRif||'____________________'}</strong></div>
             <div></div>
           </div>
           <div style="border-top:1px solid #444;padding-top:6px;font-size:11px;color:#555;text-align:center;max-width:250px">Firma del fiador</div>
         </td>
-      </tr>` : ''}
+      </tr>
     </table>
 
     <div style="text-align:center;font-size:10px;color:#999;margin-top:18px;padding-top:10px;border-top:1px solid #eee">
