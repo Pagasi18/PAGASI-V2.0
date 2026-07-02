@@ -292,21 +292,22 @@ td{padding:14px 14px;border-bottom:1px solid var(--rim);font-size:12.5px;color:v
   .tw-creditos table{table-layout:fixed;width:100%}
   .tw-creditos th,.tw-creditos td{padding-left:8px;padding-right:8px;overflow:hidden;text-overflow:ellipsis}
   .tw-creditos td{font-size:11.5px}
-  .tw-creditos th:nth-child(1),.tw-creditos td:nth-child(1){width:62px}    /* ID */
-  .tw-creditos th:nth-child(2),.tw-creditos td:nth-child(2){width:11%}     /* Cliente */
-  .tw-creditos th:nth-child(3),.tw-creditos td:nth-child(3){width:9%}      /* Modelo */
-  .tw-creditos th:nth-child(4),.tw-creditos td:nth-child(4){width:74px}    /* Fecha */
-  .tw-creditos th:nth-child(5),.tw-creditos td:nth-child(5){width:78px}    /* Precio */
-  .tw-creditos th:nth-child(6),.tw-creditos td:nth-child(6){width:80px}    /* Total */
-  .tw-creditos th:nth-child(7),.tw-creditos td:nth-child(7){width:74px}    /* Cuota */
-  .tw-creditos th:nth-child(8),.tw-creditos td:nth-child(8){width:96px}    /* Progreso */
-  .tw-creditos th:nth-child(9),.tw-creditos td:nth-child(9){width:88px}    /* Saldo */
-  .tw-creditos th:nth-child(10),.tw-creditos td:nth-child(10){width:56px}  /* Mora */
-  .tw-creditos th:nth-child(11),.tw-creditos td:nth-child(11){width:70px}  /* APY */
-  .tw-creditos th:nth-child(12),.tw-creditos td:nth-child(12){width:74px}  /* Estado */
-  .tw-creditos th:nth-child(13),.tw-creditos td:nth-child(13){width:auto;overflow:visible} /* Acciones */
-  .tw-creditos td:nth-child(13) > div{gap:2px}
-  .tw-creditos td:nth-child(13) .btn-xs{padding:4px 6px}
+  .tw-creditos th:nth-child(1),.tw-creditos td:nth-child(1){width:58px}     /* ID */
+  .tw-creditos th:nth-child(2),.tw-creditos td:nth-child(2){width:10%}      /* Cliente */
+  .tw-creditos th:nth-child(3),.tw-creditos td:nth-child(3){width:8%}       /* Modelo */
+  .tw-creditos th:nth-child(4),.tw-creditos td:nth-child(4){width:140px}    /* Concesionario */
+  .tw-creditos th:nth-child(5),.tw-creditos td:nth-child(5){width:70px}     /* Fecha */
+  .tw-creditos th:nth-child(6),.tw-creditos td:nth-child(6){width:76px}     /* Precio */
+  .tw-creditos th:nth-child(7),.tw-creditos td:nth-child(7){width:80px}     /* Total */
+  .tw-creditos th:nth-child(8),.tw-creditos td:nth-child(8){width:72px}     /* Cuota */
+  .tw-creditos th:nth-child(9),.tw-creditos td:nth-child(9){width:92px}     /* Progreso */
+  .tw-creditos th:nth-child(10),.tw-creditos td:nth-child(10){width:98px}   /* Saldo */
+  .tw-creditos th:nth-child(11),.tw-creditos td:nth-child(11){width:52px}   /* Mora */
+  .tw-creditos th:nth-child(12),.tw-creditos td:nth-child(12){width:66px}   /* APY */
+  .tw-creditos th:nth-child(13),.tw-creditos td:nth-child(13){width:74px}   /* Estado */
+  .tw-creditos th:nth-child(14),.tw-creditos td:nth-child(14){width:auto;overflow:visible} /* Acciones */
+  .tw-creditos td:nth-child(14) > div{gap:2px}
+  .tw-creditos td:nth-child(14) .btn-xs{padding:4px 6px}
 }
 tbody tr{transition:background .12s}
 tbody tr:hover td{background:var(--gs)}

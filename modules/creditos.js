@@ -321,7 +321,7 @@ PG.creditos = function(){
       <td class="tdm" style="font-family:var(--fd)">${c.id}</td>
       <td style="max-width:140px"><div class="tdm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px" title="${c.cli}">${c.cli}</div></td>
       <td class="tds">${c.modelo||'—'}</td>
-      <td class="tds" style="max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${sedeName}">${sedeName}</td>
+      <td class="tds" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${sedeName}">${sedeName}</td>
       <td class="tds" style="font-family:var(--fd);font-size:11px;color:var(--ink3);white-space:nowrap">${fechaFmt}</td>
       <td style="font-family:var(--fd);font-size:11.5px;color:var(--ink3)">${fmt(precio)}</td>
       <td style="font-family:var(--fd);font-size:11.5px;font-weight:700">${fmt(totalC)}</td>
