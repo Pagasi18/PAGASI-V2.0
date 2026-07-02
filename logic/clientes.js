@@ -579,7 +579,12 @@ function verCliente(id){
     + '<div class="cf-grid-2" style="margin-top:10px">'
     + field('Tipo de vivienda', c.vivienda)
     + field('Tiempo en la dirección', c.tiempo_dir)
-    + '</div></div>';
+    + '</div>'
+    // Terremoto — dato de riesgo: destacado si reportó daños
+    + (c.terremoto_afectado==='si'
+      ? '<div style="margin-top:10px;background:'+(c.terremoto_danos==='graves'?'var(--reds)':'var(--ambers)')+';border:1px solid '+(c.terremoto_danos==='graves'?'rgba(217,59,90,.35)':'rgba(244,180,44,.4)')+';border-radius:10px;padding:9px 12px;font-size:12px"><b style="color:'+(c.terremoto_danos==='graves'?'var(--red)':'var(--amber)')+'">⚠ Afectado por el terremoto</b> · Daños '+esc(c.terremoto_danos||'leves')+'</div>'
+      : (c.terremoto_afectado==='no' ? '<div class="cf-grid-2" style="margin-top:10px">'+field('¿Afectado por el terremoto?','No')+'</div>' : ''))
+    + '</div>';
 
   if(c.emergencia || c.notas || c.impresion || c.conocio){
     html += '<div class="cf-section"><div class="cf-section-h"><div class="cf-section-t">ℹ️ Información adicional</div></div>'

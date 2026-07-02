@@ -450,6 +450,10 @@ footer{background:var(--ink);border-top:1px solid rgba(255,255,255,.05);padding:
             <div class="fg"><label class="fl">Tipo de vivienda</label><select id="wz_viv"><option value="propia">Propia</option><option value="alquilada">Alquilada</option><option value="familiar">Familiar / prestada</option><option value="otro">Otro</option></select></div>
           </div>
           <div class="frow">
+            <div class="fg"><label class="fl">¿Fue afectado por el terremoto?</label><select id="wz_terremoto" onchange="var w=document.getElementById('wz_terremoto_danos_wrap'); if(w) w.style.display=this.value==='si'?'':'none';"><option value="no">No</option><option value="si">Sí</option></select></div>
+            <div class="fg" id="wz_terremoto_danos_wrap" style="display:none"><label class="fl">Nivel de daños</label><select id="wz_terremoto_danos"><option value="leves">Daños leves</option><option value="moderados">Daños moderados</option><option value="graves">Daños graves</option></select></div>
+          </div>
+          <div class="frow">
             <div class="fg"><label class="fl">Empresa / Negocio</label><input type="text" id="wz_empresa" placeholder="Nombre del empleador"></div>
             <div class="fg"><label class="fl">Cargo / Actividad</label><input type="text" id="wz_cargo" placeholder="Ej: Motorizado, Vendedor"></div>
           </div>
@@ -734,6 +738,9 @@ function buildClientePayload(){
     dir: _v('wz_dir_det'),
     tiempo_dir: _v('wz_tdir'),
     vivienda: _v('wz_viv') || 'propia',
+    // ──── Terremoto (evaluación de riesgo) ─────────────────────
+    terremoto_afectado: _v('wz_terremoto') || 'no',
+    terremoto_danos: (_v('wz_terremoto')==='si') ? (_v('wz_terremoto_danos')||'leves') : '',
     // ──── Empleo / Ingresos ────────────────────────────────────
     trabajo: _v('wz_emp'),
     empresa: _v('wz_empresa'),
