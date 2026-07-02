@@ -16,7 +16,8 @@ service cloud.firestore {
     }
     function esAdmin() {
       return esStaff()
-        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'Administrador';
+        && ( get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'Administrador'
+          || get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin' );
     }
     // Un lead del formulario público: sólo se permite CREAR con esta forma.
     function esLeadWeb() {

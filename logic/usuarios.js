@@ -1336,24 +1336,34 @@ function editarUsuario(uid){
           valor: parseFloat(($('eu_com_c_val')&&$('eu_com_c_val').value)||1)||0
         }
       } : { activo: false };
-      DB.updateUsuario(uid,{rol:rol,permisos:permisos,comisiones:comNueva,concesionarios:concesAsig});
-      if(typeof logActividad==='function') logActividad('usuario_editado','users',uid,{rol:rol, permisos:permisos.length});
-      // Mantener cache local sincronizado para que la UI refleje los cambios al instante.
-      try{
-        if(typeof _usersCache !== 'undefined' && Array.isArray(_usersCache)){
-          var cached = _usersCache.find(function(x){ return x.uid === uid; });
-          if(cached){ cached.rol = rol; cached.permisos = permisos; cached.comisiones = comNueva; cached.concesionarios = concesAsig; }
+      // IMPORTANTE: esperar a que la escritura confirme ANTES de recargar la lista.
+      // Antes se navegaba de inmediato (fire-and-forget) y usersReload() releía
+      // Firestore ganándole la carrera a la escritura -> el rol "revertía" solo.
+      // Además, si la escritura se rechaza (permisos/reglas), ya NO marcamos éxito.
+      DB.updateUsuario(uid,{rol:rol,permisos:permisos,comisiones:comNueva,concesionarios:concesAsig}).then(function(ok){
+        if(ok===false){
+          toast('El rol NO se guardó (Firebase rechazó el cambio). Revisá el mensaje de error y avisá.','error');
+          return;
         }
-      }catch(e){}
-      // Si es el usuario actual, actualizar currentUser y re-render switcher
-      try{
-        if(S.currentUser && S.currentUser.uid === uid){
-          S.currentUser.concesionarios = concesAsig;
-          S.currentUser.rol = rol;
-          if(typeof _renderConcSwitcher === 'function') _renderConcSwitcher();
-        }
-      }catch(e){}
-      closeM(); nav('users'); toast('Permisos actualizados','success'); return true;
+        if(typeof logActividad==='function') logActividad('usuario_editado','users',uid,{rol:rol, permisos:permisos.length});
+        // Cache local sincronizado
+        try{
+          if(typeof _usersCache !== 'undefined' && Array.isArray(_usersCache)){
+            var cached = _usersCache.find(function(x){ return x.uid === uid; });
+            if(cached){ cached.rol = rol; cached.permisos = permisos; cached.comisiones = comNueva; cached.concesionarios = concesAsig; }
+          }
+        }catch(e){}
+        // Si es el usuario actual, actualizar currentUser y re-render switcher
+        try{
+          if(S.currentUser && S.currentUser.uid === uid){
+            S.currentUser.concesionarios = concesAsig;
+            S.currentUser.rol = rol;
+            if(typeof _renderConcSwitcher === 'function') _renderConcSwitcher();
+          }
+        }catch(e){}
+        closeM(); nav('users'); toast('Rol actualizado a '+rol+' ✓','success');
+      });
+      return true;
     };
     $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar cambios</button>';
     $('ov').style.display='flex';
