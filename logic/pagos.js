@@ -366,6 +366,10 @@ function openAmort(id){
   var inicial = parseFloat(c.ini||0);
   var spreadCredito = Math.max(0, totalCredito - precioBase);
   var cobradoReal = getCreditoPagosConfirmados(c);
+  // Inicial REALMENTE pagada = suma de pagos iniciales confirmados (no el plan c.ini),
+  // para que el KPI no oculte un descuadre entre lo pactado y lo recibido.
+  var inicialPagada = (S.pagos||[]).filter(function(p){ return p && !p.eliminado && p.cred===c.id && p.estado==='confirmado' && (p.esInicial||p.tipoOperacion==='inicial_credito'||(p.concepto&&String(p.concepto).indexOf('Inicial · ')===0)); }).reduce(function(s,p){ return s+(parseFloat(p.monto)||0); },0);
+  var inicialDiff = Math.round((inicial - inicialPagada)*100)/100;
   var saldoPendiente = getCreditoSaldoPendiente(c);
   var pctAvance = totalCredito>0 ? Math.round((cobradoReal/totalCredito)*100) : 0;
   var pctCuotas = n>0 ? Math.round((pagado/n)*100) : 0;
@@ -442,7 +446,7 @@ function openAmort(id){
       </div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--rim2)">
         <div><div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase">Cobrado</div><div style="font-size:14px;font-weight:900;color:var(--green);margin-top:2px">${fmt(cobradoReal)}</div></div>
-        <div><div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase">Inicial pagada</div><div style="font-size:14px;font-weight:900;margin-top:2px">${fmt(inicial)}</div></div>
+        <div><div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase">Inicial pagada</div><div style="font-size:14px;font-weight:900;margin-top:2px;color:${Math.abs(inicialDiff)>0.01?'var(--red)':'inherit'}">${fmt(inicialPagada)}${Math.abs(inicialDiff)>0.01?`<span style="font-size:8.5px;font-weight:800;display:block;color:var(--red);line-height:1.2;margin-top:1px">plan ${fmt(inicial)} · ${inicialDiff>0?'falta '+fmt(inicialDiff):'sobra '+fmt(-inicialDiff)}</span>`:''}</div></div>
         <div><div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase">Cuotas restantes</div><div style="font-size:14px;font-weight:900;color:var(--p1);margin-top:2px">${n-pagado}</div></div>
         <div><div style="font-size:9.5px;color:var(--ink3);font-weight:700;text-transform:uppercase">Días restantes</div><div style="font-size:14px;font-weight:900;color:var(--amber);margin-top:2px">${diasRestantes}d</div></div>
       </div>

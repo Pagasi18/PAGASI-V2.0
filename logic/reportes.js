@@ -297,7 +297,7 @@ function descargarAmortPDF(){
       ${infoChip('Fecha vencimiento final', fechaFinStr)}
       ${infoChip('Plazo', totalCuotas+' cuotas quincenales')}
       ${infoChip('Precio de venta', fmt(c.precio||0))}
-      ${infoChip('Inicial pagada', fmt(c.ini||0), '#0a7a3f')}
+      ${infoChip('Inicial (plan)', fmt(c.ini||0), '#0a7a3f')}
       ${infoChip('Monto financiado', fmt(c.fin||0))}
       ${infoChip('Total a pagar', fmt(c.total||0), '#111')}
       ${infoChip('Cuota quincenal', fmt(cuota), '#2563EB')}
