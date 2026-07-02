@@ -2585,3 +2585,87 @@ function editarCredSinFirma(credId){
   // openAddCred resetea WZ, luego restaura _wzPreload antes de _wzRender
   openAddCred(c.motoId||null);
 }
+
+// ══════════════════════════════════════════
+// AUDITORÍA DE INICIALES — compara la inicial del plan (c.ini)
+// contra los pagos iniciales realmente registrados en cada crédito.
+// Detecta: iniciales incompletas (ej. plan $460, pagado $430),
+// créditos sin pago inicial registrado (típico de créditos aprobados
+// desde "pendiente de revisión") y pagos iniciales duplicados.
+// ══════════════════════════════════════════
+function auditarIniciales(){
+  var esIni = function(p){ return p.esInicial || p.tipoOperacion==='inicial_credito' || (p.concepto && String(p.concepto).indexOf('Inicial · ')===0); };
+  var rows = [];
+  (S.creds||[]).forEach(function(c){
+    if(!c || c.eliminado) return;
+    if(c.estado==='cancelado' || c.estado==='recuperado' || c.estado==='recuperada' || c.estado==='pendiente_revision') return;
+    var iniPlan = parseFloat(c.ini)||0;
+    var pIniAll = (S.pagos||[]).filter(function(p){ return p && !p.eliminado && p.cred===c.id && esIni(p); });
+    var pIni = pIniAll.filter(function(p){ return p.estado==='confirmado'; });
+    var pIniPend = pIniAll.filter(function(p){ return p.estado!=='confirmado'; });
+    var iniPag = pIni.reduce(function(s,p){ return s+(parseFloat(p.monto)||0); },0);
+    var diff = Math.round((iniPlan-iniPag)*100)/100;
+    var flags = [];
+    if(!pIni.length) flags.push('sin_pago');
+    if(pIni.length>1) flags.push('duplicado');
+    if(pIniPend.length) flags.push('pendiente');
+    if(Math.abs(diff)>0.01 && pIni.length) flags.push(diff>0?'falta':'sobra');
+    if(!pIni.length && iniPlan>0) { /* sin_pago ya implica diferencia total */ }
+    if(flags.length) rows.push({c:c, iniPlan:iniPlan, iniPag:iniPag, diff:diff, pIni:pIni, pIniPend:pIniPend, flags:flags});
+  });
+  rows.sort(function(a,b){ return Math.abs(b.diff)-Math.abs(a.diff); });
+
+  var totalFaltante = rows.reduce(function(s,r){ return s + (r.diff>0?r.diff:0); },0);
+  var totalSobrante = rows.reduce(function(s,r){ return s + (r.diff<0?-r.diff:0); },0);
+
+  var body;
+  if(!rows.length){
+    body = '<div style="text-align:center;padding:26px 10px">'
+      +'<div style="font-size:34px;margin-bottom:10px">✓</div>'
+      +'<div style="font-size:14px;font-weight:800">Todo cuadra</div>'
+      +'<div style="font-size:12px;color:var(--ink3);margin-top:6px">En todos los créditos activos, la inicial del plan coincide con los pagos iniciales registrados.</div>'
+      +'</div>';
+  } else {
+    var trs = rows.map(function(r){
+      var detalles = r.pIni.map(function(p){
+        return (p.fecha||'—')+' · '+fmt(parseFloat(p.monto)||0)+' · '+(p.metodo||p.cuenta||'—');
+      }).join('<br>') || '<span style="color:var(--red);font-weight:700">Ningún pago inicial registrado</span>';
+      if(r.pIniPend.length) detalles += '<br><span style="color:var(--amber)">'+r.pIniPend.length+' pago(s) inicial(es) sin confirmar</span>';
+      var dTxt, dColor;
+      if(!r.pIni.length){ dTxt = '−'+fmt(r.iniPlan); dColor='var(--red)'; }
+      else if(r.diff>0.01){ dTxt = '−'+fmt(r.diff); dColor='var(--red)'; }
+      else if(r.diff<-0.01){ dTxt = '+'+fmt(-r.diff); dColor='var(--amber)'; }
+      else { dTxt = 'OK'; dColor='var(--green)'; }
+      return '<tr style="border-bottom:1px solid var(--rim)">'
+        +'<td style="padding:8px 8px;white-space:nowrap"><b>'+r.c.id+'</b><br><span style="font-size:10.5px;color:var(--ink3)">'+String(r.c.cli||'').replace(/[<>]/g,'')+'</span></td>'
+        +'<td style="padding:8px 8px;text-align:right;font-family:var(--fd)">'+fmt(r.iniPlan)+'</td>'
+        +'<td style="padding:8px 8px;text-align:right;font-family:var(--fd)">'+fmt(r.iniPag)+'</td>'
+        +'<td style="padding:8px 8px;text-align:right;font-weight:800;color:'+dColor+'">'+dTxt+'</td>'
+        +'<td style="padding:8px 8px;font-size:10.5px;color:var(--ink2);line-height:1.5">'+detalles+'</td>'
+        +'</tr>';
+    }).join('');
+    body = '<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">'
+      +'<div style="flex:1;min-width:130px;background:var(--reds);border:1px solid rgba(217,59,90,.25);border-radius:10px;padding:9px 12px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--red)">Faltante total</div><div style="font-size:19px;font-weight:800;color:var(--red)">'+fmt(totalFaltante)+'</div></div>'
+      +'<div style="flex:1;min-width:130px;background:var(--gs);border:1px solid var(--rim2);border-radius:10px;padding:9px 12px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--ink3)">Créditos con diferencia</div><div style="font-size:19px;font-weight:800">'+rows.length+'</div></div>'
+      +(totalSobrante>0.01?'<div style="flex:1;min-width:130px;background:var(--ambers);border:1px solid rgba(244,180,44,.3);border-radius:10px;padding:9px 12px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--amber)">Sobrante total</div><div style="font-size:19px;font-weight:800;color:var(--amber)">'+fmt(totalSobrante)+'</div></div>':'')
+      +'</div>'
+      +'<div style="overflow:auto;max-height:56vh;border:1px solid var(--rim);border-radius:10px">'
+      +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
+      +'<thead><tr style="background:var(--gs);position:sticky;top:0">'
+      +'<th style="padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--ink3)">Crédito</th>'
+      +'<th style="padding:7px 8px;text-align:right;font-size:10px;text-transform:uppercase;color:var(--ink3)">Inicial plan</th>'
+      +'<th style="padding:7px 8px;text-align:right;font-size:10px;text-transform:uppercase;color:var(--ink3)">Inicial pagada</th>'
+      +'<th style="padding:7px 8px;text-align:right;font-size:10px;text-transform:uppercase;color:var(--ink3)">Diferencia</th>'
+      +'<th style="padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--ink3)">Pagos iniciales registrados</th>'
+      +'</tr></thead><tbody>'+trs+'</tbody></table></div>'
+      +'<div style="font-size:10.5px;color:var(--ink3);margin-top:10px;line-height:1.55">−rojo = a la inicial del plan le faltan dólares por registrar (o no hay pago inicial). +ámbar = se registró de más. Corrígelo registrando el complemento en Pagos, editando el pago inicial, o reestructurando el crédito con la inicial real.</div>';
+  }
+
+  $('mic').textContent='AUD';
+  $('mtt').textContent='Auditoría de iniciales';
+  $('msb').textContent='Inicial según plan vs pagos iniciales confirmados';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML = body;
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cerrar</button>';
+  $('ov').style.display='flex';
+}

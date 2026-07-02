@@ -171,6 +171,7 @@ PG.creditos = function(){
     'Créditos',
     '<b>'+registradosCreds.length+'</b> créditos · Valor total: <b>'+fmt(valorTotal)+'</b> · Intereses teóricos: <b>'+fmt(spreadTotal)+'</b>',
     [
+      {label:'⚖ Auditar iniciales', onclick:'auditarIniciales()'},
       {label:'↓ Exportar CSV', onclick:"exportarCSV('creditos')"},
       {label:'＋ Nueva Solicitud', onclick:'openAddCred()', primary:true}
     ]
