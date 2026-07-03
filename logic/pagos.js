@@ -1446,3 +1446,18 @@ function liveSearchCuotas(q){
     }, 40);
   }, 350);
 }
+
+// ── Buscador del "Registro de pagos" ──────────────────────────
+// Debounce + re-render + restaurar foco (nav() reconstruye el DOM).
+function liveSearchPagos(q){
+  S.pagosQ = q;
+  pgSet('pagos',1);
+  clearTimeout(window._pagosQTimer);
+  window._pagosQTimer = setTimeout(function(){
+    nav('pagos');
+    setTimeout(function(){
+      var i = $('pagosQ');
+      if(i){ i.focus(); try{ var v=i.value; i.setSelectionRange(v.length, v.length); }catch(e){} }
+    }, 40);
+  }, 350);
+}
