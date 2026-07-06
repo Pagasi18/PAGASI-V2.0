@@ -1767,10 +1767,18 @@ function _wzGuardar(){
     if(_ei>=0){
       var _r = getWzPlanConfig();
       var _finUpd = _wzCredPlanFields(_r, S.creds[_ei]);
+      // ── Resolver la moto de forma consistente (evita renombrar la moto y motos huérfanas) ──
+      var _oldMotoId = S.creds[_ei].motoId||null;
+      var _newMotoId = (WZ.motoInvId!=null && String(WZ.motoInvId)!=='') ? WZ.motoInvId : _oldMotoId;
+      var _motoRec = _newMotoId ? S.motos.find(function(m){return String(m.id)===String(_newMotoId);}) : null;
+      // El modelo del crédito SIEMPRE se deriva de la moto vinculada (no de WZ, que puede
+      // arrastrar un valor viejo). Así el "nombre de la moto" del crédito nunca se despega
+      // de la moto real de inventario.
+      var _modeloFinal = _motoRec ? (_motoRec.modelo||S.creds[_ei].modelo||'') : (S.creds[_ei].modelo||WZ.motoModelo||'');
       var _upd = {
         cli: WZ.nom||(existing&&existing.nombre)||S.creds[_ei].cli||'',
-        modelo: WZ.motoModelo||S.creds[_ei].modelo||'',
-        motoId: WZ.motoInvId||S.creds[_ei].motoId||null,
+        modelo: _modeloFinal,
+        motoId: _newMotoId,
         marca: WZ.marca||S.creds[_ei].marca||'',
         vin: WZ.vin||S.creds[_ei].vin||'',
         color: WZ.color||S.creds[_ei].color||'',
@@ -1871,6 +1879,30 @@ function _wzGuardar(){
       }
       Object.assign(S.creds[_ei], _upd);
       DB.updateCred(_editId, _upd);
+      // ── Re-vincular la moto para no dejarla huérfana ni con el cliente viejo ──
+      // (el guardado de edición hacía return sin tocar la moto: si cambiaba el motoId,
+      // la moto vieja quedaba con creditoId colgando = huérfana / "disponible").
+      try{
+        var _credEstado = S.creds[_ei].estado;
+        var _credActivo = (_credEstado==='activo' || _credEstado==='mora');
+        var _cliNombre = S.creds[_ei].cli || '';
+        if(_oldMotoId && String(_oldMotoId)!==String(_newMotoId)){
+          var _omi = S.motos.findIndex(function(x){return String(x.id)===String(_oldMotoId);});
+          if(_omi>=0 && String(S.motos[_omi].creditoId||'')===String(_editId)){
+            S.motos[_omi].estado='disponible'; S.motos[_omi].cliente=null; S.motos[_omi].creditoId=null;
+            DB.saveMoto(S.motos[_omi]);
+          }
+        }
+        if(_newMotoId){
+          var _nmi = S.motos.findIndex(function(x){return String(x.id)===String(_newMotoId);});
+          if(_nmi>=0){
+            S.motos[_nmi].creditoId=_editId;
+            S.motos[_nmi].cliente=_cliNombre;
+            if(_credActivo && S.motos[_nmi].estado!=='financiada') S.motos[_nmi].estado='financiada';
+            DB.saveMoto(S.motos[_nmi]);
+          }
+        }
+      }catch(_e){ console.warn('re-vinculo moto (edit):', _e && _e.message); }
       syncEstadoClientePorCredito && syncEstadoClientePorCredito(_editId);
     }
     _wzClose();
