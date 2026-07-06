@@ -1819,6 +1819,7 @@ function _cliGuardar(){
     creado: (edId && (S.clientes||[]).find(function(x){return String(x.id)===String(edId);}) && (S.clientes||[]).find(function(x){return String(x.id)===String(edId);}).creado) || new Date().toISOString()
   };
   var idx=(S.clientes||[]).findIndex(function(x){ return String(x.id)===String(obj.id); });
+  var _oldNombre = (idx>=0 && S.clientes[idx]) ? (S.clientes[idx].nombre||'') : '';
   if(idx>=0){
     obj.editadoEn = new Date().toISOString();
     obj.editadoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
@@ -1831,6 +1832,30 @@ function _cliGuardar(){
     S.clientes.push(obj);
   }
   DB.saveCliente(obj);
+  // ── ROOT FIX: propagar el nombre del cliente a sus créditos y motos ──
+  // Créditos y motos guardan el nombre del cliente como copia (el sistema enlaza
+  // por nombre: cr.cli === cliente.nombre). Si al renombrar no se propaga, el
+  // crédito se "desengancha" y su moto se ve mal / se agarra la de otro cliente.
+  // Se empareja por clienteId (estable) y, para créditos viejos sin él, por el
+  // nombre anterior.
+  if(idx>=0){
+    try{
+      var _nuevoNom = obj.nombre||'';
+      (S.creds||[]).forEach(function(cr){
+        if(!cr || cr.eliminado) return;
+        var _pertenece = (cr.clienteId!=null && String(cr.clienteId)===String(obj.id))
+                      || (_oldNombre && cr.cli===_oldNombre && (cr.clienteId==null || String(cr.clienteId)===''));
+        if(_pertenece && cr.cli!==_nuevoNom){
+          cr.cli=_nuevoNom;
+          if(DB.updateCred) DB.updateCred(cr.id,{cli:_nuevoNom});
+          if(cr.motoId!=null && String(cr.motoId)!==''){
+            var _mi=(S.motos||[]).findIndex(function(m){return m && String(m.id)===String(cr.motoId);});
+            if(_mi>=0 && S.motos[_mi].cliente!==_nuevoNom){ S.motos[_mi].cliente=_nuevoNom; if(DB.saveMoto) DB.saveMoto(S.motos[_mi]); }
+          }
+        }
+      });
+    }catch(_e){ console.warn('sync nombre cliente→créditos:', _e&&_e.message); }
+  }
   if(typeof logActividad==='function') logActividad(idx>=0?'cliente_editado':'cliente_creado','clientes',String(obj.id),{nombre:obj.nombre, cedula:obj.cedula||'', estado:obj.estado});
   _wzClose();
   nav('clientes');
