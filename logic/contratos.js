@@ -31,6 +31,7 @@ function _docCtx(){
   var mSerialMotor = c.serialMotor || moto.serialMotor || '';
   var mSerialChasis = c.serialChasis || moto.serialChasis || c.vin || moto.vin || '';
   var mGpsNum = c.gpsNum || moto.gpsNum || moto.gps_id || '';
+  var mConcesionario = (c.concesionarioId && typeof _concGetById==='function') ? ((_concGetById(c.concesionarioId)||{}).nombre||'') : '';
   var purple = '#5E3BEE';
   var purpleDark = '#4C2ED0';
   var purpleLight = '#F2EEFF';
@@ -42,7 +43,7 @@ function _docCtx(){
   var lblCell = 'background:'+purpleLight+';color:'+purpleDark+';font-weight:700;font-size:11.5px;padding:7px 10px;width:22%';
   var valCell = 'padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7;width:28%';
   return { c:c, cli:cli, moto:moto, emp:emp, empresaUp:empresaUp, logoSrc:logoSrc, hoy:hoy, fechaContrato:fechaContrato, V:V, Vm:Vm,
-           mModelo:mModelo, mVin:mVin, mColor:mColor, mAnio:mAnio, mPlaca:mPlaca, mMarca:mMarca,
+           mModelo:mModelo, mVin:mVin, mColor:mColor, mAnio:mAnio, mPlaca:mPlaca, mMarca:mMarca, mConcesionario:mConcesionario,
            mSerialMotor:mSerialMotor, mSerialChasis:mSerialChasis, mGpsNum:mGpsNum,
            purple:purple, purpleDark:purpleDark, purpleLight:purpleLight,
            rowStyle:rowStyle, tableHdr:tableHdr, clausH:clausH, p:p, li:li, lblCell:lblCell, valCell:valCell };
@@ -88,7 +89,7 @@ function _renderContratoArrendamiento(){
   var ctx = _docCtx();
   if(!ctx){ $('cz').innerHTML='<div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">No hay créditos</div><div style="font-size:11.5px">Registra un crédito primero</div></div>'; return; }
   var c=ctx.c, cli=ctx.cli, emp=ctx.emp, empresaUp=ctx.empresaUp, logoSrc=ctx.logoSrc, hoy=ctx.hoy, fechaContrato=ctx.fechaContrato, V=ctx.V, Vm=ctx.Vm;
-  var mModelo=ctx.mModelo, mColor=ctx.mColor, mAnio=ctx.mAnio, mPlaca=ctx.mPlaca, mMarca=ctx.mMarca, mSerialMotor=ctx.mSerialMotor, mSerialChasis=ctx.mSerialChasis;
+  var mModelo=ctx.mModelo, mColor=ctx.mColor, mAnio=ctx.mAnio, mPlaca=ctx.mPlaca, mMarca=ctx.mMarca, mSerialMotor=ctx.mSerialMotor, mSerialChasis=ctx.mSerialChasis, mConcesionario=ctx.mConcesionario;
   var purple=ctx.purple, purpleDark=ctx.purpleDark, purpleLight=ctx.purpleLight;
   var clausH=ctx.clausH, p=ctx.p, li=ctx.li, lblCell=ctx.lblCell, valCell=ctx.valCell;
 
@@ -158,6 +159,7 @@ function _renderContratoArrendamiento(){
       <tr><td style="${lblCell}">Año:</td><td style="${valCell}">${blank(mAnio)}</td><td style="${lblCell}">Color:</td><td style="${valCell}">${blank(mColor)}</td></tr>
       <tr><td style="${lblCell}">Serial de carrocería / VIN:</td><td style="${valCell}">${blank(mSerialChasis)}</td><td style="${lblCell}">Serial de motor:</td><td style="${valCell}">${blank(mSerialMotor)}</td></tr>
       <tr><td style="${lblCell}">Placa (si aplica):</td><td style="${valCell}">${blank(mPlaca)}</td><td style="${lblCell}">Condición:</td><td style="${valCell}">Nueva</td></tr>
+      <tr><td style="${lblCell}">Concesionario / Punto de venta:</td><td style="${valCell}" colspan="3">${blank(mConcesionario)}</td></tr>
     </table>
 
     <!-- SEGUNDA -->
@@ -473,7 +475,7 @@ function _renderCartaInstrucciones(){
   var ctx = _docCtx();
   if(!ctx){ $('cz').innerHTML='<div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">No hay créditos</div><div style="font-size:11.5px">Registra un crédito primero</div></div>'; return; }
   var c=ctx.c, cli=ctx.cli, emp=ctx.emp, empresaUp=ctx.empresaUp, logoSrc=ctx.logoSrc, hoy=ctx.hoy, V=ctx.V;
-  var mModelo=ctx.mModelo, mColor=ctx.mColor, mAnio=ctx.mAnio, mPlaca=ctx.mPlaca, mSerialChasis=ctx.mSerialChasis;
+  var mModelo=ctx.mModelo, mColor=ctx.mColor, mAnio=ctx.mAnio, mPlaca=ctx.mPlaca, mSerialChasis=ctx.mSerialChasis, mConcesionario=ctx.mConcesionario;
   var purple=ctx.purple, purpleDark=ctx.purpleDark, purpleLight=ctx.purpleLight;
   var clausH=ctx.clausH, p=ctx.p, li=ctx.li, lblCell=ctx.lblCell, valCell=ctx.valCell;
 
@@ -532,6 +534,7 @@ function _renderCartaInstrucciones(){
     <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
       <tr><td style="${lblCell}">Modelo:</td><td style="${valCell}">${V(mModelo)}</td><td style="${lblCell}">Color:</td><td style="${valCell}">${V(mColor)}</td></tr>
       <tr><td style="${lblCell}">Año:</td><td style="${valCell}">${V(mAnio)}</td><td style="${lblCell}">Placa:</td><td style="${valCell}">${V(mPlaca)}</td></tr>
+      <tr><td style="${lblCell}">Concesionario / Punto de venta:</td><td style="${valCell}" colspan="3">${V(mConcesionario)}</td></tr>
       <tr><td style="${lblCell}">Serial de Chasis:</td><td style="${valCell}" colspan="3">${V(mSerialChasis)}</td></tr>
     </table>
 
