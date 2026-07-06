@@ -2719,3 +2719,122 @@ function _wzTerremotoToggle(){
   var wrap = document.getElementById('wz_terremoto_danos_wrap');
   if(wrap) wrap.style.display = (sel && sel.value==='si') ? '' : 'none';
 }
+
+// ══════════════════════════════════════════
+// REPARAR VÍNCULOS MOTO ↔ CRÉDITO
+// Detecta y arregla inconsistencias entre créditos y motos:
+//  · Motos huérfanas: financiada/enlazada pero sin crédito activo que las use.
+//  · Motos a re-vincular: un crédito activo las usa pero están mal enlazadas
+//    (creditoId/estado/cliente incorrectos).
+//  · Crédito con modelo que no coincide con su moto (se corrige al de la moto).
+// Casos que NO se auto-reparan (requieren decisión): moto con 2+ créditos activos,
+// y crédito activo que apunta a una moto inexistente.
+// ══════════════════════════════════════════
+function _auditVinculosMoto(){
+  var activos = (S.creds||[]).filter(function(c){ return c && !c.eliminado && (c.estado==='activo'||c.estado==='mora'); });
+  var credByMoto = {};
+  activos.forEach(function(c){ if(c.motoId!=null && String(c.motoId)!==''){ var k=String(c.motoId); (credByMoto[k]=credByMoto[k]||[]).push(c); } });
+
+  var huerfanas=[], relink=[], conflictos=[], sinMoto=[];
+
+  (S.motos||[]).forEach(function(m){
+    if(!m || m.eliminado) return;
+    var owners = credByMoto[String(m.id)] || [];
+    if(owners.length>1){ conflictos.push({moto:m, creds:owners}); return; }
+    if(owners.length===1){
+      var c=owners[0];
+      var cambios=[];
+      if(String(m.creditoId||'')!==String(c.id)) cambios.push('vínculo');
+      if(m.estado!=='financiada') cambios.push('estado');
+      if(String(m.cliente||'')!==String(c.cli||'')) cambios.push('cliente');
+      var modeloMal = (m.modelo && String(c.modelo||'')!==String(m.modelo));
+      if(cambios.length || modeloMal){
+        relink.push({moto:m, cred:c, cambios:cambios, modeloMal:modeloMal, apply:function(){
+          m.creditoId=c.id; m.estado='financiada'; m.cliente=c.cli||''; if(DB.saveMoto) DB.saveMoto(m);
+          if(modeloMal){ var _ci=S.creds.findIndex(function(x){return x.id===c.id;}); if(_ci>=0) S.creds[_ci].modelo=m.modelo; if(DB.updateCred) DB.updateCred(c.id,{modelo:m.modelo}); }
+        }});
+      }
+    } else {
+      // Sin crédito activo que la reclame
+      if(m.estado==='financiada' || (m.creditoId!=null && String(m.creditoId)!=='')){
+        huerfanas.push({moto:m, apply:function(){ m.estado='disponible'; m.creditoId=null; m.cliente=null; if(DB.saveMoto) DB.saveMoto(m); }});
+      }
+    }
+  });
+
+  activos.forEach(function(c){
+    if(c.motoId!=null && String(c.motoId)!==''){
+      var existe = (S.motos||[]).some(function(m){ return m && !m.eliminado && String(m.id)===String(c.motoId); });
+      if(!existe) sinMoto.push({cred:c});
+    }
+  });
+
+  return {huerfanas:huerfanas, relink:relink, conflictos:conflictos, sinMoto:sinMoto};
+}
+
+function auditarVinculosMoto(){
+  var a = _auditVinculosMoto();
+  window._vinculoFixes = [].concat(a.huerfanas, a.relink);
+  var esc = function(s){ return String(s==null?'':s).replace(/[<>&]/g,function(x){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[x];}); };
+  var totalFix = a.huerfanas.length + a.relink.length;
+
+  var body;
+  if(totalFix===0 && a.conflictos.length===0 && a.sinMoto.length===0){
+    body = '<div style="text-align:center;padding:26px 10px"><div style="font-size:34px;margin-bottom:10px">✓</div>'
+      + '<div style="font-size:14px;font-weight:800">Todo consistente</div>'
+      + '<div style="font-size:12px;color:var(--ink3);margin-top:6px">No hay motos huérfanas ni vínculos rotos entre créditos y motos.</div></div>';
+  } else {
+    body = '<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">'
+      + '<div style="flex:1;min-width:120px;background:var(--ambers);border:1px solid rgba(244,180,44,.3);border-radius:10px;padding:9px 12px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--amber)">Motos huérfanas</div><div style="font-size:19px;font-weight:800;color:var(--amber)">'+a.huerfanas.length+'</div></div>'
+      + '<div style="flex:1;min-width:120px;background:var(--gs);border:1px solid var(--rim2);border-radius:10px;padding:9px 12px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--ink3)">A re-vincular</div><div style="font-size:19px;font-weight:800">'+a.relink.length+'</div></div>'
+      + (a.conflictos.length||a.sinMoto.length?'<div style="flex:1;min-width:120px;background:var(--reds);border:1px solid rgba(217,59,90,.25);border-radius:10px;padding:9px 12px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--red)">Revisar a mano</div><div style="font-size:19px;font-weight:800;color:var(--red)">'+(a.conflictos.length+a.sinMoto.length)+'</div></div>':'')
+      + '</div>';
+
+    var rows='';
+    a.huerfanas.forEach(function(it){
+      rows += '<tr style="border-bottom:1px solid var(--rim)"><td style="padding:7px 8px"><span class="bdg b-a">Huérfana</span></td>'
+        + '<td style="padding:7px 8px"><b>'+esc(it.moto.modelo||'—')+'</b> <span style="color:var(--ink3);font-size:10.5px">#'+esc(it.moto.id)+'</span></td>'
+        + '<td style="padding:7px 8px;font-size:11px;color:var(--ink2)">Marcada '+esc(it.moto.estado||'—')+' sin crédito activo → se libera a <b>disponible</b></td></tr>';
+    });
+    a.relink.forEach(function(it){
+      rows += '<tr style="border-bottom:1px solid var(--rim)"><td style="padding:7px 8px"><span class="bdg b-b">Re-vincular</span></td>'
+        + '<td style="padding:7px 8px"><b>'+esc(it.moto.modelo||'—')+'</b> <span style="color:var(--ink3);font-size:10.5px">#'+esc(it.moto.id)+'</span></td>'
+        + '<td style="padding:7px 8px;font-size:11px;color:var(--ink2)">'+esc(it.cred.id)+' · '+esc(it.cred.cli||'')+' → corrige: '+esc(it.cambios.concat(it.modeloMal?['modelo del crédito']:[]).join(', '))+'</td></tr>';
+    });
+    a.conflictos.forEach(function(it){
+      rows += '<tr style="border-bottom:1px solid var(--rim);background:var(--reds)"><td style="padding:7px 8px"><span class="bdg b-r">Conflicto</span></td>'
+        + '<td style="padding:7px 8px"><b>'+esc(it.moto.modelo||'—')+'</b> <span style="color:var(--ink3);font-size:10.5px">#'+esc(it.moto.id)+'</span></td>'
+        + '<td style="padding:7px 8px;font-size:11px;color:var(--red)">La usan '+it.creds.length+' créditos activos ('+esc(it.creds.map(function(c){return c.id;}).join(', '))+'). Revisá a mano cuál es el correcto.</td></tr>';
+    });
+    a.sinMoto.forEach(function(it){
+      rows += '<tr style="border-bottom:1px solid var(--rim);background:var(--reds)"><td style="padding:7px 8px"><span class="bdg b-r">Sin moto</span></td>'
+        + '<td style="padding:7px 8px"><b>'+esc(it.cred.id)+'</b> · '+esc(it.cred.cli||'')+'</td>'
+        + '<td style="padding:7px 8px;font-size:11px;color:var(--red)">Apunta a una moto inexistente (id '+esc(it.cred.motoId)+'). Asigná una moto desde el crédito.</td></tr>';
+    });
+
+    body += '<div style="overflow:auto;max-height:52vh;border:1px solid var(--rim);border-radius:10px"><table style="width:100%;border-collapse:collapse;font-size:12px">'
+      + '<thead><tr style="background:var(--gs);position:sticky;top:0"><th style="padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--ink3)">Tipo</th><th style="padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--ink3)">Moto / Crédito</th><th style="padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--ink3)">Acción</th></tr></thead>'
+      + '<tbody>'+rows+'</tbody></table></div>';
+    if(a.conflictos.length||a.sinMoto.length) body += '<div style="font-size:10.5px;color:var(--ink3);margin-top:9px">Los casos en rojo ("Conflicto"/"Sin moto") no se reparan automáticamente porque requieren tu decisión.</div>';
+  }
+
+  $('mic').textContent='FIX';
+  $('mtt').textContent='Reparar vínculos moto ↔ crédito';
+  $('msb').textContent='Consistencia entre inventario de motos y créditos';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML = body;
+  $('mft').innerHTML = (totalFix>0
+    ? '<button class="btn btn-g" onclick="closeM()">Cerrar</button><button class="btn btn-p" onclick="repararVinculosMoto()">✓ Reparar todo ('+totalFix+')</button>'
+    : '<button class="btn btn-g" onclick="closeM()">Cerrar</button>');
+  $('ov').style.display='flex';
+}
+
+function repararVinculosMoto(){
+  var fixes = window._vinculoFixes || [];
+  var n=0;
+  fixes.forEach(function(it){ try{ if(typeof it.apply==='function'){ it.apply(); n++; } }catch(e){ console.warn('reparar vínculo:', e&&e.message); } });
+  window._vinculoFixes = [];
+  closeM();
+  if(typeof toast==='function') toast(n+' vínculo'+(n===1?'':'s')+' reparado'+(n===1?'':'s')+' ✓','success');
+  if(typeof nav==='function') nav('creditos');
+}
