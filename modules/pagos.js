@@ -102,6 +102,12 @@ PG.pagos = function(){
         || String(c.id||'').toLowerCase().indexOf(_cuQ)>-1
         || String(c.modelo||'').toLowerCase().indexOf(_cuQ)>-1;
   });
+  // Filtro rápido Todos / Atrasados / Al día — con contadores del contexto actual
+  var _cuAtras = proximasCuotas.filter(function(it){ return it.diff<0; }).length;
+  var _cuAlDia = proximasCuotas.length - _cuAtras;
+  var _cuF = S.cuotasFilter||'todos';
+  if(_cuF==='atrasados') proximasCuotas = proximasCuotas.filter(function(it){ return it.diff<0; });
+  else if(_cuF==='aldia') proximasCuotas = proximasCuotas.filter(function(it){ return it.diff>=0; });
   // Ordenamiento configurable (por defecto: más urgentes/atrasados primero)
   var _cu = S.cuotasSort||{col:'vence',dir:'asc'};
   proximasCuotas = proximasCuotas.slice().sort(function(a,b){
@@ -201,7 +207,12 @@ PG.pagos = function(){
       <input type="date" value="${S.cuotasDesde||''}" onchange="S.cuotasDesde=this.value;pgSet('cuotas',1);nav('pagos')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
       <label style="font-size:11px;color:var(--ink3);font-weight:700">Hasta:</label>
       <input type="date" value="${S.cuotasHasta||''}" onchange="S.cuotasHasta=this.value;pgSet('cuotas',1);nav('pagos')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
-      ${(S.cuotasDesde||S.cuotasHasta||S.cuotasQ)?`<button class="btn btn-g btn-sm" onclick="S.cuotasDesde='';S.cuotasHasta='';S.cuotasQ='';pgSet('cuotas',1);nav('pagos')">✕ Limpiar</button>`:''}
+      ${(S.cuotasDesde||S.cuotasHasta||S.cuotasQ)?`<button class="btn btn-g btn-sm" onclick="S.cuotasDesde='';S.cuotasHasta='';S.cuotasQ='';S.cuotasFilter='todos';pgSet('cuotas',1);nav('pagos')">✕ Limpiar</button>`:''}
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="btn btn-sm ${_cuF==='todos'?'btn-p':'btn-g'}" onclick="setCuotasFilter('todos')">Todos <span style="opacity:.7;font-weight:800">${_cuAtras+_cuAlDia}</span></button>
+      <button class="btn btn-sm ${_cuF==='atrasados'?'btn-p':'btn-g'}" onclick="setCuotasFilter('atrasados')">🔴 Atrasados <span style="opacity:.7;font-weight:800">${_cuAtras}</span></button>
+      <button class="btn btn-sm ${_cuF==='aldia'?'btn-p':'btn-g'}" onclick="setCuotasFilter('aldia')">🟢 Al día / próximas <span style="opacity:.7;font-weight:800">${_cuAlDia}</span></button>
     </div>
     ${proximasCuotas.length===0 ? '<div style="text-align:center;padding:20px 0;color:var(--ink3);font-size:12px">Sin cuotas próximas ni atrasadas</div>' :
       `<div class="tw"><table>

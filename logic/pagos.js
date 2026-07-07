@@ -1461,3 +1461,6 @@ function liveSearchPagos(q){
     }, 40);
   }, 350);
 }
+
+// Filtro rápido de "Cuotas Próximas": todos / atrasados / al día
+function setCuotasFilter(f){ S.cuotasFilter = f; pgSet('cuotas',1); nav('pagos'); }
