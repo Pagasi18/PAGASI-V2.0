@@ -3848,12 +3848,12 @@ function mobSearch(q){
       results.push({icon:'CLI',titulo:c.nombre,sub:c.cedula+' · '+c.tel,fn:function(){ closeMobSearch(); nav('clientes'); setTimeout(function(){verCliente(c.id);},100); }});
   });
   S.creds.filter(c=>!c.eliminado).forEach(function(c){
-    if((c.id+' '+c.cli+' '+c.modelo).toLowerCase().includes(val))
-      results.push({icon:'≡',titulo:c.cli+' — '+c.modelo,sub:c.id+' · '+c.estado,fn:function(){ closeMobSearch(); nav('creditos'); setTimeout(function(){openAmort(c.id);},100); }});
+    if((c.id+' '+c.cli+' '+c.modelo+' '+(c.placa||'')).toLowerCase().includes(val))
+      results.push({icon:'≡',titulo:c.cli+' — '+c.modelo,sub:c.id+(c.placa&&c.placa!=='—'?' · '+c.placa:'')+' · '+c.estado,fn:function(){ closeMobSearch(); nav('creditos'); setTimeout(function(){openAmort(c.id);},100); }});
   });
   S.motos.filter(m=>!m.eliminado).forEach(function(m){
-    if((m.modelo+' '+(m.vin||'')+' '+(m.cliente||'')).toLowerCase().includes(val))
-      results.push({icon:'MOT',titulo:m.modelo,sub:(m.vin||'Sin VIN')+' · '+m.estado,fn:function(){ closeMobSearch(); nav('motos'); }});
+    if((m.modelo+' '+(m.vin||'')+' '+(m.cliente||'')+' '+(m.placa||'')).toLowerCase().includes(val))
+      results.push({icon:'MOT',titulo:m.modelo,sub:(m.placa&&m.placa!=='—'?m.placa+' · ':'')+(m.vin||'Sin VIN')+' · '+m.estado,fn:function(){ closeMobSearch(); nav('motos'); }});
   });
   S.pagos.filter(p=>!p.eliminado).forEach(function(p){
     if((p.cli+' '+p.id).toLowerCase().includes(val))

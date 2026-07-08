@@ -45,16 +45,16 @@ function globalSearch(q){
     }
   });
   S.creds.filter(c=>!c.eliminado).forEach(function(c){
-    if((c.id+' '+c.cli+' '+c.modelo+' '+(c.vin||'')).toLowerCase().includes(val)){
+    if((c.id+' '+c.cli+' '+c.modelo+' '+(c.vin||'')+' '+(c.placa||'')).toLowerCase().includes(val)){
       results.push({tipo:'crédito',icon:'',titulo:c.id+' — '+c.cli,
-        sub:c.modelo+' · '+c.estado+' · '+(c.pagado||0)+' cuotas',
+        sub:c.modelo+(c.placa&&c.placa!=='—'?' · '+c.placa:'')+' · '+c.estado+' · '+(c.pagado||0)+' cuotas',
         accion:function(){ nav('creditos'); setTimeout(function(){openAmort(c.id);},100); }});
     }
   });
   S.motos.filter(m=>!m.eliminado).forEach(function(m){
-    if((m.modelo+' '+(m.vin||'')+' '+(m.cliente||'')+' '+(m.color||'')).toLowerCase().includes(val)){
+    if((m.modelo+' '+(m.vin||'')+' '+(m.cliente||'')+' '+(m.color||'')+' '+(m.placa||'')).toLowerCase().includes(val)){
       results.push({tipo:'moto',icon:'MOT',titulo:m.modelo,
-        sub:(m.vin||'Sin VIN')+' · '+m.estado+(m.cliente?' · '+m.cliente:''),
+        sub:(m.placa&&m.placa!=='—'?m.placa+' · ':'')+(m.vin||'Sin VIN')+' · '+m.estado+(m.cliente?' · '+m.cliente:''),
         accion:function(){ nav('motos'); }});
     }
   });
