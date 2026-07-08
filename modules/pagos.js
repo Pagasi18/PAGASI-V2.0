@@ -76,21 +76,36 @@ PG.pagos = function(){
   // Cuotas próximas (mismo criterio que dashboard) — créditos activos con cuota próxima o vencida
   var _cuDesde = S.cuotasDesde||'';
   var _cuHasta = S.cuotasHasta||'';
+  // Fuente canónica: el ledger de amortización (mismo que el Dashboard). Antes esto
+  // (a) EXCLUÍA a los créditos con estado 'mora' y (b) calculaba el vencimiento a mano
+  // con c.pagado, por lo que la lista mostraba muchos menos atrasados que el Dashboard.
+  var _gracia=(typeof PLAN!=='undefined'&&PLAN.diasGracia!=null)?PLAN.diasGracia:5;
   var proximasCuotas = _concFiltrar(S.creds||[]).filter(function(c){
-    if(c.eliminado) return false;
-    if(c.estado!=='activo'||!c.fecha) return false;
-    const start=parseFechaLocal(c.fecha);
-    const cuotaNum=(c.pagado||0)+1;
-    const vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
-    const diff=Math.round((vence-new Date())/(24*60*60*1000));
-    return diff<=30; // próximas 30 días + TODOS los atrasados (la mora nunca saca al cliente de la lista)
+    return c && !c.eliminado && (c.estado==='activo'||c.estado==='mora') && c.fecha;
   }).map(function(c){
-    const start=parseFechaLocal(c.fecha);
-    const cuotaNum=(c.pagado||0)+1;
-    const vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
-    const diff=Math.round((vence-new Date())/(24*60*60*1000));
-    return { cred:c, cuotaNum:cuotaNum, diff:diff, venceStr:fechaLocalISO(vence) };
-  });
+    var mora=0, cuotaNum, venceStr, diff, prox=null;
+    if(typeof CreditoLedger!=='undefined' && CreditoLedger.generarEstadoCredito){
+      try{
+        var est=CreditoLedger.generarEstadoCredito(c, S.pagos, {diasGracia:_gracia});
+        mora=est.moraDias||0;
+        prox=(est.cuotas&&est.cuotas[est.cuotasPagadas])||null;
+      }catch(e){ prox=null; }
+    }
+    if(prox && prox.fechaVence){
+      cuotaNum=prox.numero;
+      venceStr=prox.fechaVence;
+      var v=parseFechaLocal(venceStr);
+      diff=Math.round((v-new Date())/(24*60*60*1000));
+    } else {
+      var start=parseFechaLocal(c.fecha);
+      cuotaNum=(c.pagado||0)+1;
+      var vf=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));
+      diff=Math.round((vf-new Date())/(24*60*60*1000));
+      venceStr=fechaLocalISO(vf);
+      if(!mora) mora=parseInt(c.mora||0,10)||0;
+    }
+    return { cred:c, cuotaNum:cuotaNum, diff:diff, venceStr:venceStr, mora:mora };
+  }).filter(function(it){ return it.diff<=30 || it.mora>0; });
   // Filtro por fecha de vencimiento
   if(_cuDesde) proximasCuotas = proximasCuotas.filter(function(it){ return it.venceStr >= _cuDesde; });
   if(_cuHasta) proximasCuotas = proximasCuotas.filter(function(it){ return it.venceStr <= _cuHasta; });
