@@ -15,9 +15,16 @@ PG.dash = function(){
   const activos = _SCREDS.filter(c=>c.estado==='activo').length;
   const completados = _SCREDS.filter(c=>c.estado==='completado').length;
   const totalCreds = _SCREDS.filter(c=>!c.eliminado && c.estado!=='cancelado' && c.estado!=='recuperado' && c.estado!=='recuperada').length;
-  // Cartera: suma del saldo pendiente REAL de cada crédito activo
+  // Créditos ACTIVOS en cartera = todos los que siguen vigentes (estado 'activo' O 'mora').
+  // Un crédito en mora sigue siendo activo: no está pagado. (Antes solo contaba estado==='activo',
+  // dejando fuera los que tienen estado 'mora' — por eso salía 202 en vez del total real.)
+  const activosArr = _SCREDS.filter(c=>!c.eliminado && (c.estado==='activo'||c.estado==='mora'));
+  const activosEnCartera = activosArr.length;
+  const moraEnCartera = activosArr.filter(c=>c.mora>0).length;
+  const alDia = Math.max(0, activosEnCartera - moraEnCartera);
+  // Cartera: suma del saldo pendiente REAL de cada crédito vigente (activo o en mora)
   // (usa la función canónica que respeta pagos parciales)
-  const cartera = _SCREDS.filter(c=>c.estado==='activo').reduce((a,c)=>a+getCreditoSaldoPendiente(c),0);
+  const cartera = activosArr.reduce((a,c)=>a+getCreditoSaldoPendiente(c),0);
   const cuotasCobradas = _SPAGOS.filter(p=>!p.eliminado&&p.estado==='confirmado'&&!p.esInicial&&p.tipoOperacion!=='inicial_credito').reduce((a,p)=>a+p.monto,0);
   const inicialesCobradas = _SPAGOS.filter(p=>!p.eliminado&&p.estado==='confirmado'&&(p.esInicial||p.tipoOperacion==='inicial_credito')).reduce((a,p)=>a+p.monto,0);
   const ingMes = inicialesCobradas + cuotasCobradas; // Dashboard: ingresos confirmados sin duplicar la inicial
@@ -41,7 +48,7 @@ PG.dash = function(){
   };
   // BUG FIX: sumar la cuota REAL de cada crédito activo (antes multiplicaba count × primer cuota,
   // lo cual era incorrecto si los créditos tenían distintos montos)
-  const cuotaEsperada = _SCREDS.filter(c=>c.estado==='activo').reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
+  const cuotaEsperada = activosArr.reduce((a,c)=>a+parseFloat(c.cuotaQ||c.cuota||0),0);
   const pctCobro = cuotaEsperada > 0 ? Math.min(100, Math.round(cuotasCobradas / cuotaEsperada * 100)) : 0;
 
   // ── Promedios de crédito (inicial y cuota) ──
@@ -60,9 +67,9 @@ PG.dash = function(){
   const mTotal = Math.max(1, mDisp+mFin+mRec+mInv);
 
   // ── Créditos por estado (para pie) ──
-  const cActivos = activos;
+  const cActivos = alDia;         // al día (vigentes sin mora)
   const cCompletados = completados;
-  const cEnMora = mora;
+  const cEnMora = moraEnCartera;  // en mora (siguen contando como activos)
   const cCancelados = _SCREDS.filter(c=>!c.eliminado&&c.estado==='cancelado').length;
   const cTotalReal = cActivos+cCompletados+cEnMora+cCancelados;
   const cTotal = Math.max(1, cTotalReal);
@@ -251,7 +258,7 @@ PG.dash = function(){
     <div class="card dash-kpi" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer;background:var(--p1);border:none">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.85);font-family:var(--fm)">Cartera Activa</span>
-        <span style="font-size:9px;background:rgba(255,255,255,0.2);color:#fff;padding:2px 7px;border-radius:20px;font-weight:700">${activos} créditos</span>
+        <span style="font-size:9px;background:rgba(255,255,255,0.2);color:#fff;padding:2px 7px;border-radius:20px;font-weight:700">${activosEnCartera} créditos</span>
       </div>
       <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:#fff;margin-bottom:4px">${fmt(cartera)}</div>
       <div style="font-size:11px;color:rgba(255,255,255,0.8)">Saldo pendiente de cobro</div>
@@ -267,10 +274,10 @@ PG.dash = function(){
         <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Créditos Activos</span>
         <span style="font-size:9px;background:var(--gs);color:var(--p1);padding:2px 7px;border-radius:20px;font-weight:700">${totalCreds} total</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:28px;letter-spacing:-1px;color:var(--p1);margin-bottom:4px">${activos}</div>
-      <div style="font-size:11px;color:var(--ink3)">Créditos activos en cartera</div>
+      <div style="font-family:var(--fd);font-weight:900;font-size:28px;letter-spacing:-1px;color:var(--p1);margin-bottom:4px">${activosEnCartera}</div>
+      <div style="font-size:11px;color:var(--ink3)">Créditos activos en cartera (incluye mora)</div>
       <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:6px">
-        ${[['Activos',cActivos,'#2563EB'],['En mora',cEnMora,'#E8335A'],['Completados',cCompletados,'#00B876']].map(function(b){var pct=cTotal>0?Math.round(b[1]/cTotal*100):0;return '<div><div style="display:flex;justify-content:space-between;font-size:9.5px;margin-bottom:3px"><span style="color:var(--ink3)">'+b[0]+'</span><span style="font-weight:700;color:var(--ink);font-family:var(--fm)">'+b[1]+'</span></div><div style="background:var(--gs);border-radius:3px;height:5px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+b[2]+';border-radius:3px"></div></div></div>';}).join('')}
+        ${[['Al día',cActivos,'#2563EB'],['En mora',cEnMora,'#E8335A'],['Completados',cCompletados,'#00B876']].map(function(b){var pct=cTotal>0?Math.round(b[1]/cTotal*100):0;return '<div><div style="display:flex;justify-content:space-between;font-size:9.5px;margin-bottom:3px"><span style="color:var(--ink3)">'+b[0]+'</span><span style="font-weight:700;color:var(--ink);font-family:var(--fm)">'+b[1]+'</span></div><div style="background:var(--gs);border-radius:3px;height:5px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+b[2]+';border-radius:3px"></div></div></div>';}).join('')}
       </div>
     </div>
 
@@ -538,7 +545,7 @@ PG.dash = function(){
     ${[
       ['CLI','var(--gs)','var(--p1)','rgba(37,99,235,0.15)','Clientes',_concFiltrarClientes(S.clientes||[]).length,'registrados',"nav('clientes')"],
       ['MOT','var(--greens)','var(--green)','rgba(6,176,106,0.15)','Disponibles',dispMotos,'de '+_SMOTOS.filter(m=>!m.eliminado).length+' motos',"nav('motos');setTimeout(()=>setMTab('disponible'),100)"],
-      ['ACT','rgba(37,99,235,0.08)','var(--p1)','rgba(37,99,235,0.2)','Activos',activos,'créditos activos',"nav('creditos')"],
+      ['ACT','rgba(37,99,235,0.08)','var(--p1)','rgba(37,99,235,0.2)','Activos',activosEnCartera,'créditos activos',"nav('creditos')"],
       ['PLN','var(--gs)','var(--p1)','var(--rim2)','Catálogo',CATALOGO.length,'modelos',"nav('plan')"],
     ].map(([ic,bg,cl,br,label,val,sub,action])=>`
     <div class="card" onclick="${action}" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:13px 15px;border-color:${br}" onmouseover="this.style.borderColor='rgba(37,99,235,0.3)'" onmouseout="this.style.borderColor='${br}'">
