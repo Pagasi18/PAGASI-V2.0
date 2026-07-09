@@ -635,7 +635,7 @@ function confirmarRecuperacion(credId){
       if(mi>=0){S.motos[mi].estado='recuperada';S.motos[mi].cliente=null;DB.saveMoto(S.motos[mi]);}
     }
     toast('Unidad recuperada — crédito cerrado','info');
-    closeM();nav('cobranza');return true;
+    closeM();nav('pagos');return true;
   };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-d" onclick="saveM()">Key Confirmar Recuperación</button>';
   $('ov').style.display='flex';

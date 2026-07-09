@@ -1102,7 +1102,7 @@ function empleadoDashHTML(){
         <div style="font-size:13px;font-weight:800;color:var(--red)">${enMora.length} cliente${enMora.length!==1?'s':''} en mora</div>
         <div style="font-size:11.5px;color:var(--ink2)">${fmt(totalAcobrarMora)} por recuperar</div>
       </div>
-      <button class="btn btn-r btn-sm" onclick="nav('cobranza')">Ver todos →</button>
+      <button class="btn btn-r btn-sm" onclick="nav('pagos')">Ver todos →</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
       <div style="background:rgba(255,255,255,.4);border-radius:8px;padding:7px 9px;text-align:center">
@@ -1166,7 +1166,7 @@ function empleadoDashHTML(){
         <div class="ct"> Esta semana</div>
         <div class="cs">${enSemana.length} vencimiento${enSemana.length!==1?'s':''} · ${fmt(totalAcobrarSem)} esperado</div>
       </div>
-      ${enSemana.length>6?`<button class="btn btn-g btn-sm" onclick="nav('cobranza')">Ver todos →</button>`:''}
+      ${enSemana.length>6?`<button class="btn btn-g btn-sm" onclick="nav('pagos')">Ver todos →</button>`:''}
     </div>
     ${enSemana.length ? `<div class="tw"><table>
       <thead><tr><th>Día</th><th>Cliente</th><th>Modelo</th><th>Cuota</th><th></th></tr></thead>

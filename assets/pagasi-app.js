@@ -2086,7 +2086,6 @@ var MODULOS = [
   {id:'motos', label:'Motocicletas', grupo:'Gestión'},
   {id:'creditos', label:'Créditos', grupo:'Gestión'},
   {id:'pagos', label:'Pagos', grupo:'Gestión'},
-  {id:'cobranza', label:'Cobranza', grupo:'Operaciones'},
   {id:'contratos', label:'Contratos', grupo:'Operaciones'},
   {id:'notif', label:'Notificaciones', grupo:'Operaciones'},
   {id:'calculadora', label:'Calculadora', grupo:'Operaciones'},
@@ -2473,7 +2472,7 @@ function _attachCurrentUserListener(uid){
       if(typeof updateSidebarFooter === 'function') updateSidebarFooter();
       // Si la página actual ya no es accesible, mover al dashboard (o primer módulo permitido)
       if(S.page && typeof hasModuleAccess === 'function' && !hasModuleAccess(S.page)){
-        var fallback = ['dash','centro','clientes','creditos','pagos','cobranza'].find(function(k){ return hasModuleAccess(k); });
+        var fallback = ['dash','centro','clientes','creditos','pagos'].find(function(k){ return hasModuleAccess(k); });
         if(fallback && typeof nav === 'function') nav(fallback);
       } else if(S.page && typeof nav === 'function'){
         // Repintar la página actual por si depende de permisos (ej. botones de eliminar)
@@ -2525,17 +2524,17 @@ function renderSidebar(){
     var grposEmp = [
       {label:'Mi Trabajo', keys:['dash','centro','recursos']},
       {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
-      {label:'Operaciones',keys:['cobranza','contratos','notif','calculadora']},
+      {label:'Operaciones',keys:['contratos','notif','calculadora']},
       {label:'Análisis', keys:['reportes','cuentas','comisiones']},
       {label:'Sistema', keys:['plan','config','scores','users']},
     ];
     var iconMapEmp = {
       dash:'DB',centro:'WK',clientes:'CLI',motos:'MOT',creditos:'SOL',pagos:'PAG',
-      cobranza:'COB',contratos:'CTR',notif:'NOT',reportes:'RPT',
+      contratos:'CTR',notif:'NOT',reportes:'RPT',
       cuentas:'CTA',comisiones:'CMS',conta:'CNT',plan:'PLN',config:'CFG',scores:'SCR',users:'USR'
     };
     var nameMapEmp = { dash:'Mi Dashboard', creditos:'Solicitudes' };
-    var extraMapEmp = {cobranza:'<span class="si-bx" id="sb-badge-cob"></span>', centro:'<span class="si-bx" id="sb-badge-wt"></span>'};
+    var extraMapEmp = {pagos:'<span class="si-bx" id="sb-badge-cob"></span>', centro:'<span class="si-bx" id="sb-badge-wt"></span>'};
 
     var sidebarEmp = '<div style="padding:10px 8px">'
       +'<div style="margin-bottom:6px">'
@@ -2585,7 +2584,7 @@ function renderSidebar(){
   var grupos = [
     {label:'Principal', keys:['dash','centro','recursos']},
     {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
-    {label:'Operaciones',keys:['cobranza','contratos','notif','calculadora','aprobaciones']},
+    {label:'Operaciones',keys:['contratos','notif','calculadora','aprobaciones']},
     {label:'Análisis', keys:['reportes','cuentas','comisiones']},
     {label:'Sistema', keys:['plan','config','concesionarios','scores','users']},
   ];
@@ -2594,7 +2593,7 @@ function renderSidebar(){
     cobranza:'COB',contratos:'CTR',notif:'NOT',reportes:'RPT',aprobaciones:'APR',
     cuentas:'CTA',comisiones:'CMS',conta:'CNT',plan:'PLN',config:'CFG',scores:'SCR',users:'USR',concesionarios:'CNC'
   };
-  var extraMap = {cobranza:'<span class="si-bx" id="sb-badge-cob"></span>', centro:'<span class="si-bx" id="sb-badge-wt"></span>'};
+  var extraMap = {pagos:'<span class="si-bx" id="sb-badge-cob"></span>', centro:'<span class="si-bx" id="sb-badge-wt"></span>'};
 
   sb.innerHTML = grupos.map(function(g){
     var items = g.keys.filter(function(k){ return isAdminUser() || k==='recursos' || perms.includes(k); });
@@ -3806,8 +3805,8 @@ function updateMobileNav(){
       mbb.innerHTML = ''
         +'<button class="mbb-btn'+(page==='dash'?' on':'')+'" onclick="nav(\'dash\');mbbSelect(\'dash\')">'
         +'<span class="mbb-ic">DB</span><span>Inicio</span></button>'
-        +'<button class="mbb-btn'+(page==='cobranza'?' on':'')+'" onclick="nav(\'cobranza\');mbbSelect(\'cobranza\')">'
-        +'<span class="mbb-ic">COB</span><span>Cobranza</span></button>'
+        +'<button class="mbb-btn'+(page==='pagos'?' on':'')+'" onclick="nav(\'pagos\');mbbSelect(\'pagos\')">'
+        +'<span class="mbb-ic">PAG</span><span>Cobrar</span></button>'
         +'<button class="mbb-btn" onclick="openAddCred()" style="color:var(--p1)">'
         +'<span class="mbb-ic" style="background:var(--p1);color:#fff">＋</span><span>Solicitud</span></button>'
         +'<button class="mbb-btn'+(page==='creditos'?' on':'')+'" onclick="nav(\'creditos\');mbbSelect(\'creditos\')">'

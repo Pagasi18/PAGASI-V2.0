@@ -175,6 +175,32 @@ PG.reportes = function(){
     {k:'contador', lbl:'📋 Contador', sub:'Reporte semanal · Tributario'}
   ];
 
+  // ══════════ RENDIMIENTO DE COBRANZA (movido desde el módulo Cobranza) ══════════
+  var _cbHoy = new Date(); _cbHoy.setHours(0,0,0,0);
+  var _cbISO = function(d){ return (typeof fechaLocalISO==='function') ? fechaLocalISO(d) : d.toISOString().slice(0,10); };
+  var _cbPagosConf = pagosConf; // confirmados (ya filtrados por concesionario)
+  // Recuperación por semana (últimas 8 semanas)
+  var semanasCob = [];
+  for(var _si=7; _si>=0; _si--){
+    var _ini = new Date(_cbHoy); _ini.setDate(_cbHoy.getDate() - (_si*7 + _cbHoy.getDay()));
+    var _fin = new Date(_ini); _fin.setDate(_ini.getDate()+6);
+    var _iniS=_cbISO(_ini), _finS=_cbISO(_fin);
+    var _sp = _cbPagosConf.filter(function(p){ return p.fecha>=_iniS && p.fecha<=_finS; });
+    semanasCob.push({ lbl:String(_ini.getDate()).padStart(2,'0')+'/'+String(_ini.getMonth()+1).padStart(2,'0'), tot:_sp.reduce(function(a,p){return a+p.monto;},0), cnt:_sp.length });
+  }
+  var maxSemCob = Math.max(1, Math.max.apply(null, semanasCob.map(function(s){return s.tot;})));
+  var totSemCob = semanasCob.reduce(function(a,s){return a+s.tot;},0);
+  var tendSemCob = (semanasCob[6].tot>0) ? Math.round((semanasCob[7].tot - semanasCob[6].tot)/semanasCob[6].tot*100) : 0;
+  // Top cobradores del mes actual
+  var _iniMesCob = _cbISO(new Date(_cbHoy.getFullYear(), _cbHoy.getMonth(), 1));
+  var _cobMesTot = 0, _cobStats = {};
+  _cbPagosConf.filter(function(p){ return p.fecha>=_iniMesCob; }).forEach(function(p){
+    var k = p.cobrador || 'Sin asignar';
+    if(!_cobStats[k]) _cobStats[k] = {cnt:0, tot:0};
+    _cobStats[k].cnt++; _cobStats[k].tot += p.monto; _cobMesTot += p.monto;
+  });
+  var topCobradoresMes = Object.keys(_cobStats).map(function(k){ return {nombre:k, cnt:_cobStats[k].cnt, tot:_cobStats[k].tot}; }).sort(function(a,b){return b.tot-a.tot;}).slice(0,5);
+
   return`<div class="page">
 
   ${pageBanner(
@@ -432,7 +458,7 @@ PG.reportes = function(){
     </div>
     <div class="card">
       <div class="ch"><div><div class="ct">Mora detallada</div><div class="cs">${credsMora.length} créditos · ${fmt(moraAcumulada)} acumulado</div></div>
-        <button class="btn btn-g btn-sm" onclick="nav('cobranza')">→ Cobranza</button>
+        <button class="btn btn-g btn-sm" onclick="nav('pagos')">→ Cobrar</button>
       </div>
       ${credsMora.length?`<div class="tw tw-compact"><table>
         <thead><tr><th>Cliente</th><th>Días</th><th>Cuota</th></tr></thead>
@@ -442,6 +468,47 @@ PG.reportes = function(){
           <td style="font-weight:700;color:var(--red)">${fmt(c.cuotaQ||c.cuota||0)}</td>
         </tr>`).join('')}</tbody>
       </table></div>`:`<div style="text-align:center;padding:28px;color:var(--green);font-size:13px;font-weight:700">✓ Sin créditos en mora</div>`}
+    </div>
+  </div>
+
+  <!-- ROW 6b: RENDIMIENTO DE COBRANZA (movido desde el módulo Cobranza) -->
+  <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px;margin-bottom:12px">
+
+    <!-- Recuperación semanal -->
+    <div class="card">
+      <div class="ch">
+        <div><div class="ct">📈 Recuperación semanal</div><div class="cs">Cobros confirmados · últimas 8 semanas</div></div>
+        <div style="text-align:right">
+          <div style="font-weight:900;font-size:18px;color:var(--green)">${fmt(totSemCob)}</div>
+          <div style="font-size:10px;color:var(--ink3)">${semanasCob.reduce((a,s)=>a+s.cnt,0)} pagos · tend. <b style="color:${tendSemCob>0?'var(--green)':tendSemCob<0?'var(--red)':'var(--ink3)'}">${tendSemCob>0?'↑ +':tendSemCob<0?'↓ ':''}${tendSemCob}%</b></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:5px;height:120px;margin-top:12px">
+        ${semanasCob.map((s,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+          <div style="font-size:8px;font-weight:700;color:var(--ink3);height:11px">${s.tot>0?fmt(s.tot).slice(0,6):''}</div>
+          <div style="flex:1;width:100%;display:flex;align-items:flex-end">
+            <div style="width:100%;background:${i===semanasCob.length-1?'var(--p1)':s.tot>0?'var(--greens)':'var(--rim)'};border:${s.tot>0?'none':'1px solid var(--rim2)'};border-radius:4px 4px 0 0;height:${s.tot>0?Math.max(6,Math.round(s.tot/maxSemCob*100)):4}px"></div>
+          </div>
+          <div style="font-size:8.5px;color:${i===semanasCob.length-1?'var(--p1)':'var(--ink3)'};font-weight:${i===semanasCob.length-1?900:600}">${s.lbl}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Top cobradores del mes -->
+    <div class="card">
+      <div class="ch"><div><div class="ct">🏆 Cobradores del mes</div><div class="cs">Por monto recaudado</div></div></div>
+      ${topCobradoresMes.length ? topCobradoresMes.map(function(c,i){
+        var medals=['🥇','🥈','🥉','','']; var pct = _cobMesTot>0 ? Math.round(c.tot/_cobMesTot*100) : 0;
+        return '<div style="padding:9px 0;border-bottom:1px solid var(--rim2)">'
+          +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">'
+            +'<span style="font-size:15px;width:20px">'+(medals[i]||(i+1))+'</span>'
+            +'<div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+c.nombre+'</div>'
+            +'<div style="font-size:10.5px;color:var(--ink3)">'+c.cnt+' pagos · '+pct+'% del total</div></div>'
+            +'<div style="font-size:14px;font-weight:900;color:var(--green)">'+fmt(c.tot)+'</div>'
+          +'</div>'
+          +'<div style="height:5px;background:var(--rim);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:var(--grad);border-radius:3px"></div></div>'
+        +'</div>';
+      }).join('') : '<div style="color:var(--ink3);font-size:12px;text-align:center;padding:24px 0">Sin cobros registrados este mes</div>'}
     </div>
   </div>
 
