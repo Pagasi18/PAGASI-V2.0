@@ -138,8 +138,8 @@ PG.pagos = function(){
   return`<div class="page">
 
   ${pageBanner(
-    'Transacciones · Cobros',
-    'Pagos',
+    'Cobranza · Cobros y pagos',
+    'Cobranza',
     '<b>'+allPagos.length+'</b> pagos registrados · Cobrado total: <b>'+fmt(totalConf)+'</b> · Este mes: <b>'+fmt(totalMes)+'</b>',
     [
       {label:'↓ Exportar CSV', onclick:"exportarCSV('pagos')"},

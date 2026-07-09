@@ -2086,7 +2086,7 @@ var MODULOS = [
   {id:'clientes', label:'Clientes', grupo:'Gestión'},
   {id:'motos', label:'Motocicletas', grupo:'Gestión'},
   {id:'creditos', label:'Créditos', grupo:'Gestión'},
-  {id:'pagos', label:'Pagos', grupo:'Gestión'},
+  {id:'pagos', label:'Cobranza', grupo:'Gestión'},
   {id:'contratos', label:'Contratos', grupo:'Operaciones'},
   {id:'notif', label:'Notificaciones', grupo:'Operaciones'},
   {id:'calculadora', label:'Calculadora', grupo:'Operaciones'},
@@ -2330,7 +2330,7 @@ function fmtFecha(iso){
 }
 const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a',completado:'b-g',propia:'b-g',cancelado:'b-r'}[s]||'b-x');
-const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Pagos',cobranza:'Cobranza',contratos:'Contratos',notif:'Notificaciones',calculadora:'Calculadora',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios',aprobaciones:'Aprobaciones',recursos:'Files'};
+const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Cobranza',cobranza:'Cobranza',contratos:'Contratos',notif:'Notificaciones',calculadora:'Calculadora',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios',aprobaciones:'Aprobaciones',recursos:'Files'};
 
 const EXTRA_PERMS={perm_delete:'Permiso para eliminar'};
 function getCurrentPerms(){ return (S.currentUser&&Array.isArray(S.currentUser.permisos)) ? S.currentUser.permisos : []; }
@@ -2642,7 +2642,9 @@ function actualizarBadgeMora(){
   try{
     var cob = document.getElementById('sb-badge-cob');
     if(!cob) return;
-    var enMora = _concFiltrar(S.creds||[]).filter(function(c){return !c.eliminado && c.mora>0 && c.estado==='activo';}).length;
+    // Un crédito en mora puede tener estado 'activo' O 'mora'. Antes solo contaba
+    // estado==='activo', por eso el badge mostraba muchos menos de los atrasados reales.
+    var enMora = _concFiltrar(S.creds||[]).filter(function(c){return !c.eliminado && c.mora>0 && (c.estado==='activo'||c.estado==='mora');}).length;
     if(enMora>0){
       cob.textContent = enMora;
       cob.style.display='flex';
