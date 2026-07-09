@@ -201,6 +201,47 @@ PG.reportes = function(){
   });
   var topCobradoresMes = Object.keys(_cobStats).map(function(k){ return {nombre:k, cnt:_cobStats[k].cnt, tot:_cobStats[k].tot}; }).sort(function(a,b){return b.tot-a.tot;}).slice(0,5);
 
+  // ══ Gráficos de Cobros / Próximas cuotas con selector de período (movidos desde Cobranza) ══
+  var _rpCobPer = S.rpCobrosPer || 'diario';
+  var _rpProxPer = S.rpProxPer || 'diario';
+  var _rpGracia = (typeof PLAN!=='undefined' && PLAN.diasGracia!=null) ? PLAN.diasGracia : 5;
+  var _rpCobItems = pagosConf.map(function(p){ return { fecha:p.fecha, monto:parseFloat(p.monto||0) }; }).filter(function(x){ return x.fecha; });
+  var _rpFutCuotas = [];
+  _SCREDS.forEach(function(c){
+    if(!c || c.eliminado) return;
+    if(!(c.estado==='activo'||c.estado==='mora')) return;
+    if(typeof CreditoLedger==='undefined' || !CreditoLedger.generarEstadoCredito) return;
+    var est; try{ est = CreditoLedger.generarEstadoCredito(c, S.pagos, {diasGracia:_rpGracia}); }catch(e){ return; }
+    if(!est || !est.cuotas) return;
+    var _mc = parseFloat(c.cuotaQ||c.cuota||0);
+    for(var _qi=(est.cuotasPagadas||0); _qi<est.cuotas.length; _qi++){
+      var _q = est.cuotas[_qi];
+      if(_q && _q.fechaVence) _rpFutCuotas.push({ fecha:_q.fechaVence, monto:_mc });
+    }
+  });
+  var _rpHoyISO = _cbISO(new Date());
+  var serieRpCob = (typeof _pgSerie==='function') ? _pgSerie(_rpCobItems, _rpCobPer, 'past') : [];
+  var serieRpProx = (typeof _pgSerie==='function') ? _pgSerie(_rpFutCuotas, _rpProxPer, 'future') : [];
+  var maxRpCob = Math.max(1, Math.max.apply(null, serieRpCob.map(function(x){return x.tot;}).concat([0])));
+  var maxRpProx = Math.max(1, Math.max.apply(null, serieRpProx.map(function(x){return x.tot;}).concat([0])));
+  var totRpCob = serieRpCob.reduce(function(a,x){return a+x.tot;},0);
+  var totRpProx = serieRpProx.reduce(function(a,x){return a+x.tot;},0);
+  var totRpVencido = _rpFutCuotas.filter(function(x){ return x.fecha < _rpHoyISO; }).reduce(function(a,x){return a+x.monto;},0);
+  var _rpBarChart = function(serie, per, maxV, color, setter){
+    return '<div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:8px">'
+      + ['diario','quincenal','mensual','anual','total'].map(function(m){ return '<button class="btn btn-xs '+(per===m?'btn-p':'btn-g')+'" onclick="'+setter+'(\''+m+'\')" style="font-size:9.5px;padding:3px 8px;text-transform:capitalize">'+m+'</button>'; }).join('')
+      + '</div>'
+      + '<div style="display:flex;align-items:flex-end;gap:4px;height:120px">'
+      + serie.map(function(d){ return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0">'
+          +'<div style="font-size:8px;font-weight:700;color:var(--ink3);height:11px;white-space:nowrap">'+(d.tot>0?_fmtK(d.tot):'')+'</div>'
+          +'<div style="flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center">'
+          +'<div style="width:100%;max-width:'+(serie.length<=2?'70px':'100%')+';background:'+(d.tot>0?color:'var(--rim)')+';border-radius:3px 3px 0 0;height:'+(d.tot>0?Math.max(6,Math.round(d.tot/maxV*90)):3)+'px;transition:height .3s"></div>'
+          +'</div>'
+          +'<div style="font-size:9px;color:var(--ink3);font-weight:600;white-space:nowrap">'+d.lbl+'</div>'
+        +'</div>'; }).join('')
+      + '</div>';
+  };
+
   return`<div class="page">
 
   ${pageBanner(
@@ -509,6 +550,24 @@ PG.reportes = function(){
           +'<div style="height:5px;background:var(--rim);border-radius:3px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:var(--grad);border-radius:3px"></div></div>'
         +'</div>';
       }).join('') : '<div style="color:var(--ink3);font-size:12px;text-align:center;padding:24px 0">Sin cobros registrados este mes</div>'}
+    </div>
+  </div>
+
+  <!-- ROW 6c: Cobros y Próximas cuotas a cobrar (selector de período · movido desde Cobranza) -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+    <div class="card">
+      <div class="ch" style="margin-bottom:6px">
+        <div><div class="ct">Cobros</div><div class="cs">Pagos confirmados · <span style="text-transform:capitalize">${_rpCobPer}</span></div></div>
+        <div style="text-align:right"><div style="font-weight:900;font-size:16px;color:var(--p1);font-family:var(--fd)">${fmt(totRpCob)}</div><div style="font-size:10px;color:var(--ink3)">en el rango</div></div>
+      </div>
+      ${_rpBarChart(serieRpCob, _rpCobPer, maxRpCob, 'var(--p1)', 'setRpCobrosPer')}
+    </div>
+    <div class="card">
+      <div class="ch" style="margin-bottom:6px">
+        <div><div class="ct">Próximas cuotas a cobrar</div><div class="cs">Por vencer · <span style="text-transform:capitalize">${_rpProxPer}</span></div></div>
+        <div style="text-align:right"><div style="font-weight:900;font-size:16px;color:var(--green);font-family:var(--fd)">${fmt(totRpProx)}</div>${totRpVencido>0?`<div style="font-size:10px;color:var(--red);font-weight:700">${fmt(totRpVencido)} vencido</div>`:'<div style="font-size:10px;color:var(--ink3)">sin vencidas</div>'}</div>
+      </div>
+      ${_rpBarChart(serieRpProx, _rpProxPer, maxRpProx, 'var(--green)', 'setRpProxPer')}
     </div>
   </div>
 

@@ -2958,6 +2958,8 @@ function getCuotasVencidas(c){
 }
 function setPagosTab(t){S.pagosTab=t;window._pages={};nav('pagos');}
 function setReportesTab(t){S.reportesTab=t;nav('reportes');}
+function setRpCobrosPer(m){S.rpCobrosPer=m;S.reportesTab='resumen';nav('reportes');}
+function setRpProxPer(m){S.rpProxPer=m;S.reportesTab='resumen';nav('reportes');}
 window.setReportesTab=setReportesTab;
 
 // Resincroniza S.motos con Firebase, descartando el caché local.
