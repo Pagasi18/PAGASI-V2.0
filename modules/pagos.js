@@ -120,6 +120,19 @@ PG.pagos = function(){
   // Filtro rápido Todos / Atrasados / Al día — con contadores del contexto actual
   var _cuAtras = proximasCuotas.filter(function(it){ return it.diff<0; }).length;
   var _cuAlDia = proximasCuotas.length - _cuAtras;
+  // ── Datos para el gráfico "Próximas cuotas a cobrar" (independiente del filtro de chips) ──
+  var _cuotasChartSrc = proximasCuotas.slice();
+  var _hoyChart = new Date(); _hoyChart.setHours(0,0,0,0);
+  var proxDias = [];
+  for(var _pi=0; _pi<14; _pi++){
+    var _pd = new Date(_hoyChart); _pd.setDate(_pd.getDate()+_pi);
+    var _pk = fechaLocalISO(_pd);
+    var _pt = _cuotasChartSrc.filter(function(it){ return it.venceStr===_pk; }).reduce(function(a,it){ return a+parseFloat(it.cred.cuotaQ||it.cred.cuota||0); },0);
+    proxDias.push({ k:_pk, tot:_pt, lbl:_pd.getDate() });
+  }
+  var maxProx = Math.max(1, Math.max.apply(null, proxDias.map(function(x){return x.tot;})));
+  var totalProx14 = proxDias.reduce(function(a,x){return a+x.tot;},0);
+  var totalVencido = _cuotasChartSrc.filter(function(it){ return it.diff<0; }).reduce(function(a,it){ return a+parseFloat(it.cred.cuotaQ||it.cred.cuota||0); },0);
   var _cuF = S.cuotasFilter||'todos';
   if(_cuF==='atrasados') proximasCuotas = proximasCuotas.filter(function(it){ return it.diff<0; });
   else if(_cuF==='aldia') proximasCuotas = proximasCuotas.filter(function(it){ return it.diff>=0; });
@@ -176,7 +189,7 @@ PG.pagos = function(){
     </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:12px;margin-bottom:12px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
 
     <!-- Chart últimos 14 días -->
     <div class="card">
@@ -192,21 +205,24 @@ PG.pagos = function(){
       </div>
     </div>
 
-    <!-- Métodos de pago -->
+    <!-- Próximas cuotas a cobrar (14 días) -->
     <div class="card">
-      <div class="ch"><div><div class="ct">Por método / cuenta</div><div class="cs">Cobros confirmados totales</div></div></div>
-      ${metodosList.length ? metodosList.slice(0,6).map(function(m){
-        var pct = totalConf>0 ? Math.round(m.total/totalConf*100) : 0;
-        return `<div style="margin-bottom:9px">
-          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
-            <span style="font-weight:700">${m.nombre}</span>
-            <span style="color:var(--ink3)">${fmt(m.total)} <span style="opacity:.6;font-size:10px">${pct}%</span></span>
+      <div class="ch" style="margin-bottom:0">
+        <div><div class="ct">Próximas cuotas a cobrar</div><div class="cs">Monto por vencer · próximos 14 días</div></div>
+        <div style="text-align:right">
+          <div style="font-weight:900;font-size:16px;color:var(--green);font-family:var(--fd)">${fmt(totalProx14)}</div>
+          ${totalVencido>0?`<div style="font-size:10px;color:var(--red);font-weight:700">${fmt(totalVencido)} vencido</div>`:'<div style="font-size:10px;color:var(--ink3)">sin vencidas</div>'}
+        </div>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:10px">
+        ${proxDias.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+          <div style="font-size:8.5px;font-weight:700;color:var(--ink3);height:12px">${d.tot>0?fmt(d.tot).slice(0,6):''}</div>
+          <div style="flex:1;width:100%;display:flex;align-items:flex-end">
+            <div style="width:100%;background:${d.tot>0?'var(--green)':'var(--rim)'};border-radius:3px 3px 0 0;height:${d.tot>0?Math.max(6,Math.round(d.tot/maxProx*90)):3}px;transition:height .3s" title="${d.k}: ${fmt(d.tot)}"></div>
           </div>
-          <div style="height:6px;background:var(--rim);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:var(--p1);border-radius:3px"></div>
-          </div>
-        </div>`;
-      }).join('') : '<div style="color:var(--ink3);font-size:12px;text-align:center;padding:20px 0">Sin pagos registrados aún</div>'}
+          <div style="font-size:9px;color:var(--ink3);font-weight:600">${d.lbl}</div>
+        </div>`).join('')}
+      </div>
     </div>
   </div>
 
