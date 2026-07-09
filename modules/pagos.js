@@ -120,19 +120,34 @@ PG.pagos = function(){
   // Filtro rápido Todos / Atrasados / Al día — con contadores del contexto actual
   var _cuAtras = proximasCuotas.filter(function(it){ return it.diff<0; }).length;
   var _cuAlDia = proximasCuotas.length - _cuAtras;
-  // ── Datos para el gráfico "Próximas cuotas a cobrar" (independiente del filtro de chips) ──
-  var _cuotasChartSrc = proximasCuotas.slice();
-  var _hoyChart = new Date(); _hoyChart.setHours(0,0,0,0);
-  var proxDias = [];
-  for(var _pi=0; _pi<14; _pi++){
-    var _pd = new Date(_hoyChart); _pd.setDate(_pd.getDate()+_pi);
-    var _pk = fechaLocalISO(_pd);
-    var _pt = _cuotasChartSrc.filter(function(it){ return it.venceStr===_pk; }).reduce(function(a,it){ return a+parseFloat(it.cred.cuotaQ||it.cred.cuota||0); },0);
-    proxDias.push({ k:_pk, tot:_pt, lbl:_pd.getDate() });
-  }
-  var maxProx = Math.max(1, Math.max.apply(null, proxDias.map(function(x){return x.tot;})));
-  var totalProx14 = proxDias.reduce(function(a,x){return a+x.tot;},0);
-  var totalVencido = _cuotasChartSrc.filter(function(it){ return it.diff<0; }).reduce(function(a,it){ return a+parseFloat(it.cred.cuotaQ||it.cred.cuota||0); },0);
+  // ── Datos para los gráficos con selector de período (diario/quincenal/mensual/anual/total) ──
+  var _cobPer = S.pgCobrosPer || 'diario';
+  var _proxPer = S.pgProxPer || 'diario';
+  // Cobros (pasado): pagos confirmados
+  var _cobItems = confs.map(function(p){ return { fecha:p.fecha, monto:parseFloat(p.monto||0) }; }).filter(function(x){ return x.fecha; });
+  // Próximas cuotas (futuro): TODAS las cuotas no pagadas de cada crédito vigente (vía ledger),
+  // no solo las de 30 días — así el chart mensual/anual/total tiene sentido.
+  var _futCuotas = [];
+  _concFiltrar(S.creds||[]).forEach(function(c){
+    if(!c || c.eliminado) return;
+    if(!(c.estado==='activo'||c.estado==='mora')) return;
+    if(typeof CreditoLedger==='undefined' || !CreditoLedger.generarEstadoCredito) return;
+    var est; try{ est = CreditoLedger.generarEstadoCredito(c, S.pagos, {diasGracia:_gracia}); }catch(e){ return; }
+    if(!est || !est.cuotas) return;
+    var _mCuota = parseFloat(c.cuotaQ||c.cuota||0);
+    for(var _qi=(est.cuotasPagadas||0); _qi<est.cuotas.length; _qi++){
+      var _q = est.cuotas[_qi];
+      if(_q && _q.fechaVence) _futCuotas.push({ fecha:_q.fechaVence, monto:_mCuota });
+    }
+  });
+  var _hoyISO = fechaLocalISO(new Date());
+  var serieCob = _pgSerie(_cobItems, _cobPer, 'past');
+  var serieProx = _pgSerie(_futCuotas, _proxPer, 'future');
+  var maxCob = Math.max(1, Math.max.apply(null, serieCob.map(function(x){return x.tot;})));
+  var maxProx = Math.max(1, Math.max.apply(null, serieProx.map(function(x){return x.tot;})));
+  var totCobSerie = serieCob.reduce(function(a,x){return a+x.tot;},0);
+  var totProxSerie = serieProx.reduce(function(a,x){return a+x.tot;},0);
+  var totalVencido = _futCuotas.filter(function(x){ return x.fecha < _hoyISO; }).reduce(function(a,x){return a+x.monto;},0);
   var _cuF = S.cuotasFilter||'todos';
   if(_cuF==='atrasados') proximasCuotas = proximasCuotas.filter(function(it){ return it.diff<0; });
   else if(_cuF==='aldia') proximasCuotas = proximasCuotas.filter(function(it){ return it.diff>=0; });
@@ -191,37 +206,43 @@ PG.pagos = function(){
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
 
-    <!-- Chart últimos 14 días -->
+    <!-- Chart Cobros (período configurable) -->
     <div class="card">
-      <div class="ch"><div><div class="ct">Cobros últimos 14 días</div><div class="cs">Pagos confirmados por día</div></div></div>
-      <div style="display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:10px">
-        ${dias.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
-          <div style="font-size:8.5px;font-weight:700;color:var(--ink3);height:12px">${d.tot>0?fmt(d.tot).replace('$','$').slice(0,6):''}</div>
-          <div style="flex:1;width:100%;display:flex;align-items:flex-end">
-            <div style="width:100%;background:${d.tot>0?'var(--p1)':'var(--rim)'};border-radius:3px 3px 0 0;height:${d.tot>0?Math.max(6,Math.round(d.tot/maxDia*90)):3}px;transition:height .3s"></div>
-          </div>
-          <div style="font-size:9px;color:var(--ink3);font-weight:600">${d.lbl}</div>
-        </div>`).join('')}
+      <div class="ch" style="margin-bottom:6px">
+        <div><div class="ct">Cobros</div><div class="cs">Pagos confirmados · <span style="text-transform:capitalize">${_cobPer}</span></div></div>
+        <div style="text-align:right"><div style="font-weight:900;font-size:16px;color:var(--p1);font-family:var(--fd)">${fmt(totCobSerie)}</div><div style="font-size:10px;color:var(--ink3)">en el rango</div></div>
+      </div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:8px">
+        ${['diario','quincenal','mensual','anual','total'].map(function(m){ return '<button class="btn btn-xs '+(_cobPer===m?'btn-p':'btn-g')+'" onclick="setPgCobrosPer(\''+m+'\')" style="font-size:9.5px;padding:3px 8px;text-transform:capitalize">'+m+'</button>'; }).join('')}
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:120px">
+        ${serieCob.map(function(d){ return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0">'
+          +'<div style="font-size:8px;font-weight:700;color:var(--ink3);height:11px;white-space:nowrap">'+(d.tot>0?_fmtK(d.tot):'')+'</div>'
+          +'<div style="flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center">'
+          +'<div style="width:100%;max-width:'+(serieCob.length<=2?'70px':'100%')+';background:'+(d.tot>0?'var(--p1)':'var(--rim)')+';border-radius:3px 3px 0 0;height:'+(d.tot>0?Math.max(6,Math.round(d.tot/maxCob*90)):3)+'px;transition:height .3s"></div>'
+          +'</div>'
+          +'<div style="font-size:9px;color:var(--ink3);font-weight:600;white-space:nowrap">'+d.lbl+'</div>'
+        +'</div>'; }).join('')}
       </div>
     </div>
 
-    <!-- Próximas cuotas a cobrar (14 días) -->
+    <!-- Próximas cuotas a cobrar (período configurable) -->
     <div class="card">
-      <div class="ch" style="margin-bottom:0">
-        <div><div class="ct">Próximas cuotas a cobrar</div><div class="cs">Monto por vencer · próximos 14 días</div></div>
-        <div style="text-align:right">
-          <div style="font-weight:900;font-size:16px;color:var(--green);font-family:var(--fd)">${fmt(totalProx14)}</div>
-          ${totalVencido>0?`<div style="font-size:10px;color:var(--red);font-weight:700">${fmt(totalVencido)} vencido</div>`:'<div style="font-size:10px;color:var(--ink3)">sin vencidas</div>'}
-        </div>
+      <div class="ch" style="margin-bottom:6px">
+        <div><div class="ct">Próximas cuotas a cobrar</div><div class="cs">Por vencer · <span style="text-transform:capitalize">${_proxPer}</span></div></div>
+        <div style="text-align:right"><div style="font-weight:900;font-size:16px;color:var(--green);font-family:var(--fd)">${fmt(totProxSerie)}</div>${totalVencido>0?`<div style="font-size:10px;color:var(--red);font-weight:700">${fmt(totalVencido)} vencido</div>`:'<div style="font-size:10px;color:var(--ink3)">sin vencidas</div>'}</div>
       </div>
-      <div style="display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:10px">
-        ${proxDias.map(d=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
-          <div style="font-size:8.5px;font-weight:700;color:var(--ink3);height:12px">${d.tot>0?fmt(d.tot).slice(0,6):''}</div>
-          <div style="flex:1;width:100%;display:flex;align-items:flex-end">
-            <div style="width:100%;background:${d.tot>0?'var(--green)':'var(--rim)'};border-radius:3px 3px 0 0;height:${d.tot>0?Math.max(6,Math.round(d.tot/maxProx*90)):3}px;transition:height .3s" title="${d.k}: ${fmt(d.tot)}"></div>
-          </div>
-          <div style="font-size:9px;color:var(--ink3);font-weight:600">${d.lbl}</div>
-        </div>`).join('')}
+      <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:8px">
+        ${['diario','quincenal','mensual','anual','total'].map(function(m){ return '<button class="btn btn-xs '+(_proxPer===m?'btn-p':'btn-g')+'" onclick="setPgProxPer(\''+m+'\')" style="font-size:9.5px;padding:3px 8px;text-transform:capitalize">'+m+'</button>'; }).join('')}
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:120px">
+        ${serieProx.map(function(d){ return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0">'
+          +'<div style="font-size:8px;font-weight:700;color:var(--ink3);height:11px;white-space:nowrap">'+(d.tot>0?_fmtK(d.tot):'')+'</div>'
+          +'<div style="flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center">'
+          +'<div style="width:100%;max-width:'+(serieProx.length<=2?'70px':'100%')+';background:'+(d.tot>0?'var(--green)':'var(--rim)')+';border-radius:3px 3px 0 0;height:'+(d.tot>0?Math.max(6,Math.round(d.tot/maxProx*90)):3)+'px;transition:height .3s"></div>'
+          +'</div>'
+          +'<div style="font-size:9px;color:var(--ink3);font-weight:600;white-space:nowrap">'+d.lbl+'</div>'
+        +'</div>'; }).join('')}
       </div>
     </div>
   </div>
@@ -398,6 +419,54 @@ PG.pagos = function(){
   </div>`+(tab!=='archivados'?pgControls('pagos',filtered.length,50,'pgNav'):'');
 };
 
+// ─── Selector de período para los gráficos de Cobranza ───
+function setPgCobrosPer(m){ S.pgCobrosPer=m; window._pgKeep=true; nav('pagos'); }
+function setPgProxPer(m){ S.pgProxPer=m; window._pgKeep=true; nav('pagos'); }
+
+// Formato compacto para etiquetas de barras ($1.2M, $55k, $320)
+function _fmtK(n){
+  n=Math.round(n||0); var s=n<0?'-':''; n=Math.abs(n);
+  if(n>=1000000) return s+'$'+(n/1000000).toFixed(n>=10000000?0:1)+'M';
+  if(n>=1000) return s+'$'+Math.round(n/1000)+'k';
+  return s+'$'+n;
+}
+
+// Agrupa [{fecha:'YYYY-MM-DD', monto}] en una serie de barras según el período elegido.
+// dir='past' (hacia atrás desde hoy) o 'future' (hacia adelante desde hoy).
+function _pgSerie(items, mode, dir){
+  items = items || [];
+  var out=[]; var today=new Date(); today.setHours(0,0,0,0);
+  var iso=function(d){ return (typeof fechaLocalISO==='function')?fechaLocalISO(d):d.toISOString().slice(0,10); };
+  var mk=function(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); };
+  var MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var sum=function(pred){ return items.filter(pred).reduce(function(a,x){return a+(x.monto||0);},0); };
+  if(mode==='total'){ out.push({lbl:'Total', tot:items.reduce(function(a,x){return a+(x.monto||0);},0)}); return out; }
+  if(mode==='diario'){
+    for(var i=0;i<14;i++){ var d=new Date(today); d.setDate(d.getDate()+(dir==='future'?i:-(13-i))); var k=iso(d);
+      out.push({lbl:String(d.getDate()), tot:sum(function(x){return x.fecha===k;})}); }
+    return out;
+  }
+  if(mode==='quincenal'){
+    for(var i=0;i<8;i++){ var start,end;
+      if(dir==='future'){ start=new Date(today); start.setDate(start.getDate()+i*15); end=new Date(start); end.setDate(end.getDate()+14); }
+      else { end=new Date(today); end.setDate(end.getDate()-(7-i)*15); start=new Date(end); start.setDate(start.getDate()-14); }
+      var ks=iso(start), ke=iso(end);
+      out.push({lbl:String(start.getDate()).padStart(2,'0')+'/'+String(start.getMonth()+1).padStart(2,'0'), tot:sum(function(x){return x.fecha>=ks && x.fecha<=ke;})}); }
+    return out;
+  }
+  if(mode==='mensual'){
+    for(var i=0;i<12;i++){ var d=new Date(today.getFullYear(), today.getMonth()+(dir==='future'?i:-(11-i)), 1); var k=mk(d);
+      out.push({lbl:MES[d.getMonth()], tot:sum(function(x){return String(x.fecha).slice(0,7)===k;})}); }
+    return out;
+  }
+  if(mode==='anual'){
+    var years={}; items.forEach(function(x){ var y=String(x.fecha).slice(0,4); years[y]=(years[y]||0)+(x.monto||0); });
+    var ykeys=Object.keys(years).sort(); if(!ykeys.length) ykeys=[String(today.getFullYear())];
+    ykeys.forEach(function(y){ out.push({lbl:y, tot:years[y]||0}); });
+    return out;
+  }
+  return out;
+}
 
 // ─── NOTAS DE COBRANZA (status del cliente en Cuotas Próximas) ───
 var NOTA_COBRANZA = [
