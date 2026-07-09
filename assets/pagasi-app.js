@@ -1976,7 +1976,8 @@ var DB = {
         if(typeof renderDashCuotasChart==='function') renderDashCuotasChart();
         if(typeof renderDashCobrospChart==='function') renderDashCobrospChart();
       }, 300);
-      setTimeout(mostrarAlertaMora, 800); // pequeño delay para que el dashboard cargue
+      // Ventana emergente de "Alertas de Mora" al abrir la app: desactivada a pedido del usuario.
+      // La info de mora está siempre disponible en Pagos → Atrasados y en el badge del menú.
     }).catch(function(e){
       hideLoader();
       // Si es error de red, trabajar con datos locales sin avisar con error
