@@ -587,3 +587,30 @@ function _renderCartaInstrucciones(){
 
 
 // EGRESOS
+
+// Ver el CONTRATO de un crédito desde el listado: selecciona el crédito, lo
+// renderiza en la vista previa (#cz) y lleva la pantalla ahí. (El botón "Ver"
+// antes abría el detalle del crédito con openAmort — no el contrato.)
+function verContratoById(credId){
+  function go(){
+    var sel = document.getElementById('sel-cred');
+    if(sel){
+      var has = Array.prototype.some.call(sel.options||[], function(o){ return String(o.value)===String(credId); });
+      if(!has){
+        var c = (S.creds||[]).find(function(x){ return String(x.id)===String(credId); });
+        var o = document.createElement('option');
+        o.value = credId;
+        o.textContent = credId + (c ? (' — '+(c.cli||'')+' · '+(c.modelo||'')) : '');
+        sel.appendChild(o);
+      }
+      sel.value = credId;
+    }
+    var td = document.getElementById('sel-tipo-doc');
+    if(td) td.value = 'contrato';
+    if(typeof renderContrato==='function') renderContrato();
+    var cz = document.getElementById('cz');
+    if(cz){ try{ cz.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){ cz.scrollIntoView(); } }
+  }
+  if(!document.getElementById('cz')){ if(typeof nav==='function') nav('contratos'); setTimeout(go, 160); }
+  else { go(); }
+}

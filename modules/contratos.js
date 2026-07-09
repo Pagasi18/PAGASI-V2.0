@@ -76,7 +76,7 @@ PG.contratos = function(){
           +'<td style="font-family:var(--fd);font-weight:700;white-space:nowrap">'+fmt(c.total||0)+'</td>'
           +'<td><span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:9.5px;font-weight:800;color:#fff;background:'+estColor+';white-space:nowrap">'+estLabel+'</span></td>'
           +'<td onclick="event.stopPropagation()" style="white-space:nowrap;text-align:right"><div style="display:inline-flex;gap:4px">'
-            +'<button class="btn btn-g btn-xs" onclick="openAmort(\''+c.id+'\')" title="Ver detalle">Ver</button>'
+            +'<button class="btn btn-g btn-xs" onclick="event.stopPropagation();verContratoById(\''+c.id+'\')" title="Ver contrato">Ver</button>'
             +'<button class="btn btn-p btn-xs" onclick="descargarContratoPDFById(\''+c.id+'\')" title="Descargar PDF">↓ PDF</button>'
           +'</div></td>'
           +'</tr>';
