@@ -609,8 +609,40 @@ function verContratoById(credId){
     if(td) td.value = 'contrato';
     if(typeof renderContrato==='function') renderContrato();
     var cz = document.getElementById('cz');
-    if(cz){ try{ cz.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){ cz.scrollIntoView(); } }
+    var html = cz ? cz.innerHTML : '<div style="padding:40px;text-align:center;color:#888">No se pudo generar el contrato</div>';
+    _mostrarContratoOverlay(credId, html);
   }
   if(!document.getElementById('cz')){ if(typeof nav==='function') nav('contratos'); setTimeout(go, 160); }
   else { go(); }
+}
+
+// Overlay a pantalla completa que muestra el contrato ya renderizado.
+function _mostrarContratoOverlay(credId, html){
+  var ov = document.getElementById('contrato-overlay');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'contrato-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(15,23,42,.6);display:none;overflow-y:auto;padding:20px 16px';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){ if(e.target===ov) cerrarContratoOverlay(); });
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape') cerrarContratoOverlay(); });
+  }
+  ov.innerHTML =
+    '<div style="max-width:920px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.35)">'
+    + '<div style="position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;background:#0B1F3A;color:#fff">'
+    +   '<div style="font-weight:800;font-size:14px">Contrato · ' + String(credId).replace(/[<>]/g,'') + '</div>'
+    +   '<div style="display:flex;gap:8px">'
+    +     '<button onclick="descargarContratoPDFById(\'' + credId + '\')" style="background:#2563EB;color:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:700;font-size:12px;cursor:pointer">↓ Descargar PDF</button>'
+    +     '<button onclick="cerrarContratoOverlay()" style="background:rgba(255,255,255,.16);color:#fff;border:0;border-radius:8px;padding:8px 13px;font-weight:700;font-size:12px;cursor:pointer">✕ Cerrar</button>'
+    +   '</div>'
+    + '</div>'
+    + '<div style="padding:14px 8px;background:#eef2f7">' + html + '</div>'
+    + '</div>';
+  ov.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+function cerrarContratoOverlay(){
+  var ov = document.getElementById('contrato-overlay');
+  if(ov) ov.style.display = 'none';
+  document.body.style.overflow = '';
 }
