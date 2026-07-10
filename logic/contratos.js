@@ -32,16 +32,18 @@ function _docCtx(){
   var mSerialChasis = c.serialChasis || moto.serialChasis || c.vin || moto.vin || '';
   var mGpsNum = c.gpsNum || moto.gpsNum || moto.gps_id || '';
   var mConcesionario = (c.concesionarioId && typeof _concGetById==='function') ? ((_concGetById(c.concesionarioId)||{}).nombre||'') : '';
-  var purple = '#5E3BEE';
-  var purpleDark = '#4C2ED0';
-  var purpleLight = '#F2EEFF';
-  var rowStyle = 'padding:8px 12px;border-bottom:1px solid #EAE5F7;font-size:11.5px';
+  // Identidad Pagasi: azul de marca (las variables conservan el nombre 'purple'
+  // por compatibilidad, pero el color es el azul #2563EB del sistema)
+  var purple = '#2563EB';
+  var purpleDark = '#1D4ED8';
+  var purpleLight = '#EFF6FF';
+  var rowStyle = 'padding:8px 12px;border-bottom:1px solid #DBEAFE;font-size:11.5px';
   var tableHdr = 'background:'+purple+';color:#fff;font-size:12px;font-weight:800;text-align:center;padding:9px 10px;letter-spacing:.3px;text-transform:uppercase';
   var clausH = 'color:'+purple+';font-weight:900;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;margin:18px 0 8px;padding-bottom:4px;border-bottom:2px solid '+purple;
   var p = 'font-size:11.5px;line-height:1.55;color:#222;margin:6px 0;text-align:justify';
   var li = 'font-size:11.5px;line-height:1.55;color:#222;margin:3px 0;text-align:justify';
   var lblCell = 'background:'+purpleLight+';color:'+purpleDark+';font-weight:700;font-size:11.5px;padding:7px 10px;width:22%';
-  var valCell = 'padding:7px 10px;font-size:11.5px;border-bottom:1px solid #EAE5F7;width:28%';
+  var valCell = 'padding:7px 10px;font-size:11.5px;border-bottom:1px solid #DBEAFE;width:28%';
   return { c:c, cli:cli, moto:moto, emp:emp, empresaUp:empresaUp, logoSrc:logoSrc, hoy:hoy, fechaContrato:fechaContrato, V:V, Vm:Vm,
            mModelo:mModelo, mVin:mVin, mColor:mColor, mAnio:mAnio, mPlaca:mPlaca, mMarca:mMarca, mConcesionario:mConcesionario,
            mSerialMotor:mSerialMotor, mSerialChasis:mSerialChasis, mGpsNum:mGpsNum,
@@ -143,7 +145,7 @@ function _renderContratoArrendamiento(){
     </div>
 
     <!-- Título -->
-    <div style="background:${purple};color:#fff;text-align:center;padding:12px 16px;border-radius:4px;margin-bottom:4px;border-bottom:4px solid #E8C842">
+    <div style="background:${purple};color:#fff;text-align:center;padding:12px 16px;border-radius:4px;margin-bottom:4px;border-bottom:4px solid #1D4ED8">
       <div style="font-size:15.5px;font-weight:900;letter-spacing:.3px">CONTRATO DE VENTA DE MOTOCICLETA EN CUOTAS</div>
       <div style="font-size:11px;opacity:.85;margin-top:3px;font-weight:600">CON RESERVA DE DOMINIO</div>
     </div>
@@ -154,7 +156,7 @@ function _renderContratoArrendamiento(){
     <!-- PRIMERA -->
     <h3 style="${clausH}">PRIMERA: OBJETO</h3>
     <p style="${p}">LA VENDEDORA da en venta a EL COMPRADOR, quien acepta comprar, una motocicleta identificada de la siguiente manera:</p>
-    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #EAE5F7">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #DBEAFE">
       <tr><td style="${lblCell}">Marca:</td><td style="${valCell}">${blank(mMarca)}</td><td style="${lblCell}">Modelo:</td><td style="${valCell}">${blank(mModelo)}</td></tr>
       <tr><td style="${lblCell}">Año:</td><td style="${valCell}">${blank(mAnio)}</td><td style="${lblCell}">Color:</td><td style="${valCell}">${blank(mColor)}</td></tr>
       <tr><td style="${lblCell}">Serial de carrocería / VIN:</td><td style="${valCell}">${blank(mSerialChasis)}</td><td style="${lblCell}">Serial de motor:</td><td style="${valCell}">${blank(mSerialMotor)}</td></tr>
@@ -165,7 +167,7 @@ function _renderContratoArrendamiento(){
     <!-- SEGUNDA -->
     <h3 style="${clausH}">SEGUNDA: PRECIO Y CONDICIONES DE PAGO</h3>
     <p style="${p}">El precio y las condiciones de pago de la motocicleta serán los siguientes:</p>
-    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #EAE5F7">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #DBEAFE">
       <tr><td style="${lblCell}">Inicial (USD $):</td><td style="${valCell};font-weight:700">${blank(iniMonto?'$ '+iniMonto.toFixed(2):null)}</td><td style="${lblCell}">Cuotas quincenales (USD $):</td><td style="${valCell};font-weight:700">${blank(cuotaMonto?'$ '+cuotaMonto.toFixed(2):null)}</td></tr>
       <tr><td style="${lblCell}">Número de cuotas:</td><td style="${valCell};font-weight:700">${blank(nCuotas?String(nCuotas):null)}</td><td style="${lblCell}">Precio total motocicleta:</td><td style="${valCell};font-weight:700">${blank(c.precio?'$ '+parseFloat(c.precio).toFixed(2):null)}</td></tr>
     </table>
@@ -178,7 +180,7 @@ function _renderContratoArrendamiento(){
 
     <!-- CUARTA -->
     <h3 style="${clausH}">CUARTA: FORMA DE PAGO EN CUOTAS</h3>
-    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #EAE5F7">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #DBEAFE">
       <tr><td style="${lblCell}">Número total de cuotas:</td><td style="${valCell}">${blank(nCuotas?String(nCuotas):null)}</td><td style="${lblCell}">Monto de cada cuota quincenal:</td><td style="${valCell};font-weight:700">${blank(cuotaMonto?'$ '+cuotaMonto.toFixed(2):null)}</td></tr>
       <tr><td style="${lblCell}">Fecha primera cuota:</td><td style="${valCell}">${blank(fmtFecha(fechaPrimeraCuota))}</td><td style="${lblCell}">Fecha última cuota (est.):</td><td style="${valCell}">${blank(fmtFecha(fechaUltimaCuota))}</td></tr>
       <tr><td style="${lblCell}">Día(s) de pago:</td><td style="${valCell}" colspan="3">Cada quince (15) días a partir de la fecha de suscripción</td></tr>
@@ -193,7 +195,7 @@ function _renderContratoArrendamiento(){
       var numBadge='display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:'+purple+';color:#fff;font-size:10px;font-weight:800;border-radius:50%;flex-shrink:0';
       var fechaStyle='font-size:10.5px;color:#444;font-weight:600;flex:1;line-height:1.2';
       var montoStyle='font-size:10.5px;font-weight:800;color:'+purpleDark+';white-space:nowrap';
-      var html='<div style="background:'+purpleLight+';border:1px solid #DDD2F5;border-radius:6px;padding:10px">';
+      var html='<div style="background:'+purpleLight+';border:1px solid #BFDBFE;border-radius:6px;padding:10px">';
       html+='<div style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:6px">';
       for(var i=0;i<nCuotas;i++){
         var fd=new Date(fechaInicio.getTime()+((i+1)*15*24*60*60*1000));
@@ -251,7 +253,7 @@ function _renderContratoArrendamiento(){
 
     <!-- DÉCIMA TERCERA -->
     <h3 style="${clausH}">DÉCIMA TERCERA: DATOS Y REFERENCIAS DE EL COMPRADOR</h3>
-    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #EAE5F7">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #DBEAFE">
       <tr><td style="${lblCell}">Dirección de habitación:</td><td style="${valCell}" colspan="3">${blank(cliDir,40)}</td></tr>
       <tr><td style="${lblCell}">Dirección de trabajo:</td><td style="${valCell}" colspan="3">${blank(cliDirTrab,40)}</td></tr>
       <tr><td style="${lblCell}">Empresa donde trabaja:</td><td style="${valCell}">${blank(cliEmpresa)}</td><td style="${lblCell}">Cargo:</td><td style="${valCell}">${blank(cliCargo)}</td></tr>
@@ -259,12 +261,12 @@ function _renderContratoArrendamiento(){
       <tr><td style="${lblCell}">Teléfono personal:</td><td style="${valCell}">${blank(cliTel)}</td><td style="${lblCell}">Correo electrónico:</td><td style="${valCell}">${blank(cliEmail)}</td></tr>
     </table>
     <p style="${p};font-weight:700;margin-top:10px">Referencia personal 1:</p>
-    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;border:1px solid #EAE5F7">
+    <table style="width:100%;border-collapse:collapse;margin:4px 0 10px;border:1px solid #DBEAFE">
       <tr><td style="${lblCell}">Nombre:</td><td style="${valCell}">${blank(V(r1.nom))}</td><td style="${lblCell}">Cédula:</td><td style="${valCell}">${blank(V(r1.ci))}</td></tr>
       <tr><td style="${lblCell}">Teléfono:</td><td style="${valCell}">${blank(V(r1.tel))}</td><td style="${lblCell}">Relación:</td><td style="${valCell}">${blank(V(r1.rel))}</td></tr>
     </table>
     <p style="${p};font-weight:700">Referencia personal 2:</p>
-    <table style="width:100%;border-collapse:collapse;margin:4px 0;border:1px solid #EAE5F7">
+    <table style="width:100%;border-collapse:collapse;margin:4px 0;border:1px solid #DBEAFE">
       <tr><td style="${lblCell}">Nombre:</td><td style="${valCell}">${blank(V(r2.nom))}</td><td style="${lblCell}">Cédula:</td><td style="${valCell}">${blank(V(r2.ci))}</td></tr>
       <tr><td style="${lblCell}">Teléfono:</td><td style="${valCell}">${blank(V(r2.tel))}</td><td style="${lblCell}">Relación:</td><td style="${valCell}">${blank(V(r2.rel))}</td></tr>
     </table>
@@ -273,7 +275,7 @@ function _renderContratoArrendamiento(){
     <h3 style="${clausH}">DÉCIMA CUARTA: FIADOR O GARANTE${tieneFiador?'':' (SI APLICA)'}</h3>
     ${tieneFiador ? `
     <p style="${p}">En caso de requerirse fiador, comparece el ciudadano/la ciudadana:</p>
-    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #EAE5F7">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #DBEAFE">
       <tr><td style="${lblCell}">Nombre:</td><td style="${valCell}">${blank(fiadNom)}</td><td style="${lblCell}">Cédula:</td><td style="${valCell}">${blank(fiadCi)}</td></tr>
       <tr><td style="${lblCell}">RIF:</td><td style="${valCell}">${blank(fiadRif)}</td><td style="${lblCell}">Teléfono:</td><td style="${valCell}">${blank(fiadTel)}</td></tr>
       <tr><td style="${lblCell}">Dirección:</td><td style="${valCell}" colspan="3">${blank(fiadDir,40)}</td></tr>
@@ -290,7 +292,7 @@ function _renderContratoArrendamiento(){
 
     <!-- DÉCIMA QUINTA -->
     <h3 style="${clausH}">DÉCIMA QUINTA: NOTIFICACIONES</h3>
-    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #EAE5F7">
+    <table style="width:100%;border-collapse:collapse;margin:8px 0;border:1px solid #DBEAFE">
       <tr><td style="${lblCell}">Correo de EL COMPRADOR:</td><td style="${valCell}">${blank(cliEmail,25)}</td><td style="${lblCell}">Tel / WhatsApp EL COMPRADOR:</td><td style="${valCell}">${blank(cliTel,14)}</td></tr>
       <tr><td style="${lblCell}">Correo de LA VENDEDORA:</td><td style="${valCell}">${blank(V(emp.email),25)}</td><td style="${lblCell}">Tel / WhatsApp LA VENDEDORA:</td><td style="${valCell}">${blank(V(emp.tel),14)}</td></tr>
     </table>
@@ -304,13 +306,13 @@ function _renderContratoArrendamiento(){
     <p style="${p}">Leído el presente contrato por las partes, y estando conformes con su contenido, lo firman en dos ejemplares de un mismo tenor y a un solo efecto, en la ciudad de <strong>${emp.ciudad||'Caracas'}</strong>, a los _____ días del mes de __________________ de ______.</p>
 
     <!-- FIRMAS -->
-    <table style="width:100%;border-collapse:collapse;margin-top:32px;border:1px solid #EAE5F7">
+    <table style="width:100%;border-collapse:collapse;margin-top:32px;border:1px solid #DBEAFE">
       <tr>
         <th style="background:${purple};color:#fff;padding:10px;text-align:center;width:50%;font-size:12px">LA VENDEDORA<br>${empresaUp}<br>RIF ${V(emp.rif)||'J-50829589-7'}</th>
         <th style="background:${purple};color:#fff;padding:10px;text-align:center;width:50%;font-size:12px">EL COMPRADOR</th>
       </tr>
       <tr>
-        <td style="padding:16px 20px 16px;vertical-align:bottom;border-right:1px solid #EAE5F7">
+        <td style="padding:16px 20px 16px;vertical-align:bottom;border-right:1px solid #DBEAFE">
           <div style="text-align:center;height:46px"><img src="data:image/png;base64,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" alt="Firma autorizada" style="height:52px;max-width:78%;object-fit:contain;margin-bottom:-12px"></div>
           <div style="border-top:1px solid #444;padding-top:6px;font-size:11px;color:#555;text-align:center">Firma autorizada</div>
         </td>
@@ -322,7 +324,7 @@ function _renderContratoArrendamiento(){
         </td>
       </tr>
       <tr>
-        <td colspan="2" style="padding:16px 20px;border-top:1px solid #EAE5F7">
+        <td colspan="2" style="padding:16px 20px;border-top:1px solid #DBEAFE">
           <div style="font-weight:700;font-size:11px;margin-bottom:8px;color:${purple}">FIADOR / GARANTE${tieneFiador?'':' (si aplica)'}</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;margin-bottom:20px">
             <div>Nombre: <strong>${fiadNom||'________________________'}</strong></div>
@@ -367,7 +369,7 @@ function _renderPagare(){
     </div>
 
     <!-- Título principal -->
-    <div style="background:${purple};color:#fff;text-align:center;padding:12px 16px;border-radius:4px;margin-bottom:4px;border-bottom:4px solid #E8C842">
+    <div style="background:${purple};color:#fff;text-align:center;padding:12px 16px;border-radius:4px;margin-bottom:4px;border-bottom:4px solid #1D4ED8">
       <div style="font-size:15.5px;font-weight:900;letter-spacing:.3px">PAGARÉ A LA ORDEN</div>
     </div>
 
@@ -392,7 +394,7 @@ function _renderPagare(){
 
     <!-- Condiciones de pago -->
     <h3 style="${clausH}">CONDICIONES DE PAGO</h3>
-    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
+    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #DBEAFE">
       <tr><td style="${lblCell}">Monto total adeudado:</td><td style="${valCell};font-weight:700">${Vm(monto)}</td></tr>
       <tr><td style="${lblCell}">Forma de pago:</td><td style="${valCell}">${totalCuotas} cuotas quincenales consecutivas</td></tr>
       <tr><td style="${lblCell}">Monto de cada cuota:</td><td style="${valCell};font-weight:700">${Vm(cuotaQ)}</td></tr>
@@ -414,7 +416,7 @@ function _renderPagare(){
     <!-- Fiador solidario -->
     <h3 style="${clausH}">AVAL / FIADOR SOLIDARIO</h3>
     <p style="${p}">Se constituye como <strong>avalista y principal pagador solidario</strong> de las obligaciones aquí contenidas, renunciando al beneficio de excusión y de división:</p>
-    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
+    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #DBEAFE">
       <tr><td style="${lblCell}">Nombre y Apellido:</td><td style="${valCell}">${V(cli.fiador_nom)}</td></tr>
       <tr><td style="${lblCell}">Cédula de Identidad:</td><td style="${valCell}">${V(cli.fiador_ci)}</td></tr>
       <tr><td style="${lblCell}">Teléfono:</td><td style="${valCell}">${V(cli.fiador_tel)}</td></tr>
@@ -444,8 +446,8 @@ function _renderPagare(){
             </div>
           </div>
         </div>
-        <div style="background:#F6EEFC;padding:14px 10px;border-radius:4px">
-          <div style="background:#8B5BC9;color:#fff;font-weight:800;font-size:11.5px;padding:5px 8px;border-radius:3px;margin-bottom:10px;text-align:center">EL AVALISTA / FIADOR</div>
+        <div style="background:#EFF6FF;padding:14px 10px;border-radius:4px">
+          <div style="background:#3B82F6;color:#fff;font-weight:800;font-size:11.5px;padding:5px 8px;border-radius:3px;margin-bottom:10px;text-align:center">EL AVALISTA / FIADOR</div>
           <div style="display:grid;grid-template-columns:1fr 60px;gap:8px;align-items:end">
             <div style="text-align:center;padding-top:46px">
               <div style="border-top:1px solid #333;padding-top:6px;font-size:10px;line-height:1.45">
@@ -488,7 +490,7 @@ function _renderCartaInstrucciones(){
     </div>
 
     <!-- Título principal -->
-    <div style="background:${purple};color:#fff;text-align:center;padding:12px 16px;border-radius:4px;margin-bottom:4px;border-bottom:4px solid #E8C842">
+    <div style="background:${purple};color:#fff;text-align:center;padding:12px 16px;border-radius:4px;margin-bottom:4px;border-bottom:4px solid #1D4ED8">
       <div style="font-size:15.5px;font-weight:900;letter-spacing:.3px">CARTA DE INSTRUCCIONES Y AUTORIZACIONES</div>
     </div>
 
@@ -518,7 +520,7 @@ function _renderCartaInstrucciones(){
 
     <h3 style="${clausH}">CUARTA: MEDIOS DE CONTACTO Y NOTIFICACIÓN</h3>
     <p style="${p}">Declaro como mis medios válidos de contacto y notificación, a los efectos del contrato y de cualquier gestión de cobranza, los siguientes:</p>
-    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
+    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #DBEAFE">
       <tr><td style="${lblCell}">Teléfono principal:</td><td style="${valCell}">${V(cli.tel)}</td></tr>
       <tr><td style="${lblCell}">WhatsApp:</td><td style="${valCell}">${V(cli.wa||cli.tel)}</td></tr>
       <tr><td style="${lblCell}">Correo electrónico:</td><td style="${valCell}">${V(cli.email)}</td></tr>
@@ -531,7 +533,7 @@ function _renderCartaInstrucciones(){
 
     <h3 style="${clausH}">SEXTA: DATOS DE LA UNIDAD ARRENDADA</h3>
     <p style="${p}">Declaro haber recibido a mi entera satisfacción, en buen estado de funcionamiento, limpieza y conservación, la unidad que se describe a continuación:</p>
-    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #EAE5F7">
+    <table style="width:100%;border-collapse:collapse;margin-top:6px;border:1px solid #DBEAFE">
       <tr><td style="${lblCell}">Modelo:</td><td style="${valCell}">${V(mModelo)}</td><td style="${lblCell}">Color:</td><td style="${valCell}">${V(mColor)}</td></tr>
       <tr><td style="${lblCell}">Año:</td><td style="${valCell}">${V(mAnio)}</td><td style="${lblCell}">Placa:</td><td style="${valCell}">${V(mPlaca)}</td></tr>
       <tr><td style="${lblCell}">Concesionario / Punto de venta:</td><td style="${valCell}" colspan="3">${V(mConcesionario)}</td></tr>

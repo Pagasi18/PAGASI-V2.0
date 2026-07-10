@@ -124,30 +124,46 @@ function abrirFiniquito(credId){
 function imprimirFiniquito(){
   var doc=$('finiquito-doc');
   if(!doc){window.print();return;}
-  var w=window.open('','_blank','width=800,height=600');
-  w.document.write('<html><head><title>Constancia de Finalización</title><style>body{font-family:\'Segoe UI\',Roboto,Arial,sans-serif;padding:30px;color:#222;background:#fff}@media print{body{padding:12px}}</style></head><body>'+doc.outerHTML+'<script>window.onload=function(){window.print();}<\/script></body></html>');
-  w.document.close();
+  // Usa la ventana unificada Pagasi (Nunito + azul); el doc trae su propio membrete
+  _abrirVentanaImpresion('Constancia de Finalización', doc.outerHTML, {sinHeader:true});
 }
 
 // ══════════════════════════════════════════
 // GENERACIÓN DE REPORTES (imprime como PDF)
 // ══════════════════════════════════════════
 
-function _abrirVentanaImpresion(titulo, htmlContenido){
+// Ventana de impresión con la identidad Pagasi (logo, Nunito, azul #2563EB).
+// TODOS los reportes del sistema deben salir por aquí para verse iguales.
+// opts.sinHeader: true cuando el contenido ya trae su propio membrete (contratos, finiquito).
+function _abrirVentanaImpresion(titulo, htmlContenido, opts){
+  opts = opts || {};
   var estilos = `
-    body{font-family:Georgia,serif;padding:32px;color:#111;font-size:12px;line-height:1.7}
-    h2{text-align:center;font-size:16px;letter-spacing:1px;margin-bottom:4px}
-    h3{font-size:13px;margin-top:18px;margin-bottom:6px;border-bottom:1px solid #ddd;padding-bottom:4px}
+    *{box-sizing:border-box}
+    body{font-family:'Nunito','Nunito Sans',system-ui,-apple-system,Arial,sans-serif;padding:32px;color:#1f2937;font-size:12px;line-height:1.7;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    h2{text-align:center;font-size:17px;letter-spacing:.4px;margin-bottom:4px;color:#0B1F3A;font-weight:900}
+    h3{font-size:12.5px;margin-top:18px;margin-bottom:6px;border-bottom:2px solid #2563EB;padding-bottom:4px;color:#1D4ED8;font-weight:900;text-transform:uppercase;letter-spacing:.4px}
     table{width:100%;border-collapse:collapse;font-size:11.5px}
-    td,th{padding:5px 6px;border-bottom:1px solid #eee;vertical-align:top}
-    th{background:#f5f5f5;font-weight:800;font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px}
-    .ar{display:grid;padding:5px 0;border-bottom:1px solid #eee;font-size:11px}
-    .ah{display:grid;padding:5px 0;border-bottom:2px solid #111;font-weight:800;font-size:10.5px;text-transform:uppercase}
+    td,th{padding:6px 7px;border-bottom:1px solid #DBEAFE;vertical-align:top}
+    th{background:#EFF6FF;color:#1D4ED8;font-weight:800;font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px}
+    tr:nth-child(even) td{background:#FAFCFF}
+    .ar{display:grid;padding:5px 0;border-bottom:1px solid #E5EDFB;font-size:11px}
+    .ah{display:grid;padding:5px 0;border-bottom:2px solid #1D4ED8;font-weight:800;font-size:10.5px;text-transform:uppercase;color:#1D4ED8}
     .pd{opacity:0.45;text-decoration:line-through}
+    .pg-hd{display:flex;justify-content:space-between;align-items:center;border-bottom:2.5px solid #2563EB;padding-bottom:12px;margin-bottom:18px}
+    .pg-hd img{height:38px;object-fit:contain}
+    .pg-hd .co{text-align:right;font-size:9.5px;color:#64748b;line-height:1.6}
+    .pg-hd .co b{color:#1D4ED8;font-size:11.5px}
     @media print{body{padding:12px}button{display:none!important}}
   `;
+  var fonts = '<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">';
+  var logo = (typeof _PAGASI_LOGO_BLUE!=='undefined'&&_PAGASI_LOGO_BLUE) || ((document.querySelector('.sb-logo img')||{}).src||'');
+  var header = opts.sinHeader ? '' :
+    '<div class="pg-hd">'
+    +(logo?'<img src="'+logo+'" alt="Pagasi">':'<div style="font-size:20px;font-weight:900;color:#2563EB">PAGASI</div>')
+    +'<div class="co"><b>PAGASI</b><br>Sistema de Gestión de Crédito<br>pagasi.io · '+new Date().toLocaleDateString('es-VE')+'</div>'
+    +'</div>';
   var w = window.open('','_blank','width=860,height=700');
-  w.document.write('<html><head><title>'+titulo+'</title><style>'+estilos+'</style></head><body>'+htmlContenido+'<br><button onclick="window.print()" style="background:#2563EB;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:16px">Imprimir / Guardar PDF</button><script>setTimeout(function(){window.print();},400);<\/script></body></html>');
+  w.document.write('<html><head><title>'+titulo+'</title>'+fonts+'<style>'+estilos+'</style></head><body>'+header+htmlContenido+'<br><button onclick="window.print()" style="background:#2563EB;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:16px;font-family:inherit;font-weight:700">Imprimir / Guardar PDF</button><script>setTimeout(function(){window.print();},600);<\/script></body></html>');
   w.document.close();
 }
 
@@ -474,7 +490,7 @@ function descargarContratoPDF(){
     var cz = $('cz');
     if(!cz){ toast('Selecciona un crédito primero','error'); return; }
     var credId = ($('sel-cred')&&$('sel-cred').value)||'contrato';
-    _abrirVentanaImpresion('Contrato '+credId, cz.innerHTML);
+    _abrirVentanaImpresion('Contrato '+credId, cz.innerHTML, {sinHeader:true});
   }, 200);
 }
 
@@ -496,7 +512,7 @@ function descargarContratoPDFById(credId){
     renderContrato();
     var cz = $('cz');
     if(!cz){ toast('No se pudo generar el contrato','error'); return; }
-    _abrirVentanaImpresion('Contrato '+credId, cz.innerHTML);
+    _abrirVentanaImpresion('Contrato '+credId, cz.innerHTML, {sinHeader:true});
     if(sel && prevSel!==null) sel.value = prevSel;
   }, 150);
 }
@@ -654,7 +670,7 @@ function generarReporte(tipo){
   var titulo, html_content;
   var empresa = ($('cfg_empresa')&&$('cfg_empresa').value)||'Pagasi';
   var fecha = new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
-  var estilos = '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:24px}h1{font-size:18px;font-weight:900;margin-bottom:4px}h2{font-size:13px;color:#555;font-weight:400;margin-bottom:16px}table{width:100%;border-collapse:collapse;margin-top:12px}th{background:#2563EB;color:#fff;padding:7px 9px;text-align:left;font-size:11px}td{padding:6px 9px;border-bottom:1px solid #eee;font-size:11px}tr:nth-child(even){background:#f9f9ff}.total-row{font-weight:900;background:#ede8ff!important}.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}.green{background:#d4f5e9;color:#0a7a50}.red{background:#fde8ec;color:#b5162d}.blue{background:#e0d9ff;color:#4834d4}.gray{background:#f0f0f0;color:#555}.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #2563EB}.logo-area{}.meta{text-align:right;color:#666;font-size:11px}.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}.stat-box{background:#f8f7ff;border:1px solid #e0d9ff;border-radius:8px;padding:12px;text-align:center}.stat-v{font-size:18px;font-weight:900;color:#2563EB}.stat-l{font-size:10px;color:#888;margin-top:2px}@media print{button{display:none!important}}</style>';
+  var estilos = '<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"><style>*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:\'Nunito\',system-ui,-apple-system,Arial,sans-serif;font-size:12px;color:#1f2937;padding:24px}h1{font-size:18px;font-weight:900;margin-bottom:4px;color:#1D4ED8}h2{font-size:13px;color:#64748b;font-weight:600;margin-bottom:16px}table{width:100%;border-collapse:collapse;margin-top:12px}th{background:#EFF6FF;color:#1D4ED8;padding:7px 9px;text-align:left;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #2563EB}td{padding:6px 9px;border-bottom:1px solid #DBEAFE;font-size:11px}tr:nth-child(even){background:#FAFCFF}.total-row{font-weight:900;background:#DBEAFE!important}.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}.green{background:#d4f5e9;color:#0a7a50}.red{background:#fde8ec;color:#b5162d}.blue{background:#DBEAFE;color:#1D4ED8}.gray{background:#f0f0f0;color:#555}.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid #2563EB}.logo-area{display:flex;align-items:center;gap:14px}.logo-area img{height:38px;object-fit:contain}.meta{text-align:right;color:#64748b;font-size:11px}.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}.stat-box{background:#F5F8FF;border:1px solid #DBEAFE;border-radius:8px;padding:12px;text-align:center}.stat-v{font-size:18px;font-weight:900;color:#2563EB}.stat-l{font-size:10px;color:#64748b;margin-top:2px}@media print{button{display:none!important}}</style>';
 
   if(tipo==='ingresos'){
     titulo = 'Reporte de Ingresos Mensuales';
@@ -817,9 +833,10 @@ function generarReporte(tipo){
   var doc = window.open('about:blank','_blank');
   if(!doc){ toast('No se pudo abrir el reporte. Permite ventanas emergentes para pagasi.io','error'); return; }
   doc.document.open();
+  var _logoPdf = (typeof _PAGASI_LOGO_BLUE!=='undefined'&&_PAGASI_LOGO_BLUE) || ((document.querySelector('.sb-logo img')||{}).src||'');
   doc.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titulo+' — '+empresa+'</title>'+estilos+'</head><body>'
-    +'<div class="header"><div class="logo-area"><h1>'+empresa+'</h1><h2>'+titulo+'</h2></div>'
-    +'<div class="meta">'+fecha+'<br><button onclick="window.print()" style="margin-top:8px;background:#2563EB;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px">Imprimir / Guardar PDF</button></div>'
+    +'<div class="header"><div class="logo-area">'+(_logoPdf?'<img src="'+_logoPdf+'" alt="Pagasi">':'')+'<div><h1>'+empresa+'</h1><h2>'+titulo+'</h2></div></div>'
+    +'<div class="meta">'+fecha+'<br><button onclick="window.print()" style="margin-top:8px;background:#2563EB;color:#fff;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:700">Imprimir / Guardar PDF</button></div>'
     +'</div>'+html_content+'</body></html>');
   doc.document.close();
   }catch(err){

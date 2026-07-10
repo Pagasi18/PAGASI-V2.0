@@ -97,8 +97,9 @@ function imprimirRecibo(pago, cred){
   var fecha = new Date(pago.fecha+'T12:00:00').toLocaleDateString('es-VE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
     +'<title>Recibo '+pago.id+'</title>'
+    +'<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">'
     +'<style>'
-    +'*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}'
+    +'*{margin:0;padding:0;box-sizing:border-box;font-family:\'Nunito\',system-ui,Arial,sans-serif}'
     +'body{background:#fff;color:#111;padding:40px}'
     +'.recibo{max-width:420px;margin:auto;border:1px solid #ddd;border-radius:12px;overflow:hidden}'
     +'.header{background:#2563EB;color:#fff;padding:24px;text-align:center}'
