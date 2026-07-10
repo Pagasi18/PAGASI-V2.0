@@ -491,6 +491,25 @@ function _concAbrirDetalle(id){
       + '<td><button class="btn btn-d btn-xs" onclick="_concDelAnticipo(\''+id+'\',\''+a.id+'\')" title="Eliminar anticipo">✕</button></td>'
       + '</tr>';
   }).join('');
+  // ── Kardex: TODAS las entradas (anticipos) y salidas (motos) con saldo acumulado ──
+  var movs = fin.anticipos.map(function(a){
+      return { fecha:a.fecha||'', det:'Anticipo · '+(a.metodo||'—')+(a.ref?' · '+a.ref:'')+(a.nota?' · '+a.nota:''), monto:parseFloat(a.monto)||0 };
+    }).concat(fin.creds.map(function(cr){
+      return { fecha:cr.fecha||'', det:cr.id+' · '+(cr.cli||'')+' · '+(cr.modelo||''), monto:-(parseFloat(cr.precioBaseReal||cr.precio)||0), credId:cr.id };
+    })).sort(function(a,b){ return String(a.fecha).localeCompare(String(b.fecha)); });
+  var _run = 0;
+  movs.forEach(function(m){ _run += m.monto; m.saldo = _run; });
+  var filasMov = movs.slice().reverse().map(function(m){
+    var esIn = m.monto >= 0;
+    return '<tr'+(m.credId?' style="cursor:pointer" onclick="closeM();openAmort(\''+m.credId+'\')"':'')+'>'
+      + '<td class="tds">'+(m.fecha||'—')+'</td>'
+      + '<td><span class="bdg '+(esIn?'b-g':'b-a')+'" style="font-size:8.5px">'+(esIn?'ENTRADA':'SALIDA')+'</span></td>'
+      + '<td class="tds" style="max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(m.det)+'">'+esc(m.det)+'</td>'
+      + '<td style="text-align:right;font-family:var(--fd);font-weight:800;color:var(--green)">'+(esIn?fmt(m.monto):'')+'</td>'
+      + '<td style="text-align:right;font-family:var(--fd);font-weight:800;color:var(--red)">'+(!esIn?'−'+fmt(Math.abs(m.monto)):'')+'</td>'
+      + '<td style="text-align:right;font-family:var(--fd);font-weight:900;color:'+(m.saldo>=0?'var(--green)':'var(--red)')+'">'+fmt(m.saldo)+'</td>'
+      + '</tr>';
+  }).join('');
   setMicon('conces');
   $('mtt').textContent= c.nombre;
   $('msb').textContent= 'Detalle del concesionario · saldo y movimientos';
@@ -509,6 +528,13 @@ function _concAbrirDetalle(id){
     + '<span><b>Estado:</b> '+(c.activo!==false?'<span style="color:var(--green);font-weight:700">Activo</span>':'<span style="color:var(--red);font-weight:700">Inactivo</span>')+'</span>'
     + '<span><b>Usuarios:</b> '+usuarios.length+'</span>'
     + '</div>'
+    // ── Historial de movimientos (kardex con saldo acumulado) ──
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Historial de movimientos — entradas y salidas ('+movs.length+')</div>'
+    + (movs.length===0
+      ? '<div style="padding:14px;text-align:center;background:var(--gs);border-radius:9px;color:var(--ink3);font-size:11.5px;margin-bottom:13px">Sin movimientos todavía.</div>'
+      : '<div class="tw tw-compact" style="max-height:240px;overflow-y:auto;margin-bottom:13px"><table>'
+        + '<thead><tr><th>Fecha</th><th>Tipo</th><th>Detalle</th><th style="text-align:right">Entrada</th><th style="text-align:right">Salida</th><th style="text-align:right">Saldo</th></tr></thead>'
+        + '<tbody>'+filasMov+'</tbody></table></div>')
     // ── Anticipos enviados ──
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">'
     + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Dinero enviado — anticipos ('+fin.anticipos.length+')</div>'

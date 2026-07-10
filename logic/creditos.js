@@ -157,8 +157,11 @@ function _wzRender(motoId){
     + '</div>'
     + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Se guardará en el catálogo y se usará en este crédito.</div>'
     + '</div>'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'
-    + _wzFg('Precio (USD)','wz_precio','number','0','oninput="_wzActualizarPrecioBaseDesdePrecio();_wzActualizarFinPreview(this.value);_wzMpagoSync();_wzCuotaSug();_wzScore()"',true)
+    // El campo visible "Precio (USD)" se retiró: el precio del crédito se toma del
+    // "Precio base real" del plan. Se mantiene un input oculto porque score,
+    // validación, preview y guardado leen wz_precio.
+    + '<input type="hidden" id="wz_precio" value="">'
+    + '<div style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px">'
     + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Uso de la moto *</label>'
     + '<select class="fs" id="wz_uso" onchange="_wzScore()">'
     + '<option value="personal">Personal</option>'
@@ -170,7 +173,7 @@ function _wzRender(motoId){
     + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Plan del crédito</div>'
     + '<div class="fgr">'
     + '<div class="fg"><label>Tipo de plan</label><select class="fs" id="wz_plan_mode" onchange="_wzTogglePlanMode(this.value)"><option value="custom" selected>Plan personalizado</option></select></div>'
-    + '<div class="fg"><label>Precio base real (USD)</label><input class="fi" id="wz_precio_base_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzMpagoSync();_wzCuotaSug();_wzScore()"></div>'
+    + '<div class="fg"><label>Precio base real (USD)</label><input class="fi" id="wz_precio_base_real" type="number" placeholder="0.00" oninput="_wzSyncPrecioBase(this.value);_wzActualizarFinPreview(WZ.precio||0);_wzMpagoSync();_wzCuotaSug();_wzScore()"></div>'
     + '</div>'
     + '<div id="wz_plan_custom_box" style="display:block;margin-top:10px">'
     + '<div class="fgr">'
@@ -909,6 +912,14 @@ function _wzPickCliente(sel){
   _wzRender();
 }
 
+// El precio del crédito ahora se escribe en "Precio base real"; este helper lo
+// copia al input oculto wz_precio (score, validación, preview y guardado lo leen).
+function _wzSyncPrecioBase(v){
+  var p=document.getElementById('wz_precio');
+  if(p) p.value=v;
+  WZ.precio=parseFloat(v)||0;
+}
+
 function _wzActualizarPrecioBaseDesdePrecio(){
   var pInp=document.getElementById('wz_precio');
   var baseInp=document.getElementById('wz_precio_base_real');
@@ -1396,7 +1407,7 @@ function _wzValidar(){
   }
   if(s===3){
     var precio = parseFloat((document.getElementById('wz_precio')||{}).value)||0;
-    if(precio<=0 && !_modoEdicion){ toast('Selecciona una moto o ingresa el precio','error'); return false; }
+    if(precio<=0 && !_modoEdicion){ toast('Ingresa el precio base real de la moto','error'); return false; }
     if(precio<=0) precio = WZ.precio||0; // en edición usar precio guardado
     WZ.precio = precio;
     var planMode=((document.getElementById('wz_plan_mode')||{}).value)||'custom';
