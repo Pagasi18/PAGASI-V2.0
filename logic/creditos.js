@@ -158,7 +158,7 @@ function _wzRender(motoId){
     + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Se guardará en el catálogo y se usará en este crédito.</div>'
     + '</div>'
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'
-    + _wzFg('Precio (USD)','wz_precio','number','0','oninput="_wzActualizarPrecioBaseDesdePrecio();_wzActualizarFinPreview(this.value);_wzMpagoSync();_wzScore()"',true)
+    + _wzFg('Precio (USD)','wz_precio','number','0','oninput="_wzActualizarPrecioBaseDesdePrecio();_wzActualizarFinPreview(this.value);_wzMpagoSync();_wzCuotaSug();_wzScore()"',true)
     + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Uso de la moto *</label>'
     + '<select class="fs" id="wz_uso" onchange="_wzScore()">'
     + '<option value="personal">Personal</option>'
@@ -170,15 +170,16 @@ function _wzRender(motoId){
     + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Plan del crédito</div>'
     + '<div class="fgr">'
     + '<div class="fg"><label>Tipo de plan</label><select class="fs" id="wz_plan_mode" onchange="_wzTogglePlanMode(this.value)"><option value="custom" selected>Plan personalizado</option></select></div>'
-    + '<div class="fg"><label>Precio base real (USD)</label><input class="fi" id="wz_precio_base_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzMpagoSync();_wzScore()"></div>'
+    + '<div class="fg"><label>Precio base real (USD)</label><input class="fi" id="wz_precio_base_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzMpagoSync();_wzCuotaSug();_wzScore()"></div>'
     + '</div>'
     + '<div id="wz_plan_custom_box" style="display:block;margin-top:10px">'
     + '<div class="fgr">'
-    + '<div class="fg"><label>Inicial real (USD)</label><input class="fi" id="wz_ini_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzMpagoSync();_wzScore()"></div>'
+    + '<div class="fg"><label>Inicial real (USD)</label><input class="fi" id="wz_ini_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzMpagoSync();_wzCuotaSug();_wzScore()"></div>'
     + '<div class="fg"><label>Cuota quincenal (USD)</label><input class="fi" id="wz_cuota_q_custom" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzScore()"></div>'
-    + '<div class="fg"><label>Plazo (meses)</label><input class="fi" id="wz_plazo_custom" type="number" min="1" step="1" placeholder="12" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzScore()"></div>'
+    + '<div class="fg"><label>Plazo (meses)</label><input class="fi" id="wz_plazo_custom" type="number" min="1" step="1" placeholder="12" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzCuotaSug();_wzScore()"></div>'
     + '</div>'
-    + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Solo indicas precio base real, inicial real, cuota quincenal y plazo. El sistema calcula factor y tasa automáticamente.</div>'
+    + '<div id="wz_cuota_sug" style="display:none;margin-top:10px"></div>'
+    + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Escribe el precio y la calculadora te sugiere la inicial y la cuota quincenal. Puedes ajustarlas a mano.</div>'
     + '</div>'
     + '<div id="wz_plan_apy_box" style="display:none;margin-top:10px">'
     + '<div class="fgr">'
@@ -728,6 +729,7 @@ function _wzHydrate(){
     if(_pm){ _pm.value=_planModeVal; }
     if(typeof _wzTogglePlanMode==='function') _wzTogglePlanMode(_planModeVal);
     if(WZ.precio>0 && typeof _wzActualizarFinPreview==='function') setTimeout(function(){ _wzActualizarFinPreview(WZ.precio); },80);
+    if(typeof _wzCuotaSug==='function') setTimeout(_wzCuotaSug, 90);
   }
   // Restaurar radios de cashea y fiador desde WZ al editar
   (function(){
@@ -1005,33 +1007,20 @@ function _wzPickMotoCat(sel){
   if(sel.value === '__wz_new_cat__'){
     if(newCatDiv) newCatDiv.style.display='block';
     if(wrap) wrap.style.display='none';
-    WZ.precio = 0;
     WZ.motoInvId = null;
     WZ.motoModelo = '';
     return;
   }
   if(newCatDiv) newCatDiv.style.display='none';
-  var precio = parseFloat(sel.value);
   var opt = sel.options[sel.selectedIndex];
   var invSel = document.getElementById('wz_moto_inv');
   if(invSel) invSel.value = '';
-  var pInp = document.getElementById('wz_precio');
-  if(pInp){ pInp.value = precio; }
-  WZ.precio = precio;
-  _wzActualizarPrecioBaseDesdePrecio();
   WZ.motoInvId = null;
   WZ.motoModelo = opt.getAttribute('data-modelo')||opt.text.split(' —')[0].trim();
-  // Catálogo: SÍ mostrar bloque de pago (se está creando una moto nueva)
-  if(wrap){
-    wrap.style.display='block';
-    var pBaseInp = document.getElementById('wz_precio_base_real');
-    var costoBase = pBaseInp && parseFloat(pBaseInp.value)>0 ? parseFloat(pBaseInp.value) : precio;
-    // Precargar primera fila con la inicial real del wizard (si está disponible)
-    var iniReal = 0;
-    try { var pc = getWzPlanConfig(); iniReal = parseFloat(pc&&pc.ini)||0; } catch(e){}
-    _mpagoSetCosto('wzmpago', costoBase, iniReal>0 ? iniReal : null);
-  }
-  _wzActualizarFinPreview(precio);
+  // El precio NO se toma del catálogo (los precios cambian a cada rato):
+  // el empleado escribe el precio manualmente y la calculadora en línea sugiere las cuotas.
+  if(typeof _wzMpagoSync==='function') _wzMpagoSync();
+  if(typeof _wzCuotaSug==='function') _wzCuotaSug();
   _wzScore();
 }
 
@@ -1095,6 +1084,54 @@ function _wzActualizarFinPreview(precio){
   WZ.ini = planCfg.ini;
   WZ.monto = planCfg.fin;
   WZ.plazo = planCfg.plazo;
+}
+
+// ── Calculadora integrada del paso 3 (plan personalizado) ──
+// Misma matemática del plan principal (módulo Calculadora): inicial 45% del precio,
+// financiado × factor, cuota quincenal = total / (plazo × 2). Los empleados ya no
+// tienen que salir del wizard para calcular.
+function _wzCuotaSug(){
+  var box=document.getElementById('wz_cuota_sug'); if(!box) return;
+  var base=parseFloat(((document.getElementById('wz_precio_base_real')||{}).value))||0;
+  if(!(base>0)) base=parseFloat(((document.getElementById('wz_precio')||{}).value))||0;
+  if(!(base>0)){ box.style.display='none'; box.innerHTML=''; return; }
+  var factor=(typeof PLAN!=='undefined'&&PLAN.factor)?PLAN.factor:1.935483870967742;
+  var iniPct=(typeof PLAN!=='undefined'&&PLAN.inicial)?PLAN.inicial:0.45;
+  var plazo=parseInt(((document.getElementById('wz_plazo_custom')||{}).value),10)||((typeof PLAN!=='undefined'&&PLAN.plazo)||12);
+  var iniTyped=parseFloat(((document.getElementById('wz_ini_real')||{}).value))||0;
+  var iniSug=Math.round(base*iniPct*100)/100;
+  var iniUsada=iniTyped>0?iniTyped:iniSug;
+  var fin=Math.max(0,base-iniUsada);
+  var cuotaQ=Math.round((fin*factor/(plazo*2))*100)/100;
+  var total=Math.round((iniUsada+cuotaQ*plazo*2)*100)/100;
+  var cell=function(l,v){ return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:10px;padding:9px 11px">'
+    +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);font-weight:700;margin-bottom:2px">'+l+'</div>'
+    +'<div style="font-size:15px;font-weight:900;letter-spacing:-.4px;color:var(--p1)">'+v+'</div></div>'; };
+  box.style.display='block';
+  box.innerHTML='<div style="background:var(--gs);border:1px solid var(--rim2);border-radius:10px;padding:12px">'
+    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:8px">🧮 Calculadora · '+(iniTyped>0?'con tu inicial':'inicial '+(iniPct*100).toFixed(0)+'%')+' · '+plazo+' meses</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'
+    +cell('Inicial'+(iniTyped>0?'':' ('+(iniPct*100).toFixed(0)+'%)'),'$'+iniUsada.toFixed(2))
+    +cell('A financiar','$'+fin.toFixed(2))
+    +cell('Cuota quincenal','$'+cuotaQ.toFixed(2))
+    +cell('Total a pagar','$'+total.toFixed(2))
+    +'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'
+    +(iniTyped>0?'':'<button type="button" class="btn btn-g btn-sm" onclick="_wzUsarIniSug('+iniSug+')">Usar inicial $'+iniSug.toFixed(2)+'</button>')
+    +'<button type="button" class="btn btn-p btn-sm" onclick="_wzUsarCuotaSug('+cuotaQ+')">Usar cuota $'+cuotaQ.toFixed(2)+'</button>'
+    +'</div></div>';
+}
+function _wzUsarIniSug(v){
+  var el=document.getElementById('wz_ini_real'); if(el) el.value=(parseFloat(v)||0).toFixed(2);
+  _wzCuotaSug();
+  _wzActualizarFinPreview(((document.getElementById('wz_precio')||{}).value)||WZ.precio||0);
+  if(typeof _wzMpagoSync==='function') _wzMpagoSync();
+  _wzScore();
+}
+function _wzUsarCuotaSug(v){
+  var el=document.getElementById('wz_cuota_q_custom'); if(el) el.value=(parseFloat(v)||0).toFixed(2);
+  _wzActualizarFinPreview(((document.getElementById('wz_precio')||{}).value)||WZ.precio||0);
+  _wzScore();
 }
 
 // ── Chip selector (pill buttons) ──
