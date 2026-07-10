@@ -30,6 +30,57 @@ function _comGetUsuariosActivos(){
   });
 }
 
+// TODOS los usuarios de Pagasi (no suspendidos) — los que no tienen comisiones
+// configuradas aparecen en el módulo con botón "Configurar". Los configurados primero.
+function _comGetTodosUsuarios(){
+  var lista = (typeof _usersCache !== 'undefined' && Array.isArray(_usersCache)) ? _usersCache : [];
+  return lista.filter(function(u){ return u && !u.suspendido; }).slice().sort(function(a,b){
+    var ca = (a.comisiones && a.comisiones.activo) ? 0 : 1;
+    var cb = (b.comisiones && b.comisiones.activo) ? 0 : 1;
+    if(ca !== cb) return ca - cb;
+    return String(a.nombre||a.email||'').localeCompare(String(b.nombre||b.email||''));
+  });
+}
+
+// Modal rápido para configurar las comisiones de un usuario sin salir del módulo
+function _comConfigRapida(uid){
+  var u = (_usersCache||[]).find(function(x){ return x.uid === uid; });
+  if(!u){ toast('Usuario no encontrado','error'); return; }
+  var c = _comGetConfig(u) || { activo:false, venta:{tipo:'fijo',valor:5}, cobranza:{tipo:'fijo',valor:1} };
+  setMicon('comision');
+  $('mtt').textContent = 'Comisiones — ' + (u.nombre || u.email);
+  $('msb').textContent = (u.rol||'Usuario') + ' · configuración rápida';
+  $('modal-box').className = 'modal';
+  $('mbd').innerHTML = ''
+    + '<label style="display:flex;align-items:center;gap:9px;background:var(--gs);border-radius:10px;padding:11px 13px;cursor:pointer;margin-bottom:13px">'
+    + '<input type="checkbox" id="cmr_activo" '+((u.comisiones&&u.comisiones.activo)?'checked':'')+' style="accent-color:var(--green);transform:scale(1.2)">'
+    + '<span style="font-weight:800;font-size:13px">Gana comisiones</span></label>'
+    + '<div class="fgr" style="gap:10px">'
+    + '<div class="fg"><label>Comisión por venta</label><div style="display:flex;gap:6px">'
+    + '<select class="fs" id="cmr_vtipo" style="width:90px"><option value="fijo" '+(c.venta.tipo!=='porc'?'selected':'')+'>$ fijo</option><option value="porc" '+(c.venta.tipo==='porc'?'selected':'')+'>% precio</option></select>'
+    + '<input class="fi" id="cmr_vval" type="number" step="0.01" value="'+(c.venta.valor||0)+'" style="flex:1"></div></div>'
+    + '<div class="fg"><label>Comisión por cobranza</label><div style="display:flex;gap:6px">'
+    + '<select class="fs" id="cmr_ctipo" style="width:90px"><option value="fijo" '+(c.cobranza.tipo!=='porc'?'selected':'')+'>$ fijo</option><option value="porc" '+(c.cobranza.tipo==='porc'?'selected':'')+'>% pago</option></select>'
+    + '<input class="fi" id="cmr_cval" type="number" step="0.01" value="'+(c.cobranza.valor||0)+'" style="flex:1"></div></div>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--ink3);margin-top:10px;line-height:1.5">Venta = créditos creados por este usuario · Cobranza = pagos confirmados que registró. Los cambios aplican al histórico completo.</div>';
+  S.saveFn = function(){
+    var config = {
+      activo: !!($('cmr_activo')&&$('cmr_activo').checked),
+      venta: { tipo: ($('cmr_vtipo')&&$('cmr_vtipo').value)||'fijo', valor: parseFloat(($('cmr_vval')&&$('cmr_vval').value)||0)||0 },
+      cobranza: { tipo: ($('cmr_ctipo')&&$('cmr_ctipo').value)||'fijo', valor: parseFloat(($('cmr_cval')&&$('cmr_cval').value)||0)||0 }
+    };
+    _comGuardarConfigUsuario(uid, config);
+    closeM();
+    toast('Comisiones de '+(u.nombre||u.email)+' actualizadas','success');
+    nav('comisiones');
+    return true;
+  };
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    + '<button class="btn btn-p" onclick="saveM()">Guardar</button>';
+  $('ov').style.display='flex';
+}
+
 // ── Cálculo de comisiones generadas por un usuario ──
 // Retorna { porVenta, porCobranza, ventas:[...], cobranzas:[...] }
 function _comCalcGenerado(u){
@@ -278,7 +329,7 @@ function _comisionesRender(){
   if((typeof _usersCache === 'undefined' || !_usersCache.length) && typeof usersReload === 'function'){
     setTimeout(function(){ usersReload(); setTimeout(function(){ if(S.page==='comisiones') nav('comisiones'); },600); },50);
   }
-  var usuarios = _comGetUsuariosActivos();
+  var usuarios = _comGetTodosUsuarios(); // TODOS los usuarios (los sin configurar salen con "⚙ Configurar")
   var tab = window._comTab || 'vendedores';
   var totalDebe=0, totalPagado=0, totalGenerado=0;
   usuarios.forEach(function(u){ var s=_comGetSaldo(u); totalDebe+=s.saldo; totalPagado+=s.pagado; totalGenerado+=s.generado; });
@@ -332,15 +383,16 @@ function _comisionesRender(){
         var s = _comGetSaldo(u);
         var st = _comStatsRango(u);
         var nombre = (u.nombre || u.email || 'Usuario');
-        var ventaLbl = cfg.venta.tipo === 'porc' ? cfg.venta.valor+'%' : '$'+cfg.venta.valor;
-        var cobroLbl = cfg.cobranza.tipo === 'porc' ? cfg.cobranza.valor+'%' : '$'+cfg.cobranza.valor;
+        var subLbl = cfg
+          ? ('Venta '+(cfg.venta.tipo==='porc' ? cfg.venta.valor+'%' : '$'+cfg.venta.valor)+' · Cobro '+(cfg.cobranza.tipo==='porc' ? cfg.cobranza.valor+'%' : '$'+cfg.cobranza.valor))
+          : '<span style="color:var(--amber);font-weight:700">Sin comisiones configuradas</span>';
         var inics = nombre.split(' ').slice(0,2).map(function(w){return (w[0]||'').toUpperCase();}).join('');
         var saldoCol = s.saldo > 0 ? 'var(--green)' : 'var(--ink3)';
-        return '<tr class="com-card" data-nombre="'+nombre.toLowerCase().replace(/"/g,'')+'" style="cursor:pointer" onclick="_comAbrirDetalle(\''+u.uid+'\')">'
+        return '<tr class="com-card" data-nombre="'+nombre.toLowerCase().replace(/"/g,'')+'" style="cursor:pointer'+(cfg?'':';opacity:.65')+'" onclick="_comAbrirDetalle(\''+u.uid+'\')">'
           + '<td><div style="display:flex;align-items:center;gap:9px">'
-            + '<div style="width:30px;height:30px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#fff;flex-shrink:0">'+inics+'</div>'
+            + '<div style="width:30px;height:30px;border-radius:50%;background:'+(cfg?'var(--grad)':'var(--rim)')+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:'+(cfg?'#fff':'var(--ink3)')+';flex-shrink:0">'+inics+'</div>'
             + '<div style="min-width:0"><div class="tdm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px">'+nombre+'</div>'
-            + '<div style="font-size:10px;color:var(--ink3)">Venta '+ventaLbl+' · Cobro '+cobroLbl+'</div></div>'
+            + '<div style="font-size:10px;color:var(--ink3)">'+(u.rol?u.rol+' · ':'')+subLbl+'</div></div>'
           + '</div></td>'
           + '<td class="tds" style="text-align:right;font-family:var(--fd)">'+s.nVentas+'</td>'
           + '<td class="tds" style="text-align:right;font-family:var(--fd)">'+s.nCobranzas+'</td>'
@@ -349,8 +401,11 @@ function _comisionesRender(){
           + '<td style="text-align:right;font-family:var(--fd);font-weight:900;font-size:13.5px;color:'+saldoCol+'">'+fmt(s.saldo)+'</td>'
           + '<td style="text-align:right;font-family:var(--fd);font-weight:700;color:var(--p1)">'+fmt(st.mes)+'</td>'
           + '<td onclick="event.stopPropagation()"><div style="display:flex;gap:4px;justify-content:flex-end">'
-            + '<button class="btn btn-g btn-xs" onclick="_comAbrirDetalle(\''+u.uid+'\')">Detalle</button>'
-            + '<button class="btn btn-p btn-xs" onclick="_comAbrirPagar(\''+u.uid+'\')" '+(s.saldo<=0?'disabled style="opacity:.4;cursor:not-allowed"':'')+'>$ Pagar</button>'
+            + '<button class="btn btn-g btn-xs" onclick="_comConfigRapida(\''+u.uid+'\')" title="Configurar comisiones">⚙</button>'
+            + (cfg
+              ? '<button class="btn btn-g btn-xs" onclick="_comAbrirDetalle(\''+u.uid+'\')">Detalle</button>'
+                + '<button class="btn btn-p btn-xs" onclick="_comAbrirPagar(\''+u.uid+'\')" '+(s.saldo<=0?'disabled style="opacity:.4;cursor:not-allowed"':'')+'>$ Pagar</button>'
+              : '<button class="btn btn-p btn-xs" onclick="_comConfigRapida(\''+u.uid+'\')">⚙ Configurar</button>')
           + '</div></td>'
           + '</tr>';
       }).join('');
@@ -376,7 +431,7 @@ function _comisionesRender(){
     var cortes = usuarios.map(function(u){
       var cc = _comCalcCorte(u, rq.desde, rq.hasta);
       var s = _comGetSaldo(u);
-      return { u:u, cc:cc, saldo:s.saldo };
+      return { u:u, cc:cc, saldo:s.saldo, cfg:_comGetConfig(u) };
     });
     var totCorte = cortes.reduce(function(a,x){ return a+x.cc.total; },0);
     var conMov = cortes.filter(function(x){ return x.cc.total>0; }).length;
@@ -415,11 +470,13 @@ function _comisionesRender(){
           + '<td class="tds" style="text-align:right">'+x.cc.cobranzas.length+' · <b style="font-family:var(--fd)">'+fmt(x.cc.porCobranza)+'</b></td>'
           + '<td style="text-align:right;font-family:var(--fd);font-weight:900;font-size:13.5px;color:'+(x.cc.total>0?'var(--green)':'var(--ink3)')+'">'+fmt(x.cc.total)+'</td>'
           + '<td style="text-align:right;font-family:var(--fd);font-weight:700;color:'+(x.saldo>0?'var(--amber)':'var(--ink3)')+'">'+fmt(x.saldo)+'</td>'
-          + '<td style="text-align:right">'+(sinMov
-              ? '<span style="font-size:10.5px;color:var(--ink3)">Sin comisiones</span>'
-              : (aPagar>0
-                ? '<button class="btn btn-p btn-xs" onclick="_comCortePagar(\''+x.u.uid+'\','+aPagar.toFixed(2)+',\''+rq.desde+'\',\''+rq.hasta+'\')">$ Pagar corte '+fmt(aPagar)+'</button>'
-                : '<span class="bdg b-g" style="font-size:9px">✓ Ya pagado</span>'))
+          + '<td style="text-align:right">'+(!x.cfg
+              ? '<button class="btn btn-g btn-xs" onclick="_comConfigRapida(\''+x.u.uid+'\')">⚙ Configurar</button>'
+              : (sinMov
+                ? '<span style="font-size:10.5px;color:var(--ink3)">Sin comisiones</span>'
+                : (aPagar>0
+                  ? '<button class="btn btn-p btn-xs" onclick="_comCortePagar(\''+x.u.uid+'\','+aPagar.toFixed(2)+',\''+rq.desde+'\',\''+rq.hasta+'\')">$ Pagar corte '+fmt(aPagar)+'</button>'
+                  : '<span class="bdg b-g" style="font-size:9px">✓ Ya pagado</span>')))
           + '</td>'
           + '</tr>';
       }).join('');
