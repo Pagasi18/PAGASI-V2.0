@@ -172,6 +172,107 @@ function _comStatsRango(u){
   };
 }
 
+// ── Comisiones generadas por un usuario dentro de un rango (corte quincenal) ──
+function _comCalcCorte(u, desde, hasta){
+  var gen = _comCalcGenerado(u);
+  var enR = function(f){ f = String(f||'').slice(0,10); return f >= desde && f <= hasta; };
+  var v = gen.ventas.filter(function(x){ return enR(x.fecha); });
+  var c = gen.cobranzas.filter(function(x){ return enR(x.fecha); });
+  var pv = v.reduce(function(a,x){ return a+x.comision; },0);
+  var pc = c.reduce(function(a,x){ return a+x.comision; },0);
+  return { ventas:v, cobranzas:c, porVenta:pv, porCobranza:pc, total:pv+pc };
+}
+
+// Navegar entre quincenas (dir: -1 anterior, +1 siguiente)
+function _comCorteMove(dir){
+  var ref = window._comCorteRef || hoyLocalISO();
+  var r = _concRangoDe('quincena', ref);
+  var base = (dir > 0) ? r.hasta : r.desde;
+  var d = (typeof parseFechaLocal==='function') ? parseFechaLocal(base) : new Date(base+'T12:00:00');
+  d.setDate(d.getDate() + (dir > 0 ? 1 : -1));
+  window._comCorteRef = fechaLocalISO(d);
+  window._comTab = 'cortes';
+  nav('comisiones');
+}
+function _comCorteSetFecha(v){
+  window._comCorteRef = v || hoyLocalISO();
+  window._comTab = 'cortes';
+  nav('comisiones');
+}
+
+// Pagar el corte: abre el modal de pago con el monto del corte y la nota prellenados
+function _comCortePagar(uid, monto, desde, hasta){
+  _comAbrirPagar(uid, parseFloat(monto)||0, 'Comisiones quincena '+desde+' → '+hasta);
+}
+
+// Exportar el corte quincenal en PDF (ventana Pagasi) o Excel (CSV)
+function _comCorteExport(formato){
+  var refCorte = window._comCorteRef || hoyLocalISO();
+  var rq = _concRangoDe('quincena', refCorte);
+  var usuarios = _comGetUsuariosActivos();
+  if(!usuarios.length){ toast('Sin usuarios con comisiones activas','info'); return; }
+  var filas = usuarios.map(function(u){
+    var cc = _comCalcCorte(u, rq.desde, rq.hasta);
+    var s = _comGetSaldo(u);
+    return { nombre:(u.nombre||u.email||'Usuario'), cc:cc, saldo:s.saldo };
+  });
+  var totCorte = filas.reduce(function(a,x){ return a+x.cc.total; },0);
+  if(formato === 'excel'){
+    var cell = function(v){ v = String(v==null?'':v); if(/[",\n]/.test(v)) v = '"'+v.replace(/"/g,'""')+'"'; return v; };
+    var row = function(arr){ return arr.map(cell).join(','); };
+    var rows = [];
+    rows.push(row(['CORTE QUINCENAL DE COMISIONES']));
+    rows.push(row(['Período', rq.desde+' → '+rq.hasta]));
+    rows.push(row(['Generado', new Date().toLocaleString('es-VE')]));
+    rows.push('');
+    rows.push(row(['Empleado','N° ventas','Comisión ventas','N° cobranzas','Comisión cobranzas','TOTAL DEL CORTE','Saldo global pendiente']));
+    filas.forEach(function(x){
+      rows.push(row([x.nombre, x.cc.ventas.length, x.cc.porVenta.toFixed(2), x.cc.cobranzas.length, x.cc.porCobranza.toFixed(2), x.cc.total.toFixed(2), x.saldo.toFixed(2)]));
+    });
+    rows.push(row(['TOTAL','','','','',totCorte.toFixed(2),'']));
+    rows.push('');
+    rows.push(row(['DETALLE DE OPERACIONES DEL CORTE']));
+    rows.push(row(['Empleado','Tipo','Fecha','Referencia','Cliente','Base','Comisión']));
+    filas.forEach(function(x){
+      x.cc.ventas.forEach(function(v){ rows.push(row([x.nombre,'Venta',String(v.fecha||'').slice(0,10),v.credId,v.cliente,(v.precio||0).toFixed(2),(v.comision||0).toFixed(2)])); });
+      x.cc.cobranzas.forEach(function(c){ rows.push(row([x.nombre,'Cobranza',String(c.fecha||'').slice(0,10),c.pagoId,c.cliente,(c.monto||0).toFixed(2),(c.comision||0).toFixed(2)])); });
+    });
+    var blob = new Blob(['﻿'+rows.join('\r\n')], {type:'text/csv;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = 'corte-comisiones-'+rq.desde+'_'+rq.hasta+'.csv'; a.click();
+    URL.revokeObjectURL(url);
+    toast('Excel del corte exportado ✓','success');
+    return;
+  }
+  // PDF
+  var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var html = ''
+    + '<h2>CORTE QUINCENAL DE COMISIONES</h2>'
+    + '<div style="text-align:center;font-size:11px;color:#555;margin-bottom:16px">Período: '+rq.desde+' → '+rq.hasta+' · Generado: '+new Date().toLocaleString('es-VE')+'</div>'
+    + '<h3>Resumen por empleado</h3>'
+    + '<table><tr><th>Empleado</th><th>Ventas</th><th>Com. ventas</th><th>Cobranzas</th><th>Com. cobranzas</th><th>TOTAL CORTE</th><th>Saldo global</th></tr>'
+    + filas.map(function(x){
+        return '<tr><td>'+esc(x.nombre)+'</td><td>'+x.cc.ventas.length+'</td><td>$'+x.cc.porVenta.toFixed(2)+'</td><td>'+x.cc.cobranzas.length+'</td><td>$'+x.cc.porCobranza.toFixed(2)+'</td><td style="font-weight:900">$'+x.cc.total.toFixed(2)+'</td><td>$'+x.saldo.toFixed(2)+'</td></tr>';
+      }).join('')
+    + '<tr><td style="font-weight:900">TOTAL</td><td></td><td></td><td></td><td></td><td style="font-weight:900">$'+totCorte.toFixed(2)+'</td><td></td></tr></table>'
+    + '<h3>Detalle de operaciones</h3>'
+    + '<table><tr><th>Empleado</th><th>Tipo</th><th>Fecha</th><th>Referencia</th><th>Cliente</th><th>Base</th><th>Comisión</th></tr>'
+    + filas.map(function(x){
+        return x.cc.ventas.map(function(v){
+            return '<tr><td>'+esc(x.nombre)+'</td><td>Venta</td><td>'+String(v.fecha||'').slice(0,10)+'</td><td>'+esc(v.credId)+'</td><td>'+esc(v.cliente)+'</td><td>$'+(v.precio||0).toFixed(2)+'</td><td>$'+(v.comision||0).toFixed(2)+'</td></tr>';
+          }).join('')
+          + x.cc.cobranzas.map(function(c){
+            return '<tr><td>'+esc(x.nombre)+'</td><td>Cobranza</td><td>'+String(c.fecha||'').slice(0,10)+'</td><td>'+esc(c.pagoId)+'</td><td>'+esc(c.cliente)+'</td><td>$'+(c.monto||0).toFixed(2)+'</td><td>$'+(c.comision||0).toFixed(2)+'</td></tr>';
+          }).join('');
+      }).join('')
+    + '</table>'
+    + '<div style="margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:40px">'
+    + '<div style="border-top:1px solid #94a3b8;padding-top:6px;text-align:center;font-size:10.5px">Preparado por</div>'
+    + '<div style="border-top:1px solid #94a3b8;padding-top:6px;text-align:center;font-size:10.5px">Aprobado por</div>'
+    + '</div>';
+  _abrirVentanaImpresion('Corte comisiones '+rq.desde, html);
+}
+
 // ════════ RENDER PRINCIPAL ════════
 function _comisionesRender(){
   if((typeof _usersCache === 'undefined' || !_usersCache.length) && typeof usersReload === 'function'){
@@ -212,10 +313,10 @@ function _comisionesRender(){
     + '</div>';
 
   // Tab bar
-  html += '<div style="display:flex;gap:0;border-bottom:2px solid var(--rim);margin-bottom:16px">'
-    + [['vendedores','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:5px"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg>Vendedores'],['generadas','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:5px"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>Generadas'],['historial','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:5px"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>Pagos realizados']].map(function(t){
+  html += '<div style="display:flex;gap:0;border-bottom:2px solid var(--rim);margin-bottom:16px;flex-wrap:wrap">'
+    + [['vendedores','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:5px"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg>Vendedores'],['cortes','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:5px"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>Cortes quincenales'],['generadas','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:5px"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>Generadas'],['historial','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px;margin-right:5px"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>Pagos realizados']].map(function(t){
         var act = tab===t[0];
-        return '<button onclick="window._comTab=&quot;'+t[0]+'&quot;nav(&quot;comisiones&quot;)" style="background:none;border:none;padding:11px 18px;font-size:13px;font-weight:'+(act?'800':'600')+';color:'+(act?'var(--p1)':'var(--ink3)')+';border-bottom:3px solid '+(act?'var(--p1)':'transparent')+';margin-bottom:-2px;cursor:pointer;font-family:var(--f);transition:color .15s">'+t[1]+'</button>';
+        return '<button onclick="window._comTab=&quot;'+t[0]+'&quot;;nav(&quot;comisiones&quot;)" style="background:none;border:none;padding:11px 18px;font-size:13px;font-weight:'+(act?'800':'600')+';color:'+(act?'var(--p1)':'var(--ink3)')+';border-bottom:3px solid '+(act?'var(--p1)':'transparent')+';margin-bottom:-2px;cursor:pointer;font-family:var(--f);transition:color .15s">'+t[1]+'</button>';
       }).join('')
     + '</div>';
 
@@ -225,9 +326,111 @@ function _comisionesRender(){
     if(!usuarios.length){
       html += '<div class="empty"><div class="e-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:32px;height:32px;opacity:.4"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></div><div class="e-tt">Sin usuarios con comisiones activas</div><button class="btn btn-p btn-sm" style="margin-top:14px" onclick="nav(&quot;users&quot;)">Ir a Usuarios</button></div>';
     } else {
-      html += '<div id="com-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">';
-      usuarios.forEach(function(u){ html += _comTarjetaHtml(u); });
-      html += '</div>';
+      // Tabla estilo Concesionarios: una fila por vendedor con toda su data
+      var filasVend = usuarios.map(function(u){
+        var cfg = _comGetConfig(u);
+        var s = _comGetSaldo(u);
+        var st = _comStatsRango(u);
+        var nombre = (u.nombre || u.email || 'Usuario');
+        var ventaLbl = cfg.venta.tipo === 'porc' ? cfg.venta.valor+'%' : '$'+cfg.venta.valor;
+        var cobroLbl = cfg.cobranza.tipo === 'porc' ? cfg.cobranza.valor+'%' : '$'+cfg.cobranza.valor;
+        var inics = nombre.split(' ').slice(0,2).map(function(w){return (w[0]||'').toUpperCase();}).join('');
+        var saldoCol = s.saldo > 0 ? 'var(--green)' : 'var(--ink3)';
+        return '<tr class="com-card" data-nombre="'+nombre.toLowerCase().replace(/"/g,'')+'" style="cursor:pointer" onclick="_comAbrirDetalle(\''+u.uid+'\')">'
+          + '<td><div style="display:flex;align-items:center;gap:9px">'
+            + '<div style="width:30px;height:30px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#fff;flex-shrink:0">'+inics+'</div>'
+            + '<div style="min-width:0"><div class="tdm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px">'+nombre+'</div>'
+            + '<div style="font-size:10px;color:var(--ink3)">Venta '+ventaLbl+' · Cobro '+cobroLbl+'</div></div>'
+          + '</div></td>'
+          + '<td class="tds" style="text-align:right;font-family:var(--fd)">'+s.nVentas+'</td>'
+          + '<td class="tds" style="text-align:right;font-family:var(--fd)">'+s.nCobranzas+'</td>'
+          + '<td style="text-align:right;font-family:var(--fd);font-weight:700">'+fmt(s.generado)+'</td>'
+          + '<td style="text-align:right;font-family:var(--fd);font-weight:700;color:var(--amber)">'+fmt(s.pagado)+'</td>'
+          + '<td style="text-align:right;font-family:var(--fd);font-weight:900;font-size:13.5px;color:'+saldoCol+'">'+fmt(s.saldo)+'</td>'
+          + '<td style="text-align:right;font-family:var(--fd);font-weight:700;color:var(--p1)">'+fmt(st.mes)+'</td>'
+          + '<td onclick="event.stopPropagation()"><div style="display:flex;gap:4px;justify-content:flex-end">'
+            + '<button class="btn btn-g btn-xs" onclick="_comAbrirDetalle(\''+u.uid+'\')">Detalle</button>'
+            + '<button class="btn btn-p btn-xs" onclick="_comAbrirPagar(\''+u.uid+'\')" '+(s.saldo<=0?'disabled style="opacity:.4;cursor:not-allowed"':'')+'>$ Pagar</button>'
+          + '</div></td>'
+          + '</tr>';
+      }).join('');
+      html += '<div class="card">'
+        + '<div class="ch"><div><div class="ct">Vendedores y cobradores</div><div class="cs">Por pagar = comisiones generadas − pagos realizados</div></div></div>'
+        + '<div class="tw"><table>'
+        + '<thead><tr><th>Vendedor</th><th style="text-align:right">Ventas</th><th style="text-align:right">Cobros</th><th style="text-align:right">Generado</th><th style="text-align:right">Pagado</th><th style="text-align:right">Por pagar</th><th style="text-align:right">Este mes</th><th style="text-align:right">Acciones</th></tr></thead>'
+        + '<tbody>'+filasVend
+        + '<tr style="border-top:2px solid var(--rim);background:var(--surf2)"><td class="tdm" style="font-weight:900">TOTAL</td><td></td><td></td>'
+        + '<td style="text-align:right;font-weight:900;font-family:var(--fd)">'+fmt(totalGenerado)+'</td>'
+        + '<td style="text-align:right;font-weight:900;font-family:var(--fd);color:var(--amber)">'+fmt(totalPagado)+'</td>'
+        + '<td style="text-align:right;font-weight:900;font-family:var(--fd);color:var(--green)">'+fmt(totalDebe)+'</td>'
+        + '<td></td><td></td></tr>'
+        + '</tbody></table></div></div>';
+    }
+
+  // ── Tab: Cortes quincenales ──
+  } else if(tab === 'cortes'){
+    var refCorte = window._comCorteRef || hoyLocalISO();
+    var rq = _concRangoDe('quincena', refCorte);
+    var esQ1 = parseInt(rq.desde.slice(8,10),10) === 1;
+    var mesLbl = (function(){ try{ var d=(typeof parseFechaLocal==='function')?parseFechaLocal(rq.desde):new Date(rq.desde+'T12:00:00'); return d.toLocaleDateString('es-VE',{month:'long',year:'numeric'}); }catch(e){ return rq.desde.slice(0,7); } })();
+    var cortes = usuarios.map(function(u){
+      var cc = _comCalcCorte(u, rq.desde, rq.hasta);
+      var s = _comGetSaldo(u);
+      return { u:u, cc:cc, saldo:s.saldo };
+    });
+    var totCorte = cortes.reduce(function(a,x){ return a+x.cc.total; },0);
+    var conMov = cortes.filter(function(x){ return x.cc.total>0; }).length;
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;background:var(--surf2);border:1px solid var(--rim2);border-radius:10px;padding:10px 12px">'
+      + '<button class="btn btn-g btn-sm" onclick="_comCorteMove(-1)">◀ Anterior</button>'
+      + '<div style="text-align:center;min-width:210px">'
+        + '<div style="font-size:13px;font-weight:900;color:var(--p1);text-transform:capitalize">'+(esQ1?'1ª':'2ª')+' quincena · '+mesLbl+'</div>'
+        + '<div style="font-size:10.5px;color:var(--ink3)">'+rq.desde+' → '+rq.hasta+'</div>'
+      + '</div>'
+      + '<button class="btn btn-g btn-sm" onclick="_comCorteMove(1)">Siguiente ▶</button>'
+      + '<input type="date" value="'+refCorte+'" onchange="_comCorteSetFecha(this.value)" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">'
+      + '<div style="margin-left:auto;display:flex;gap:6px">'
+        + '<button class="btn btn-g btn-sm" onclick="_comCorteExport(\'excel\')">⬇ Excel</button>'
+        + '<button class="btn btn-g btn-sm" onclick="_comCorteExport(\'pdf\')">🖨 PDF</button>'
+      + '</div>'
+      + '</div>';
+    html += '<div class="sg" style="grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
+      + '<div class="stat"><div class="st-v" style="font-size:24px;color:var(--green)">'+fmt(totCorte)+'</div><div class="st-l">Comisiones del corte</div></div>'
+      + '<div class="stat"><div class="st-v" style="font-size:24px">'+conMov+'</div><div class="st-l">Empleados con comisión</div></div>'
+      + '<div class="stat"><div class="st-v" style="font-size:24px;color:var(--amber)">'+fmt(totalDebe)+'</div><div class="st-l">Por pagar global (todas las quincenas)</div></div>'
+      + '</div>';
+    if(!usuarios.length){
+      html += '<div class="empty"><div class="e-tt">Sin usuarios con comisiones activas</div></div>';
+    } else {
+      var filasCorte = cortes.map(function(x){
+        var nombre = (x.u.nombre || x.u.email || 'Usuario');
+        var inics = nombre.split(' ').slice(0,2).map(function(w){return (w[0]||'').toUpperCase();}).join('');
+        var sinMov = x.cc.total <= 0;
+        var aPagar = Math.min(x.cc.total, Math.max(0, x.saldo));
+        return '<tr style="'+(sinMov?'opacity:.55':'')+'">'
+          + '<td><div style="display:flex;align-items:center;gap:9px">'
+            + '<div style="width:28px;height:28px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:900;color:#fff;flex-shrink:0">'+inics+'</div>'
+            + '<span class="tdm">'+nombre+'</span>'
+          + '</div></td>'
+          + '<td class="tds" style="text-align:right">'+x.cc.ventas.length+' · <b style="font-family:var(--fd)">'+fmt(x.cc.porVenta)+'</b></td>'
+          + '<td class="tds" style="text-align:right">'+x.cc.cobranzas.length+' · <b style="font-family:var(--fd)">'+fmt(x.cc.porCobranza)+'</b></td>'
+          + '<td style="text-align:right;font-family:var(--fd);font-weight:900;font-size:13.5px;color:'+(x.cc.total>0?'var(--green)':'var(--ink3)')+'">'+fmt(x.cc.total)+'</td>'
+          + '<td style="text-align:right;font-family:var(--fd);font-weight:700;color:'+(x.saldo>0?'var(--amber)':'var(--ink3)')+'">'+fmt(x.saldo)+'</td>'
+          + '<td style="text-align:right">'+(sinMov
+              ? '<span style="font-size:10.5px;color:var(--ink3)">Sin comisiones</span>'
+              : (aPagar>0
+                ? '<button class="btn btn-p btn-xs" onclick="_comCortePagar(\''+x.u.uid+'\','+aPagar.toFixed(2)+',\''+rq.desde+'\',\''+rq.hasta+'\')">$ Pagar corte '+fmt(aPagar)+'</button>'
+                : '<span class="bdg b-g" style="font-size:9px">✓ Ya pagado</span>'))
+          + '</td>'
+          + '</tr>';
+      }).join('');
+      html += '<div class="card">'
+        + '<div class="ch"><div><div class="ct">Corte quincenal</div><div class="cs">Comisiones generadas del '+rq.desde+' al '+rq.hasta+' · "Pagar corte" descuenta del saldo global</div></div></div>'
+        + '<div class="tw"><table>'
+        + '<thead><tr><th>Empleado</th><th style="text-align:right">Ventas</th><th style="text-align:right">Cobranzas</th><th style="text-align:right">Comisión del corte</th><th style="text-align:right">Saldo global</th><th style="text-align:right">Acción</th></tr></thead>'
+        + '<tbody>'+filasCorte
+        + '<tr style="border-top:2px solid var(--rim);background:var(--surf2)"><td class="tdm" style="font-weight:900">TOTAL DEL CORTE</td><td></td><td></td>'
+        + '<td style="text-align:right;font-weight:900;font-family:var(--fd);color:var(--green)">'+fmt(totCorte)+'</td><td></td><td></td></tr>'
+        + '</tbody></table></div></div>';
     }
 
   // ── Tab: Comisiones Generadas ──
@@ -487,11 +690,14 @@ function _comFiltrar(){
 }
 
 // ════════ MODAL: PAGAR COMISIÓN ════════
-function _comAbrirPagar(uid){
+// montoPre/notaPre (opcionales): prellenan el pago — usados por "Pagar corte" quincenal
+function _comAbrirPagar(uid, montoPre, notaPre){
   var u = (_usersCache||[]).find(function(x){return x.uid===uid;});
   if(!u){ toast('Usuario no encontrado','error'); return; }
   var s = _comGetSaldo(u);
   if(s.saldo <= 0){ toast('Este usuario no tiene saldo pendiente','info'); return; }
+  var montoInicial = (montoPre && montoPre > 0) ? Math.min(montoPre, s.saldo) : s.saldo;
+  var notaInicial = String(notaPre||'').replace(/</g,'&lt;');
   var cuentas = (typeof _cuentasBanc !== 'undefined' && _cuentasBanc) ? _cuentasBanc : [];
   if(!cuentas.length){ toast('No hay cuentas bancarias configuradas','error'); return; }
   setMicon('comision');
@@ -515,7 +721,7 @@ function _comAbrirPagar(uid){
     + '</div></div>'
     + '<div class="fgr c1" style="gap:10px">'
     + '<div class="fg"><label>Monto a pagar <span style="color:var(--red)">*</span></label>'
-    + '<input class="fi" type="number" step="0.01" min="0.01" max="'+s.saldo+'" id="comp_monto" value="'+s.saldo.toFixed(2)+'" oninput="_comValidarPago()">'
+    + '<input class="fi" type="number" step="0.01" min="0.01" max="'+s.saldo+'" id="comp_monto" value="'+montoInicial.toFixed(2)+'" oninput="_comValidarPago()">'
     + '<div style="font-size:10.5px;color:var(--ink3);margin-top:3px">Puedes pagar parcial o total. Máximo: $'+s.saldo.toFixed(2)+'</div></div>'
     + '<div class="fg"><label>Cuenta de origen <span style="color:var(--red)">*</span></label>'
     + '<select class="fs" id="comp_cuenta" onchange="_comValidarPago()">'+cuentasOpts+'</select>'
@@ -523,7 +729,7 @@ function _comAbrirPagar(uid){
     + '<div class="fg"><label>Fecha</label>'
     + '<input class="fi" type="date" id="comp_fecha" value="'+(hoyLocalISO())+'"></div>'
     + '<div class="fg"><label>Notas (opcional)</label>'
-    + '<textarea class="fi" id="comp_notas" rows="2" placeholder="Ej: Pago de comisiones primera quincena"></textarea></div>'
+    + '<textarea class="fi" id="comp_notas" rows="2" placeholder="Ej: Pago de comisiones primera quincena">'+notaInicial+'</textarea></div>'
     + '</div>';
   $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
     + '<button class="btn btn-p" id="comp_btn_save" onclick="_comGuardarPago(\''+uid+'\')">Pagar comisión</button>';
