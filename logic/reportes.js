@@ -132,38 +132,81 @@ function imprimirFiniquito(){
 // GENERACIÓN DE REPORTES (imprime como PDF)
 // ══════════════════════════════════════════
 
-// Ventana de impresión con la identidad Pagasi (logo, Nunito, azul #2563EB).
-// TODOS los reportes del sistema deben salir por aquí para verse iguales.
+// Ventana de impresión con la identidad Pagasi — MISMO diseño que el
+// Reporte Mensual (barra degradada, logo, sello CONFIDENCIAL, pie).
+// TODOS los reportes del sistema salen por aquí para verse iguales.
 // opts.sinHeader: true cuando el contenido ya trae su propio membrete (contratos, finiquito).
 function _abrirVentanaImpresion(titulo, htmlContenido, opts){
   opts = opts || {};
-  var estilos = `
-    *{box-sizing:border-box}
-    body{font-family:'Nunito','Nunito Sans',system-ui,-apple-system,Arial,sans-serif;padding:32px;color:#1f2937;font-size:12px;line-height:1.7;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    h2{text-align:center;font-size:17px;letter-spacing:.4px;margin-bottom:4px;color:#0B1F3A;font-weight:900}
-    h3{font-size:12.5px;margin-top:18px;margin-bottom:6px;border-bottom:2px solid #2563EB;padding-bottom:4px;color:#1D4ED8;font-weight:900;text-transform:uppercase;letter-spacing:.4px}
-    table{width:100%;border-collapse:collapse;font-size:11.5px}
-    td,th{padding:6px 7px;border-bottom:1px solid #DBEAFE;vertical-align:top}
-    th{background:#EFF6FF;color:#1D4ED8;font-weight:800;font-size:10.5px;text-transform:uppercase;letter-spacing:0.5px}
-    tr:nth-child(even) td{background:#FAFCFF}
-    .ar{display:grid;padding:5px 0;border-bottom:1px solid #E5EDFB;font-size:11px}
-    .ah{display:grid;padding:5px 0;border-bottom:2px solid #1D4ED8;font-weight:800;font-size:10.5px;text-transform:uppercase;color:#1D4ED8}
-    .pd{opacity:0.45;text-decoration:line-through}
-    .pg-hd{display:flex;justify-content:space-between;align-items:center;border-bottom:2.5px solid #2563EB;padding-bottom:12px;margin-bottom:18px}
-    .pg-hd img{height:38px;object-fit:contain}
-    .pg-hd .co{text-align:right;font-size:9.5px;color:#64748b;line-height:1.6}
-    .pg-hd .co b{color:#1D4ED8;font-size:11.5px}
-    @media print{body{padding:12px}button{display:none!important}}
-  `;
-  var fonts = '<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">';
   var logo = (typeof _PAGASI_LOGO_BLUE!=='undefined'&&_PAGASI_LOGO_BLUE) || ((document.querySelector('.sb-logo img')||{}).src||'');
-  var header = opts.sinHeader ? '' :
-    '<div class="pg-hd">'
-    +(logo?'<img src="'+logo+'" alt="Pagasi">':'<div style="font-size:20px;font-weight:900;color:#2563EB">PAGASI</div>')
-    +'<div class="co"><b>PAGASI</b><br>Sistema de Gestión de Crédito<br>pagasi.io · '+new Date().toLocaleDateString('es-VE')+'</div>'
-    +'</div>';
-  var w = window.open('','_blank','width=860,height=700');
-  w.document.write('<html><head><title>'+titulo+'</title>'+fonts+'<style>'+estilos+'</style></head><body>'+header+htmlContenido+'<br><button onclick="window.print()" style="background:#2563EB;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:16px;font-family:inherit;font-weight:700">Imprimir / Guardar PDF</button><script>setTimeout(function(){window.print();},600);<\/script></body></html>');
+  var nombreEmp = (typeof $==='function' && $('cfg_empresa') && $('cfg_empresa').value) || 'Pagasi';
+  var genStr = new Date().toLocaleString('es-VE');
+  var fonts = '<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">';
+  var w = window.open('','_blank','width=900,height=720');
+  if(!w){ if(typeof toast==='function') toast('Habilita las ventanas emergentes para ver el reporte','error'); return; }
+  if(opts.sinHeader){
+    // Contenido con membrete propio (contratos, finiquito): shell simple Nunito
+    var cssS = '*{box-sizing:border-box}body{font-family:\'Nunito\',\'Nunito Sans\',system-ui,Arial,sans-serif;padding:32px;color:#1f2937;font-size:12px;line-height:1.7;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{body{padding:12px}button{display:none!important}}';
+    w.document.write('<html><head><title>'+titulo+'</title>'+fonts+'<style>'+cssS+'</style></head><body>'+htmlContenido
+      +'<br><button onclick="window.print()" style="background:#2563EB;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:16px;font-family:inherit;font-weight:700">Imprimir / Guardar PDF</button>'
+      +'<script>setTimeout(function(){window.print();},600);<\/script></body></html>');
+    w.document.close();
+    return;
+  }
+  var wmSvg = "<svg xmlns='http://www.w3.org/2000/svg' width='430' height='320'><text x='215' y='175' transform='rotate(-26 215 160)' font-family='Arial,sans-serif' font-size='30' font-weight='800' fill='rgba(37,99,235,0.07)' text-anchor='middle'>CONFIDENCIAL</text></svg>";
+  var wmUrl = "data:image/svg+xml;utf8,"+encodeURIComponent(wmSvg);
+  var css = '*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+    +'@page{size:A4;margin:13mm 11mm}'
+    +"body{background:#eef1f7;font-family:'Nunito Sans',system-ui,-apple-system,sans-serif;color:#1f2937;-webkit-font-smoothing:antialiased;padding:22px 0}"
+    +".rp{max-width:820px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.08);background-image:url('"+wmUrl+"');background-repeat:repeat}"
+    +".rp-bar{height:7px;background:linear-gradient(90deg,#1D4ED8 0%,#2563EB 55%,#60A5FA 100%)}"
+    +".rp-head{padding:22px 34px 18px;border-bottom:2px solid #1D4ED8;position:relative;background:rgba(255,255,255,.92)}"
+    +".rp-conf{position:absolute;top:18px;right:34px;background:#fde8ec;color:#b91c1c;border:1px solid #f5c2cb;font-size:9px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;padding:4px 11px;border-radius:5px}"
+    +".rp-lh{display:flex;align-items:center;gap:15px}.rp-logo{height:40px;width:auto;display:block}"
+    +".rp-lh-co{border-left:1px solid #d6dbe3;padding-left:15px}.rp-lh-n{font-family:'Nunito',sans-serif;font-size:15px;font-weight:900;color:#1D4ED8}.rp-lh-s{font-size:8.5px;color:#8a93a3;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-top:3px}"
+    +".rp-title-row{margin-top:15px}"
+    +".rp-kicker{font-size:9.5px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#9ca3af}"
+    +".rp-title{font-family:'Nunito',sans-serif;font-size:24px;font-weight:900;color:#0f172a;letter-spacing:-.5px;margin:3px 0 0}"
+    +".rp-range{font-size:12px;color:#6b7280;margin-top:4px}"
+    +".rp-body{padding:24px 34px 28px}"
+    // Estilos del contenido genérico (h2/h3/table) mapeados al look .rp
+    +".rp-body h2{display:none}" // el título ya va en el header del shell
+    +".rp-body h3{font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#1D4ED8;border-bottom:2px solid #1D4ED8;padding-bottom:6px;margin:22px 0 12px;break-after:avoid}"
+    +".rp-body h3:first-of-type{margin-top:0}"
+    +".rp-body table{width:100%;border-collapse:collapse;margin-bottom:6px}"
+    +".rp-body th{padding:9px 11px;border-bottom:2px solid #e5e7eb;text-align:left;font-size:9.5px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:800;background:#f8fafc}"
+    +".rp-body td{padding:7px 11px;border-bottom:1px solid #f1f5f9;font-size:11.5px;color:#374151}"
+    +".rp-body tr{break-inside:avoid}"
+    +".ar{display:grid;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:11px}"
+    +".ah{display:grid;padding:5px 0;border-bottom:2px solid #1D4ED8;font-weight:800;font-size:10.5px;text-transform:uppercase;color:#1D4ED8}"
+    +".pd{opacity:0.45;text-decoration:line-through}"
+    +".rp-note{background:#f8fafc;border:1px solid #e5e7eb;border-left:3px solid #b91c1c;border-radius:10px;padding:14px 16px;margin-top:18px;break-inside:avoid}.rp-note-t{font-size:10px;font-weight:900;color:#b91c1c;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}.rp-note-b{font-size:11px;color:#6b7280;line-height:1.6}"
+    +".rp-foot{padding:15px 34px;background:#f8fafc;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#9ca3af;font-weight:700;flex-wrap:wrap;gap:6px}"
+    +".rp-actions{max-width:820px;margin:14px auto 0;text-align:center}"
+    +"@media print{body{background:#fff;padding:0}.rp{box-shadow:none;border-radius:0;max-width:none}.rp-actions{display:none!important}}";
+  var html = '<!DOCTYPE html><html lang="es-VE"><head><meta charset="UTF-8"><title>'+titulo+' · Pagasi</title>'+fonts+'<style>'+css+'</style></head><body>'
+    +'<div class="rp">'
+      +'<div class="rp-bar"></div>'
+      +'<div class="rp-head">'
+        +'<div class="rp-conf">Confidencial</div>'
+        +'<div class="rp-lh">'
+          +(logo?'<img class="rp-logo" src="'+logo+'" alt="Pagasi">':'')
+          +'<div class="rp-lh-co"><div class="rp-lh-n">'+nombreEmp+'</div><div class="rp-lh-s">Sistema de Gestión de Crédito</div></div>'
+        +'</div>'
+        +'<div class="rp-title-row">'
+          +'<div class="rp-kicker">Reporte</div>'
+          +'<div class="rp-title">'+titulo+'</div>'
+          +'<div class="rp-range">Generado: '+genStr+'</div>'
+        +'</div>'
+      +'</div>'
+      +'<div class="rp-body">'+htmlContenido
+        +'<div class="rp-note"><div class="rp-note-t">Documento confidencial</div><div class="rp-note-b">Este reporte contiene información financiera reservada de '+nombreEmp+'. Prohibida su divulgación, copia o distribución total o parcial sin autorización. Generado en tiempo real desde el sistema Pagasi.</div></div>'
+      +'</div>'
+      +'<div class="rp-foot"><span>'+nombreEmp+' · '+titulo+'</span><span>Confidencial · '+genStr+'</span></div>'
+    +'</div>'
+    +'<div class="rp-actions"><button onclick="window.print()" style="background:#2563EB;color:#fff;border:none;padding:9px 22px;border-radius:7px;cursor:pointer;font-size:13px;font-family:inherit;font-weight:800">Imprimir / Guardar PDF</button></div>'
+    +'<script>setTimeout(function(){window.print();},650);<\/script></body></html>';
+  w.document.write(html);
   w.document.close();
 }
 
@@ -236,9 +279,35 @@ function _dfDatos(){
   };
 }
 
+// Presets rápidos de fecha para el Dashboard Finanzas
+function _dfRangoPreset(key){
+  var hoy = hoyLocalISO();
+  if(key==='hoy') return { desde:hoy, hasta:hoy };
+  if(key==='quincena'){ var r=_concRangoDe('quincena', hoy); return { desde:r.desde, hasta:r.hasta }; }
+  if(key==='mes'){ var m=_concRangoDe('mes', hoy); return { desde:m.desde, hasta:m.hasta }; }
+  if(key==='mes_pasado'){
+    var d0 = new Date(); var prev = new Date(d0.getFullYear(), d0.getMonth()-1, 15);
+    var mp = _concRangoDe('mes', fechaLocalISO(prev)); return { desde:mp.desde, hasta:mp.hasta };
+  }
+  if(key==='ano'){ var a=_concRangoDe('ano', hoy); return { desde:a.desde, hasta:a.hasta }; }
+  return { desde:'', hasta:'' }; // todo
+}
+function dfPreset(key){
+  var r = _dfRangoPreset(key);
+  S.dfDesde = r.desde; S.dfHasta = r.hasta;
+  S.reportesTab = 'dashfin';
+  nav('reportes');
+}
+
 function _renderDashFin(){
   var d = _dfDatos();
   var perLbl = (d.desde||d.hasta) ? ((d.desde||'inicio')+' → '+(d.hasta||'hoy')) : 'Todo el histórico';
+  // Chips de preset (se marca el activo comparando el rango actual)
+  var presetChips = [['hoy','Hoy'],['quincena','Esta quincena'],['mes','Este mes'],['mes_pasado','Mes pasado'],['ano','Este año'],['todo','Todo']].map(function(p){
+    var r = _dfRangoPreset(p[0]);
+    var on = (d.desde===r.desde && d.hasta===r.hasta);
+    return '<button class="btn btn-sm '+(on?'btn-p':'btn-g')+'" onclick="dfPreset(\''+p[0]+'\')" style="font-size:11px;padding:5px 12px">'+p[1]+'</button>';
+  }).join('');
   // Card profesional: valor grande + qué es + desglose + botón de reporte
   var card = function(o){
     return '<div class="card" style="padding:16px 18px;display:flex;flex-direction:column;border-top:3px solid '+(o.color||'var(--p1)')+'">'
@@ -263,17 +332,23 @@ function _renderDashFin(){
   var maxAging = Math.max(1, Math.max.apply(null, d.aging.map(function(b){ return b.saldo; })));
   return ''
     // ══ Barra de filtro global ══
-    + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:13px 16px;box-shadow:var(--shadow)">'
-    + '<div><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">Filtro global de fechas</div>'
-    + '<div style="font-size:11px;color:var(--ink3);margin-top:2px">Aplica a originación y cobros · saldos al día de hoy</div></div>'
-    + '<label style="font-size:11px;color:var(--ink3);font-weight:700;margin-left:6px">Desde</label>'
-    + '<input type="date" value="'+(d.desde||'')+'" onchange="S.dfDesde=this.value;S.reportesTab=\'dashfin\';nav(\'reportes\')" style="border:1px solid var(--rim);border-radius:8px;padding:6px 9px;font-size:12.5px;font-family:var(--f);background:var(--surf);color:var(--ink)">'
-    + '<label style="font-size:11px;color:var(--ink3);font-weight:700">Hasta</label>'
-    + '<input type="date" value="'+(d.hasta||'')+'" onchange="S.dfHasta=this.value;S.reportesTab=\'dashfin\';nav(\'reportes\')" style="border:1px solid var(--rim);border-radius:8px;padding:6px 9px;font-size:12.5px;font-family:var(--f);background:var(--surf);color:var(--ink)">'
-    + ((d.desde||d.hasta)?'<button class="btn btn-g btn-sm" onclick="S.dfDesde=\'\';S.dfHasta=\'\';S.reportesTab=\'dashfin\';nav(\'reportes\')">✕ Limpiar</button>':'')
-    + '<div style="margin-left:auto;text-align:right"><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">Cohorte</div>'
-    + '<div style="font-size:13px;font-weight:900;color:var(--p1)">'+perLbl+'</div>'
-    + '<div style="font-size:10.5px;color:var(--ink3)">'+d.nOrig+' créditos · '+d.nOrigAct+' activos · '+d.nCompletados+' completados · '+d.nRecuperados+' recuperados</div></div>'
+    + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:13px 16px;box-shadow:var(--shadow);margin-bottom:16px">'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'
+      + '<div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">Período:</div>'
+      + presetChips
+      + '<div style="margin-left:auto;text-align:right"><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">Cohorte</div>'
+      + '<div style="font-size:13px;font-weight:900;color:var(--p1)">'+perLbl+'</div>'
+      + '<div style="font-size:10.5px;color:var(--ink3)">'+d.nOrig+' créditos · '+d.nOrigAct+' activos · '+d.nCompletados+' completados · '+d.nRecuperados+' recuperados</div></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--rim2)">'
+      + '<span style="font-size:10.5px;color:var(--ink3);font-weight:700">O elige un rango exacto:</span>'
+      + '<label style="font-size:11px;color:var(--ink3);font-weight:700">Desde</label>'
+      + '<input type="date" value="'+(d.desde||'')+'" onchange="S.dfDesde=this.value;S.reportesTab=\'dashfin\';nav(\'reportes\')" style="border:1px solid var(--rim);border-radius:8px;padding:6px 9px;font-size:12.5px;font-family:var(--f);background:var(--surf);color:var(--ink)">'
+      + '<label style="font-size:11px;color:var(--ink3);font-weight:700">Hasta</label>'
+      + '<input type="date" value="'+(d.hasta||'')+'" onchange="S.dfHasta=this.value;S.reportesTab=\'dashfin\';nav(\'reportes\')" style="border:1px solid var(--rim);border-radius:8px;padding:6px 9px;font-size:12.5px;font-family:var(--f);background:var(--surf);color:var(--ink)">'
+      + ((d.desde||d.hasta)?'<button class="btn btn-g btn-sm" onclick="S.dfDesde=\'\';S.dfHasta=\'\';S.reportesTab=\'dashfin\';nav(\'reportes\')">✕ Limpiar</button>':'')
+      + '<span style="font-size:10.5px;color:var(--ink3);margin-left:auto">Aplica a originación y cobros · saldos al día de hoy</span>'
+    + '</div>'
     + '</div>'
 
     // ══ SECCIÓN 1: ORIGINACIÓN ══
