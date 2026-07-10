@@ -460,12 +460,23 @@ function _concEliminar(id){
 function _concAbrirDetalle(id){
   var c = _concGetById(id);
   if(!c){ toast('No encontrado','error'); return; }
+  // ── Filtro por período (día / quincena / mes / año / todo) ──
+  window._concDetId = id;
+  if(!window._concDetF || window._concDetF.id !== id){ window._concDetF = { id:id, tipo:'todo', fecha:hoyLocalISO() }; }
+  var _f = window._concDetF;
+  var _rango = _concRangoDe(_f.tipo, _f.fecha); // null = todo
+  var _enRango = function(fecha){ return !_rango || ((fecha||'') >= _rango.desde && (fecha||'') <= _rango.hasta); };
   var fin = _concFinanzasDe(id);
   var usuarios = (typeof _usersCache!=='undefined'&&_usersCache) ? _usersCache.filter(function(u){return (u.concesionarios||[]).indexOf(id)!==-1;}) : [];
   var saldoCol = fin.saldo > 0 ? 'var(--green)' : (fin.saldo < 0 ? 'var(--red)' : 'var(--ink3)');
   var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  // Aplicar el filtro a anticipos y créditos (el saldo global NO cambia con el filtro)
+  var antF = fin.anticipos.filter(function(a){ return _enRango(a.fecha); });
+  var credsF = fin.creds.filter(function(cr){ return _enRango(cr.fecha); });
+  var envP = antF.reduce(function(s,a){ return s+(parseFloat(a.monto)||0); },0);
+  var conP = credsF.reduce(function(s,cr){ return s+(parseFloat(cr.precioBaseReal||cr.precio)||0); },0);
   // Créditos (motos que salieron) — más recientes primero
-  var credsOrd = fin.creds.slice().sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
+  var credsOrd = credsF.slice().sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
   var filasCreds = credsOrd.map(function(cr){
     var costo = parseFloat(cr.precioBaseReal||cr.precio)||0;
     return '<tr style="cursor:pointer" onclick="closeM();openAmort(\''+cr.id+'\')">'
@@ -478,8 +489,8 @@ function _concAbrirDetalle(id){
       + '<td class="tds">'+(cr.estado||'')+'</td>'
       + '</tr>';
   }).join('');
-  // Anticipos — más recientes primero
-  var antOrd = fin.anticipos.slice().sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
+  // Anticipos — más recientes primero (filtrados por período)
+  var antOrd = antF.slice().sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
   var filasAnt = antOrd.map(function(a){
     return '<tr>'
       + '<td class="tds">'+(a.fecha||'—')+'</td>'
@@ -492,13 +503,16 @@ function _concAbrirDetalle(id){
       + '</tr>';
   }).join('');
   // ── Kardex: TODAS las entradas (anticipos) y salidas (motos) con saldo acumulado ──
-  var movs = fin.anticipos.map(function(a){
+  // El saldo acumulado se calcula sobre el histórico COMPLETO (para que sea real);
+  // el filtro de período solo decide qué filas se muestran.
+  var movsAll = fin.anticipos.map(function(a){
       return { fecha:a.fecha||'', det:'Anticipo · '+(a.metodo||'—')+(a.ref?' · '+a.ref:'')+(a.nota?' · '+a.nota:''), monto:parseFloat(a.monto)||0 };
     }).concat(fin.creds.map(function(cr){
       return { fecha:cr.fecha||'', det:cr.id+' · '+(cr.cli||'')+' · '+(cr.modelo||''), monto:-(parseFloat(cr.precioBaseReal||cr.precio)||0), credId:cr.id };
     })).sort(function(a,b){ return String(a.fecha).localeCompare(String(b.fecha)); });
   var _run = 0;
-  movs.forEach(function(m){ _run += m.monto; m.saldo = _run; });
+  movsAll.forEach(function(m){ _run += m.monto; m.saldo = _run; });
+  var movs = movsAll.filter(function(m){ return _enRango(m.fecha); });
   var filasMov = movs.slice().reverse().map(function(m){
     var esIn = m.monto >= 0;
     return '<tr'+(m.credId?' style="cursor:pointer" onclick="closeM();openAmort(\''+m.credId+'\')"':'')+'>'
@@ -528,6 +542,16 @@ function _concAbrirDetalle(id){
     + '<span><b>Estado:</b> '+(c.activo!==false?'<span style="color:var(--green);font-weight:700">Activo</span>':'<span style="color:var(--red);font-weight:700">Inactivo</span>')+'</span>'
     + '<span><b>Usuarios:</b> '+usuarios.length+'</span>'
     + '</div>'
+    // ── Filtro por período ──
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;background:var(--surf2);border:1px solid var(--rim2);border-radius:10px;padding:8px 10px">'
+    + '<span style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Filtrar:</span>'
+    + [['dia','Día'],['quincena','Quincena'],['mes','Mes'],['ano','Año'],['todo','Todo']].map(function(t){
+        return '<button class="btn btn-xs '+(_f.tipo===t[0]?'btn-p':'btn-g')+'" onclick="_concDetSetTipo(\''+t[0]+'\')" style="font-size:10px;padding:3px 10px">'+t[1]+'</button>';
+      }).join('')
+    + '<input type="date" value="'+_f.fecha+'" onchange="_concDetSetFecha(this.value)" style="border:1px solid var(--rim);border-radius:8px;padding:4px 8px;font-size:11.5px;font-family:var(--f);background:var(--surf);color:var(--ink)'+(_f.tipo==='todo'?';opacity:.45':'')+'">'
+    + (_rango?'<span style="font-size:10.5px;color:var(--ink3)">'+_rango.desde+' → '+_rango.hasta+'</span>':'')
+    + (_rango?'<span style="margin-left:auto;font-size:11px;font-weight:800"><span style="color:var(--green)">+'+fmt(envP).replace('$','$')+'</span> · <span style="color:var(--red)">−'+fmt(conP)+'</span> <span style="color:var(--ink3);font-weight:600">en el período</span></span>':'')
+    + '</div>'
     // ── Historial de movimientos (kardex con saldo acumulado) ──
     + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Historial de movimientos — entradas y salidas ('+movs.length+')</div>'
     + (movs.length===0
@@ -537,18 +561,18 @@ function _concAbrirDetalle(id){
         + '<tbody>'+filasMov+'</tbody></table></div>')
     // ── Anticipos enviados ──
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">'
-    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Dinero enviado — anticipos ('+fin.anticipos.length+')</div>'
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Dinero enviado — anticipos ('+antF.length+')</div>'
     + '<button class="btn btn-p btn-xs" onclick="_concOpenAnticipo(\''+id+'\')">＋ Registrar anticipo</button>'
     + '</div>'
-    + (fin.anticipos.length===0
-      ? '<div style="padding:14px;text-align:center;background:var(--gs);border-radius:9px;color:var(--ink3);font-size:11.5px;margin-bottom:13px">Sin anticipos registrados. Usa "＋ Registrar anticipo" cuando le mandes dinero a esta sede.</div>'
+    + (antF.length===0
+      ? '<div style="padding:14px;text-align:center;background:var(--gs);border-radius:9px;color:var(--ink3);font-size:11.5px;margin-bottom:13px">'+(_rango?'Sin anticipos en este período.':'Sin anticipos registrados. Usa "＋ Registrar anticipo" cuando le mandes dinero a esta sede.')+'</div>'
       : '<div class="tw tw-compact" style="max-height:180px;overflow-y:auto;margin-bottom:13px"><table>'
         + '<thead><tr><th>Fecha</th><th style="text-align:right">Monto</th><th>Método</th><th>Referencia</th><th>Nota</th><th>Por</th><th></th></tr></thead>'
         + '<tbody>'+filasAnt+'</tbody></table></div>')
     // ── Motos que salieron ──
-    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Motos que salieron — contratos ('+fin.creds.length+')</div>'
-    + (fin.creds.length===0
-      ? '<div style="padding:14px;text-align:center;background:var(--gs);border-radius:9px;color:var(--ink3);font-size:11.5px">Aún no han salido motos de esta sede.</div>'
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Motos que salieron — contratos ('+credsF.length+')</div>'
+    + (credsF.length===0
+      ? '<div style="padding:14px;text-align:center;background:var(--gs);border-radius:9px;color:var(--ink3);font-size:11.5px">'+(_rango?'Sin motos vendidas en este período.':'Aún no han salido motos de esta sede.')+'</div>'
       : '<div class="tw tw-compact" style="max-height:260px;overflow-y:auto"><table>'
         + '<thead><tr><th>Crédito</th><th>Fecha</th><th>Cliente</th><th>Modelo</th><th>Placa/Serial</th><th style="text-align:right">Costo</th><th>Estado</th></tr></thead>'
         + '<tbody>'+filasCreds+'</tbody></table></div>');
@@ -823,6 +847,37 @@ function _concFinanzasDe(cid){
   });
   var consumido = creds.reduce(function(s,cr){ return s + (parseFloat(cr.precioBaseReal||cr.precio)||0); }, 0);
   return { anticipos: anticipos, creds: creds, enviado: enviado, consumido: consumido, saldo: enviado - consumido };
+}
+
+// Rango de fechas para el filtro del detalle: dia / quincena / mes / ano / todo (null)
+function _concRangoDe(tipo, fecha){
+  var f = fecha || hoyLocalISO();
+  if(tipo==='dia') return { desde:f, hasta:f };
+  if(tipo==='quincena'){
+    var day = parseInt(f.slice(8,10),10), ym = f.slice(0,7);
+    if(day<=15) return { desde:ym+'-01', hasta:ym+'-15' };
+    var last = new Date(parseInt(ym.slice(0,4),10), parseInt(ym.slice(5,7),10), 0).getDate();
+    return { desde:ym+'-16', hasta:ym+'-'+String(last).padStart(2,'0') };
+  }
+  if(tipo==='mes'){
+    var ym2 = f.slice(0,7);
+    var l2 = new Date(parseInt(ym2.slice(0,4),10), parseInt(ym2.slice(5,7),10), 0).getDate();
+    return { desde:ym2+'-01', hasta:ym2+'-'+String(l2).padStart(2,'0') };
+  }
+  if(tipo==='ano'){
+    var y = f.slice(0,4);
+    return { desde:y+'-01-01', hasta:y+'-12-31' };
+  }
+  return null; // todo
+}
+
+function _concDetSetTipo(t){
+  if(window._concDetF) window._concDetF.tipo = t;
+  if(window._concDetId) _concAbrirDetalle(window._concDetId);
+}
+function _concDetSetFecha(v){
+  if(window._concDetF) window._concDetF.fecha = v || hoyLocalISO();
+  if(window._concDetId) _concAbrirDetalle(window._concDetId);
 }
 
 // Modal: registrar anticipo (dinero enviado a la sede)
