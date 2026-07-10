@@ -349,33 +349,33 @@ function reporteMensualHtml(){
   var trCobradores = r.topCobradores.length ? r.topCobradores.map(function(c,i){
     return '<tr><td style="'+tdStyle()+'">'+(i+1)+'</td>'
       +'<td style="'+tdStyle('font-weight:700;color:#111')+'">'+c.nombre+'</td>'
-      +'<td style="'+tdStyle('text-align:right;font-family:ui-monospace,monospace;color:#16a34a;font-weight:800')+'">'+r.fmtUsd(c.total)+'</td>'
+      +'<td style="'+tdStyle('text-align:right;font-family:Nunito,sans-serif;color:#16a34a;font-weight:800')+'">'+r.fmtUsd(c.total)+'</td>'
       +'<td style="'+tdStyle('text-align:right;color:#9ca3af')+'">'+c.count+'</td></tr>';
   }).join('') : trEmpty(4,'Sin cobros registrados este mes');
 
   var trClientes = r.topClientes.length ? r.topClientes.map(function(c,i){
     return '<tr><td style="'+tdStyle()+'">'+(i+1)+'</td>'
       +'<td style="'+tdStyle('font-weight:700;color:#111')+'">'+c.nombre+'</td>'
-      +'<td style="'+tdStyle('text-align:right;font-family:ui-monospace,monospace;color:#16a34a;font-weight:800')+'">'+r.fmtUsd(c.total)+'</td>'
+      +'<td style="'+tdStyle('text-align:right;font-family:Nunito,sans-serif;color:#16a34a;font-weight:800')+'">'+r.fmtUsd(c.total)+'</td>'
       +'<td style="'+tdStyle('text-align:right;color:#9ca3af')+'">'+c.count+'</td></tr>';
   }).join('') : trEmpty(4,'Sin clientes que hayan pagado este mes');
 
   var trCreditosNuevos = r.creditosNuevosArr.length ? r.creditosNuevosArr.slice(0,15).map(function(c){
-    return '<tr><td style="'+tdStyle('font-family:ui-monospace,monospace;color:#6b7280')+'">'+(c.id||'—')+'</td>'
+    return '<tr><td style="'+tdStyle('font-family:Nunito,sans-serif;color:#6b7280')+'">'+(c.id||'—')+'</td>'
       +'<td style="'+tdStyle('font-weight:700;color:#111')+'">'+(c.cli||'—')+'</td>'
       +'<td style="'+tdStyle()+'">'+(c.modelo||'—')+'</td>'
-      +'<td style="'+tdStyle('text-align:right;font-family:ui-monospace,monospace;font-weight:700')+'">'+r.fmtUsd(c.precio)+'</td>'
-      +'<td style="'+tdStyle('text-align:right;font-family:ui-monospace,monospace;color:#2563EB;font-weight:700')+'">'+r.fmtUsd(c.cuotaQ||c.cuota||0)+'</td>'
+      +'<td style="'+tdStyle('text-align:right;font-family:Nunito,sans-serif;font-weight:700')+'">'+r.fmtUsd(c.precio)+'</td>'
+      +'<td style="'+tdStyle('text-align:right;font-family:Nunito,sans-serif;color:#2563EB;font-weight:700')+'">'+r.fmtUsd(c.cuotaQ||c.cuota||0)+'</td>'
       +'<td style="'+tdStyle('text-align:center;color:#6b7280;font-size:11.5px')+'">'+r.fmtFecha(c.fecha)+'</td></tr>';
   }).join('') : trEmpty(6,'Sin créditos nuevos este mes');
 
   var trMora = r.enMora.length ? r.enMora.slice(0,20).map(function(c){
     var moraColor = (c.mora||0) > 30 ? '#dc2626' : (c.mora||0) > 15 ? '#ea580c' : '#ca8a04';
-    return '<tr><td style="'+tdStyle('font-family:ui-monospace,monospace;color:#6b7280')+'">'+(c.id||'—')+'</td>'
+    return '<tr><td style="'+tdStyle('font-family:Nunito,sans-serif;color:#6b7280')+'">'+(c.id||'—')+'</td>'
       +'<td style="'+tdStyle('font-weight:700;color:#111')+'">'+(c.cli||'—')+'</td>'
       +'<td style="'+tdStyle()+'">'+(c.modelo||'—')+'</td>'
-      +'<td style="'+tdStyle('text-align:center;font-family:ui-monospace,monospace;font-weight:900;color:'+moraColor)+'">'+c.mora+'d</td>'
-      +'<td style="'+tdStyle('text-align:right;font-family:ui-monospace,monospace;font-weight:700')+'">'+r.fmtUsd(c.cuotaQ||c.cuota||0)+'</td></tr>';
+      +'<td style="'+tdStyle('text-align:center;font-family:Nunito,sans-serif;font-weight:900;color:'+moraColor)+'">'+c.mora+'d</td>'
+      +'<td style="'+tdStyle('text-align:right;font-family:Nunito,sans-serif;font-weight:700')+'">'+r.fmtUsd(c.cuotaQ||c.cuota||0)+'</td></tr>';
   }).join('') : trEmpty(5,'Sin clientes en mora 🎉');
 
   var trIngresos = r.pagosMesAct.length ? r.pagosMesAct.slice(0,20).map(function(p){
@@ -383,28 +383,28 @@ function reporteMensualHtml(){
     var tipoColor = tipo === 'Inicial' ? '#2563EB' : '#16a34a';
     return '<tr><td style="'+tdStyle('color:#6b7280;font-size:11.5px')+'">'+r.fmtFecha(p.fecha)+'</td>'
       +'<td style="'+tdStyle('font-weight:700;color:#111')+'">'+(p.cli||'—')+'</td>'
-      +'<td style="'+tdStyle('font-family:ui-monospace,monospace;color:#6b7280;font-size:11px')+'">'+(p.cred||'—')+'</td>'
+      +'<td style="'+tdStyle('font-family:Nunito,sans-serif;color:#6b7280;font-size:11px')+'">'+(p.cred||'—')+'</td>'
       +'<td style="'+tdStyle()+'"><span style="background:'+tipoColor+'18;color:'+tipoColor+';padding:2px 8px;border-radius:50px;font-size:10.5px;font-weight:700">'+tipo+'</span></td>'
-      +'<td style="'+tdStyle('text-align:right;font-family:ui-monospace,monospace;font-weight:800;color:#16a34a')+'">+'+r.fmtUsd(p.monto)+'</td></tr>';
+      +'<td style="'+tdStyle('text-align:right;font-family:Nunito,sans-serif;font-weight:800;color:#16a34a')+'">+'+r.fmtUsd(p.monto)+'</td></tr>';
   }).join('') : trEmpty(5,'Sin pagos registrados este mes');
 
   var trEgresos = r.egresosMesAct.length ? r.egresosMesAct.slice(0,15).map(function(e){
     return '<tr><td style="'+tdStyle('color:#6b7280;font-size:11.5px')+'">'+r.fmtFecha(e.fecha)+'</td>'
       +'<td style="'+tdStyle('font-weight:700;color:#111')+'">'+(e.concepto||e.descripcion||'—')+'</td>'
       +'<td style="'+tdStyle('color:#6b7280;font-size:11.5px')+'">'+(e.categoria||'Sin categoría')+'</td>'
-      +'<td style="'+tdStyle('text-align:right;font-family:ui-monospace,monospace;font-weight:800;color:#dc2626')+'">-'+r.fmtUsd(e.monto)+'</td></tr>';
+      +'<td style="'+tdStyle('text-align:right;font-family:Nunito,sans-serif;font-weight:800;color:#dc2626')+'">-'+r.fmtUsd(e.monto)+'</td></tr>';
   }).join('') : trEmpty(4,'Sin egresos registrados este mes');
 
   var trEgresosCat = r.egresosListados.length ? r.egresosListados.map(function(e){
     return '<tr><td style="'+tdStyle('font-weight:700;color:#111')+'">'+e.cat+'</td>'
       +'<td style="'+tdStyle('text-align:right;color:#9ca3af')+'">'+e.count+'</td>'
-      +'<td style="'+tdStyle('text-align:right;font-family:ui-monospace,monospace;font-weight:800;color:#dc2626')+'">'+r.fmtUsd(e.total)+'</td></tr>';
+      +'<td style="'+tdStyle('text-align:right;font-family:Nunito,sans-serif;font-weight:800;color:#dc2626')+'">'+r.fmtUsd(e.total)+'</td></tr>';
   }).join('') : trEmpty(3,'Sin egresos');
 
   var trSedes = r.pagosPorSede.length ? r.pagosPorSede.map(function(s){
     return '<tr><td style="'+tdStyle('font-weight:700;color:#111')+'">'+s.sede+'</td>'
       +'<td style="'+tdStyle('text-align:right;color:#9ca3af')+'">'+s.count+'</td>'
-      +'<td style="'+tdStyle('text-align:right;font-family:ui-monospace,monospace;font-weight:800;color:#16a34a')+'">'+r.fmtUsd(s.total)+'</td></tr>';
+      +'<td style="'+tdStyle('text-align:right;font-family:Nunito,sans-serif;font-weight:800;color:#16a34a')+'">'+r.fmtUsd(s.total)+'</td></tr>';
   }).join('') : trEmpty(3,'Sin pagos por sede');
 
   // Sección reusable
@@ -415,18 +415,21 @@ function reporteMensualHtml(){
       +contenido+'</div>';
   }
 
+  var _logoRM = (typeof _PAGASI_LOGO_BLUE!=='undefined'&&_PAGASI_LOGO_BLUE) || ((document.querySelector('.sb-logo img')||{}).src||'');
   return ''
-    +'<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;max-width:880px;margin:0 auto;color:#1f2937;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.06)">'
+    +'<div style="font-family:Nunito,\'Nunito Sans\',system-ui,sans-serif;max-width:880px;margin:0 auto;color:#1f2937;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.06)">'
 
     // Header
     +'<div style="background:linear-gradient(135deg,#2563EB 0%,#1D4ED8 50%,#1E3A8A 100%);color:#fff;padding:38px 40px">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap">'
-        +'<div><div style="font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;opacity:.85;margin-bottom:8px">Reporte mensual completo</div>'
+        +'<div>'
+        +(_logoRM?'<div style="background:#fff;border-radius:10px;padding:8px 14px;display:inline-block;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,.15)"><img src="'+_logoRM+'" alt="Pagasi" style="height:30px;display:block"></div>':'')
+        +'<div style="font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;opacity:.85;margin-bottom:8px">Reporte mensual completo</div>'
         +'<h1 style="font-size:36px;font-weight:900;margin:0;letter-spacing:-1.2px;text-transform:capitalize;line-height:1.05">'+r.mes+'</h1>'
         +'<div style="font-size:13px;opacity:.85;margin-top:10px">'+(emp.nombre||'Pagasi')+(emp.rif?' · RIF '+emp.rif:'')+' · Generado el '+new Date().toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'})+' a las '+new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})+'</div></div>'
         +'<div style="background:rgba(255,255,255,.18);backdrop-filter:blur(8px);border-radius:11px;padding:14px 18px;text-align:right;min-width:160px">'
           +'<div style="font-size:10px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Utilidad neta</div>'
-          +'<div style="font-size:26px;font-weight:900;letter-spacing:-.5px;font-family:ui-monospace,monospace;color:'+(r.utilidad>=0?'#86efac':'#fecaca')+'">'+r.fmtUsd(r.utilidad)+'</div>'
+          +'<div style="font-size:26px;font-weight:900;letter-spacing:-.5px;font-family:Nunito,sans-serif;color:'+(r.utilidad>=0?'#86efac':'#fecaca')+'">'+r.fmtUsd(r.utilidad)+'</div>'
           +'<div style="font-size:10.5px;opacity:.85;margin-top:3px">Ingresos − Egresos</div>'
         +'</div>'
       +'</div>'
@@ -438,9 +441,9 @@ function reporteMensualHtml(){
       // ─── 1. RESUMEN EJECUTIVO ───
       +seccion('Resumen financiero','Visión general del mes',''
         +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">'
-          +'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:11px;padding:14px"><div style="font-size:10px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Ingresos</div><div style="font-size:24px;font-weight:900;color:#16a34a;font-family:ui-monospace,monospace">'+r.fmtUsd(r.cobradoMesAct)+'</div><div style="font-size:11px;color:#16a34a;margin-top:3px;font-weight:600">'+r.pagosCount+' pagos · '+(r.pctCrec>=0?'↑ +':'↓ ')+Math.abs(r.pctCrec)+'%</div></div>'
-          +'<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:11px;padding:14px"><div style="font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Egresos</div><div style="font-size:24px;font-weight:900;color:#dc2626;font-family:ui-monospace,monospace">'+r.fmtUsd(r.totalEgresos)+'</div><div style="font-size:11px;color:#dc2626;margin-top:3px;font-weight:600">'+r.egresosMesAct.length+' transacciones</div></div>'
-          +'<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:11px;padding:14px"><div style="font-size:10px;font-weight:700;color:#2563EB;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Cartera activa</div><div style="font-size:24px;font-weight:900;color:#2563EB;font-family:ui-monospace,monospace">'+r.fmtUsd(r.cartera)+'</div><div style="font-size:11px;color:#2563EB;margin-top:3px;font-weight:600">'+r.creditosActivos+' créditos activos</div></div>'
+          +'<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:11px;padding:14px"><div style="font-size:10px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Ingresos</div><div style="font-size:24px;font-weight:900;color:#16a34a;font-family:Nunito,sans-serif">'+r.fmtUsd(r.cobradoMesAct)+'</div><div style="font-size:11px;color:#16a34a;margin-top:3px;font-weight:600">'+r.pagosCount+' pagos · '+(r.pctCrec>=0?'↑ +':'↓ ')+Math.abs(r.pctCrec)+'%</div></div>'
+          +'<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:11px;padding:14px"><div style="font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Egresos</div><div style="font-size:24px;font-weight:900;color:#dc2626;font-family:Nunito,sans-serif">'+r.fmtUsd(r.totalEgresos)+'</div><div style="font-size:11px;color:#dc2626;margin-top:3px;font-weight:600">'+r.egresosMesAct.length+' transacciones</div></div>'
+          +'<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:11px;padding:14px"><div style="font-size:10px;font-weight:700;color:#2563EB;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">Cartera activa</div><div style="font-size:24px;font-weight:900;color:#2563EB;font-family:Nunito,sans-serif">'+r.fmtUsd(r.cartera)+'</div><div style="font-size:11px;color:#2563EB;margin-top:3px;font-weight:600">'+r.creditosActivos+' créditos activos</div></div>'
           +'<div style="background:'+(r.enMora.length>0?'#fef2f2':'#f9fafb')+';border:1px solid '+(r.enMora.length>0?'#fecaca':'#e5e7eb')+';border-radius:11px;padding:14px"><div style="font-size:10px;font-weight:700;color:'+(r.enMora.length>0?'#dc2626':'#6b7280')+';text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px">En mora</div><div style="font-size:24px;font-weight:900;color:'+(r.enMora.length>0?'#dc2626':'#6b7280')+'">'+r.enMora.length+'</div><div style="font-size:11px;color:'+(r.enMora.length>0?'#dc2626':'#6b7280')+';margin-top:3px;font-weight:600">'+r.moraGraves.length+' graves (+30d)</div></div>'
         +'</div>'
 
@@ -452,8 +455,8 @@ function reporteMensualHtml(){
         +'</div>'
 
         +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">'
-          +'<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:11px;padding:13px"><div style="font-size:10px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Desglose ingresos</div><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:6px"><span>Cuotas regulares</span><span style="font-family:ui-monospace,monospace;color:#059669">'+r.fmtUsd(r.totalCuotas)+' ('+r.cuotas.length+')</span></div><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:4px"><span>Iniciales</span><span style="font-family:ui-monospace,monospace;color:#059669">'+r.fmtUsd(r.totalIniciales)+' ('+r.iniciales.length+')</span></div></div>'
-          +'<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:11px;padding:13px"><div style="font-size:10px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Cartera vs mes anterior</div><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:6px"><span>Mes actual</span><span style="font-family:ui-monospace,monospace;color:#b45309">'+r.fmtUsd(r.cobradoMesAct)+'</span></div><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:4px"><span>Mes anterior</span><span style="font-family:ui-monospace,monospace;color:#92400e">'+r.fmtUsd(r.cobradoMesAnt)+'</span></div></div>'
+          +'<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:11px;padding:13px"><div style="font-size:10px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Desglose ingresos</div><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:6px"><span>Cuotas regulares</span><span style="font-family:Nunito,sans-serif;color:#059669">'+r.fmtUsd(r.totalCuotas)+' ('+r.cuotas.length+')</span></div><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:4px"><span>Iniciales</span><span style="font-family:Nunito,sans-serif;color:#059669">'+r.fmtUsd(r.totalIniciales)+' ('+r.iniciales.length+')</span></div></div>'
+          +'<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:11px;padding:13px"><div style="font-size:10px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Cartera vs mes anterior</div><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:6px"><span>Mes actual</span><span style="font-family:Nunito,sans-serif;color:#b45309">'+r.fmtUsd(r.cobradoMesAct)+'</span></div><div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:4px"><span>Mes anterior</span><span style="font-family:Nunito,sans-serif;color:#92400e">'+r.fmtUsd(r.cobradoMesAnt)+'</span></div></div>'
         +'</div>'
       )
 
@@ -462,7 +465,7 @@ function reporteMensualHtml(){
         +'<table style="width:100%;border-collapse:collapse;background:#fff">'
           +'<thead><tr><th style="'+thStyle()+'">Fecha</th><th style="'+thStyle()+'">Cliente</th><th style="'+thStyle()+'">Crédito</th><th style="'+thStyle()+'">Tipo</th><th style="'+thStyle('text-align:right')+'">Monto</th></tr></thead>'
           +'<tbody>'+trIngresos+'</tbody>'
-          +(r.pagosMesAct.length>0?'<tfoot><tr><td colspan="4" style="padding:11px 12px;border-top:2px solid #e5e7eb;font-weight:800;color:#111;font-size:13px">TOTAL INGRESOS</td><td style="padding:11px 12px;border-top:2px solid #e5e7eb;text-align:right;font-weight:900;color:#16a34a;font-family:ui-monospace,monospace;font-size:15px">'+r.fmtUsd(r.cobradoMesAct)+'</td></tr></tfoot>':'')
+          +(r.pagosMesAct.length>0?'<tfoot><tr><td colspan="4" style="padding:11px 12px;border-top:2px solid #e5e7eb;font-weight:800;color:#111;font-size:13px">TOTAL INGRESOS</td><td style="padding:11px 12px;border-top:2px solid #e5e7eb;text-align:right;font-weight:900;color:#16a34a;font-family:Nunito,sans-serif;font-size:15px">'+r.fmtUsd(r.cobradoMesAct)+'</td></tr></tfoot>':'')
         +'</table>'
       )
 
@@ -471,7 +474,7 @@ function reporteMensualHtml(){
         +'<table style="width:100%;border-collapse:collapse;background:#fff;margin-bottom:14px">'
           +'<thead><tr><th style="'+thStyle()+'">Fecha</th><th style="'+thStyle()+'">Concepto</th><th style="'+thStyle()+'">Categoría</th><th style="'+thStyle('text-align:right')+'">Monto</th></tr></thead>'
           +'<tbody>'+trEgresos+'</tbody>'
-          +(r.egresosMesAct.length>0?'<tfoot><tr><td colspan="3" style="padding:11px 12px;border-top:2px solid #e5e7eb;font-weight:800;color:#111;font-size:13px">TOTAL EGRESOS</td><td style="padding:11px 12px;border-top:2px solid #e5e7eb;text-align:right;font-weight:900;color:#dc2626;font-family:ui-monospace,monospace;font-size:15px">-'+r.fmtUsd(r.totalEgresos)+'</td></tr></tfoot>':'')
+          +(r.egresosMesAct.length>0?'<tfoot><tr><td colspan="3" style="padding:11px 12px;border-top:2px solid #e5e7eb;font-weight:800;color:#111;font-size:13px">TOTAL EGRESOS</td><td style="padding:11px 12px;border-top:2px solid #e5e7eb;text-align:right;font-weight:900;color:#dc2626;font-family:Nunito,sans-serif;font-size:15px">-'+r.fmtUsd(r.totalEgresos)+'</td></tr></tfoot>':'')
         +'</table>'
         +(r.egresosListados.length?'<div style="background:#f9fafb;border-radius:10px;padding:14px;margin-top:8px"><div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Egresos por categoría</div><table style="width:100%;border-collapse:collapse"><thead><tr><th style="'+thStyle()+'">Categoría</th><th style="'+thStyle('text-align:right')+'">#</th><th style="'+thStyle('text-align:right')+'">Total</th></tr></thead><tbody>'+trEgresosCat+'</tbody></table></div>':'')
       )
@@ -528,9 +531,12 @@ function reporteMensualHtml(){
 function reporteMensualAbrir(){
   var win = window.open('', '_blank');
   if(!win){ if(typeof toast==='function') toast('Habilita popups para ver el reporte','error'); return; }
-  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte mensual</title></head><body style="background:#f3f4f6;padding:24px 0;margin:0">'
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte mensual</title>'
+    +'<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">'
+    +'<style>*{-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{body{background:#fff!important;padding:0!important}button{display:none!important}}</style>'
+    +'</head><body style="background:#f3f4f6;padding:24px 0;margin:0;font-family:Nunito,system-ui,sans-serif">'
     +reporteMensualHtml()
-    +'<div style="max-width:680px;margin:18px auto 0;text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;font-family:-apple-system,sans-serif">'
+    +'<div style="max-width:680px;margin:18px auto 0;text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;font-family:Nunito,system-ui,sans-serif">'
       +'<button onclick="window.print()" style="background:#2563EB;color:#fff;border:none;padding:12px 24px;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px">Imprimir / PDF</button>'
       +'<button onclick="window.close()" style="background:#fff;color:#374151;border:1px solid #d1d5db;padding:12px 24px;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px">Cerrar</button>'
     +'</div>'
