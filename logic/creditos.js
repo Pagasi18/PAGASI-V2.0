@@ -135,23 +135,15 @@ function _wzRender(motoId){
   var _catOrdenado = (CATALOGO||[]).filter(function(c){ return !!c; }).slice().sort(function(a,b){
     return String(a.modelo||'').localeCompare(String(b.modelo||''),'es',{numeric:true,sensitivity:'base'});
   });
-  var catOptions = _catOrdenado.map(function(c){
+  var catOptions = '<option value="__wz_new_cat__">＋ Agregar nueva moto al catálogo...</option>'
+    + _catOrdenado.map(function(c){
     var modelo = c.modelo || ('Modelo '+(c.id||'?'));
     var precio = parseFloat(c.precio)||0;
     var sede = c.sede ? ' · '+c.sede : '';
-    return '<option value="'+precio+'" data-modelo="'+modelo+'">'+modelo+' — $'+precio.toFixed(2)+sede+'</option>';
-  }).join('') + '<option value="__wz_new_cat__">＋ Agregar nueva moto al catálogo...</option>';
+    return '<option value="'+precio+'" data-modelo="'+modelo+'">'+modelo+sede+'</option>';
+  }).join('');
 
-  var step2 = '<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:14px;margin-bottom:12px">'
-    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Moto del inventario disponible</div>'
-    + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Seleccionar unidad disponible</label>'
-    + '<select class="fs" id="wz_moto_inv" onchange="_wzPickMotoInv(this)">'
-    + '<option value="">— Sin asignar del inventario —</option>'
-    + motoOptions
-    + '</select></div>'
-    + '</div>'
-    + '<div style="text-align:center;font-size:11px;color:var(--ink3);margin:8px 0">— o usa el catálogo de precios —</div>'
-    + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Modelo del catálogo</label>'
+  var step2 = '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Modelo del catálogo</label>'
     + '<select class="fs" id="wz_moto_cat" onchange="_wzPickMotoCat(this)">'
     + '<option value="">Seleccionar modelo...</option>'
     + catOptions
@@ -177,10 +169,10 @@ function _wzRender(motoId){
     + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px;margin-top:12px">'
     + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Plan del crédito</div>'
     + '<div class="fgr">'
-    + '<div class="fg"><label>Tipo de plan</label><select class="fs" id="wz_plan_mode" onchange="_wzTogglePlanMode(this.value)"><option value="global">Plan principal</option><option value="custom">Plan personalizado</option><option value="apy">APY / Meses</option></select></div>'
+    + '<div class="fg"><label>Tipo de plan</label><select class="fs" id="wz_plan_mode" onchange="_wzTogglePlanMode(this.value)"><option value="custom" selected>Plan personalizado</option></select></div>'
     + '<div class="fg"><label>Precio base real (USD)</label><input class="fi" id="wz_precio_base_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzMpagoSync();_wzScore()"></div>'
     + '</div>'
-    + '<div id="wz_plan_custom_box" style="display:none;margin-top:10px">'
+    + '<div id="wz_plan_custom_box" style="display:block;margin-top:10px">'
     + '<div class="fgr">'
     + '<div class="fg"><label>Inicial real (USD)</label><input class="fi" id="wz_ini_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzMpagoSync();_wzScore()"></div>'
     + '<div class="fg"><label>Cuota quincenal (USD)</label><input class="fi" id="wz_cuota_q_custom" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzScore()"></div>'
@@ -731,7 +723,7 @@ function _wzHydrate(){
   // Restaurar campos del plan financiero (paso 3)
   if(WZ.step===3){
     // Activar panel del modo correcto
-    var _planModeVal = WZ['wz_plan_mode']||WZ.planMode||'global';
+    var _planModeVal = WZ['wz_plan_mode']||WZ.planMode||'custom';
     var _pm = document.getElementById('wz_plan_mode');
     if(_pm){ _pm.value=_planModeVal; }
     if(typeof _wzTogglePlanMode==='function') _wzTogglePlanMode(_planModeVal);
@@ -1353,7 +1345,7 @@ function _wzValidar(){
     if(precio<=0 && !_modoEdicion){ toast('Selecciona una moto o ingresa el precio','error'); return false; }
     if(precio<=0) precio = WZ.precio||0; // en edición usar precio guardado
     WZ.precio = precio;
-    var planMode=((document.getElementById('wz_plan_mode')||{}).value)||'global';
+    var planMode=((document.getElementById('wz_plan_mode')||{}).value)||'custom';
     if(planMode==='custom'){
       var iniReal=parseFloat((document.getElementById('wz_ini_real')||{}).value)||0;
       var cuotaReal=parseFloat((document.getElementById('wz_cuota_q_custom')||{}).value)||0;
@@ -2508,8 +2500,8 @@ function editarCredSinFirma(credId){
   preload.cuota         = c.cuotaQ||0;
   preload.ini           = parseFloat(c.ini||0);
   preload.precioBaseReal= parseFloat(c.precioBaseReal||c.precio||0);
-  preload.planMode       = c.planModo||preload.planMode||'global';
-  preload['wz_plan_mode']= c.planModo||preload['wz_plan_mode']||preload.planMode||'global';
+  preload.planMode       = 'custom'; // siempre plan personalizado (los demás modos se retiraron)
+  preload['wz_plan_mode']= 'custom';
   preload.apy            = c.plan ? (c.plan.apy||0) : 0;
   preload.factor         = c.factor||0;
   preload.tasaMensual    = c.tasaMensual||0;
