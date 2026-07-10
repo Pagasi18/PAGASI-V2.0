@@ -318,8 +318,11 @@ function _renderDashFin(){
         }).join('')+'</div>':'')
       + '<div style="font-size:11px;color:var(--ink3);line-height:1.55;margin-top:10px;flex:1">'+o.desc+'</div>'
       + '<div style="border-top:1px solid var(--rim2);margin-top:12px;padding-top:10px">'
-      + '<button class="btn btn-g btn-sm" style="width:100%;justify-content:center" onclick="dfReporte(\''+o.rep+'\')">📄 Reporte detallado — crédito por crédito</button>'
-      + '</div></div>';
+      + '<div style="font-size:9.5px;color:var(--ink3);font-weight:700;margin-bottom:6px">Reporte detallado — crédito por crédito</div>'
+      + '<div style="display:flex;gap:6px">'
+      + '<button class="btn btn-g btn-sm" style="flex:1;justify-content:center" onclick="dfReporte(\''+o.rep+'\',\'pdf\')">📄 PDF</button>'
+      + '<button class="btn btn-g btn-sm" style="flex:1;justify-content:center" onclick="dfReporte(\''+o.rep+'\',\'excel\')">⬇ Excel</button>'
+      + '</div></div></div>';
   };
   var secTitle = function(t, s){
     return '<div style="display:flex;align-items:baseline;gap:10px;margin:22px 0 10px">'
@@ -430,9 +433,9 @@ function _renderDashFin(){
 }
 
 // ── Reporte detallado por indicador (PDF con membrete Pagasi) ──
-function dfReporte(key){
+// formato: 'pdf' (default) o 'excel'
+function dfReporte(key, formato){
   var d = _dfDatos();
-  var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
   var perLbl = (d.desde||d.hasta) ? ((d.desde||'inicio')+' → '+(d.hasta||'hoy')) : 'Todo el histórico';
   var titulos = {
     fin_total:'Total financiado (principal)', cxc_total:'Cuentas por cobrar (principal + interés)',
@@ -441,50 +444,91 @@ function dfReporte(key){
     cuotas:'Cuotas cobradas (total, principal, interés)', mora:'Mora — créditos, balance e intereses'
   };
   var titulo = titulos[key]||'Reporte';
-  var head = '<h2>PAGASI — '+esc(titulo).toUpperCase()+'</h2>'
-    + '<div style="text-align:center;font-size:11px;color:#555;margin-bottom:16px">Período: '+esc(perLbl)+' · Generado: '+new Date().toLocaleString('es-VE')+'</div>';
-  var html = '';
-  // Pagos cobrados por crédito (para columna Cobrado)
   var cobradoDe = function(credId){
     return (S.pagos||[]).filter(function(p){ return p && !p.eliminado && p.estado==='confirmado' && !p.esInicial && p.tipoOperacion!=='inicial_credito' && p.cred===credId; })
       .reduce(function(a,p){ return a+(parseFloat(p.monto)||0); },0);
   };
+  // Construir secciones de datos (estructura común para PDF y Excel)
+  // sección = { titulo, headers:[...], rows:[[...]], total:[...], nums:[índices de columnas numéricas] }
+  var secciones = [];
   if(key==='cuotas'){
-    var tot=0, tp=0, ti=0;
-    html = head + '<h3>Detalle de cuotas cobradas ('+d.pagos.length+')</h3>'
-      + '<table><tr><th>Fecha</th><th>Pago</th><th>Crédito</th><th>Cliente</th><th>Monto</th><th>Principal</th><th>Interés</th></tr>'
-      + d.pagos.slice().sort(function(a,b){ return String(a.fecha||'').localeCompare(String(b.fecha||'')); }).map(function(p){
-          var m=parseFloat(p.monto)||0; var c=d.credIdx[p.cred]; var ratio=0;
-          if(c){ var pr=d.principal(c), tt=d.totalPI(c); ratio=tt>0?pr/tt:0; }
-          var mp=m*ratio, mi=m*(1-ratio); tot+=m; tp+=mp; ti+=mi;
-          return '<tr><td>'+esc(p.fecha||'')+'</td><td>'+esc(p.id)+'</td><td>'+esc(p.cred||'')+'</td><td>'+esc(p.cli||'')+'</td><td>$'+m.toFixed(2)+'</td><td>$'+mp.toFixed(2)+'</td><td>$'+mi.toFixed(2)+'</td></tr>';
-        }).join('')
-      + '<tr><td colspan="4" style="font-weight:900;text-align:right">TOTAL</td><td style="font-weight:900">$'+tot.toFixed(2)+'</td><td style="font-weight:900">$'+tp.toFixed(2)+'</td><td style="font-weight:900">$'+ti.toFixed(2)+'</td></tr></table>';
+    var tot=0, tp=0, ti=0, rows=[];
+    d.pagos.slice().sort(function(a,b){ return String(a.fecha||'').localeCompare(String(b.fecha||'')); }).forEach(function(p){
+      var m=parseFloat(p.monto)||0; var c=d.credIdx[p.cred]; var ratio=0;
+      if(c){ var pr=d.principal(c), tt=d.totalPI(c); ratio=tt>0?pr/tt:0; }
+      var mp=m*ratio, mi=m*(1-ratio); tot+=m; tp+=mp; ti+=mi;
+      rows.push([p.fecha||'', p.id, p.cred||'', p.cli||'', m, mp, mi]);
+    });
+    secciones.push({ titulo:'Detalle de cuotas cobradas ('+d.pagos.length+')',
+      headers:['Fecha','Pago','Crédito','Cliente','Monto','Principal','Interés'],
+      rows:rows, nums:[4,5,6], total:['TOTAL','','','',tot,tp,ti] });
   } else if(key==='mora'){
-    html = head
-      + '<h3>Resumen</h3><table><tr><th>Créditos en mora</th><th>Balance en mora (P+I)</th><th>Intereses por mora</th></tr>'
-      + '<tr><td>'+d.nMora+'</td><td>$'+d.moraBalance.toFixed(2)+'</td><td>$'+d.moraInt.toFixed(2)+'</td></tr></table>'
-      + '<h3>Detalle ('+d.enMora.length+')</h3>'
-      + '<table><tr><th>Crédito</th><th>Cliente</th><th>Teléfono</th><th>Días mora</th><th>Cuota</th><th>Cuotas vencidas</th><th>Interés mora</th><th>Saldo (P+I)</th></tr>'
-      + d.enMora.slice().sort(function(a,b){ return (parseFloat(b.mora)||0)-(parseFloat(a.mora)||0); }).map(function(c){
-          var cl=(S.clientes||[]).find(function(x){ return x && ((c.clienteId&&String(x.id)===String(c.clienteId))||x.nombre===c.cli); })||{};
-          var cv=Math.ceil((parseFloat(c.mora)||0)/15);
-          return '<tr><td>'+esc(c.id)+'</td><td>'+esc(c.cli||'')+'</td><td>'+esc(cl.tel||'')+'</td><td>'+(c.mora||0)+'</td><td>$'+(parseFloat(c.cuotaQ||c.cuota)||0).toFixed(2)+'</td><td>'+cv+'</td><td>$'+(parseFloat(c.moraMonto)||0).toFixed(2)+'</td><td>$'+d.saldo(c).toFixed(2)+'</td></tr>';
-        }).join('')
-      + '<tr><td colspan="6" style="font-weight:900;text-align:right">TOTAL</td><td style="font-weight:900">$'+d.moraInt.toFixed(2)+'</td><td style="font-weight:900">$'+d.moraBalance.toFixed(2)+'</td></tr></table>';
+    secciones.push({ titulo:'Resumen', headers:['Créditos en mora','Balance en mora (P+I)','Intereses por mora'],
+      rows:[[d.nMora, d.moraBalance, d.moraInt]], nums:[1,2] });
+    var rowsM=[];
+    d.enMora.slice().sort(function(a,b){ return (parseFloat(b.mora)||0)-(parseFloat(a.mora)||0); }).forEach(function(c){
+      var cl=(S.clientes||[]).find(function(x){ return x && ((c.clienteId&&String(x.id)===String(c.clienteId))||x.nombre===c.cli); })||{};
+      var cv=Math.ceil((parseFloat(c.mora)||0)/15);
+      rowsM.push([c.id, c.cli||'', cl.tel||'', (parseFloat(c.mora)||0), (parseFloat(c.cuotaQ||c.cuota)||0), cv, (parseFloat(c.moraMonto)||0), d.saldo(c)]);
+    });
+    secciones.push({ titulo:'Detalle ('+d.enMora.length+')',
+      headers:['Crédito','Cliente','Teléfono','Días mora','Cuota','Cuotas vencidas','Interés mora','Saldo (P+I)'],
+      rows:rowsM, nums:[4,6,7], total:['TOTAL','','','','','',d.moraInt,d.moraBalance] });
   } else {
-    // Indicadores basados en créditos
     var lista = (key==='fin_act'||key==='cxc_act'||key==='orig_act') ? d.activos : d.creds;
-    var tf=0, tint=0, tpi=0, tcob=0, tsal=0;
-    html = head + '<h3>Detalle de créditos ('+lista.length+')</h3>'
-      + '<table><tr><th>Crédito</th><th>Fecha</th><th>Cliente</th><th>Estado</th><th>Principal</th><th>Interés</th><th>Total (P+I)</th><th>Cobrado</th><th>Saldo</th></tr>'
-      + lista.slice().sort(function(a,b){ return String(a.fecha||'').localeCompare(String(b.fecha||'')); }).map(function(c){
-          var f=d.principal(c), inte=d.interes(c), tt=d.totalPI(c), cob=cobradoDe(c.id), sal=d.saldo(c);
-          tf+=f; tint+=inte; tpi+=tt; tcob+=cob; tsal+=sal;
-          return '<tr><td>'+esc(c.id)+'</td><td>'+esc(c.fecha||'')+'</td><td>'+esc(c.cli||'')+'</td><td>'+esc(c.estado||'')+'</td><td>$'+f.toFixed(2)+'</td><td>$'+inte.toFixed(2)+'</td><td>$'+tt.toFixed(2)+'</td><td>$'+cob.toFixed(2)+'</td><td>$'+sal.toFixed(2)+'</td></tr>';
-        }).join('')
-      + '<tr><td colspan="4" style="font-weight:900;text-align:right">TOTAL</td><td style="font-weight:900">$'+tf.toFixed(2)+'</td><td style="font-weight:900">$'+tint.toFixed(2)+'</td><td style="font-weight:900">$'+tpi.toFixed(2)+'</td><td style="font-weight:900">$'+tcob.toFixed(2)+'</td><td style="font-weight:900">$'+tsal.toFixed(2)+'</td></tr></table>';
+    var tf=0, tint=0, tpi=0, tcob=0, tsal=0, rowsC=[];
+    lista.slice().sort(function(a,b){ return String(a.fecha||'').localeCompare(String(b.fecha||'')); }).forEach(function(c){
+      var f=d.principal(c), inte=d.interes(c), tt=d.totalPI(c), cob=cobradoDe(c.id), sal=d.saldo(c);
+      tf+=f; tint+=inte; tpi+=tt; tcob+=cob; tsal+=sal;
+      rowsC.push([c.id, c.fecha||'', c.cli||'', c.estado||'', f, inte, tt, cob, sal]);
+    });
+    secciones.push({ titulo:'Detalle de créditos ('+lista.length+')',
+      headers:['Crédito','Fecha','Cliente','Estado','Principal','Interés','Total (P+I)','Cobrado','Saldo'],
+      rows:rowsC, nums:[4,5,6,7,8], total:['TOTAL','','','',tf,tint,tpi,tcob,tsal] });
   }
+
+  // ── Excel (CSV) ──
+  if(formato==='excel'){
+    var cell = function(v){ v = String(v==null?'':v); if(/[",\n]/.test(v)) v = '"'+v.replace(/"/g,'""')+'"'; return v; };
+    var row = function(arr){ return arr.map(cell).join(','); };
+    var out = [];
+    out.push(row(['PAGASI — '+titulo]));
+    out.push(row(['Período', perLbl]));
+    out.push(row(['Generado', new Date().toLocaleString('es-VE')]));
+    secciones.forEach(function(sec){
+      out.push('');
+      out.push(row([sec.titulo]));
+      out.push(row(sec.headers));
+      sec.rows.forEach(function(r){ out.push(row(r.map(function(v,i){ return (sec.nums.indexOf(i)>=0 && typeof v==='number') ? v.toFixed(2) : v; }))); });
+      if(sec.total) out.push(row(sec.total.map(function(v,i){ return (sec.nums.indexOf(i)>=0 && typeof v==='number') ? v.toFixed(2) : v; })));
+    });
+    var slug = (titulo||'reporte').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    var blob = new Blob(['﻿'+out.join('\r\n')], {type:'text/csv;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = 'finanzas-'+slug+'-'+hoyLocalISO()+'.csv'; a.click();
+    URL.revokeObjectURL(url);
+    if(typeof toast==='function') toast('Excel exportado ✓','success');
+    return;
+  }
+
+  // ── PDF (ventana Pagasi) ──
+  var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var money = function(v){ return '$'+(parseFloat(v)||0).toFixed(2); };
+  var html = '<h2>PAGASI — '+esc(titulo).toUpperCase()+'</h2>'
+    + '<div style="text-align:center;font-size:11px;color:#555;margin-bottom:16px">Período: '+esc(perLbl)+' · Generado: '+new Date().toLocaleString('es-VE')+'</div>';
+  secciones.forEach(function(sec){
+    html += '<h3>'+esc(sec.titulo)+'</h3><table><tr>'+sec.headers.map(function(h){ return '<th>'+esc(h)+'</th>'; }).join('')+'</tr>';
+    sec.rows.forEach(function(r){
+      html += '<tr>'+r.map(function(v,i){ return '<td>'+(sec.nums.indexOf(i)>=0 ? money(v) : esc(v))+'</td>'; }).join('')+'</tr>';
+    });
+    if(sec.total){
+      html += '<tr>'+sec.total.map(function(v,i){
+        var content = (sec.nums.indexOf(i)>=0 && v!=='') ? money(v) : esc(v);
+        return '<td style="font-weight:900">'+content+'</td>';
+      }).join('')+'</tr>';
+    }
+    html += '</table>';
+  });
   _abrirVentanaImpresion(titulo, html);
 }
 
