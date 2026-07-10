@@ -196,69 +196,162 @@ function _dfDatos(){
     if(c){ var pr=principal(c), tt=totalPI(c); ratio = tt>0 ? pr/tt : 0; }
     cuotasPrin += m*ratio; cuotasInt += m*(1-ratio);
   });
-  // Mora (dentro del cohorte)
+  // Iniciales cobradas en el rango
+  var iniciales = _concFiltrar(S.pagos||[]).filter(function(p){ return p && !p.eliminado && p.estado==='confirmado' && (p.esInicial||p.tipoOperacion==='inicial_credito') && enR(p.fecha); });
+  var inicialesTot = iniciales.reduce(function(a,p){ return a+(parseFloat(p.monto)||0); },0);
+  // Split del saldo pendiente en principal/interés (proporcional al plan de cada crédito)
+  var saldoPrin = function(c){ var tt=totalPI(c); var r=tt>0?principal(c)/tt:0; return saldo(c)*r; };
+  var saldoInt = function(c){ return Math.max(0, saldo(c)-saldoPrin(c)); };
+  // Mora (dentro del cohorte) + aging
   var enMora = activos.filter(function(c){ return (parseFloat(c.mora)||0) > 0; });
+  var aging = [
+    {lbl:'1–15 días',  arr:enMora.filter(function(c){ var m=parseFloat(c.mora)||0; return m>0&&m<=15; })},
+    {lbl:'16–30 días', arr:enMora.filter(function(c){ var m=parseFloat(c.mora)||0; return m>15&&m<=30; })},
+    {lbl:'31–60 días', arr:enMora.filter(function(c){ var m=parseFloat(c.mora)||0; return m>30&&m<=60; })},
+    {lbl:'+60 días',   arr:enMora.filter(function(c){ var m=parseFloat(c.mora)||0; return m>60; })}
+  ].map(function(b){ return {lbl:b.lbl, n:b.arr.length, saldo:sum(b.arr,saldo)}; });
+  var totPI = sum(creds,totalPI);
+  var cxcTot = sum(creds,saldo);
+  var completados = creds.filter(function(c){ return c.estado==='completado'; }).length;
+  var recuperados = creds.filter(function(c){ return c.estado==='recuperado'||c.estado==='recuperada'; }).length;
   return {
     desde:desde, hasta:hasta, enR:enR, credIdx:credIdx,
     creds:creds, activos:activos, enMora:enMora, pagos:pagos,
     principal:principal, totalPI:totalPI, interes:interes, saldo:saldo,
     finTotal:sum(creds,principal), finActivos:sum(activos,principal),
-    cxcTotal:sum(creds,saldo), cxcActivos:sum(activos,saldo),
-    intTotal:sum(creds,interes),
-    nOrig:creds.length, nOrigAct:activos.length,
+    cxcTotal:cxcTot, cxcActivos:sum(activos,saldo),
+    cxcPrin:sum(creds,saldoPrin), cxcInt:sum(creds,saldoInt),
+    cxcActPrin:sum(activos,saldoPrin), cxcActInt:sum(activos,saldoInt),
+    intTotal:sum(creds,interes), totPI:totPI,
+    pctRecuperado: totPI>0 ? ((totPI-cxcTot)/totPI*100) : 0,
+    ticketProm: creds.length ? (sum(creds,principal)/creds.length) : 0,
+    cuotaProm: activos.length ? (sum(activos,function(c){ return parseFloat(c.cuotaQ||c.cuota)||0; })/activos.length) : 0,
+    nOrig:creds.length, nOrigAct:activos.length, nCompletados:completados, nRecuperados:recuperados,
     cuotasTot:cuotasTot, cuotasPrin:cuotasPrin, cuotasInt:cuotasInt,
+    inicialesTot:inicialesTot, nIniciales:iniciales.length,
     nMora:enMora.length, moraBalance:sum(enMora,saldo),
-    moraInt:sum(enMora,function(c){ return parseFloat(c.moraMonto)||0; })
+    moraInt:sum(enMora,function(c){ return parseFloat(c.moraMonto)||0; }),
+    pctMora: activos.length ? (enMora.length/activos.length*100) : 0,
+    aging:aging
   };
 }
 
 function _renderDashFin(){
   var d = _dfDatos();
   var perLbl = (d.desde||d.hasta) ? ((d.desde||'inicio')+' → '+(d.hasta||'hoy')) : 'Todo el histórico';
-  var card = function(lbl, valor, sub, color, repKey){
-    return '<div class="stat" style="position:relative">'
-      + '<div class="st-v" style="font-size:21px;color:'+(color||'var(--ink)')+'">'+valor+'</div>'
-      + '<div class="st-l">'+lbl+'</div>'
-      + (sub?'<div style="font-size:10px;color:var(--ink3);margin-top:3px">'+sub+'</div>':'')
-      + '<button class="btn btn-g btn-xs" style="margin-top:8px" onclick="dfReporte(\''+repKey+'\')">📄 Reporte</button>'
+  // Card profesional: valor grande + qué es + desglose + botón de reporte
+  var card = function(o){
+    return '<div class="card" style="padding:16px 18px;display:flex;flex-direction:column;border-top:3px solid '+(o.color||'var(--p1)')+'">'
+      + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);margin-bottom:8px">'+o.lbl+'</div>'
+      + '<div style="font-family:var(--fd);font-weight:900;font-size:28px;letter-spacing:-1px;line-height:1;color:'+(o.color||'var(--ink)')+'">'+o.valor+'</div>'
+      + (o.chips?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">'+o.chips.map(function(ch){
+          return '<span style="background:var(--surf2);border:1px solid var(--rim2);border-radius:20px;padding:3px 10px;font-size:10.5px;font-weight:700;color:var(--ink2)">'+ch[0]+' <b style="font-family:var(--fd);color:'+(ch[2]||'var(--ink)')+'">'+ch[1]+'</b></span>';
+        }).join('')+'</div>':'')
+      + '<div style="font-size:11px;color:var(--ink3);line-height:1.55;margin-top:10px;flex:1">'+o.desc+'</div>'
+      + '<div style="border-top:1px solid var(--rim2);margin-top:12px;padding-top:10px">'
+      + '<button class="btn btn-g btn-sm" style="width:100%;justify-content:center" onclick="dfReporte(\''+o.rep+'\')">📄 Reporte detallado — crédito por crédito</button>'
+      + '</div></div>';
+  };
+  var secTitle = function(t, s){
+    return '<div style="display:flex;align-items:baseline;gap:10px;margin:22px 0 10px">'
+      + '<div style="font-size:14px;font-weight:900;color:var(--ink);letter-spacing:-.3px">'+t+'</div>'
+      + '<div style="font-size:11px;color:var(--ink3)">'+s+'</div>'
+      + '<div style="flex:1;height:1px;background:var(--rim)"></div>'
       + '</div>';
   };
+  var pct = function(v){ return (Math.round(v*10)/10).toFixed(1).replace('.0','')+'%'; };
+  var maxAging = Math.max(1, Math.max.apply(null, d.aging.map(function(b){ return b.saldo; })));
   return ''
-    // ── Filtro global de fechas ──
-    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;background:var(--surf2);border:1px solid var(--rim2);border-radius:10px;padding:10px 12px">'
-    + '<span style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Filtro global:</span>'
-    + '<label style="font-size:11px;color:var(--ink3);font-weight:700">Desde</label>'
-    + '<input type="date" value="'+(d.desde||'')+'" onchange="S.dfDesde=this.value;S.reportesTab=\'dashfin\';nav(\'reportes\')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">'
+    // ══ Barra de filtro global ══
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:13px 16px;box-shadow:var(--shadow)">'
+    + '<div><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">Filtro global de fechas</div>'
+    + '<div style="font-size:11px;color:var(--ink3);margin-top:2px">Aplica a originación y cobros · saldos al día de hoy</div></div>'
+    + '<label style="font-size:11px;color:var(--ink3);font-weight:700;margin-left:6px">Desde</label>'
+    + '<input type="date" value="'+(d.desde||'')+'" onchange="S.dfDesde=this.value;S.reportesTab=\'dashfin\';nav(\'reportes\')" style="border:1px solid var(--rim);border-radius:8px;padding:6px 9px;font-size:12.5px;font-family:var(--f);background:var(--surf);color:var(--ink)">'
     + '<label style="font-size:11px;color:var(--ink3);font-weight:700">Hasta</label>'
-    + '<input type="date" value="'+(d.hasta||'')+'" onchange="S.dfHasta=this.value;S.reportesTab=\'dashfin\';nav(\'reportes\')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">'
+    + '<input type="date" value="'+(d.hasta||'')+'" onchange="S.dfHasta=this.value;S.reportesTab=\'dashfin\';nav(\'reportes\')" style="border:1px solid var(--rim);border-radius:8px;padding:6px 9px;font-size:12.5px;font-family:var(--f);background:var(--surf);color:var(--ink)">'
     + ((d.desde||d.hasta)?'<button class="btn btn-g btn-sm" onclick="S.dfDesde=\'\';S.dfHasta=\'\';S.reportesTab=\'dashfin\';nav(\'reportes\')">✕ Limpiar</button>':'')
-    + '<span style="margin-left:auto;font-size:11px;color:var(--ink3)">Cohorte: <b style="color:var(--ink)">'+perLbl+'</b> · '+d.nOrig+' créditos · saldos al día de hoy</span>'
+    + '<div style="margin-left:auto;text-align:right"><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">Cohorte</div>'
+    + '<div style="font-size:13px;font-weight:900;color:var(--p1)">'+perLbl+'</div>'
+    + '<div style="font-size:10.5px;color:var(--ink3)">'+d.nOrig+' créditos · '+d.nOrigAct+' activos · '+d.nCompletados+' completados · '+d.nRecuperados+' recuperados</div></div>'
     + '</div>'
-    // ── Cartera ──
-    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Cartera — principal e interés</div>'
-    + '<div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:14px">'
-    + card('Total financiado (principal)', fmt(d.finTotal), d.nOrig+' créditos originados', 'var(--p1)', 'fin_total')
-    + card('Cuentas por cobrar (P+I)', fmt(d.cxcTotal), 'saldo pendiente de todos', 'var(--amber)', 'cxc_total')
-    + card('Financiado (solo activos)', fmt(d.finActivos), d.nOrigAct+' créditos activos', 'var(--p1)', 'fin_act')
-    + card('CxC solo activos (P+I)', fmt(d.cxcActivos), 'saldo pendiente activos', 'var(--amber)', 'cxc_act')
-    + card('Créditos originados', String(d.nOrig), fmt(d.finTotal+ d.intTotal)+' total P+I', 'var(--ink)', 'orig')
-    + card('Originados activos', String(d.nOrigAct), 'activos + en mora', 'var(--green)', 'orig_act')
+
+    // ══ SECCIÓN 1: ORIGINACIÓN ══
+    + secTitle('Originación','Lo que colocaste en la calle — cohorte '+perLbl.toLowerCase())
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px">'
+    + card({lbl:'Créditos originados', valor:String(d.nOrig), color:'var(--ink)', rep:'orig',
+        chips:[['Activos',String(d.nOrigAct),'var(--green)'],['Completados',String(d.nCompletados)],['Recuperados',String(d.nRecuperados),'var(--red)']],
+        desc:'Cantidad de créditos otorgados en el período (los cancelados no cuentan: esa venta se anuló). Es tu volumen de colocación.'})
+    + card({lbl:'Total financiado — principal', valor:fmt(d.finTotal), color:'var(--p1)', rep:'fin_total',
+        chips:[['Ticket promedio',fmt(d.ticketProm)]],
+        desc:'Capital que pusiste en la calle: precio de venta menos la inicial de cada crédito. Es el dinero tuyo que está trabajando.'})
+    + card({lbl:'Interés pactado', valor:fmt(d.intTotal), color:'var(--amber)', rep:'orig',
+        chips:[['Total a cobrar (P+I)',fmt(d.totPI)]],
+        desc:'La ganancia acordada en los planes: lo que el cliente pagará por encima del principal. Principal + interés = todo lo que entra si pagan completo.'})
+    + card({lbl:'Financiado — solo activos', valor:fmt(d.finActivos), color:'var(--p1)', rep:'fin_act',
+        chips:[['Créditos activos',String(d.nOrigAct),'var(--green)'],['Cuota prom.',fmt(d.cuotaProm)]],
+        desc:'El principal de los créditos que siguen vigentes (activos + en mora). Es tu exposición actual de capital.'})
     + '</div>'
-    // ── Cuotas cobradas ──
-    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Cuotas cobradas — '+d.pagos.length+' pagos en el rango</div>'
-    + '<div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:14px">'
-    + card('Cuotas cobradas (total)', fmt(d.cuotasTot), d.pagos.length+' pagos · sin iniciales', 'var(--green)', 'cuotas')
-    + card('Cuotas — principal', fmt(d.cuotasPrin), 'porción capital', 'var(--p1)', 'cuotas')
-    + card('Cuotas — interés', fmt(d.cuotasInt), 'porción interés', 'var(--amber)', 'cuotas')
+
+    // ══ SECCIÓN 2: CUENTAS POR COBRAR ══
+    + secTitle('Cuentas por cobrar','Lo que te deben hoy — saldo pendiente al día')
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px">'
+    + card({lbl:'CxC total — principal + interés', valor:fmt(d.cxcTotal), color:'var(--amber)', rep:'cxc_total',
+        chips:[['Principal pend.',fmt(d.cxcPrin),'var(--p1)'],['Interés pend.',fmt(d.cxcInt),'var(--amber)']],
+        desc:'Todo lo que falta por cobrar del cohorte (cuotas restantes de cada crédito, según el motor de amortización). Dividido en capital e interés pendiente.'})
+    + card({lbl:'CxC solo activos — P+I', valor:fmt(d.cxcActivos), color:'var(--amber)', rep:'cxc_act',
+        chips:[['Principal pend.',fmt(d.cxcActPrin),'var(--p1)'],['Interés pend.',fmt(d.cxcActInt),'var(--amber)']],
+        desc:'Lo pendiente solo de créditos vigentes (activos + mora). Es tu cartera cobrable real — la que gestiona cobranza cada quincena.'})
+    + card({lbl:'Recuperación del cohorte', valor:pct(d.pctRecuperado), color:'var(--green)', rep:'orig',
+        chips:[['Cobrado (P+I)',fmt(d.totPI-d.cxcTotal),'var(--green)'],['Falta',fmt(d.cxcTotal),'var(--amber)']],
+        desc:'Porcentaje del total a cobrar (P+I) que ya entró. Mientras más viejo el cohorte, más cerca de 100% debería estar.'})
     + '</div>'
-    // ── Mora ──
-    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Mora</div>'
-    + '<div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:14px">'
-    + card('Créditos en mora', String(d.nMora), 'del cohorte filtrado', 'var(--red)', 'mora')
-    + card('Balance en mora (P+I)', fmt(d.moraBalance), 'saldo pendiente de los morosos', 'var(--red)', 'mora')
-    + card('Intereses por mora', fmt(d.moraInt), 'recargos acumulados', 'var(--red)', 'mora')
+
+    // ══ SECCIÓN 3: COBRADO EN EL RANGO ══
+    + secTitle('Cobrado en el período','Dinero que entró en el rango de fechas — '+d.pagos.length+' cuotas + '+d.nIniciales+' iniciales')
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px">'
+    + card({lbl:'Cuotas cobradas — total', valor:fmt(d.cuotasTot), color:'var(--green)', rep:'cuotas',
+        chips:[['Pagos',String(d.pagos.length)]],
+        desc:'Suma de todas las cuotas confirmadas en el rango (no incluye iniciales). Es tu flujo de cobranza del período.'})
+    + card({lbl:'Cuotas — porción principal', valor:fmt(d.cuotasPrin), color:'var(--p1)', rep:'cuotas',
+        chips:[['% del cobro',pct(d.cuotasTot>0?d.cuotasPrin/d.cuotasTot*100:0)]],
+        desc:'La parte de cada cuota que devuelve tu capital. Se calcula proporcional al plan de cada crédito (principal ÷ total).'})
+    + card({lbl:'Cuotas — porción interés', valor:fmt(d.cuotasInt), color:'var(--amber)', rep:'cuotas',
+        chips:[['% del cobro',pct(d.cuotasTot>0?d.cuotasInt/d.cuotasTot*100:0)]],
+        desc:'La parte de cada cuota que es ganancia (interés). Este es el ingreso financiero real del período.'})
+    + card({lbl:'Iniciales cobradas', valor:fmt(d.inicialesTot), color:'var(--green)', rep:'orig',
+        chips:[['Iniciales',String(d.nIniciales)]],
+        desc:'Cuotas iniciales recibidas en el rango. No son financiamiento: son el pago de entrada de cada moto.'})
     + '</div>'
-    + '<div style="font-size:11px;color:var(--ink3);background:var(--gs);border-radius:8px;padding:9px 12px;line-height:1.55">Principal = precio − inicial · Interés = total a pagar − principal · La división principal/interés de las cuotas es proporcional al plan de cada crédito. Cada indicador tiene su botón <b>📄 Reporte</b> con el detalle crédito por crédito (PDF imprimible).</div>';
+
+    // ══ SECCIÓN 4: MORA ══
+    + secTitle('Mora','Cartera con atraso — del cohorte filtrado')
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px">'
+    + card({lbl:'Créditos en mora', valor:String(d.nMora), color:'var(--red)', rep:'mora',
+        chips:[['Tasa de mora',pct(d.pctMora),'var(--red)'],['De '+d.nOrigAct+' activos','']],
+        desc:'Créditos vigentes con al menos un día de atraso. La tasa de mora es sobre los créditos activos del cohorte.'})
+    + card({lbl:'Balance en mora — P+I', valor:fmt(d.moraBalance), color:'var(--red)', rep:'mora',
+        chips:[['% de la CxC activa',pct(d.cxcActivos>0?d.moraBalance/d.cxcActivos*100:0),'var(--red)']],
+        desc:'Todo el saldo pendiente (principal + interés) de los créditos que están en mora. Es el capital en riesgo.'})
+    + card({lbl:'Intereses por mora', valor:fmt(d.moraInt), color:'var(--red)', rep:'mora',
+        desc:'Recargos acumulados por atraso registrados en los créditos morosos. Se cobran aparte de las cuotas.'})
+    + '<div class="card" style="padding:16px 18px;border-top:3px solid var(--red)">'
+      + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--ink3);margin-bottom:10px">Antigüedad de la mora (aging)</div>'
+      + d.aging.map(function(b){
+          var w = Math.round(b.saldo/maxAging*100);
+          return '<div style="margin-bottom:9px">'
+            + '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">'
+            + '<span style="font-weight:700;color:var(--ink2)">'+b.lbl+'</span>'
+            + '<span style="color:var(--ink3)">'+b.n+' créd. · <b style="font-family:var(--fd);color:var(--red)">'+fmt(b.saldo)+'</b></span></div>'
+            + '<div style="height:7px;background:var(--rim);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+(b.saldo>0?Math.max(4,w):0)+'%;background:var(--red);border-radius:4px;opacity:'+(b.lbl==='+60 días'?'1':b.lbl==='31–60 días'?'.85':b.lbl==='16–30 días'?'.65':'.45')+'"></div></div>'
+            + '</div>';
+        }).join('')
+      + '<div style="font-size:11px;color:var(--ink3);line-height:1.5;margin-top:6px;border-top:1px solid var(--rim2);padding-top:8px">Mientras más vieja la mora, más difícil de recuperar. Los de +60 días son candidatos a recuperación de la unidad.</div>'
+    + '</div>'
+    + '</div>'
+
+    // ══ Nota metodológica ══
+    + '<div style="font-size:11px;color:var(--ink3);background:var(--gs);border:1px solid var(--rim2);border-radius:10px;padding:11px 14px;line-height:1.6;margin-top:16px"><b style="color:var(--ink2)">Cómo se calcula:</b> Principal = precio de venta − inicial · Interés = total a pagar − principal · CxC = cuotas restantes según el motor de amortización (respeta pagos parciales y días de gracia) · La división principal/interés de cada cuota cobrada es proporcional al plan de su crédito · Los créditos cancelados quedan fuera del cohorte.</div>';
 }
 
 // ── Reporte detallado por indicador (PDF con membrete Pagasi) ──
