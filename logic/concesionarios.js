@@ -357,7 +357,8 @@ function _concRender(){
     }).join('');
     var saldoTot = totFin.env - totFin.con;
     html += '<div class="card">'
-      + '<div class="ch"><div><div class="ct">Concesionarios</div><div class="cs">Saldo = anticipos enviados − costo de las motos que salieron</div></div></div>'
+      + '<div class="ch"><div><div class="ct">Concesionarios</div><div class="cs">Saldo = anticipos enviados − costo de las motos que salieron</div></div>'
+      + '<button class="btn btn-p btn-sm" onclick="_concAbrirDetalleTotal()">Σ Detalle total</button></div>'
       + '<div class="tw"><table>'
       + '<thead><tr><th>Sede</th><th>Ciudad</th><th style="text-align:right">Motos</th><th style="text-align:right">Créditos</th><th style="text-align:right">Enviado</th><th style="text-align:right">Consumido</th><th style="text-align:right">Saldo</th><th style="text-align:right">Acciones</th></tr></thead>'
       + '<tbody>'+filasConc
@@ -878,6 +879,98 @@ function _concDetSetTipo(t){
 function _concDetSetFecha(v){
   if(window._concDetF) window._concDetF.fecha = v || hoyLocalISO();
   if(window._concDetId) _concAbrirDetalle(window._concDetId);
+}
+
+// ── Detalle TOTAL: consolidado de todos los concesionarios ──
+function _concDetTotSetTipo(t){ if(window._concDetTotF) window._concDetTotF.tipo = t; _concAbrirDetalleTotal(true); }
+function _concDetTotSetFecha(v){ if(window._concDetTotF) window._concDetTotF.fecha = v || hoyLocalISO(); _concAbrirDetalleTotal(true); }
+
+function _concAbrirDetalleTotal(keep){
+  var lista = (S.concesionarios||[]).filter(function(c){ return !c.eliminado; });
+  if(!lista.length){ toast('No hay concesionarios','error'); return; }
+  if(!keep || !window._concDetTotF){ window._concDetTotF = { tipo:'todo', fecha:hoyLocalISO() }; }
+  var _f = window._concDetTotF;
+  var _rango = _concRangoDe(_f.tipo, _f.fecha);
+  var _enRango = function(fecha){ return !_rango || ((fecha||'') >= _rango.desde && (fecha||'') <= _rango.hasta); };
+  var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+
+  // Consolidar: finanzas por sede + kardex global con nombre de sede
+  var totEnv = 0, totCon = 0, movsAll = [];
+  var filasSedes = lista.map(function(c){
+    var fin = _concFinanzasDe(c.id);
+    totEnv += fin.enviado; totCon += fin.consumido;
+    fin.anticipos.forEach(function(a){
+      movsAll.push({ fecha:a.fecha||'', sede:c.nombre||c.id, det:'Anticipo · '+(a.metodo||'—')+(a.ref?' · '+a.ref:''), monto:parseFloat(a.monto)||0 });
+    });
+    fin.creds.forEach(function(cr){
+      movsAll.push({ fecha:cr.fecha||'', sede:c.nombre||c.id, det:cr.id+' · '+(cr.cli||'')+' · '+(cr.modelo||''), monto:-(parseFloat(cr.precioBaseReal||cr.precio)||0), credId:cr.id });
+    });
+    var sc = fin.saldo > 0 ? 'var(--green)' : (fin.saldo < 0 ? 'var(--red)' : 'var(--ink3)');
+    return '<tr style="cursor:pointer" onclick="_concAbrirDetalle(\''+c.id+'\')">'
+      + '<td class="tdm">'+esc(c.nombre||'—')+'</td>'
+      + '<td style="text-align:right;font-family:var(--fd);font-weight:700;color:var(--p1)">'+fmt(fin.enviado)+'</td>'
+      + '<td style="text-align:right;font-family:var(--fd);font-weight:700;color:var(--amber)">−'+fmt(fin.consumido)+'</td>'
+      + '<td style="text-align:right;font-family:var(--fd);font-weight:900;color:'+sc+'">'+fmt(fin.saldo)+'</td>'
+      + '</tr>';
+  }).join('');
+  var totSaldo = totEnv - totCon;
+  var saldoCol = totSaldo > 0 ? 'var(--green)' : (totSaldo < 0 ? 'var(--red)' : 'var(--ink3)');
+
+  // Kardex global: saldo acumulado sobre TODO; el filtro decide qué filas se ven
+  movsAll.sort(function(a,b){ return String(a.fecha).localeCompare(String(b.fecha)); });
+  var _run = 0;
+  movsAll.forEach(function(m){ _run += m.monto; m.saldo = _run; });
+  var movs = movsAll.filter(function(m){ return _enRango(m.fecha); });
+  var envP = movs.filter(function(m){ return m.monto >= 0; }).reduce(function(s,m){ return s+m.monto; },0);
+  var conP = movs.filter(function(m){ return m.monto < 0; }).reduce(function(s,m){ return s-m.monto; },0);
+  var filasMov = movs.slice().reverse().map(function(m){
+    var esIn = m.monto >= 0;
+    return '<tr'+(m.credId?' style="cursor:pointer" onclick="closeM();openAmort(\''+m.credId+'\')"':'')+'>'
+      + '<td class="tds">'+(m.fecha||'—')+'</td>'
+      + '<td class="tds" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(m.sede)+'">'+esc(m.sede)+'</td>'
+      + '<td><span class="bdg '+(esIn?'b-g':'b-a')+'" style="font-size:8.5px">'+(esIn?'ENTRADA':'SALIDA')+'</span></td>'
+      + '<td class="tds" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(m.det)+'">'+esc(m.det)+'</td>'
+      + '<td style="text-align:right;font-family:var(--fd);font-weight:800;color:var(--green)">'+(esIn?fmt(m.monto):'')+'</td>'
+      + '<td style="text-align:right;font-family:var(--fd);font-weight:800;color:var(--red)">'+(!esIn?'−'+fmt(Math.abs(m.monto)):'')+'</td>'
+      + '<td style="text-align:right;font-family:var(--fd);font-weight:900;color:'+(m.saldo>=0?'var(--green)':'var(--red)')+'">'+fmt(m.saldo)+'</td>'
+      + '</tr>';
+  }).join('');
+
+  setMicon('conces');
+  $('mtt').textContent = 'Σ Total — Todos los concesionarios';
+  $('msb').textContent = lista.length+' sedes · consolidado de anticipos y motos';
+  $('modal-box').className = 'modal modal-lg';
+  $('mbd').innerHTML = ''
+    // KPIs globales
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:13px">'
+    + '<div style="background:var(--surf);padding:13px;border-radius:10px;text-align:center;border:1px solid var(--rim2)"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase">Enviado total</div><div style="font-family:var(--fd);font-weight:900;font-size:20px;margin-top:3px;color:var(--p1)">'+fmt(totEnv)+'</div></div>'
+    + '<div style="background:var(--surf);padding:13px;border-radius:10px;text-align:center;border:1px solid var(--rim2)"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase">Consumido total</div><div style="font-family:var(--fd);font-weight:900;font-size:20px;margin-top:3px;color:var(--amber)">−'+fmt(totCon)+'</div></div>'
+    + '<div style="background:'+(totSaldo>=0?'rgba(6,176,106,.08)':'rgba(232,51,90,.08)')+';padding:13px;border-radius:10px;text-align:center;border:1.5px solid '+saldoCol+'"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase">Saldo total</div><div style="font-family:var(--fd);font-weight:900;font-size:22px;margin-top:3px;color:'+saldoCol+'">'+fmt(totSaldo)+'</div></div>'
+    + '</div>'
+    // Resumen por sede
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Resumen por sede ('+lista.length+')</div>'
+    + '<div class="tw tw-compact" style="max-height:180px;overflow-y:auto;margin-bottom:13px"><table>'
+    + '<thead><tr><th>Sede</th><th style="text-align:right">Enviado</th><th style="text-align:right">Consumido</th><th style="text-align:right">Saldo</th></tr></thead>'
+    + '<tbody>'+filasSedes+'</tbody></table></div>'
+    // Filtro por período
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;background:var(--surf2);border:1px solid var(--rim2);border-radius:10px;padding:8px 10px">'
+    + '<span style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Filtrar:</span>'
+    + [['dia','Día'],['quincena','Quincena'],['mes','Mes'],['ano','Año'],['todo','Todo']].map(function(t){
+        return '<button class="btn btn-xs '+(_f.tipo===t[0]?'btn-p':'btn-g')+'" onclick="_concDetTotSetTipo(\''+t[0]+'\')" style="font-size:10px;padding:3px 10px">'+t[1]+'</button>';
+      }).join('')
+    + '<input type="date" value="'+_f.fecha+'" onchange="_concDetTotSetFecha(this.value)" style="border:1px solid var(--rim);border-radius:8px;padding:4px 8px;font-size:11.5px;font-family:var(--f);background:var(--surf);color:var(--ink)'+(_f.tipo==='todo'?';opacity:.45':'')+'">'
+    + (_rango?'<span style="font-size:10.5px;color:var(--ink3)">'+_rango.desde+' → '+_rango.hasta+'</span>':'')
+    + (_rango?'<span style="margin-left:auto;font-size:11px;font-weight:800"><span style="color:var(--green)">+'+fmt(envP)+'</span> · <span style="color:var(--red)">−'+fmt(conP)+'</span> <span style="color:var(--ink3);font-weight:600">en el período</span></span>':'')
+    + '</div>'
+    // Kardex global
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Historial global — entradas y salidas ('+movs.length+')</div>'
+    + (movs.length===0
+      ? '<div style="padding:14px;text-align:center;background:var(--gs);border-radius:9px;color:var(--ink3);font-size:11.5px">'+(_rango?'Sin movimientos en este período.':'Sin movimientos todavía.')+'</div>'
+      : '<div class="tw tw-compact" style="max-height:280px;overflow-y:auto"><table>'
+        + '<thead><tr><th>Fecha</th><th>Sede</th><th>Tipo</th><th>Detalle</th><th style="text-align:right">Entrada</th><th style="text-align:right">Salida</th><th style="text-align:right">Saldo</th></tr></thead>'
+        + '<tbody>'+filasMov+'</tbody></table></div>');
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cerrar</button>';
+  $('ov').style.display='flex';
 }
 
 // Modal: registrar anticipo (dinero enviado a la sede)
