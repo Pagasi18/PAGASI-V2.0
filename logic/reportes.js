@@ -224,7 +224,7 @@ function _dfDatos(){
   var creds = _concFiltrar(S.creds||[]).filter(function(c){ return c && !c.eliminado && c.estado!=='cancelado' && enR(c.fecha); });
   var activos = creds.filter(function(c){ return c.estado==='activo'||c.estado==='mora'; });
   var principal = function(c){ var p=parseFloat(c.precio)||0, i=parseFloat(c.ini)||0; return Math.max(0, p-i); };
-  var totalPI = function(c){ var t=parseFloat(c.total)||0; if(t>0) return t; var f=principal(c); var fac=parseFloat(c.factor)||((typeof PLAN!=='undefined'&&PLAN.factor)||1.935483870967742); return f*fac; };
+  var totalPI = function(c){ var t=parseFloat(c.total)||0; if(t>0) return t; var f=principal(c); var fac=parseFloat(c.factor)||((typeof PLAN!=='undefined'&&PLAN.factor)||2.102343121528029); return f*fac; };
   var interes = function(c){ return Math.max(0, totalPI(c)-principal(c)); };
   var saldo = function(c){ return (typeof getCreditoSaldoPendiente==='function') ? (getCreditoSaldoPendiente(c)||0) : 0; };
   var sum = function(arr, fn){ return arr.reduce(function(a,c){ return a+fn(c); },0); };

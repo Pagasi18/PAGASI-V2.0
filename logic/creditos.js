@@ -1106,7 +1106,7 @@ function _wzCuotaSug(){
   var base=parseFloat(((document.getElementById('wz_precio_base_real')||{}).value))||0;
   if(!(base>0)) base=parseFloat(((document.getElementById('wz_precio')||{}).value))||0;
   if(!(base>0)){ box.style.display='none'; box.innerHTML=''; return; }
-  var factor=(typeof PLAN!=='undefined'&&PLAN.factor)?PLAN.factor:1.935483870967742;
+  var factor=(typeof PLAN!=='undefined'&&PLAN.factor)?PLAN.factor:2.102343121528029;
   var iniTyped=parseFloat(((document.getElementById('wz_ini_real')||{}).value))||0;
   // ── % de inicial elegido con los chips ('manual' = usa el campo "Inicial real") ──
   var pctSel = (WZ._calcPct!=null) ? WZ._calcPct : ((typeof PLAN!=='undefined'&&PLAN.inicial)||0.45);

@@ -2111,7 +2111,7 @@ var MODULOS = [
 // ══════════════════════════════════════════
 // CATÁLOGO OFICIAL PAGASI — PLAN GLOBAL CONFIGURABLE
 // ══════════════════════════════════════════
-const PLAN = {plazo:12, factor:1.935483870967742, inicial:0.45, tasaMensual:12.26, apy:413.34, diasGracia:5, moraPct:5};
+const PLAN = {plazo:12, factor:2.102343121528029, inicial:0.45, tasaMensual:14.11, apy:413.34, diasGracia:5, moraPct:5};
 
 // ══════════════════════════════════════════
 // SCORE CFG — Política de riesgo configurable
