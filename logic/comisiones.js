@@ -94,8 +94,10 @@ function _comCalcGenerado(u){
   (S.creds || []).forEach(function(c){
     if(c.eliminado) return;
     if(c.estado === 'cancelado') return; // créditos cancelados no pagan comisión
-    var creador = (c.creadoPor || '').trim().toLowerCase();
-    if(creador !== nombreLow) return;
+    // La comisión de venta se atribuye al VENDEDOR de la solicitud. Para créditos
+    // viejos sin vendedor asignado, se usa quien creó el crédito (compatibilidad).
+    var vendedor = (c.vendedorNombre || c.creadoPor || '').trim().toLowerCase();
+    if(vendedor !== nombreLow) return;
     var precio = parseFloat(c.precioFinanciado || c.precio || 0) || 0;
     var monto = cfg.venta.tipo === 'porc'
       ? precio * (cfg.venta.valor/100)

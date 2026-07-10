@@ -161,12 +161,16 @@ function _wzRender(motoId){
     // "Precio base real" del plan. Se mantiene un input oculto porque score,
     // validación, preview y guardado leen wz_precio.
     + '<input type="hidden" id="wz_precio" value="">'
-    + '<div style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'
     + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Uso de la moto *</label>'
     + '<select class="fs" id="wz_uso" onchange="_wzScore()">'
     + '<option value="personal">Personal</option>'
     + '<option value="delivery">Delivery / Trabajo</option>'
     + '<option value="negocio">Negocio</option>'
+    + '</select></div>'
+    + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Vendedor (para comisión) *</label>'
+    + '<select class="fs" id="wz_vendedor" onchange="_wzSetVendedor(this)">'
+    + _wzVendedorOpts()
     + '</select></div>'
     + '</div>'
     + '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:12px;padding:14px;margin-top:12px">'
@@ -699,7 +703,7 @@ function _wzCliHidratar(){
 function _wzHydrate(){
   var ids=['wz_cliente_sel','wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_tdir','wz_viv','wz_terremoto','wz_terremoto_danos','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_obs',
     // Paso 3: moto
-    'wz_vin','wz_color','wz_marca','wz_anio','wz_placa','wz_serial_motor','wz_serial_chasis','wz_gps_num','wz_uso',
+    'wz_vin','wz_color','wz_marca','wz_anio','wz_placa','wz_serial_motor','wz_serial_chasis','wz_gps_num','wz_uso','wz_vendedor',
     // Paso 3: plan financiero
     'wz_precio','wz_precio_base_real','wz_ini_real','wz_cuota_q_custom','wz_plazo_custom',
     'wz_apy_objetivo','wz_apy_plazo','wz_apy_inicial_sel',
@@ -733,6 +737,12 @@ function _wzHydrate(){
     if(typeof _wzTogglePlanMode==='function') _wzTogglePlanMode(_planModeVal);
     if(WZ.precio>0 && typeof _wzActualizarFinPreview==='function') setTimeout(function(){ _wzActualizarFinPreview(WZ.precio); },80);
     if(typeof _wzCuotaSug==='function') setTimeout(_wzCuotaSug, 90);
+    // Vendedor: default al usuario actual si no hay uno elegido; sincronizar WZ
+    var _vs = document.getElementById('wz_vendedor');
+    if(_vs){
+      if(!WZ.vendedorUid && S.currentUser && S.currentUser.uid){ _vs.value = S.currentUser.uid; }
+      if(_vs.value){ _wzSetVendedor(_vs); }
+    }
   }
   // Restaurar radios de cashea y fiador desde WZ al editar
   (function(){
@@ -1004,6 +1014,28 @@ function _wzPickMotoInv(sel){
   if(wrap) wrap.style.display='none';
   _wzActualizarFinPreview(precio);
   _wzScore();
+}
+
+// ── Vendedor de la solicitud (para atribuir la comisión de venta) ──
+// Lista los usuarios no suspendidos; por defecto marca al usuario actual.
+function _wzVendedorOpts(){
+  var lista = (typeof _usersCache!=='undefined' && Array.isArray(_usersCache)) ? _usersCache : [];
+  var sel = WZ.vendedorUid || (S.currentUser && S.currentUser.uid) || '';
+  var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); };
+  var opts = '<option value="">— Seleccionar vendedor —</option>';
+  lista.filter(function(u){ return u && !u.suspendido; })
+    .sort(function(a,b){ return String(a.nombre||a.email||'').localeCompare(String(b.nombre||b.email||'')); })
+    .forEach(function(u){
+      var nm = u.nombre || u.email || 'Usuario';
+      opts += '<option value="'+esc(u.uid)+'" data-nombre="'+esc(nm)+'"'+(String(u.uid)===String(sel)?' selected':'')+'>'+esc(nm)+(u.rol?' · '+esc(u.rol):'')+'</option>';
+    });
+  return opts;
+}
+function _wzSetVendedor(selEl){
+  var opt = selEl.options[selEl.selectedIndex];
+  WZ.vendedorUid = selEl.value || '';
+  WZ.vendedorNombre = (opt && opt.getAttribute('data-nombre')) || '';
+  WZ['wz_vendedor'] = WZ.vendedorUid;
 }
 
 // ── Selección de moto del catálogo ──
@@ -1423,6 +1455,10 @@ function _wzValidar(){
     if(ing<=0){ toast('El ingreso mensual es obligatorio','error'); return false; }
   }
   if(s===3){
+    // Vendedor obligatorio (para atribuir la comisión de venta)
+    var _vsel = document.getElementById('wz_vendedor');
+    if(_vsel){ if(_vsel.value){ _wzSetVendedor(_vsel); } }
+    if(!WZ.vendedorNombre && !_modoEdicion){ toast('Selecciona el vendedor de la moto','error'); return false; }
     var precio = parseFloat((document.getElementById('wz_precio')||{}).value)||0;
     if(precio<=0 && !_modoEdicion){ toast('Ingresa el precio base real de la moto','error'); return false; }
     if(precio<=0) precio = WZ.precio||0; // en edición usar precio guardado
@@ -1877,6 +1913,8 @@ function _wzGuardar(){
         planModo: _finUpd.planModo,
         plan: _finUpd.plan,
         uso_moto: WZ.uso||S.creds[_ei].uso_moto||'',
+        vendedorUid: WZ.vendedorUid||S.creds[_ei].vendedorUid||'',
+        vendedorNombre: WZ.vendedorNombre||S.creds[_ei].vendedorNombre||'',
         notas: WZ.obs||S.creds[_ei].notas||'',
         conocio: WZ.conocio||S.creds[_ei].conocio||'',
         emp_tipo: WZ.emp||S.creds[_ei].emp_tipo||'',
@@ -2029,6 +2067,8 @@ function _wzGuardar(){
     uso_moto: WZ.uso||'',
     notas: WZ.obs||'',
     concesionarioId: (WZ.concesionarioId !== undefined ? WZ.concesionarioId : _concDefaultId()),
+    vendedorUid: WZ.vendedorUid||'',
+    vendedorNombre: WZ.vendedorNombre || (S.currentUser&&S.currentUser.nombre) || '',
     creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
     creado: new Date().toISOString(),
     contratoFirmado: false,
@@ -2635,6 +2675,8 @@ function editarCredSinFirma(credId){
   preload['wz_banco_cobro'] = _f('banco_cobro','banco_cobro',''); preload.banco_cobro = preload['wz_banco_cobro'];
   preload['wz_cuenta'] = _f('cuenta','cuenta_digitos',''); preload.cuenta = preload['wz_cuenta'];
   preload['wz_ahorro'] = _f('ahorro','ahorro','no'); preload.ahorro = preload['wz_ahorro'];
+  // Vendedor (comisión)
+  preload['wz_vendedor'] = c.vendedorUid||''; preload.vendedorUid = c.vendedorUid||''; preload.vendedorNombre = c.vendedorNombre||'';
   preload['wz_hist'] = _f('hist','historial','ninguno'); preload.hist = preload['wz_hist'];
   preload['wz_deuda'] = _f('deuda','deudas','no'); preload.deuda = preload['wz_deuda'];
   // Cashea
