@@ -1,7 +1,7 @@
 // Pagasi module: reportes
 PG.reportes = function(){
   // Tab interno: 'resumen' (default), 'proyecciones', 'egresos', 'exportar'
-  var tab = S.reportesTab || 'resumen';
+  var tab = S.reportesTab || 'dashfin';
 
   // Variables filtradas por concesionario activo
   var _SPAGOS = _concFiltrar(S.pagos||[]);
@@ -165,6 +165,7 @@ PG.reportes = function(){
 
   // ══════════ HTML ══════════
   var tabs = [
+    {k:'dashfin', lbl:'Dashboard Finanzas', sub:'Cartera · principal e interés · mora'},
     {k:'resumen', lbl:'Resumen', sub:'Estado general · KPIs'},
     {k:'periodicos', lbl:'Reportes', sub:'Diario · Semanal · Quincenal · Mensual'},
     {k:'proyecciones', lbl:'Proyecciones', sub:'Flujo futuro · 12 meses'},
@@ -287,6 +288,8 @@ PG.reportes = function(){
         +'</button>';
     }).join('')}
   </div>
+
+  ${tab==='dashfin' ? _renderDashFin() : ''}
 
   ${tab==='resumen' ? `
   <!-- ════════ TAB: RESUMEN ════════ -->

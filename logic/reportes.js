@@ -167,6 +167,159 @@ function _abrirVentanaImpresion(titulo, htmlContenido, opts){
   w.document.close();
 }
 
+// ══════════════════════════════════════════════════════════════
+// DASHBOARD FINANZAS (primera pestaña de Finanzas)
+// Indicadores de cartera con separación principal / interés,
+// filtro global de fechas y reporte detallado por indicador.
+// El filtro de fechas define el COHORTE: créditos originados en el
+// rango + cuotas cobradas en el rango. Los saldos son al día de hoy.
+// ══════════════════════════════════════════════════════════════
+function _dfDatos(){
+  var desde = S.dfDesde||'', hasta = S.dfHasta||'';
+  var enR = function(f){ f = String(f||'').slice(0,10); if(desde && f < desde) return false; if(hasta && f > hasta) return false; return true; };
+  // Créditos originados en el rango (cancelados no cuentan: la venta se anuló)
+  var creds = _concFiltrar(S.creds||[]).filter(function(c){ return c && !c.eliminado && c.estado!=='cancelado' && enR(c.fecha); });
+  var activos = creds.filter(function(c){ return c.estado==='activo'||c.estado==='mora'; });
+  var principal = function(c){ var p=parseFloat(c.precio)||0, i=parseFloat(c.ini)||0; return Math.max(0, p-i); };
+  var totalPI = function(c){ var t=parseFloat(c.total)||0; if(t>0) return t; var f=principal(c); var fac=parseFloat(c.factor)||((typeof PLAN!=='undefined'&&PLAN.factor)||1.935483870967742); return f*fac; };
+  var interes = function(c){ return Math.max(0, totalPI(c)-principal(c)); };
+  var saldo = function(c){ return (typeof getCreditoSaldoPendiente==='function') ? (getCreditoSaldoPendiente(c)||0) : 0; };
+  var sum = function(arr, fn){ return arr.reduce(function(a,c){ return a+fn(c); },0); };
+  // Cuotas cobradas en el rango (sin iniciales), divididas principal/interés
+  // proporcionalmente al plan de cada crédito (principal/total)
+  var pagos = _concFiltrar(S.pagos||[]).filter(function(p){ return p && !p.eliminado && p.estado==='confirmado' && !p.esInicial && p.tipoOperacion!=='inicial_credito' && enR(p.fecha); });
+  var credIdx = {}; (S.creds||[]).forEach(function(c){ if(c) credIdx[c.id]=c; });
+  var cuotasTot=0, cuotasPrin=0, cuotasInt=0;
+  pagos.forEach(function(p){
+    var m = parseFloat(p.monto)||0; cuotasTot += m;
+    var c = credIdx[p.cred]; var ratio = 0;
+    if(c){ var pr=principal(c), tt=totalPI(c); ratio = tt>0 ? pr/tt : 0; }
+    cuotasPrin += m*ratio; cuotasInt += m*(1-ratio);
+  });
+  // Mora (dentro del cohorte)
+  var enMora = activos.filter(function(c){ return (parseFloat(c.mora)||0) > 0; });
+  return {
+    desde:desde, hasta:hasta, enR:enR, credIdx:credIdx,
+    creds:creds, activos:activos, enMora:enMora, pagos:pagos,
+    principal:principal, totalPI:totalPI, interes:interes, saldo:saldo,
+    finTotal:sum(creds,principal), finActivos:sum(activos,principal),
+    cxcTotal:sum(creds,saldo), cxcActivos:sum(activos,saldo),
+    intTotal:sum(creds,interes),
+    nOrig:creds.length, nOrigAct:activos.length,
+    cuotasTot:cuotasTot, cuotasPrin:cuotasPrin, cuotasInt:cuotasInt,
+    nMora:enMora.length, moraBalance:sum(enMora,saldo),
+    moraInt:sum(enMora,function(c){ return parseFloat(c.moraMonto)||0; })
+  };
+}
+
+function _renderDashFin(){
+  var d = _dfDatos();
+  var perLbl = (d.desde||d.hasta) ? ((d.desde||'inicio')+' → '+(d.hasta||'hoy')) : 'Todo el histórico';
+  var card = function(lbl, valor, sub, color, repKey){
+    return '<div class="stat" style="position:relative">'
+      + '<div class="st-v" style="font-size:21px;color:'+(color||'var(--ink)')+'">'+valor+'</div>'
+      + '<div class="st-l">'+lbl+'</div>'
+      + (sub?'<div style="font-size:10px;color:var(--ink3);margin-top:3px">'+sub+'</div>':'')
+      + '<button class="btn btn-g btn-xs" style="margin-top:8px" onclick="dfReporte(\''+repKey+'\')">📄 Reporte</button>'
+      + '</div>';
+  };
+  return ''
+    // ── Filtro global de fechas ──
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;background:var(--surf2);border:1px solid var(--rim2);border-radius:10px;padding:10px 12px">'
+    + '<span style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Filtro global:</span>'
+    + '<label style="font-size:11px;color:var(--ink3);font-weight:700">Desde</label>'
+    + '<input type="date" value="'+(d.desde||'')+'" onchange="S.dfDesde=this.value;S.reportesTab=\'dashfin\';nav(\'reportes\')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">'
+    + '<label style="font-size:11px;color:var(--ink3);font-weight:700">Hasta</label>'
+    + '<input type="date" value="'+(d.hasta||'')+'" onchange="S.dfHasta=this.value;S.reportesTab=\'dashfin\';nav(\'reportes\')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">'
+    + ((d.desde||d.hasta)?'<button class="btn btn-g btn-sm" onclick="S.dfDesde=\'\';S.dfHasta=\'\';S.reportesTab=\'dashfin\';nav(\'reportes\')">✕ Limpiar</button>':'')
+    + '<span style="margin-left:auto;font-size:11px;color:var(--ink3)">Cohorte: <b style="color:var(--ink)">'+perLbl+'</b> · '+d.nOrig+' créditos · saldos al día de hoy</span>'
+    + '</div>'
+    // ── Cartera ──
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Cartera — principal e interés</div>'
+    + '<div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:14px">'
+    + card('Total financiado (principal)', fmt(d.finTotal), d.nOrig+' créditos originados', 'var(--p1)', 'fin_total')
+    + card('Cuentas por cobrar (P+I)', fmt(d.cxcTotal), 'saldo pendiente de todos', 'var(--amber)', 'cxc_total')
+    + card('Financiado (solo activos)', fmt(d.finActivos), d.nOrigAct+' créditos activos', 'var(--p1)', 'fin_act')
+    + card('CxC solo activos (P+I)', fmt(d.cxcActivos), 'saldo pendiente activos', 'var(--amber)', 'cxc_act')
+    + card('Créditos originados', String(d.nOrig), fmt(d.finTotal+ d.intTotal)+' total P+I', 'var(--ink)', 'orig')
+    + card('Originados activos', String(d.nOrigAct), 'activos + en mora', 'var(--green)', 'orig_act')
+    + '</div>'
+    // ── Cuotas cobradas ──
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Cuotas cobradas — '+d.pagos.length+' pagos en el rango</div>'
+    + '<div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:14px">'
+    + card('Cuotas cobradas (total)', fmt(d.cuotasTot), d.pagos.length+' pagos · sin iniciales', 'var(--green)', 'cuotas')
+    + card('Cuotas — principal', fmt(d.cuotasPrin), 'porción capital', 'var(--p1)', 'cuotas')
+    + card('Cuotas — interés', fmt(d.cuotasInt), 'porción interés', 'var(--amber)', 'cuotas')
+    + '</div>'
+    // ── Mora ──
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Mora</div>'
+    + '<div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:14px">'
+    + card('Créditos en mora', String(d.nMora), 'del cohorte filtrado', 'var(--red)', 'mora')
+    + card('Balance en mora (P+I)', fmt(d.moraBalance), 'saldo pendiente de los morosos', 'var(--red)', 'mora')
+    + card('Intereses por mora', fmt(d.moraInt), 'recargos acumulados', 'var(--red)', 'mora')
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--ink3);background:var(--gs);border-radius:8px;padding:9px 12px;line-height:1.55">Principal = precio − inicial · Interés = total a pagar − principal · La división principal/interés de las cuotas es proporcional al plan de cada crédito. Cada indicador tiene su botón <b>📄 Reporte</b> con el detalle crédito por crédito (PDF imprimible).</div>';
+}
+
+// ── Reporte detallado por indicador (PDF con membrete Pagasi) ──
+function dfReporte(key){
+  var d = _dfDatos();
+  var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var perLbl = (d.desde||d.hasta) ? ((d.desde||'inicio')+' → '+(d.hasta||'hoy')) : 'Todo el histórico';
+  var titulos = {
+    fin_total:'Total financiado (principal)', cxc_total:'Cuentas por cobrar (principal + interés)',
+    fin_act:'Total financiado — solo créditos activos', cxc_act:'Cuentas por cobrar — solo activos (P+I)',
+    orig:'Créditos originados', orig_act:'Créditos originados activos',
+    cuotas:'Cuotas cobradas (total, principal, interés)', mora:'Mora — créditos, balance e intereses'
+  };
+  var titulo = titulos[key]||'Reporte';
+  var head = '<h2>PAGASI — '+esc(titulo).toUpperCase()+'</h2>'
+    + '<div style="text-align:center;font-size:11px;color:#555;margin-bottom:16px">Período: '+esc(perLbl)+' · Generado: '+new Date().toLocaleString('es-VE')+'</div>';
+  var html = '';
+  // Pagos cobrados por crédito (para columna Cobrado)
+  var cobradoDe = function(credId){
+    return (S.pagos||[]).filter(function(p){ return p && !p.eliminado && p.estado==='confirmado' && !p.esInicial && p.tipoOperacion!=='inicial_credito' && p.cred===credId; })
+      .reduce(function(a,p){ return a+(parseFloat(p.monto)||0); },0);
+  };
+  if(key==='cuotas'){
+    var tot=0, tp=0, ti=0;
+    html = head + '<h3>Detalle de cuotas cobradas ('+d.pagos.length+')</h3>'
+      + '<table><tr><th>Fecha</th><th>Pago</th><th>Crédito</th><th>Cliente</th><th>Monto</th><th>Principal</th><th>Interés</th></tr>'
+      + d.pagos.slice().sort(function(a,b){ return String(a.fecha||'').localeCompare(String(b.fecha||'')); }).map(function(p){
+          var m=parseFloat(p.monto)||0; var c=d.credIdx[p.cred]; var ratio=0;
+          if(c){ var pr=d.principal(c), tt=d.totalPI(c); ratio=tt>0?pr/tt:0; }
+          var mp=m*ratio, mi=m*(1-ratio); tot+=m; tp+=mp; ti+=mi;
+          return '<tr><td>'+esc(p.fecha||'')+'</td><td>'+esc(p.id)+'</td><td>'+esc(p.cred||'')+'</td><td>'+esc(p.cli||'')+'</td><td>$'+m.toFixed(2)+'</td><td>$'+mp.toFixed(2)+'</td><td>$'+mi.toFixed(2)+'</td></tr>';
+        }).join('')
+      + '<tr><td colspan="4" style="font-weight:900;text-align:right">TOTAL</td><td style="font-weight:900">$'+tot.toFixed(2)+'</td><td style="font-weight:900">$'+tp.toFixed(2)+'</td><td style="font-weight:900">$'+ti.toFixed(2)+'</td></tr></table>';
+  } else if(key==='mora'){
+    html = head
+      + '<h3>Resumen</h3><table><tr><th>Créditos en mora</th><th>Balance en mora (P+I)</th><th>Intereses por mora</th></tr>'
+      + '<tr><td>'+d.nMora+'</td><td>$'+d.moraBalance.toFixed(2)+'</td><td>$'+d.moraInt.toFixed(2)+'</td></tr></table>'
+      + '<h3>Detalle ('+d.enMora.length+')</h3>'
+      + '<table><tr><th>Crédito</th><th>Cliente</th><th>Teléfono</th><th>Días mora</th><th>Cuota</th><th>Cuotas vencidas</th><th>Interés mora</th><th>Saldo (P+I)</th></tr>'
+      + d.enMora.slice().sort(function(a,b){ return (parseFloat(b.mora)||0)-(parseFloat(a.mora)||0); }).map(function(c){
+          var cl=(S.clientes||[]).find(function(x){ return x && ((c.clienteId&&String(x.id)===String(c.clienteId))||x.nombre===c.cli); })||{};
+          var cv=Math.ceil((parseFloat(c.mora)||0)/15);
+          return '<tr><td>'+esc(c.id)+'</td><td>'+esc(c.cli||'')+'</td><td>'+esc(cl.tel||'')+'</td><td>'+(c.mora||0)+'</td><td>$'+(parseFloat(c.cuotaQ||c.cuota)||0).toFixed(2)+'</td><td>'+cv+'</td><td>$'+(parseFloat(c.moraMonto)||0).toFixed(2)+'</td><td>$'+d.saldo(c).toFixed(2)+'</td></tr>';
+        }).join('')
+      + '<tr><td colspan="6" style="font-weight:900;text-align:right">TOTAL</td><td style="font-weight:900">$'+d.moraInt.toFixed(2)+'</td><td style="font-weight:900">$'+d.moraBalance.toFixed(2)+'</td></tr></table>';
+  } else {
+    // Indicadores basados en créditos
+    var lista = (key==='fin_act'||key==='cxc_act'||key==='orig_act') ? d.activos : d.creds;
+    var tf=0, tint=0, tpi=0, tcob=0, tsal=0;
+    html = head + '<h3>Detalle de créditos ('+lista.length+')</h3>'
+      + '<table><tr><th>Crédito</th><th>Fecha</th><th>Cliente</th><th>Estado</th><th>Principal</th><th>Interés</th><th>Total (P+I)</th><th>Cobrado</th><th>Saldo</th></tr>'
+      + lista.slice().sort(function(a,b){ return String(a.fecha||'').localeCompare(String(b.fecha||'')); }).map(function(c){
+          var f=d.principal(c), inte=d.interes(c), tt=d.totalPI(c), cob=cobradoDe(c.id), sal=d.saldo(c);
+          tf+=f; tint+=inte; tpi+=tt; tcob+=cob; tsal+=sal;
+          return '<tr><td>'+esc(c.id)+'</td><td>'+esc(c.fecha||'')+'</td><td>'+esc(c.cli||'')+'</td><td>'+esc(c.estado||'')+'</td><td>$'+f.toFixed(2)+'</td><td>$'+inte.toFixed(2)+'</td><td>$'+tt.toFixed(2)+'</td><td>$'+cob.toFixed(2)+'</td><td>$'+sal.toFixed(2)+'</td></tr>';
+        }).join('')
+      + '<tr><td colspan="4" style="font-weight:900;text-align:right">TOTAL</td><td style="font-weight:900">$'+tf.toFixed(2)+'</td><td style="font-weight:900">$'+tint.toFixed(2)+'</td><td style="font-weight:900">$'+tpi.toFixed(2)+'</td><td style="font-weight:900">$'+tcob.toFixed(2)+'</td><td style="font-weight:900">$'+tsal.toFixed(2)+'</td></tr></table>';
+  }
+  _abrirVentanaImpresion(titulo, html);
+}
+
 function descargarAmortPDF(){
   var credId = window._currentAmortCredId;
   if(!credId){ toast('Abre primero la tabla de amortización','error'); return; }
