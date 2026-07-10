@@ -333,40 +333,39 @@ function _concRender(){
       + '<button class="btn btn-p btn-sm" style="margin-top:14px" onclick="_concOpenEdit(null)">+ Crear primer concesionario</button>'
       + '</div>';
   } else {
-    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px">';
-    lista.forEach(function(c){
+    var totFin = {env:0, con:0};
+    var filasConc = lista.map(function(c){
       var st = statsDe(c.id);
-      var inactivoBadge = c.activo === false ? '<span style="background:rgba(255,71,87,.18);color:var(--red);padding:2px 8px;border-radius:9px;font-size:10px;font-weight:700;letter-spacing:.3px">INACTIVO</span>' : '<span style="background:rgba(0,184,118,.18);color:var(--green);padding:2px 8px;border-radius:9px;font-size:10px;font-weight:700;letter-spacing:.3px">ACTIVO</span>';
-      var nUsuarios = ((typeof _usersCache!=='undefined'&&_usersCache)?_usersCache.filter(function(u){return (u.concesionarios||[]).indexOf(c.id)!==-1;}).length:0);
-      html += ''
-        + '<div class="card" style="overflow:hidden;padding:0">'
-        + '<div style="padding:14px 16px 10px;border-bottom:1px solid var(--rim2)">'
-        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:5px">'
-        + '<div style="flex:1;min-width:0">'
-        + '<div class="cs" style="text-transform:uppercase;letter-spacing:.6px">Concesionario</div>'
-        + '<div class="ct" style="font-size:16px;margin-top:2px">'+(c.nombre||'—')+'</div>'
-        + '</div>'
-        + '<div>'+inactivoBadge+'</div>'
-        + '</div>'
-        + (c.ciudad ? '<div style="font-size:11.5px;color:var(--ink3);margin-top:3px">'+c.ciudad+(c.direccion?' · '+c.direccion:'')+'</div>' : '')
-        + (c.telefono ? '<div style="font-size:11px;color:var(--ink3);margin-top:1px">Tel: '+c.telefono+'</div>' : '')
-        + '</div>'
-        + '<div style="padding:11px 16px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;border-bottom:1px solid var(--rim2)">'
-        + '<div><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase">Motos</div><div style="font-family:var(--fd);font-weight:800;font-size:15px;margin-top:2px">'+st.motos+'</div></div>'
-        + '<div><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase">Créditos</div><div style="font-family:var(--fd);font-weight:800;font-size:15px;margin-top:2px;color:var(--p1)">'+st.creds+'</div></div>'
-        + '<div><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase">Clientes</div><div style="font-family:var(--fd);font-weight:800;font-size:15px;margin-top:2px">'+st.clis+'</div></div>'
-        + '<div><div style="font-size:9.5px;font-weight:800;color:var(--ink3);text-transform:uppercase">Pagos</div><div style="font-family:var(--fd);font-weight:800;font-size:15px;margin-top:2px;color:var(--green)">'+st.pagos+'</div></div>'
-        + '</div>'
-        + '<div style="padding:9px 16px;font-size:11px;color:var(--ink3);border-bottom:1px solid var(--rim2)">'
-        + (nUsuarios > 0 ? '<b style="color:var(--ink2)">'+nUsuarios+'</b> usuario'+(nUsuarios===1?'':'s')+' asignado'+(nUsuarios===1?'':'s') : 'Sin usuarios asignados')
-        + '</div>'
-        + '<div style="padding:11px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-        + '<button class="btn btn-p btn-sm" onclick="_concOpenEdit(\''+c.id+'\')">Editar</button>'
-        + '<button class="btn btn-g btn-sm" onclick="_concAbrirDetalle(\''+c.id+'\')">Ver Detalle</button>'
-        + '</div>'
-        + '</div>';
-    });
-    html += '</div>';
+      var fin = _concFinanzasDe(c.id);
+      totFin.env += fin.enviado; totFin.con += fin.consumido;
+      var saldoCol = fin.saldo > 0 ? 'var(--green)' : (fin.saldo < 0 ? 'var(--red)' : 'var(--ink3)');
+      return '<tr style="cursor:pointer" onclick="_concAbrirDetalle(\''+c.id+'\')">'
+        + '<td class="tdm">'+(c.nombre||'—')+(c.activo===false?' <span class="bdg b-r" style="font-size:8.5px">INACTIVO</span>':'')+'</td>'
+        + '<td class="tds">'+(c.ciudad||'—')+'</td>'
+        + '<td class="tds" style="text-align:right;font-family:var(--fd)">'+st.motos+'</td>'
+        + '<td class="tds" style="text-align:right;font-family:var(--fd);color:var(--p1);font-weight:700">'+st.creds+'</td>'
+        + '<td style="text-align:right;font-family:var(--fd);font-weight:700;color:var(--p1)">'+fmt(fin.enviado)+'</td>'
+        + '<td style="text-align:right;font-family:var(--fd);font-weight:700;color:var(--amber)">−'+fmt(fin.consumido).replace('$','$')+'</td>'
+        + '<td style="text-align:right;font-family:var(--fd);font-weight:900;font-size:13.5px;color:'+saldoCol+'">'+fmt(fin.saldo)+'</td>'
+        + '<td onclick="event.stopPropagation()"><div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap">'
+          + '<button class="btn btn-p btn-xs" onclick="_concOpenAnticipo(\''+c.id+'\')" title="Registrar dinero enviado a esta sede">＋ Anticipo</button>'
+          + '<button class="btn btn-g btn-xs" onclick="_concAbrirDetalle(\''+c.id+'\')">Detalle</button>'
+          + '<button class="btn btn-g btn-xs" onclick="_concOpenReporte(\''+c.id+'\')" title="Reporte diario/quincenal/mensual en PDF o Excel">Reporte</button>'
+          + '<button class="btn btn-g btn-xs" onclick="_concOpenEdit(\''+c.id+'\')">Editar</button>'
+        + '</div></td>'
+        + '</tr>';
+    }).join('');
+    var saldoTot = totFin.env - totFin.con;
+    html += '<div class="card">'
+      + '<div class="ch"><div><div class="ct">Concesionarios</div><div class="cs">Saldo = anticipos enviados − costo de las motos que salieron</div></div></div>'
+      + '<div class="tw"><table>'
+      + '<thead><tr><th>Sede</th><th>Ciudad</th><th style="text-align:right">Motos</th><th style="text-align:right">Créditos</th><th style="text-align:right">Enviado</th><th style="text-align:right">Consumido</th><th style="text-align:right">Saldo</th><th style="text-align:right">Acciones</th></tr></thead>'
+      + '<tbody>'+filasConc
+      + '<tr style="border-top:2px solid var(--rim);background:var(--surf2)"><td class="tdm" style="font-weight:900">TOTAL</td><td></td><td></td><td></td>'
+      + '<td style="text-align:right;font-weight:900;font-family:var(--fd);color:var(--p1)">'+fmt(totFin.env)+'</td>'
+      + '<td style="text-align:right;font-weight:900;font-family:var(--fd);color:var(--amber)">−'+fmt(totFin.con).replace('$','$')+'</td>'
+      + '<td style="text-align:right;font-weight:900;font-family:var(--fd);color:'+(saldoTot>=0?'var(--green)':'var(--red)')+'">'+fmt(saldoTot)+'</td><td></td></tr>'
+      + '</tbody></table></div></div>';
   }
   html += '</div>';
   return html;
@@ -461,47 +460,75 @@ function _concEliminar(id){
 function _concAbrirDetalle(id){
   var c = _concGetById(id);
   if(!c){ toast('No encontrado','error'); return; }
-  var st = {
-    motos: (S.motos||[]).filter(function(m){return !m.eliminado && m.concesionarioId===id;}),
-    creds: (S.creds||[]).filter(function(cr){return !cr.eliminado && cr.concesionarioId===id;}),
-    clis:  (S.clientes||[]).filter(function(cl){return !cl.eliminado && cl.concesionarioId===id;}),
-    pagos: (S.pagos||[]).filter(function(p){return !p.eliminado && p.concesionarioId===id;})
-  };
+  var fin = _concFinanzasDe(id);
   var usuarios = (typeof _usersCache!=='undefined'&&_usersCache) ? _usersCache.filter(function(u){return (u.concesionarios||[]).indexOf(id)!==-1;}) : [];
+  var saldoCol = fin.saldo > 0 ? 'var(--green)' : (fin.saldo < 0 ? 'var(--red)' : 'var(--ink3)');
+  var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  // Créditos (motos que salieron) — más recientes primero
+  var credsOrd = fin.creds.slice().sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
+  var filasCreds = credsOrd.map(function(cr){
+    var costo = parseFloat(cr.precioBaseReal||cr.precio)||0;
+    return '<tr style="cursor:pointer" onclick="closeM();openAmort(\''+cr.id+'\')">'
+      + '<td class="tds" style="font-family:var(--fd)">'+cr.id+'</td>'
+      + '<td class="tds">'+(cr.fecha||'—')+'</td>'
+      + '<td class="tdm">'+esc(cr.cli||'—')+'</td>'
+      + '<td class="tds">'+esc(cr.modelo||'—')+'</td>'
+      + '<td class="tds">'+esc(cr.placa||cr.serialMotor||'—')+'</td>'
+      + '<td style="text-align:right;font-family:var(--fd);font-weight:700;color:var(--amber)">−'+fmt(costo)+'</td>'
+      + '<td class="tds">'+(cr.estado||'')+'</td>'
+      + '</tr>';
+  }).join('');
+  // Anticipos — más recientes primero
+  var antOrd = fin.anticipos.slice().sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
+  var filasAnt = antOrd.map(function(a){
+    return '<tr>'
+      + '<td class="tds">'+(a.fecha||'—')+'</td>'
+      + '<td style="text-align:right;font-family:var(--fd);font-weight:800;color:'+((parseFloat(a.monto)||0)>=0?'var(--green)':'var(--red)')+'">'+fmt(parseFloat(a.monto)||0)+'</td>'
+      + '<td class="tds">'+esc(a.metodo||'—')+'</td>'
+      + '<td class="tds">'+esc(a.ref||'—')+'</td>'
+      + '<td class="tds" style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(a.nota||'')+'">'+esc(a.nota||'—')+'</td>'
+      + '<td class="tds">'+esc(a.creadoPor||'')+'</td>'
+      + '<td><button class="btn btn-d btn-xs" onclick="_concDelAnticipo(\''+id+'\',\''+a.id+'\')" title="Eliminar anticipo">✕</button></td>'
+      + '</tr>';
+  }).join('');
   setMicon('conces');
   $('mtt').textContent= c.nombre;
-  $('msb').textContent= 'Detalle del concesionario';
+  $('msb').textContent= 'Detalle del concesionario · saldo y movimientos';
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML = ''
-    + '<div style="background:var(--gs);padding:13px 15px;border-radius:10px;margin-bottom:13px">'
-    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">INFORMACIÓN</div>'
-    + '<div style="margin-top:6px;font-size:12.5px;line-height:1.6">'
-    + (c.ciudad ? '<div><b>Ciudad:</b> '+c.ciudad+'</div>' : '')
-    + (c.direccion ? '<div><b>Dirección:</b> '+c.direccion+'</div>' : '')
-    + (c.telefono ? '<div><b>Teléfono:</b> '+c.telefono+'</div>' : '')
-    + '<div><b>Estado:</b> '+(c.activo!==false?'<span style="color:var(--green);font-weight:700">Activo</span>':'<span style="color:var(--red);font-weight:700">Inactivo</span>')+'</div>'
-    + (c.createdAt?'<div style="color:var(--ink3);font-size:10.5px;margin-top:3px">Creado: '+(c.createdAt||'').slice(0,10)+'</div>':'')
+    // ── Finanzas: enviado / consumido / saldo ──
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:13px">'
+    + '<div style="background:var(--surf);padding:13px;border-radius:10px;text-align:center;border:1px solid var(--rim2)"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase">Enviado (anticipos)</div><div style="font-family:var(--fd);font-weight:900;font-size:20px;margin-top:3px;color:var(--p1)">'+fmt(fin.enviado)+'</div><div style="font-size:10px;color:var(--ink3);margin-top:2px">'+fin.anticipos.length+' envío'+(fin.anticipos.length!==1?'s':'')+'</div></div>'
+    + '<div style="background:var(--surf);padding:13px;border-radius:10px;text-align:center;border:1px solid var(--rim2)"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase">Consumido (motos)</div><div style="font-family:var(--fd);font-weight:900;font-size:20px;margin-top:3px;color:var(--amber)">−'+fmt(fin.consumido)+'</div><div style="font-size:10px;color:var(--ink3);margin-top:2px">'+fin.creds.length+' moto'+(fin.creds.length!==1?'s':'')+' vendida'+(fin.creds.length!==1?'s':'')+'</div></div>'
+    + '<div style="background:'+(fin.saldo>=0?'rgba(6,176,106,.08)':'rgba(232,51,90,.08)')+';padding:13px;border-radius:10px;text-align:center;border:1.5px solid '+saldoCol+'"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase">Saldo disponible</div><div style="font-family:var(--fd);font-weight:900;font-size:22px;margin-top:3px;color:'+saldoCol+'">'+fmt(fin.saldo)+'</div><div style="font-size:10px;color:var(--ink3);margin-top:2px">'+(fin.saldo<0?'⚠ le debemos a la sede':'a favor en la sede')+'</div></div>'
     + '</div>'
+    // ── Info básica compacta ──
+    + '<div style="background:var(--gs);padding:10px 13px;border-radius:9px;margin-bottom:13px;font-size:11.5px;color:var(--ink2);display:flex;gap:14px;flex-wrap:wrap">'
+    + (c.ciudad?'<span><b>Ciudad:</b> '+esc(c.ciudad)+'</span>':'')
+    + (c.telefono?'<span><b>Tel:</b> '+esc(c.telefono)+'</span>':'')
+    + '<span><b>Estado:</b> '+(c.activo!==false?'<span style="color:var(--green);font-weight:700">Activo</span>':'<span style="color:var(--red);font-weight:700">Inactivo</span>')+'</span>'
+    + '<span><b>Usuarios:</b> '+usuarios.length+'</span>'
     + '</div>'
-    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'
-    + '<div style="background:var(--surf);padding:12px;border-radius:9px;text-align:center;border:1px solid var(--rim2)"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase">Motos</div><div style="font-family:var(--fd);font-weight:800;font-size:20px;margin-top:3px">'+st.motos.length+'</div></div>'
-    + '<div style="background:var(--surf);padding:12px;border-radius:9px;text-align:center;border:1px solid var(--rim2)"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase">Créditos</div><div style="font-family:var(--fd);font-weight:800;font-size:20px;margin-top:3px;color:var(--p1)">'+st.creds.length+'</div></div>'
-    + '<div style="background:var(--surf);padding:12px;border-radius:9px;text-align:center;border:1px solid var(--rim2)"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase">Clientes</div><div style="font-family:var(--fd);font-weight:800;font-size:20px;margin-top:3px">'+st.clis.length+'</div></div>'
-    + '<div style="background:var(--surf);padding:12px;border-radius:9px;text-align:center;border:1px solid var(--rim2)"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase">Pagos</div><div style="font-family:var(--fd);font-weight:800;font-size:20px;margin-top:3px;color:var(--green)">'+st.pagos.length+'</div></div>'
+    // ── Anticipos enviados ──
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">'
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Dinero enviado — anticipos ('+fin.anticipos.length+')</div>'
+    + '<button class="btn btn-p btn-xs" onclick="_concOpenAnticipo(\''+id+'\')">＋ Registrar anticipo</button>'
     + '</div>'
-    // Usuarios asignados
-    + '<div style="margin-top:10px"><div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Usuarios asignados ('+usuarios.length+')</div>'
-    + (usuarios.length === 0
-        ? '<div style="padding:18px;text-align:center;background:var(--gs);border-radius:9px;color:var(--ink3);font-size:11.5px">Sin usuarios asignados. Asigna usuarios desde el módulo <b>Usuarios</b> → Editar permisos.</div>'
-        : '<div style="display:grid;gap:6px">'+ usuarios.map(function(u){
-            return '<div style="background:var(--gs);padding:9px 11px;border-radius:8px;display:flex;justify-content:space-between;align-items:center">'
-              + '<div><div style="font-weight:700;font-size:12.5px">'+(u.nombre||u.email||'?')+'</div><div style="font-size:10.5px;color:var(--ink3)">'+(u.rol||'')+' · '+(u.email||'')+'</div></div>'
-              + '<button class="btn btn-g btn-xs" onclick="closeM();nav(\'users\');setTimeout(function(){editarUsuario(\''+u.uid+'\');},250)">Editar</button>'
-              + '</div>';
-          }).join('') +'</div>')
-    + '</div>';
+    + (fin.anticipos.length===0
+      ? '<div style="padding:14px;text-align:center;background:var(--gs);border-radius:9px;color:var(--ink3);font-size:11.5px;margin-bottom:13px">Sin anticipos registrados. Usa "＋ Registrar anticipo" cuando le mandes dinero a esta sede.</div>'
+      : '<div class="tw tw-compact" style="max-height:180px;overflow-y:auto;margin-bottom:13px"><table>'
+        + '<thead><tr><th>Fecha</th><th style="text-align:right">Monto</th><th>Método</th><th>Referencia</th><th>Nota</th><th>Por</th><th></th></tr></thead>'
+        + '<tbody>'+filasAnt+'</tbody></table></div>')
+    // ── Motos que salieron ──
+    + '<div style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Motos que salieron — contratos ('+fin.creds.length+')</div>'
+    + (fin.creds.length===0
+      ? '<div style="padding:14px;text-align:center;background:var(--gs);border-radius:9px;color:var(--ink3);font-size:11.5px">Aún no han salido motos de esta sede.</div>'
+      : '<div class="tw tw-compact" style="max-height:260px;overflow-y:auto"><table>'
+        + '<thead><tr><th>Crédito</th><th>Fecha</th><th>Cliente</th><th>Modelo</th><th>Placa/Serial</th><th style="text-align:right">Costo</th><th>Estado</th></tr></thead>'
+        + '<tbody>'+filasCreds+'</tbody></table></div>');
   $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cerrar</button>'
-    + '<button class="btn btn-p" onclick="_concOpenEdit(\''+c.id+'\')">Editar</button>';
+    + '<button class="btn btn-g" onclick="_concOpenReporte(\''+c.id+'\')">Reporte PDF/Excel</button>'
+    + '<button class="btn btn-p" onclick="_concOpenAnticipo(\''+c.id+'\')">＋ Anticipo</button>';
   $('ov').style.display='flex';
 }
 
@@ -750,6 +777,225 @@ function _concAsignarUno(tipo, id, sedeId){
   _concRenderAsignarIndividual();
 }
 
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  FINANZAS POR CONCESIONARIO — ANTICIPOS Y SALDO           ║
+// ║  Les mandamos dinero por adelantado (anticipos); cada     ║
+// ║  moto vendida descuenta su costo (precio base real).      ║
+// ║  Saldo = Σ anticipos − Σ costos de motos que salieron.    ║
+// ║  Los anticipos viven en el doc del concesionario          ║
+// ║  (c.anticipos[]) — no requiere reglas nuevas de Firestore.║
+// ╚══════════════════════════════════════════════════════════╝
+
+function _concFinanzasDe(cid){
+  var c = _concGetById(cid) || {};
+  var anticipos = Array.isArray(c.anticipos) ? c.anticipos.filter(function(a){ return a && !a.eliminado; }) : [];
+  var enviado = anticipos.reduce(function(s,a){ return s + (parseFloat(a.monto)||0); }, 0);
+  // Motos que salieron = créditos de esta sede (cancelados no consumen: la venta se anuló)
+  var creds = (S.creds||[]).filter(function(cr){
+    return cr && !cr.eliminado && cr.concesionarioId === cid && cr.estado !== 'cancelado';
+  });
+  var consumido = creds.reduce(function(s,cr){ return s + (parseFloat(cr.precioBaseReal||cr.precio)||0); }, 0);
+  return { anticipos: anticipos, creds: creds, enviado: enviado, consumido: consumido, saldo: enviado - consumido };
+}
+
+// Modal: registrar anticipo (dinero enviado a la sede)
+function _concOpenAnticipo(cid){
+  var c = _concGetById(cid);
+  if(!c){ toast('Concesionario no encontrado','error'); return; }
+  var fin = _concFinanzasDe(cid);
+  setMicon('conces');
+  $('mtt').textContent = '＋ Anticipo — ' + c.nombre;
+  $('msb').textContent = 'Saldo actual: ' + fmt(fin.saldo);
+  $('modal-box').className = 'modal';
+  $('mbd').innerHTML = ''
+    + '<div class="fgr" style="gap:10px">'
+    + '<div class="fg"><label>Fecha</label><input class="fi" id="cant_fecha" type="date" value="'+hoyLocalISO()+'"></div>'
+    + '<div class="fg"><label>Monto (USD) <span style="color:var(--red)">*</span></label><input class="fi" id="cant_monto" type="number" step="0.01" placeholder="10000"></div>'
+    + '</div>'
+    + '<div class="fgr" style="gap:10px">'
+    + '<div class="fg"><label>Método</label><select class="fs" id="cant_metodo"><option>Binance</option><option>Zelle</option><option>Efectivo</option><option>Transferencia bancaria</option><option>Otro</option></select></div>'
+    + '<div class="fg"><label>Referencia (opcional)</label><input class="fi" id="cant_ref" placeholder="N° de operación / hash"></div>'
+    + '</div>'
+    + '<div class="fg"><label>Nota (opcional)</label><input class="fi" id="cant_nota" placeholder="Ej: anticipo para lote de 10 motos"></div>'
+    + '<div style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.5">También puedes registrar un <b>monto negativo</b> como ajuste (ej: la sede nos devolvió dinero).</div>';
+  S.saveFn = function(){
+    var monto = parseFloat(($('cant_monto')&&$('cant_monto').value)||'');
+    if(!monto || isNaN(monto)){ toast('Indica el monto del anticipo','error'); return false; }
+    var ant = {
+      id: 'ANT-'+Date.now(),
+      fecha: ($('cant_fecha')&&$('cant_fecha').value) || hoyLocalISO(),
+      monto: monto,
+      metodo: ($('cant_metodo')&&$('cant_metodo').value) || 'Otro',
+      ref: (($('cant_ref')&&$('cant_ref').value)||'').trim(),
+      nota: (($('cant_nota')&&$('cant_nota').value)||'').trim(),
+      creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
+      creadoEn: new Date().toISOString()
+    };
+    if(!Array.isArray(c.anticipos)) c.anticipos = [];
+    c.anticipos.push(ant);
+    c.updatedAt = new Date().toISOString();
+    if(DB && DB.saveConcesionario) DB.saveConcesionario(c);
+    if(typeof logActividad==='function') logActividad('Anticipo a concesionario','concesionarios',c.id,fmt(monto)+' · '+ant.metodo);
+    closeM();
+    toast('Anticipo de '+fmt(monto)+' registrado en '+c.nombre,'success');
+    nav('concesionarios');
+    return true;
+  };
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    + '<button class="btn btn-p" onclick="saveM()">Registrar anticipo</button>';
+  $('ov').style.display='flex';
+}
+
+function _concDelAnticipo(cid, antId){
+  var c = _concGetById(cid);
+  if(!c || !Array.isArray(c.anticipos)) return;
+  var a = c.anticipos.find(function(x){ return x && x.id === antId; });
+  if(!a){ toast('Anticipo no encontrado','error'); return; }
+  if(!confirm('¿Eliminar el anticipo de '+fmt(parseFloat(a.monto)||0)+' del '+(a.fecha||'')+'?')) return;
+  a.eliminado = true;
+  a.eliminadoEn = new Date().toISOString();
+  a.eliminadoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
+  c.updatedAt = new Date().toISOString();
+  if(DB && DB.saveConcesionario) DB.saveConcesionario(c);
+  toast('Anticipo eliminado','info');
+  _concAbrirDetalle(cid);
+}
+
+// ── Reportes por concesionario (diario / quincenal / mensual / rango) ──
+function _concOpenReporte(cid){
+  var c = _concGetById(cid);
+  if(!c){ toast('Concesionario no encontrado','error'); return; }
+  setMicon('conces');
+  $('mtt').textContent = 'Reporte — ' + c.nombre;
+  $('msb').textContent = 'Diario · Quincenal · Mensual · Rango — PDF o Excel';
+  $('modal-box').className = 'modal';
+  $('mbd').innerHTML = ''
+    + '<div class="fg" style="margin-bottom:10px"><label>Período</label>'
+    + '<select class="fs" id="crep_tipo" onchange="var r=this.value===\'rango\';document.getElementById(\'crep_rango_box\').style.display=r?\'grid\':\'none\';document.getElementById(\'crep_fecha_box\').style.display=r?\'none\':\'block\'">'
+    + '<option value="diario">Diario (un día)</option>'
+    + '<option value="quincenal">Quincenal (1–15 / 16–fin)</option>'
+    + '<option value="mensual">Mensual (mes completo)</option>'
+    + '<option value="rango">Rango personalizado</option>'
+    + '</select></div>'
+    + '<div class="fg" id="crep_fecha_box" style="margin-bottom:10px"><label>Fecha de referencia</label><input class="fi" id="crep_fecha" type="date" value="'+hoyLocalISO()+'">'
+    + '<div style="font-size:10.5px;color:var(--ink3);margin-top:4px">Diario usa ese día · Quincenal usa su quincena · Mensual usa su mes.</div></div>'
+    + '<div id="crep_rango_box" style="display:none;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+    + '<div class="fg"><label>Desde</label><input class="fi" id="crep_desde" type="date" value="'+hoyLocalISO()+'"></div>'
+    + '<div class="fg"><label>Hasta</label><input class="fi" id="crep_hasta" type="date" value="'+hoyLocalISO()+'"></div>'
+    + '</div>'
+    + '<div style="font-size:11.5px;color:var(--ink2);background:var(--gs);border-radius:8px;padding:10px 12px;line-height:1.55">El reporte incluye: <b>motos que salieron</b> (crédito, cliente, cédula, teléfono, modelo, costo), <b>anticipos enviados</b> y el <b>saldo</b> de la sede.</div>';
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    + '<button class="btn btn-g" onclick="_concGenerarReporte(\''+cid+'\',\'excel\')">⬇ Excel (CSV)</button>'
+    + '<button class="btn btn-p" onclick="_concGenerarReporte(\''+cid+'\',\'pdf\')">🖨 PDF</button>';
+  $('ov').style.display='flex';
+}
+
+function _concRangoReporte(){
+  var tipo = (($('crep_tipo')||{}).value) || 'diario';
+  var f = (($('crep_fecha')||{}).value) || hoyLocalISO();
+  var d = f, h = f, lbl = 'Diario · '+f;
+  if(tipo==='quincenal'){
+    var day = parseInt(f.slice(8,10),10), ym = f.slice(0,7);
+    if(day<=15){ d=ym+'-01'; h=ym+'-15'; }
+    else { d=ym+'-16'; var last=new Date(parseInt(ym.slice(0,4),10), parseInt(ym.slice(5,7),10), 0).getDate(); h=ym+'-'+String(last).padStart(2,'0'); }
+    lbl = 'Quincenal · '+d+' → '+h;
+  } else if(tipo==='mensual'){
+    var ym2 = f.slice(0,7);
+    d = ym2+'-01';
+    var l2 = new Date(parseInt(ym2.slice(0,4),10), parseInt(ym2.slice(5,7),10), 0).getDate();
+    h = ym2+'-'+String(l2).padStart(2,'0');
+    lbl = 'Mensual · '+ym2;
+  } else if(tipo==='rango'){
+    d = (($('crep_desde')||{}).value) || f;
+    h = (($('crep_hasta')||{}).value) || f;
+    lbl = 'Rango · '+d+' → '+h;
+  }
+  return { desde:d, hasta:h, tipo:tipo, lbl:lbl };
+}
+
+function _concGenerarReporte(cid, formato){
+  var c = _concGetById(cid);
+  if(!c){ toast('Concesionario no encontrado','error'); return; }
+  var r = _concRangoReporte();
+  var fin = _concFinanzasDe(cid);
+  var enR = function(fecha){ return (fecha||'') >= r.desde && (fecha||'') <= r.hasta; };
+  var credsP = fin.creds.filter(function(cr){ return enR(cr.fecha); })
+    .sort(function(a,b){ return String(a.fecha||'').localeCompare(String(b.fecha||'')); });
+  var antP = fin.anticipos.filter(function(a){ return enR(a.fecha); })
+    .sort(function(a,b){ return String(a.fecha||'').localeCompare(String(b.fecha||'')); });
+  var costoP = credsP.reduce(function(s,cr){ return s + (parseFloat(cr.precioBaseReal||cr.precio)||0); }, 0);
+  var ventaP = credsP.reduce(function(s,cr){ return s + (parseFloat(cr.precio)||0); }, 0);
+  var antTotalP = antP.reduce(function(s,a){ return s + (parseFloat(a.monto)||0); }, 0);
+  var cliDe = function(cr){
+    return (S.clientes||[]).find(function(x){ return x && !x.eliminado && ((cr.clienteId && String(x.id)===String(cr.clienteId)) || x.nombre===cr.cli); }) || {};
+  };
+  if(formato === 'excel'){
+    var cell = function(v){ v = String(v==null?'':v); if(/[",\n]/.test(v)) v = '"'+v.replace(/"/g,'""')+'"'; return v; };
+    var row = function(arr){ return arr.map(cell).join(','); };
+    var rows = [];
+    rows.push(row(['REPORTE DE CONCESIONARIO', c.nombre]));
+    rows.push(row(['Período', r.lbl]));
+    rows.push(row(['Generado', new Date().toLocaleString('es-VE')]));
+    rows.push('');
+    rows.push(row(['RESUMEN']));
+    rows.push(row(['Motos que salieron (período)', credsP.length]));
+    rows.push(row(['Costo consumido (período)', costoP.toFixed(2)]));
+    rows.push(row(['Precio de venta total (período)', ventaP.toFixed(2)]));
+    rows.push(row(['Anticipos enviados (período)', antTotalP.toFixed(2)]));
+    rows.push(row(['— SALDO GLOBAL DE LA SEDE —', fin.saldo.toFixed(2)]));
+    rows.push(row(['Total enviado histórico', fin.enviado.toFixed(2)]));
+    rows.push(row(['Total consumido histórico', fin.consumido.toFixed(2)]));
+    rows.push('');
+    rows.push(row(['MOTOS QUE SALIERON']));
+    rows.push(row(['N° Crédito','Fecha','Cliente','Cédula','Teléfono','Modelo','Placa/Serial','Precio venta','Costo (deducción)','Estado']));
+    credsP.forEach(function(cr){
+      var cl = cliDe(cr);
+      rows.push(row([cr.id, cr.fecha||'', cr.cli||'', cl.cedula||'', cl.tel||'', cr.modelo||'', cr.placa||cr.serialMotor||'', (parseFloat(cr.precio)||0).toFixed(2), (parseFloat(cr.precioBaseReal||cr.precio)||0).toFixed(2), cr.estado||'']));
+    });
+    rows.push('');
+    rows.push(row(['ANTICIPOS ENVIADOS']));
+    rows.push(row(['Fecha','Monto','Método','Referencia','Nota','Registrado por']));
+    antP.forEach(function(a){
+      rows.push(row([a.fecha||'', (parseFloat(a.monto)||0).toFixed(2), a.metodo||'', a.ref||'', a.nota||'', a.creadoPor||'']));
+    });
+    var slug = (c.nombre||'sede').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    var blob = new Blob(['\uFEFF'+rows.join('\r\n')], {type:'text/csv;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = 'reporte-'+slug+'-'+r.desde+'_'+r.hasta+'.csv'; a.click();
+    URL.revokeObjectURL(url);
+    toast('Excel exportado ✓','success');
+    return;
+  }
+  // ── PDF ──
+  var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var html = ''
+    + '<h2>PAGASI — REPORTE DE CONCESIONARIO</h2>'
+    + '<div style="text-align:center;font-size:12px;margin-bottom:4px"><b>'+esc(c.nombre)+'</b>'+(c.ciudad?' · '+esc(c.ciudad):'')+'</div>'
+    + '<div style="text-align:center;font-size:11px;color:#555;margin-bottom:16px">'+esc(r.lbl)+' · Generado: '+new Date().toLocaleString('es-VE')+'</div>'
+    + '<h3>Resumen del período</h3>'
+    + '<table><tr><th>Motos que salieron</th><th>Costo consumido</th><th>Venta total</th><th>Anticipos enviados</th></tr>'
+    + '<tr><td>'+credsP.length+'</td><td>$'+costoP.toFixed(2)+'</td><td>$'+ventaP.toFixed(2)+'</td><td>$'+antTotalP.toFixed(2)+'</td></tr></table>'
+    + '<h3>Saldo global de la sede</h3>'
+    + '<table><tr><th>Total enviado</th><th>Total consumido</th><th>SALDO DISPONIBLE</th></tr>'
+    + '<tr><td>$'+fin.enviado.toFixed(2)+'</td><td>−$'+fin.consumido.toFixed(2)+'</td><td style="font-weight:900;'+(fin.saldo<0?'color:#c0392b':'color:#0a7a4b')+'">$'+fin.saldo.toFixed(2)+'</td></tr></table>'
+    + '<h3>Motos que salieron ('+credsP.length+')</h3>'
+    + (credsP.length===0 ? '<div style="color:#777;font-size:11px">Sin ventas en el período.</div>'
+      : '<table><tr><th>Crédito</th><th>Fecha</th><th>Cliente</th><th>Cédula</th><th>Teléfono</th><th>Modelo</th><th>Placa/Serial</th><th>Costo</th><th>Estado</th></tr>'
+        + credsP.map(function(cr){
+            var cl = cliDe(cr);
+            return '<tr><td>'+esc(cr.id)+'</td><td>'+esc(cr.fecha||'')+'</td><td>'+esc(cr.cli||'')+'</td><td>'+esc(cl.cedula||'')+'</td><td>'+esc(cl.tel||'')+'</td><td>'+esc(cr.modelo||'')+'</td><td>'+esc(cr.placa||cr.serialMotor||'')+'</td><td>−$'+(parseFloat(cr.precioBaseReal||cr.precio)||0).toFixed(2)+'</td><td>'+esc(cr.estado||'')+'</td></tr>';
+          }).join('')
+        + '<tr><td colspan="7" style="text-align:right;font-weight:800">TOTAL COSTO</td><td style="font-weight:900">−$'+costoP.toFixed(2)+'</td><td></td></tr></table>')
+    + '<h3>Anticipos enviados ('+antP.length+')</h3>'
+    + (antP.length===0 ? '<div style="color:#777;font-size:11px">Sin anticipos en el período.</div>'
+      : '<table><tr><th>Fecha</th><th>Monto</th><th>Método</th><th>Referencia</th><th>Nota</th><th>Registrado por</th></tr>'
+        + antP.map(function(a){
+            return '<tr><td>'+esc(a.fecha||'')+'</td><td>$'+(parseFloat(a.monto)||0).toFixed(2)+'</td><td>'+esc(a.metodo||'')+'</td><td>'+esc(a.ref||'')+'</td><td>'+esc(a.nota||'')+'</td><td>'+esc(a.creadoPor||'')+'</td></tr>';
+          }).join('')
+        + '<tr><td style="font-weight:800">TOTAL</td><td style="font-weight:900">$'+antTotalP.toFixed(2)+'</td><td colspan="4"></td></tr></table>');
+  _abrirVentanaImpresion('Reporte '+c.nombre+' '+r.desde, html);
+}
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║  BANDEJA DE APROBACIONES (Entrega 3)                      ║
