@@ -1028,6 +1028,23 @@ function _wzPickMotoCat(sel){
   if(invSel) invSel.value = '';
   WZ.motoInvId = null;
   WZ.motoModelo = opt.getAttribute('data-modelo')||opt.text.split(' —')[0].trim();
+  // ── Autocompletar los datos de la moto que SÍ vienen del catálogo ──
+  // El catálogo trae 'modelo', 'sede' y opcionalmente 'marca'. VIN, color, placa
+  // y seriales son únicos de cada moto física y no se pueden autollenar.
+  try{
+    var _catIt = (typeof CATALOGO!=='undefined'?CATALOGO:[]).find(function(x){ return x && String(x.modelo)===String(WZ.motoModelo); });
+    // Marca: solo si el empleado no la escribió ya (no pisamos ediciones manuales)
+    var _mk = document.getElementById('wz_marca');
+    if(_mk && !(_mk.value||'').trim()){
+      var _marca = (_catIt && _catIt.marca) ? _catIt.marca : WZ.motoModelo;
+      _mk.value = _marca; WZ['wz_marca'] = _marca;
+    }
+    // Concesionario: si la moto del catálogo tiene sede y aún no se eligió una, la sugiere
+    if(_catIt && _catIt.sede && (WZ.concesionarioId===undefined || WZ.concesionarioId===null || WZ.concesionarioId==='')){
+      var _cc = (S.concesionarios||[]).find(function(c){ return c && !c.eliminado && String(c.nombre)===String(_catIt.sede); });
+      if(_cc){ WZ.concesionarioId = _cc.id; WZ['wz_concesionario_id']=_cc.id; var _sc=document.getElementById('wz_concesionario_id'); if(_sc) _sc.value=_cc.id; }
+    }
+  }catch(e){}
   // El precio NO se toma del catálogo (los precios cambian a cada rato):
   // el empleado escribe el precio manualmente y la calculadora en línea sugiere las cuotas.
   if(typeof _wzMpagoSync==='function') _wzMpagoSync();
