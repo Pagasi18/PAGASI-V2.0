@@ -174,9 +174,9 @@ function _wzRender(motoId){
     + '</div>'
     + '<div id="wz_plan_custom_box" style="display:block;margin-top:10px">'
     + '<div class="fgr">'
-    + '<div class="fg"><label>Inicial real (USD)</label><input class="fi" id="wz_ini_real" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzMpagoSync();_wzCuotaSug();_wzScore()"></div>'
+    + '<div class="fg"><label>Inicial real (USD)</label><input class="fi" id="wz_ini_real" type="number" placeholder="0.00" oninput="WZ._calcPct=\'manual\';_wzActualizarFinPreview(WZ.precio||0);_wzMpagoSync();_wzCuotaSug();_wzScore()"></div>'
     + '<div class="fg"><label>Cuota quincenal (USD)</label><input class="fi" id="wz_cuota_q_custom" type="number" placeholder="0.00" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzScore()"></div>'
-    + '<div class="fg"><label>Plazo (meses)</label><input class="fi" id="wz_plazo_custom" type="number" min="1" step="1" placeholder="12" oninput="_wzActualizarFinPreview(WZ.precio||0);_wzCuotaSug();_wzScore()"></div>'
+    + '<div class="fg"><label>Plazo (meses)</label><input class="fi" id="wz_plazo_custom" type="number" min="1" step="1" placeholder="12" oninput="WZ._calcPlazo=null;_wzActualizarFinPreview(WZ.precio||0);_wzCuotaSug();_wzScore()"></div>'
     + '</div>'
     + '<div id="wz_cuota_sug" style="display:none;margin-top:10px"></div>'
     + '<div style="font-size:11px;color:var(--ink3);margin-top:6px">Escribe el precio y la calculadora te sugiere la inicial y la cuota quincenal. Puedes ajustarlas a mano.</div>'
@@ -1096,43 +1096,59 @@ function _wzCuotaSug(){
   if(!(base>0)) base=parseFloat(((document.getElementById('wz_precio')||{}).value))||0;
   if(!(base>0)){ box.style.display='none'; box.innerHTML=''; return; }
   var factor=(typeof PLAN!=='undefined'&&PLAN.factor)?PLAN.factor:1.935483870967742;
-  var iniPct=(typeof PLAN!=='undefined'&&PLAN.inicial)?PLAN.inicial:0.45;
-  var plazo=parseInt(((document.getElementById('wz_plazo_custom')||{}).value),10)||((typeof PLAN!=='undefined'&&PLAN.plazo)||12);
   var iniTyped=parseFloat(((document.getElementById('wz_ini_real')||{}).value))||0;
+  // ── % de inicial elegido con los chips ('manual' = usa el campo "Inicial real") ──
+  var pctSel = (WZ._calcPct!=null) ? WZ._calcPct : ((typeof PLAN!=='undefined'&&PLAN.inicial)||0.45);
+  var esManual = (pctSel==='manual');
+  if(esManual && !(iniTyped>0)){ esManual=false; pctSel=(typeof PLAN!=='undefined'&&PLAN.inicial)||0.45; }
+  // ── Plazo elegido con los chips (si no, usa el campo Plazo o 12) ──
+  var plazoField=parseInt(((document.getElementById('wz_plazo_custom')||{}).value),10)||0;
+  var plazo = (WZ._calcPlazo!=null) ? WZ._calcPlazo : (plazoField>0?plazoField:((typeof PLAN!=='undefined'&&PLAN.plazo)||12));
   // Redondeo a dólares enteros: sin decimales en inicial ni cuota
-  var iniSug=Math.round(base*iniPct);
-  var iniUsada=iniTyped>0?iniTyped:iniSug;
+  var iniUsada = esManual ? Math.round(iniTyped) : Math.round(base*pctSel);
   var fin=Math.max(0,base-iniUsada);
   var cuotaQ=Math.round(fin*factor/(plazo*2));
   var total=Math.round(iniUsada+cuotaQ*plazo*2);
   var cell=function(l,v){ return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:10px;padding:9px 11px">'
     +'<div style="font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);font-weight:700;margin-bottom:2px">'+l+'</div>'
     +'<div style="font-size:15px;font-weight:900;letter-spacing:-.4px;color:var(--p1)">'+v+'</div></div>'; };
+  var pctChip=function(p){ var on=!esManual && Math.abs(pctSel-p)<0.001;
+    return '<button type="button" class="btn btn-xs '+(on?'btn-p':'btn-g')+'" onclick="_wzCalcPct('+p+')" style="font-size:10px;padding:3px 9px">'+(p*100).toFixed(0)+'%</button>'; };
+  var plazoChip=function(m){ var on=(plazo===m);
+    return '<button type="button" class="btn btn-xs '+(on?'btn-p':'btn-g')+'" onclick="_wzCalcPlazo('+m+')" style="font-size:10px;padding:3px 9px">'+m+' m</button>'; };
   box.style.display='block';
   box.innerHTML='<div style="background:var(--gs);border:1px solid var(--rim2);border-radius:10px;padding:12px">'
-    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:8px">🧮 Calculadora · '+(iniTyped>0?'con tu inicial':'inicial '+(iniPct*100).toFixed(0)+'%')+' · '+plazo+' meses</div>'
+    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:8px">🧮 Calculadora</div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:6px">'
+      +'<span style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Inicial:</span>'
+      +[0.45,0.50,0.55,0.60,0.65,0.70].map(pctChip).join('')
+      +(iniTyped>0?'<button type="button" class="btn btn-xs '+(esManual?'btn-p':'btn-g')+'" onclick="_wzCalcPct(\'manual\')" style="font-size:10px;padding:3px 9px">Manual $'+Math.round(iniTyped)+'</button>':'')
+    +'</div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'
+      +'<span style="font-size:10px;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Plazo:</span>'
+      +[6,9,12,15,18,24].map(plazoChip).join('')
+    +'</div>'
     +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'
-    +cell('Inicial'+(iniTyped>0?'':' ('+(iniPct*100).toFixed(0)+'%)'),'$'+Math.round(iniUsada))
+    +cell('Inicial'+(esManual?' (manual)':' ('+(pctSel*100).toFixed(0)+'%)'),'$'+iniUsada)
     +cell('A financiar','$'+Math.round(fin))
     +cell('Cuota quincenal','$'+cuotaQ)
     +cell('Total a pagar','$'+total)
     +'</div>'
-    +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'
-    +(iniTyped>0?'':'<button type="button" class="btn btn-g btn-sm" onclick="_wzUsarIniSug('+iniSug+')">Usar inicial $'+iniSug+'</button>')
-    +'<button type="button" class="btn btn-p btn-sm" onclick="_wzUsarCuotaSug('+cuotaQ+')">Usar cuota $'+cuotaQ+'</button>'
+    +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">'
+    +'<button type="button" class="btn btn-p btn-sm" onclick="_wzAplicarCalc('+iniUsada+','+cuotaQ+','+plazo+')">✓ Aplicar este plan</button>'
+    +'<span style="font-size:10.5px;color:var(--ink3)">Llena inicial $'+iniUsada+' · cuota $'+cuotaQ+' · plazo '+plazo+' meses</span>'
     +'</div></div>';
 }
-function _wzUsarIniSug(v){
-  var el=document.getElementById('wz_ini_real'); if(el) el.value=Math.round(parseFloat(v)||0);
-  _wzCuotaSug();
+function _wzCalcPct(p){ WZ._calcPct=p; _wzCuotaSug(); }
+function _wzCalcPlazo(m){ WZ._calcPlazo=m; _wzCuotaSug(); }
+function _wzAplicarCalc(ini,cuota,plazo){
+  var a=document.getElementById('wz_ini_real'); if(a) a.value=Math.round(parseFloat(ini)||0);
+  var b=document.getElementById('wz_cuota_q_custom'); if(b) b.value=Math.round(parseFloat(cuota)||0);
+  var c=document.getElementById('wz_plazo_custom'); if(c) c.value=parseInt(plazo,10)||12;
   _wzActualizarFinPreview(((document.getElementById('wz_precio')||{}).value)||WZ.precio||0);
   if(typeof _wzMpagoSync==='function') _wzMpagoSync();
   _wzScore();
-}
-function _wzUsarCuotaSug(v){
-  var el=document.getElementById('wz_cuota_q_custom'); if(el) el.value=Math.round(parseFloat(v)||0);
-  _wzActualizarFinPreview(((document.getElementById('wz_precio')||{}).value)||WZ.precio||0);
-  _wzScore();
+  _wzCuotaSug();
 }
 
 // ── Chip selector (pill buttons) ──
