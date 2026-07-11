@@ -521,15 +521,55 @@ function dfReporte(key, formato){
   } else if(key==='mora'){
     secciones.push({ titulo:'Resumen', headers:['Créditos en mora','Balance en mora (P+I)','Intereses por mora'],
       rows:[[d.nMora, d.moraBalance, d.moraInt]], nums:[1,2] });
+    var estadoLbl = function(c){
+      if(typeof _notaCobranzaOpt==='function'){ var o=_notaCobranzaOpt(c.cobranzaStatus||''); return (o&&o.v)?o.t:'—'; }
+      return c.cobranzaStatus||'—';
+    };
+    var morosos = d.enMora.slice().sort(function(a,b){ return (parseFloat(b.mora)||0)-(parseFloat(a.mora)||0); });
     var rowsM=[];
-    d.enMora.slice().sort(function(a,b){ return (parseFloat(b.mora)||0)-(parseFloat(a.mora)||0); }).forEach(function(c){
+    morosos.forEach(function(c){
       var cl=(S.clientes||[]).find(function(x){ return x && ((c.clienteId&&String(x.id)===String(c.clienteId))||x.nombre===c.cli); })||{};
       var cv=Math.ceil((parseFloat(c.mora)||0)/15);
-      rowsM.push([c.id, c.cli||'', cl.tel||'', (parseFloat(c.mora)||0), (parseFloat(c.cuotaQ||c.cuota)||0), cv, (parseFloat(c.moraMonto)||0), d.saldo(c)]);
+      var gest=Array.isArray(c.gestiones)?c.gestiones:[];
+      var ult=gest.length?gest.slice().sort(function(a,b){ return String(b.creadoEn||b.fecha||'').localeCompare(String(a.creadoEn||a.fecha||'')); })[0]:null;
+      var ultTxt=ult?((ult.fecha||'')+' · '+(ult.tipo||'')+(ult.fechaCompromiso?' · comp: '+ult.fechaCompromiso:'')):'—';
+      rowsM.push([c.id, c.cli||'', cl.tel||'', c.modelo||'', (parseFloat(c.mora)||0), (parseFloat(c.cuotaQ||c.cuota)||0), cv, d.saldo(c), estadoLbl(c), gest.length?gest.length:'—', ultTxt]);
     });
     secciones.push({ titulo:'Detalle ('+d.enMora.length+')',
-      headers:['Crédito','Cliente','Teléfono','Días mora','Cuota','Cuotas vencidas','Interés mora','Saldo (P+I)'],
-      rows:rowsM, nums:[4,6,7], total:['TOTAL','','','','','',d.moraInt,d.moraBalance] });
+      headers:['Crédito','Cliente','Teléfono','Modelo','Días','Cuota','C. venc.','Saldo (P+I)','Estado de gestión','Gest.','Última gestión'],
+      rows:rowsM, nums:[5,7], total:['TOTAL','','','','','','',d.moraBalance,'','',''] });
+    // ── Historial completo de gestiones de cobranza de los morosos ──
+    var rowsG=[];
+    morosos.forEach(function(c){
+      (Array.isArray(c.gestiones)?c.gestiones.slice():[]).sort(function(a,b){ return String(b.creadoEn||b.fecha||'').localeCompare(String(a.creadoEn||a.fecha||'')); })
+        .forEach(function(g){
+          var res=String(g.resultado||'').trim(); if(res.length>90) res=res.slice(0,90)+'…';
+          rowsG.push([c.id, c.cli||'', g.fecha||'', g.tipo||'', g.cobrador||'', res, g.fechaCompromiso||'']);
+        });
+    });
+    if(rowsG.length){
+      secciones.push({ titulo:'Gestiones de cobranza registradas ('+rowsG.length+')',
+        headers:['Crédito','Cliente','Fecha','Tipo','Cobrador','Resultado','Compromiso'],
+        rows:rowsG, nums:[] });
+    }
+    var sinGest = morosos.filter(function(c){ return !Array.isArray(c.gestiones)||!c.gestiones.length; }).length;
+    if(sinGest){
+      secciones.push({ titulo:'⚠ Morosos SIN ninguna gestión registrada ('+sinGest+')',
+        headers:['Crédito','Cliente','Teléfono','Días mora','Saldo (P+I)'],
+        rows:morosos.filter(function(c){ return !Array.isArray(c.gestiones)||!c.gestiones.length; }).map(function(c){
+          var cl=(S.clientes||[]).find(function(x){ return x && ((c.clienteId&&String(x.id)===String(c.clienteId))||x.nombre===c.cli); })||{};
+          return [c.id, c.cli||'', cl.tel||'', (parseFloat(c.mora)||0), d.saldo(c)];
+        }), nums:[4] });
+    }
+    // ── Notas de los créditos morosos ──
+    var rowsN = morosos.filter(function(c){ return String(c.notas||'').trim(); }).map(function(c){
+      var n=String(c.notas||'').trim(); if(n.length>160) n=n.slice(0,160)+'…';
+      return [c.id, c.cli||'', n];
+    });
+    if(rowsN.length){
+      secciones.push({ titulo:'Notas de los créditos ('+rowsN.length+')',
+        headers:['Crédito','Cliente','Nota'], rows:rowsN, nums:[] });
+    }
   } else {
     var lista = (key==='fin_act'||key==='cxc_act'||key==='orig_act') ? d.activos : d.creds;
     var tf=0, tint=0, tpi=0, tcob=0, tsal=0, rowsC=[];
