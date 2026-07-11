@@ -405,6 +405,9 @@ function _renderDashFin(){
     // ══ SECCIÓN 4: MORA ══
     + secTitle('Mora','Cartera con atraso — del cohorte filtrado')
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px">'
+    + card({lbl:'% de mora de la cartera', valor:pct(d.cxcActivos>0?d.moraBalance/d.cxcActivos*100:0), color:'var(--red)', rep:'mora',
+        chips:[['Saldo en mora',fmt(d.moraBalance),'var(--red)'],['Cartera activa',fmt(d.cxcActivos)],['Por créditos',pct(d.pctMora),'var(--red)']],
+        desc:'Qué porción de la cartera cobrable (CxC de créditos vigentes) está en manos de clientes atrasados. Es EL indicador de salud de la cartera: por debajo de 5% excelente, 5-15% vigilar, sobre 15% acción de cobranza urgente.'})
     + card({lbl:'Créditos en mora', valor:String(d.nMora), color:'var(--red)', rep:'mora',
         chips:[['Tasa de mora',pct(d.pctMora),'var(--red)'],['De '+d.nOrigAct+' activos','']],
         desc:'Créditos vigentes con al menos un día de atraso. La tasa de mora es sobre los créditos activos del cohorte.'})
