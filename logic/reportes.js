@@ -174,8 +174,8 @@ function _abrirVentanaImpresion(titulo, htmlContenido, opts){
     +".rp-body h3{font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#1D4ED8;border-bottom:2px solid #1D4ED8;padding-bottom:6px;margin:22px 0 12px;break-after:avoid}"
     +".rp-body h3:first-of-type{margin-top:0}"
     +".rp-body table{width:100%;border-collapse:collapse;margin-bottom:6px}"
-    +".rp-body th{padding:9px 11px;border-bottom:2px solid #e5e7eb;text-align:left;font-size:9.5px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:800;background:#f8fafc}"
-    +".rp-body td{padding:7px 11px;border-bottom:1px solid #f1f5f9;font-size:11.5px;color:#374151}"
+    +".rp-body th{padding:8px 7px;border-bottom:2px solid #e5e7eb;text-align:left;font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.03em;font-weight:800;background:#f8fafc;word-break:break-word}"
+    +".rp-body td{padding:6px 7px;border-bottom:1px solid #f1f5f9;font-size:11px;color:#374151;word-break:break-word;overflow-wrap:anywhere}"
     +".rp-body tr{break-inside:avoid}"
     +".ar{display:grid;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:11px}"
     +".ah{display:grid;padding:5px 0;border-bottom:2px solid #1D4ED8;font-weight:800;font-size:10.5px;text-transform:uppercase;color:#1D4ED8}"
@@ -525,19 +525,21 @@ function dfReporte(key, formato){
       if(typeof _notaCobranzaOpt==='function'){ var o=_notaCobranzaOpt(c.cobranzaStatus||''); return (o&&o.v)?o.t:'—'; }
       return c.cobranzaStatus||'—';
     };
+    var sedeDe = function(c){
+      if(!c.concesionarioId || typeof _concGetById!=='function') return '—';
+      var cc=_concGetById(c.concesionarioId); return (cc&&cc.nombre)||'—';
+    };
     var morosos = d.enMora.slice().sort(function(a,b){ return (parseFloat(b.mora)||0)-(parseFloat(a.mora)||0); });
     var rowsM=[];
     morosos.forEach(function(c){
       var cl=(S.clientes||[]).find(function(x){ return x && ((c.clienteId&&String(x.id)===String(c.clienteId))||x.nombre===c.cli); })||{};
       var cv=Math.ceil((parseFloat(c.mora)||0)/15);
       var gest=Array.isArray(c.gestiones)?c.gestiones:[];
-      var ult=gest.length?gest.slice().sort(function(a,b){ return String(b.creadoEn||b.fecha||'').localeCompare(String(a.creadoEn||a.fecha||'')); })[0]:null;
-      var ultTxt=ult?((ult.fecha||'')+' · '+(ult.tipo||'')+(ult.fechaCompromiso?' · comp: '+ult.fechaCompromiso:'')):'—';
-      rowsM.push([c.id, c.cli||'', cl.tel||'', c.modelo||'', (parseFloat(c.mora)||0), (parseFloat(c.cuotaQ||c.cuota)||0), cv, d.saldo(c), estadoLbl(c), gest.length?gest.length:'—', ultTxt]);
+      rowsM.push([c.id, c.cli||'', cl.tel||'', sedeDe(c), c.modelo||'', (parseFloat(c.mora)||0), (parseFloat(c.cuotaQ||c.cuota)||0), cv, d.saldo(c), estadoLbl(c), gest.length?gest.length:'—']);
     });
-    secciones.push({ titulo:'Detalle ('+d.enMora.length+')',
-      headers:['Crédito','Cliente','Teléfono','Modelo','Días','Cuota','C. venc.','Saldo (P+I)','Estado de gestión','Gest.','Última gestión'],
-      rows:rowsM, nums:[5,7], total:['TOTAL','','','','','','',d.moraBalance,'','',''] });
+    secciones.push({ titulo:'Detalle ('+d.enMora.length+') — el historial de gestiones está en la sección siguiente',
+      headers:['Crédito','Cliente','Teléfono','Sede','Modelo','Días','Cuota','C. venc.','Saldo (P+I)','Estado de gestión','Gest.'],
+      rows:rowsM, nums:[6,8], total:['TOTAL','','','','','','','',d.moraBalance,'',''] });
     // ── Historial completo de gestiones de cobranza de los morosos ──
     var rowsG=[];
     morosos.forEach(function(c){
@@ -555,11 +557,11 @@ function dfReporte(key, formato){
     var sinGest = morosos.filter(function(c){ return !Array.isArray(c.gestiones)||!c.gestiones.length; }).length;
     if(sinGest){
       secciones.push({ titulo:'⚠ Morosos SIN ninguna gestión registrada ('+sinGest+')',
-        headers:['Crédito','Cliente','Teléfono','Días mora','Saldo (P+I)'],
+        headers:['Crédito','Cliente','Teléfono','Sede','Días mora','Saldo (P+I)'],
         rows:morosos.filter(function(c){ return !Array.isArray(c.gestiones)||!c.gestiones.length; }).map(function(c){
           var cl=(S.clientes||[]).find(function(x){ return x && ((c.clienteId&&String(x.id)===String(c.clienteId))||x.nombre===c.cli); })||{};
-          return [c.id, c.cli||'', cl.tel||'', (parseFloat(c.mora)||0), d.saldo(c)];
-        }), nums:[4] });
+          return [c.id, c.cli||'', cl.tel||'', sedeDe(c), (parseFloat(c.mora)||0), d.saldo(c)];
+        }), nums:[5] });
     }
     // ── Notas de los créditos morosos ──
     var rowsN = morosos.filter(function(c){ return String(c.notas||'').trim(); }).map(function(c){
