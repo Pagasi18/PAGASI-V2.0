@@ -212,12 +212,14 @@ function _renderContratoArrendamiento(){
     })()}
 
     <!-- QUINTA -->
-    <h3 style="${clausH}">QUINTA: RESERVA DE DOMINIO</h3>
-    <p style="${p}">LA VENDEDORA se reserva el dominio y propiedad de la motocicleta descrita en la Cláusula Primera hasta tanto EL COMPRADOR haya pagado la totalidad del precio, incluyendo cuotas, cargos, penalidades, gastos o cualquier otra obligación pendiente derivada de este contrato. EL COMPRADOR reconoce que adquirirá la propiedad plena de la motocicleta únicamente una vez pagada la última cuota y cumplidas todas sus obligaciones contractuales.</p>
+    <h3 style="${clausH}">QUINTA: RESERVA DE DOMINIO Y REGISTRO</h3>
+    <p style="${p}">LA VENDEDORA se reserva el dominio y propiedad de la motocicleta descrita en la Cláusula Primera hasta tanto EL COMPRADOR haya pagado la totalidad del precio, incluyendo cuotas, cargos, penalidades, gastos o cualquier otra obligación pendiente derivada de este contrato. En consecuencia, la motocicleta se encuentra y permanecerá <strong>registrada y titulada a nombre de LA VENDEDORA (PAGASI 18, C.A.)</strong> durante toda la vigencia de este contrato, sin que la tenencia o uso por parte de EL COMPRADOR implique transferencia alguna de propiedad.</p>
+    <p style="${p}">Una vez pagada la última cuota y cumplidas todas las obligaciones contractuales, <strong>la propiedad plena de la motocicleta pasará a EL COMPRADOR</strong>, y LA VENDEDORA se obliga a otorgar y suscribir, en un plazo razonable, los documentos necesarios para el traspaso del registro de dominio a nombre de EL COMPRADOR. Los gastos, tasas y trámites del traspaso serán por cuenta de EL COMPRADOR, salvo acuerdo distinto por escrito.</p>
 
     <!-- SEXTA -->
-    <h3 style="${clausH}">SEXTA: ENTREGA Y RIESGO</h3>
+    <h3 style="${clausH}">SEXTA: ENTREGA, RIESGO Y RETENCIÓN DE LLAVE</h3>
     <p style="${p}">LA VENDEDORA entrega la motocicleta a EL COMPRADOR en fecha ${blank(fechaContrato,20)}. Desde el momento de la entrega material, EL COMPRADOR asume la guarda, custodia, uso, mantenimiento, riesgo de pérdida, robo, hurto, daño, accidente, multas, infracciones, sanciones y cualquier otra responsabilidad relacionada con la motocicleta.</p>
+    <p style="${p}">EL COMPRADOR acepta y autoriza expresamente que <strong>LA VENDEDORA conserve en su poder una (1) llave de la motocicleta</strong> como medida de garantía, durante toda la vigencia de este contrato. Dicha llave será utilizada únicamente en los supuestos de incumplimiento y recuperación previstos en este contrato. Al quedar pagada la totalidad del precio y finalizado el contrato, <strong>LA VENDEDORA entregará dicha llave a EL COMPRADOR</strong> junto con los documentos de traspaso señalados en la Cláusula Quinta.</p>
 
     <!-- SÉPTIMA -->
     <h3 style="${clausH}">SÉPTIMA: USO, CONSERVACIÓN Y PROHIBICIONES</h3>
