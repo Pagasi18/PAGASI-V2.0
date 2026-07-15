@@ -3897,3 +3897,34 @@ window.addEventListener('resize', function(){
 });
 
 setTimeout(function(){ try{ if(window.S && Array.isArray(S.clientes) && Array.isArray(S.creds)) syncTodosEstadosClientes(); }catch(e){} }, 1200);
+
+// ══════════════════════════════════════════════════════════════
+// AUTOCAPITALIZACIÓN GLOBAL DE FORMULARIOS
+// Aplica en TODA la app mientras se escribe (solicitudes, clientes,
+// créditos, modales): la primera letra de cada palabra en mayúscula.
+// Placas, VIN, seriales, chasis, GPS y RIF van en MAYÚSCULAS completas.
+// NO toca: emails, contraseñas, buscadores, URLs, números, fechas ni
+// textareas (notas/observaciones se escriben libres).
+// Delegado en document para cubrir también campos creados dinámicamente.
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('input', function(e){
+  var el = e.target;
+  if(!el || (el.tagName||'').toLowerCase() !== 'input') return;
+  if(((el.type||'text').toLowerCase()) !== 'text') return;
+  var key = ((el.id||'')+' '+(el.name||'')+' '+(el.placeholder||'')).toLowerCase();
+  if(/mail|correo|clave|pass|url|http|busca|search|srch/.test(key)) return;
+  if(/q$/i.test(el.id||'')) return; // buscadores tipo cuotasQ / pagosQ
+  var v = el.value; if(!v) return;
+  var selS = el.selectionStart, selE = el.selectionEnd;
+  var nv;
+  if(/placa|vin|serial|chasis|gps|rif/.test(key)){
+    nv = v.toUpperCase();
+  } else {
+    // Primera letra de cada palabra en mayúscula (respeta acrónimos ya escritos)
+    nv = v.replace(/(^|[\s.\-\/("'])([a-záéíóúñü])/g, function(m, pre, ch){ return pre + ch.toUpperCase(); });
+  }
+  if(nv !== v){
+    el.value = nv;
+    try{ el.setSelectionRange(selS, selE); }catch(_e){}
+  }
+}, true);
