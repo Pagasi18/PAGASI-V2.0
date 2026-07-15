@@ -356,6 +356,19 @@ function _bcvActualizarUI(){
       dashSpread.textContent = '—';
     }
   }
+  // Brecha EUR oficial → paralelo (Binance): cuánto está el paralelo respecto al euro oficial
+  var dashSpreadEur = document.getElementById('dash-tasa-spread-eur');
+  if(dashSpreadEur){
+    var e1 = _eurTasa || window._tasaEuro || 0;
+    var e2 = _binanceTasa || window._tasaBinance || 0;
+    if(e1 > 1 && e2 > 1){
+      var pctE = ((e2 - e1) / e1) * 100;
+      dashSpreadEur.textContent = (pctE >= 0 ? '+' : '') + pctE.toFixed(1) + '%';
+      dashSpreadEur.style.color = pctE > 30 ? '#E8335A' : (pctE > 15 ? '#BA7517' : '#15803D');
+    } else {
+      dashSpreadEur.textContent = '—';
+    }
+  }
 }
 window._bcvActualizarUI = _bcvActualizarUI;
 

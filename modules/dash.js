@@ -368,10 +368,16 @@ PG.dash = function(){
         <span id="dash-tasa-binance" style="font-family:var(--fd);font-weight:900;font-size:15px;color:var(--ink);letter-spacing:-.4px;white-space:nowrap">${(window._tasaBinance||0)>1?(window._tasaBinance).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
       </div>
 
-      <!-- Footer: Brecha BCV↔Binance (paralelo sobre oficial) -->
-      <div style="margin-top:10px;padding:7px 10px;background:var(--surf2);border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-size:10.5px">
-        <span style="color:var(--ink3);font-weight:700">Brecha oficial → paralelo</span>
-        <span id="dash-tasa-spread" style="color:var(--ink);font-weight:800;font-family:var(--fd)">${(window._tasaBinance>1&&window._tasaBsGlobal>1)?('+'+(((window._tasaBinance-window._tasaBsGlobal)/window._tasaBsGlobal*100).toFixed(1))+'%'):'—'}</span>
+      <!-- Footer: Brechas (paralelo sobre oficial USD y sobre EUR oficial) -->
+      <div style="margin-top:10px;padding:7px 10px;background:var(--surf2);border-radius:8px;display:flex;flex-direction:column;gap:5px;font-size:10.5px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="color:var(--ink3);font-weight:700">Brecha oficial → paralelo</span>
+          <span id="dash-tasa-spread" style="color:var(--ink);font-weight:800;font-family:var(--fd)">${(window._tasaBinance>1&&window._tasaBsGlobal>1)?('+'+(((window._tasaBinance-window._tasaBsGlobal)/window._tasaBsGlobal*100).toFixed(1))+'%'):'—'}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--rim2);padding-top:5px">
+          <span style="color:var(--ink3);font-weight:700">Brecha EUR → paralelo</span>
+          <span id="dash-tasa-spread-eur" style="color:var(--ink);font-weight:800;font-family:var(--fd)">${(window._tasaBinance>1&&window._tasaEuro>1)?((((window._tasaBinance-window._tasaEuro)/window._tasaEuro*100)>=0?'+':'')+(((window._tasaBinance-window._tasaEuro)/window._tasaEuro*100).toFixed(1))+'%'):'—'}</span>
+        </div>
       </div>
     </div>
   </div>
