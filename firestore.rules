@@ -2,10 +2,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Identidad ──────────────────────────────────────────────────────────
-    // "Staff" = sesión REAL (no anónima) que YA tiene su ficha en /usuarios.
+    // == Identidad ==
+    // "Staff" = sesion REAL (no anonima) que YA tiene su ficha en /usuarios.
     // Antes se usaba solo request.auth != null ("logueado"), lo que dejaba
-    // entrar a cualquier sesión anónima (las que crea el formulario público).
+    // entrar a cualquier sesion anonima (las que crea el formulario publico).
     function noAnonimo() {
       return request.auth != null
         && request.auth.token.firebase.sign_in_provider != 'anonymous';
@@ -19,16 +19,16 @@ service cloud.firestore {
         && ( get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'Administrador'
           || get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin' );
     }
-    // Un lead del formulario público: sólo se permite CREAR con esta forma.
+    // Un lead del formulario publico: solo se permite CREAR con esta forma.
     function esLeadWeb() {
       return request.resource.data.estado == 'lead'
         && request.resource.data.origen == 'web';
     }
 
-    // ── Usuarios ───────────────────────────────────────────────────────────
-    // Crear la ficha propia SÓLO al aceptar una invitación válida (el email del
-    // doc debe coincidir con el de la cuenta, y debe existir una invitación
-    // para ese email). Así, aunque el registro email/clave esté abierto, nadie
+    // == Usuarios ==
+    // Crear la ficha propia SOLO al aceptar una invitacion valida (el email del
+    // doc debe coincidir con el de la cuenta, y debe existir una invitacion
+    // para ese email). Asi, aunque el registro email/clave este abierto, nadie
     // puede auto-asignarse acceso sin haber sido invitado por un admin.
     match /usuarios/{uid} {
       allow read: if esStaff();
@@ -47,20 +47,20 @@ service cloud.firestore {
       allow delete: if esAdmin();
     }
 
-    // ── Invitaciones ─────────────────────────────────────────────────────────
+    // == Invitaciones ==
     // get(): el invitado abre su link (el token es un secreto en la URL).
-    // list(): sólo staff puede enumerarlas. Crear/editar/borrar: sólo admin.
+    // list(): solo staff puede enumerarlas. Crear/editar/borrar: solo admin.
     match /invitaciones/{token} {
       allow get: if true;
       allow list: if esStaff();
       allow create, update, delete: if esAdmin();
     }
 
-    // ── Configuración ────────────────────────────────────────────────────────
+    // == Configuracion ==
     match /config/{id} { allow read, write: if esStaff(); }
 
-    // ── Clientes ───────────────────────────────────────────────────────────
-    // Lectura y edición: sólo staff. El formulario público puede CREAR un lead
+    // == Clientes ==
+    // Lectura y edicion: solo staff. El formulario publico puede CREAR un lead
     // (no leer, no editar, no borrar datos existentes).
     match /clientes/{id} {
       allow read:   if esStaff();
@@ -69,7 +69,7 @@ service cloud.firestore {
       allow delete: if esAdmin();
     }
 
-    // ── Resto de colecciones internas: sólo staff ──────────────────────────
+    // == Resto de colecciones internas: solo staff ==
     match /creditos/{id}          { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
     match /pagos/{id}             { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
     match /motos/{id}             { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
@@ -89,7 +89,7 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Todo lo demás, bloqueado.
+    // Todo lo demas, bloqueado.
     match /{document=**} { allow read, write: if false; }
   }
 }
