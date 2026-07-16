@@ -1105,40 +1105,36 @@ function _concGenerarReporte(cid, formato){
     return (S.clientes||[]).find(function(x){ return x && !x.eliminado && ((cr.clienteId && String(x.id)===String(cr.clienteId)) || x.nombre===cr.cli); }) || {};
   };
   if(formato === 'excel'){
-    var cell = function(v){ v = String(v==null?'':v); if(/[",\n]/.test(v)) v = '"'+v.replace(/"/g,'""')+'"'; return v; };
-    var row = function(arr){ return arr.map(cell).join(','); };
-    var rows = [];
-    rows.push(row(['REPORTE DE CONCESIONARIO', c.nombre]));
-    rows.push(row(['Período', r.lbl]));
-    rows.push(row(['Generado', new Date().toLocaleString('es-VE')]));
-    rows.push('');
-    rows.push(row(['RESUMEN']));
-    rows.push(row(['Motos que salieron (período)', credsP.length]));
-    rows.push(row(['Costo consumido (período)', costoP.toFixed(2)]));
-    rows.push(row(['Precio de venta total (período)', ventaP.toFixed(2)]));
-    rows.push(row(['Anticipos enviados (período)', antTotalP.toFixed(2)]));
-    rows.push(row(['— SALDO GLOBAL DE LA SEDE —', fin.saldo.toFixed(2)]));
-    rows.push(row(['Total enviado histórico', fin.enviado.toFixed(2)]));
-    rows.push(row(['Total consumido histórico', fin.consumido.toFixed(2)]));
-    rows.push('');
-    rows.push(row(['MOTOS QUE SALIERON']));
-    rows.push(row(['N° Crédito','Fecha','Cliente','Cédula','Teléfono','Modelo','Placa/Serial','Precio venta','Costo (deducción)','Estado']));
+    var n2 = function(v){ return Math.round((parseFloat(v)||0)*100)/100; };
+    var aoa = [];
+    aoa.push(['REPORTE DE CONCESIONARIO', c.nombre]);
+    aoa.push(['Período', r.lbl]);
+    aoa.push(['Generado', new Date().toLocaleString('es-VE')]);
+    aoa.push([]);
+    aoa.push(['RESUMEN']);
+    aoa.push(['Motos que salieron (período)', credsP.length]);
+    aoa.push(['Costo consumido (período)', n2(costoP)]);
+    aoa.push(['Precio de venta total (período)', n2(ventaP)]);
+    aoa.push(['Anticipos enviados (período)', n2(antTotalP)]);
+    aoa.push(['— SALDO GLOBAL DE LA SEDE —', n2(fin.saldo)]);
+    aoa.push(['Total enviado histórico', n2(fin.enviado)]);
+    aoa.push(['Total consumido histórico', n2(fin.consumido)]);
+    aoa.push([]);
+    aoa.push(['MOTOS QUE SALIERON']);
+    aoa.push(['N° Crédito','Fecha','Cliente','Cédula','Teléfono','Modelo','Placa/Serial','Precio venta','Costo (deducción)','Estado']);
     credsP.forEach(function(cr){
       var cl = cliDe(cr);
-      rows.push(row([cr.id, cr.fecha||'', cr.cli||'', cl.cedula||'', cl.tel||'', cr.modelo||'', cr.placa||cr.serialMotor||'', (parseFloat(cr.precio)||0).toFixed(2), (parseFloat(cr.precioBaseReal||cr.precio)||0).toFixed(2), cr.estado||'']));
+      aoa.push([cr.id, cr.fecha||'', cr.cli||'', cl.cedula||'', cl.tel||'', cr.modelo||'', cr.placa||cr.serialMotor||'', n2(cr.precio), n2(cr.precioBaseReal||cr.precio), cr.estado||'']);
     });
-    rows.push('');
-    rows.push(row(['ANTICIPOS ENVIADOS']));
-    rows.push(row(['Fecha','Monto','Método','Referencia','Nota','Registrado por']));
+    aoa.push([]);
+    aoa.push(['ANTICIPOS ENVIADOS']);
+    aoa.push(['Fecha','Monto','Método','Referencia','Nota','Registrado por']);
     antP.forEach(function(a){
-      rows.push(row([a.fecha||'', (parseFloat(a.monto)||0).toFixed(2), a.metodo||'', a.ref||'', a.nota||'', a.creadoPor||'']));
+      aoa.push([a.fecha||'', n2(a.monto), a.metodo||'', a.ref||'', a.nota||'', a.creadoPor||'']);
     });
     var slug = (c.nombre||'sede').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-    var blob = new Blob(['\uFEFF'+rows.join('\r\n')], {type:'text/csv;charset=utf-8'});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a'); a.href = url; a.download = 'reporte-'+slug+'-'+r.desde+'_'+r.hasta+'.csv'; a.click();
-    URL.revokeObjectURL(url);
-    toast('Excel exportado ✓','success');
+    if(typeof _xlsxDownload==='function') _xlsxDownload('reporte-'+slug+'-'+r.desde+'_'+r.hasta+'.xlsx', [{name:'Reporte', rows:aoa}]);
+    toast('Excel (.xlsx) exportado ✓','success');
     return;
   }
   // ── PDF ──

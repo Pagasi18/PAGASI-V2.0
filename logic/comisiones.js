@@ -271,30 +271,26 @@ function _comCorteExport(formato){
   });
   var totCorte = filas.reduce(function(a,x){ return a+x.cc.total; },0);
   if(formato === 'excel'){
-    var cell = function(v){ v = String(v==null?'':v); if(/[",\n]/.test(v)) v = '"'+v.replace(/"/g,'""')+'"'; return v; };
-    var row = function(arr){ return arr.map(cell).join(','); };
-    var rows = [];
-    rows.push(row(['CORTE QUINCENAL DE COMISIONES']));
-    rows.push(row(['Período', rq.desde+' → '+rq.hasta]));
-    rows.push(row(['Generado', new Date().toLocaleString('es-VE')]));
-    rows.push('');
-    rows.push(row(['Empleado','N° ventas','Comisión ventas','N° cobranzas','Comisión cobranzas','TOTAL DEL CORTE','Saldo global pendiente']));
+    var n2=function(v){return Math.round((parseFloat(v)||0)*100)/100;};
+    var aoa=[];
+    aoa.push(['CORTE QUINCENAL DE COMISIONES']);
+    aoa.push(['Período', rq.desde+' → '+rq.hasta]);
+    aoa.push(['Generado', new Date().toLocaleString('es-VE')]);
+    aoa.push([]);
+    aoa.push(['Empleado','N° ventas','Comisión ventas','N° cobranzas','Comisión cobranzas','TOTAL DEL CORTE','Saldo global pendiente']);
     filas.forEach(function(x){
-      rows.push(row([x.nombre, x.cc.ventas.length, x.cc.porVenta.toFixed(2), x.cc.cobranzas.length, x.cc.porCobranza.toFixed(2), x.cc.total.toFixed(2), x.saldo.toFixed(2)]));
+      aoa.push([x.nombre, x.cc.ventas.length, n2(x.cc.porVenta), x.cc.cobranzas.length, n2(x.cc.porCobranza), n2(x.cc.total), n2(x.saldo)]);
     });
-    rows.push(row(['TOTAL','','','','',totCorte.toFixed(2),'']));
-    rows.push('');
-    rows.push(row(['DETALLE DE OPERACIONES DEL CORTE']));
-    rows.push(row(['Empleado','Tipo','Fecha','Referencia','Cliente','Base','Comisión']));
+    aoa.push(['TOTAL','','','','',n2(totCorte),'']);
+    aoa.push([]);
+    aoa.push(['DETALLE DE OPERACIONES DEL CORTE']);
+    aoa.push(['Empleado','Tipo','Fecha','Referencia','Cliente','Base','Comisión']);
     filas.forEach(function(x){
-      x.cc.ventas.forEach(function(v){ rows.push(row([x.nombre,'Venta',String(v.fecha||'').slice(0,10),v.credId,v.cliente,(v.precio||0).toFixed(2),(v.comision||0).toFixed(2)])); });
-      x.cc.cobranzas.forEach(function(c){ rows.push(row([x.nombre,'Cobranza',String(c.fecha||'').slice(0,10),c.pagoId,c.cliente,(c.monto||0).toFixed(2),(c.comision||0).toFixed(2)])); });
+      x.cc.ventas.forEach(function(v){ aoa.push([x.nombre,'Venta',String(v.fecha||'').slice(0,10),v.credId,v.cliente,n2(v.precio),n2(v.comision)]); });
+      x.cc.cobranzas.forEach(function(c){ aoa.push([x.nombre,'Cobranza',String(c.fecha||'').slice(0,10),c.pagoId,c.cliente,n2(c.monto),n2(c.comision)]); });
     });
-    var blob = new Blob(['﻿'+rows.join('\r\n')], {type:'text/csv;charset=utf-8'});
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a'); a.href = url; a.download = 'corte-comisiones-'+rq.desde+'_'+rq.hasta+'.csv'; a.click();
-    URL.revokeObjectURL(url);
-    toast('Excel del corte exportado ✓','success');
+    if(typeof _xlsxDownload==='function') _xlsxDownload('corte-comisiones-'+rq.desde+'_'+rq.hasta+'.xlsx', [{name:'Corte', rows:aoa}]);
+    toast('Excel (.xlsx) del corte exportado ✓','success');
     return;
   }
   // PDF
@@ -355,7 +351,7 @@ function _comisionesRender(){
   var html = '<div class="page">'
     + pageBanner('Vendedores y cobradores · Pago de comisiones','Comisiones',
         '<b>'+usuarios.length+'</b> usuarios · Por pagar: <b style="color:var(--green)">'+fmt(totalDebe)+'</b> · Pagado: <b>'+fmt(totalPagado)+'</b>',
-        [{label:'↓ Exportar CSV', onclick:'_comExportarCSV()'},{label:'Actualizar', onclick:'nav(&quot;comisiones&quot;)'}]);
+        [{label:'⬇ Exportar Excel', onclick:'_comExportarCSV()'},{label:'Actualizar', onclick:'nav(&quot;comisiones&quot;)'}]);
 
   // KPIs
   html += '<div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:16px">'
@@ -573,7 +569,7 @@ function _comisionesRender(){
         + '<div class="card" style="padding:0;overflow:hidden">'
         + '<div class="ch" style="padding:13px 16px;border-bottom:1px solid var(--rim2)">'
         + '<div><div class="ct">Historial de pagos</div><div class="cs">'+historial.length+' pago'+(historial.length!==1?'s':'')+' realizados</div></div>'
-        + '<button class="btn btn-g btn-sm" onclick="_comExportarCSV()">↓ Exportar CSV</button>'
+        + '<button class="btn btn-g btn-sm" onclick="_comExportarCSV()">⬇ Exportar Excel</button>'
         + '</div>'
         + '<div style="overflow-x:auto"><table class="tbl"><thead><tr>'
         + '<th style="width:36px"></th>'
@@ -612,37 +608,28 @@ function _comisionesRender(){
 
 function _comExportarCSV(){
   var usuarios = _comGetUsuariosActivos();
-  var esc=function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';};
-  var row=function(arr){return arr.map(esc).join(',')+'\n';};
-  var rows=[];
-  // Resumen
-  rows.push(row(['Vendedor','Email','Generado','Por venta','Por cobranza','Pagado','Saldo pendiente','Nº ventas','Nº cobranzas']));
+  var n2=function(v){return Math.round((parseFloat(v)||0)*100)/100;};
+  var aoa=[];
+  aoa.push(['Vendedor','Email','Generado','Por venta','Por cobranza','Pagado','Saldo pendiente','Nº ventas','Nº cobranzas']);
   usuarios.forEach(function(u){
     var s=_comGetSaldo(u);
-    rows.push(row([u.nombre||u.email||'',u.email||'',s.generado.toFixed(2),s.porVenta.toFixed(2),s.porCobranza.toFixed(2),s.pagado.toFixed(2),s.saldo.toFixed(2),s.nVentas,s.nCobranzas]));
+    aoa.push([u.nombre||u.email||'',u.email||'',n2(s.generado),n2(s.porVenta),n2(s.porCobranza),n2(s.pagado),n2(s.saldo),s.nVentas,s.nCobranzas]);
   });
-  rows.push(row([]));
-  // Historial
-  rows.push(row(['=== HISTORIAL DE PAGOS ===']));
-  rows.push(row(['Fecha','Vendedor','Monto','Cuenta','Pagado por','Notas']));
+  aoa.push([]);
+  aoa.push(['=== HISTORIAL DE PAGOS ===']);
+  aoa.push(['Fecha','Vendedor','Monto','Cuenta','Pagado por','Notas']);
   (S.egresos||[]).filter(function(e){return !e.eliminado&&e.categoria==='comisiones';})
     .sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');})
-    .forEach(function(e){ rows.push(row([e.fecha||'',e.usuarioComisionNombre||'',(parseFloat(e.monto)||0).toFixed(2),e.forma||e.cuenta||'',e.creadoPor||'',e.notas||''])); });
-  rows.push(row([]));
-  // Detalle ventas
-  rows.push(row(['=== DETALLE DE VENTAS ===']));
-  rows.push(row(['Vendedor','Crédito','Cliente','Modelo','Fecha','Precio','Comisión']));
+    .forEach(function(e){ aoa.push([e.fecha||'',e.usuarioComisionNombre||'',n2(e.monto),e.forma||e.cuenta||'',e.creadoPor||'',e.notas||'']); });
+  aoa.push([]);
+  aoa.push(['=== DETALLE DE VENTAS ===']);
+  aoa.push(['Vendedor','Crédito','Cliente','Modelo','Fecha','Precio','Comisión']);
   usuarios.forEach(function(u){
     var gen=_comCalcGenerado(u);
-    gen.ventas.forEach(function(v){ rows.push(row([u.nombre||u.email||'',v.credId,v.cliente,v.modelo,v.fecha,(v.precio||0).toFixed(2),(v.comision||0).toFixed(2)])); });
+    gen.ventas.forEach(function(v){ aoa.push([u.nombre||u.email||'',v.credId,v.cliente,v.modelo,v.fecha,n2(v.precio),n2(v.comision)]); });
   });
-  var csv=rows.join('');
-  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');
-  a.href=url; a.download='comisiones-'+hoyLocalISO()+'.csv'; a.click();
-  URL.revokeObjectURL(url);
-  toast('CSV descargado','success');
+  if(typeof _xlsxDownload==='function') _xlsxDownload('comisiones-'+hoyLocalISO()+'.xlsx', [{name:'Comisiones', rows:aoa}]);
+  toast('Excel (.xlsx) descargado','success');
 }
 // Tarjeta individual de usuario — compacta, igual estilo que cards de cuentas
 function _comTarjetaHtml(u){

@@ -142,13 +142,16 @@ PG.pagos = function(){
   ${pageBanner(
     'Cobranza · Cobros y pagos',
     'Cobranza',
-    '<b>'+allPagos.length+'</b> pagos registrados · Cobrado total: <b>'+fmt(totalConf)+'</b> · Este mes: <b>'+fmt(totalMes)+'</b>',
+    isEmpleadoRole()
+      ? '<b>'+proximasCuotas.length+'</b> cuotas por cobrar · '+allPagos.length+' pagos registrados'
+      : '<b>'+allPagos.length+'</b> pagos registrados · Cobrado total: <b>'+fmt(totalConf)+'</b> · Este mes: <b>'+fmt(totalMes)+'</b>',
     [
       {label:'↓ Exportar CSV', onclick:"exportarCSV('pagos')"},
       {label:'＋ Registrar Pago', onclick:'openAddPago()', primary:true}
     ]
   )}
 
+  ${isEmpleadoRole() ? '' : `
   <!-- KPI cards -->
   <div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:14px">
     <div class="stat">
@@ -177,6 +180,7 @@ PG.pagos = function(){
       <div class="st-l">Método más usado · ${fmt(topMetodo.total)}</div>
     </div>
   </div>
+  `}
 
   <!-- Cuotas Próximas -->
   <div class="card" style="margin-bottom:12px">
