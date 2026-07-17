@@ -93,7 +93,11 @@ function _renderContratoArrendamiento(){
   var c=ctx.c, cli=ctx.cli, emp=ctx.emp, empresaUp=ctx.empresaUp, logoSrc=ctx.logoSrc, fechaContrato=ctx.fechaContrato, V=ctx.V;
   var mModelo=ctx.mModelo, mColor=ctx.mColor, mAnio=ctx.mAnio, mPlaca=ctx.mPlaca, mMarca=ctx.mMarca, mSerialMotor=ctx.mSerialMotor, mSerialChasis=ctx.mSerialChasis;
   var purple=ctx.purple, purpleDark=ctx.purpleDark, purpleLight=ctx.purpleLight;
-  var clausH=ctx.clausH, p=ctx.p;
+  // Estilos propios del contrato (más compactos que los de _docCtx, que siguen
+  // usando el pagaré y la carta de instrucciones): el documento es largo y hay
+  // que evitar que la firma quede huérfana en una página sola.
+  var clausH = 'color:'+purple+';font-weight:900;font-size:11.5px;text-transform:uppercase;letter-spacing:.3px;margin:12px 0 5px;padding-bottom:3px;border-bottom:2px solid '+purple;
+  var p = 'font-size:10.4px;line-height:1.45;color:#222;margin:5px 0;text-align:justify';
 
   // ── Datos financieros ────────────────────────────────────────────────────
   // El sistema cobra quincenal (cuotaQ x 2 por mes). El Contrato define un
@@ -168,7 +172,7 @@ function _renderContratoArrendamiento(){
   var blank = function(val, len){ len=len||30; var v=val||'';
     return v ? '<strong>'+v+'</strong>' : '<span style="display:inline-block;border-bottom:1px solid #888;min-width:'+(len*6)+'px;vertical-align:bottom">&nbsp;</span>'; };
 
-  var sub = 'font-size:11.5px;line-height:1.6;color:#222;margin:7px 0;text-align:justify';
+  var sub = 'font-size:10.4px;line-height:1.45;color:#222;margin:5px 0;text-align:justify';
   var subN = 'font-weight:800;color:'+purpleDark;
 
   $('cz').innerHTML = `<div class="cdoc" style="font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#222;max-width:820px;margin:0 auto;padding:20px 28px">
@@ -312,7 +316,7 @@ function _renderContratoArrendamiento(){
     <p style="${sub}"><span style="${subN}">11.4 Títulos y Encabezados.</span> Los encabezados y/o títulos de las cláusulas que forman parte del presente Contrato se establecen únicamente para facilitar la lectura, interpretación e implementación del mismo, pero no constituyen parte integrante del Contrato.</p>
     <p style="${sub}"><span style="${subN}">11.5 Separabilidad.</span> Las Partes convienen que en caso de que cualquier parte o sección del presente Contrato fuera declarada nula, inválida o inoperante, el mismo deberá ser interpretado omitiendo única y exclusivamente las disposiciones declaradas nulas, inválidas o inoperantes; procurando preservar la validez y eficacia del resto del Contrato, obedeciendo a la intención de las Partes manifestada en el presente Contrato, así como a la buena fe mediante la cual entran en el presente Contrato. Las obligaciones declaradas total o parcialmente nulas, de ser el caso, subsistirán como obligaciones de derecho natural, susceptibles de su cumplimiento por las Partes en base a la buena fe, sin que corresponda la acción de repetición, de enriquecimiento sin causa, de pago de lo indebido ni por responsabilidad contractual o extracontractual alguna, en dicho caso.</p>
     <p style="${sub}"><span style="${subN}">11.6 Términos Definidos.</span> Para efectos de la lectura e interpretación del presente Contrato, a menos que el contexto requiera algo distinto:</p>
-    <div style="font-size:10.5px;line-height:1.55;color:#333;margin:4px 0 8px 14px;column-count:2;column-gap:22px">
+    <div style="font-size:9.2px;line-height:1.4;color:#333;margin:3px 0 6px 12px;column-count:2;column-gap:22px">
       <div>“Arrendador” tiene el significado dado en el preámbulo del mismo.</div>
       <div>“Arrendatario” tiene el significado dado en el preámbulo del mismo.</div>
       <div>“Bolívar(es)” significa la moneda de curso legal en Venezuela.</div>
@@ -344,18 +348,19 @@ function _renderContratoArrendamiento(){
       <div>“Vehículo” tiene el significado dado en los “Considerandos” del mismo.</div>
       <div>“Venezuela” significa la República Bolivariana de Venezuela.</div>
     </div>
-    <p style="${sub}"><span style="${subN}">11.7 Debida Asistencia Legal.</span> El Arrendatario declara, manifiesta, reconoce y acepta que, durante la negociación del presente Contrato, ha estado en todo momento asesorado por abogados de su elección y confianza. Cada Parte correrá con los gastos de sus abogados y asesores legales, según corresponda.</p>
-    <p style="${sub}"><span style="${subN}">11.8 Ejemplares.</span> Este Contrato se extiende en dos (2) ejemplares de igual tenor y valor: uno para el Arrendatario y otro para el Arrendador.</p>
-
-    <p style="${p};margin-top:16px">El Arrendatario firma el presente Contrato en señal de aceptación íntegra de sus términos, en la Fecha de Celebración indicada a continuación.</p>
-
-    <!-- Firma -->
-    <div style="margin-top:34px;page-break-inside:avoid">
-      <div style="font-weight:800;font-size:11.5px;color:${purpleDark};margin-bottom:30px">POR EL ARRENDATARIO</div>
-      <div style="border-top:1px solid #444;max-width:330px;padding-top:6px;font-size:11.5px;line-height:1.8">
-        <strong>${cliNom||'________________________________'}</strong><br>
-        C.I. ${cliCi||'________________________'}<br>
-        FECHA: _____ / _____ / __________
+    <!-- Últimas cláusulas + cierre + firma: van juntos para que la firma nunca
+         quede sola en una página. Si el bloque salta, arrastra 11.7 y 11.8. -->
+    <div style="page-break-inside:avoid">
+      <p style="${sub}"><span style="${subN}">11.7 Debida Asistencia Legal.</span> El Arrendatario declara, manifiesta, reconoce y acepta que, durante la negociación del presente Contrato, ha estado en todo momento asesorado por abogados de su elección y confianza. Cada Parte correrá con los gastos de sus abogados y asesores legales, según corresponda.</p>
+      <p style="${sub}"><span style="${subN}">11.8 Ejemplares.</span> Este Contrato se extiende en dos (2) ejemplares de igual tenor y valor: uno para el Arrendatario y otro para el Arrendador.</p>
+      <p style="${p};margin-top:10px">El Arrendatario firma el presente Contrato en señal de aceptación íntegra de sus términos, en la Fecha de Celebración indicada a continuación.</p>
+      <div style="margin-top:22px">
+        <div style="font-weight:800;font-size:11px;color:${purpleDark};margin-bottom:26px">POR EL ARRENDATARIO</div>
+        <div style="border-top:1px solid #444;max-width:330px;padding-top:6px;font-size:11px;line-height:1.75">
+          <strong>${cliNom||'________________________________'}</strong><br>
+          C.I. ${cliCi||'________________________'}<br>
+          FECHA: _____ / _____ / __________
+        </div>
       </div>
     </div>
 
