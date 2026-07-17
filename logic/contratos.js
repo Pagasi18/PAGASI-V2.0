@@ -125,18 +125,34 @@ function _renderContratoArrendamiento(){
   var fIni = c.fecha ? new Date(c.fecha+'T12:00:00') : new Date();
   // Si no arranca el día 1, el primer mes completo es el mes siguiente
   var mes0 = fIni.getDate()===1 ? fIni.getMonth() : fIni.getMonth()+1;
-  var canonRows = '';
-  var totalCanones = 0;
-  for(var i=0; i<plazoMeses; i++){
-    var dv = ultimoDiaHabil(fIni.getFullYear(), mes0+i);
-    totalCanones += canonMensual;
-    canonRows += '<tr>'
-      + '<td style="padding:5px 8px;border:1px solid #DBEAFE;text-align:center">'+(i+1)+'</td>'
-      + '<td style="padding:5px 8px;border:1px solid #DBEAFE;text-transform:capitalize">'+MESES_L[dv.getMonth()]+' '+dv.getFullYear()+'</td>'
-      + '<td style="padding:5px 8px;border:1px solid #DBEAFE;text-align:center">'+String(dv.getDate()).padStart(2,'0')+'/'+String(dv.getMonth()+1).padStart(2,'0')+'/'+dv.getFullYear()+'</td>'
-      + '<td style="padding:5px 8px;border:1px solid #DBEAFE;text-align:right;font-weight:700">US$ '+fmtUSD(canonMensual)+'</td>'
-      + '</tr>';
-  }
+  var totalCanones = canonMensual * plazoMeses;
+  var fmtFechaLarga = function(d){ return d.toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'}); };
+  var venc1 = ultimoDiaHabil(fIni.getFullYear(), mes0);
+  var vencN = ultimoDiaHabil(fIni.getFullYear(), mes0+plazoMeses-1);
+
+  // Plan de abonos quincenales (referencial): 2 abonos conforman cada Canon
+  // Mensual, que vence el último Día Hábil del mes conforme a la Sección 2.2(a).
+  var MESES_C = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var nAbonos = parseInt(c.totalCuotas||0) || (plazoMeses*2);
+  var abonoMonto = cuotaQ;
+  var abonosHtml = (function(){
+    var cellWrap='display:flex;align-items:center;gap:7px;padding:7px 9px;background:#fff;border:1px solid #BFDBFE;border-radius:5px';
+    var numBadge='display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;background:'+purple+';color:#fff;font-size:10px;font-weight:800;border-radius:50%;flex-shrink:0';
+    var fechaStyle='font-size:10.5px;color:#444;font-weight:600;flex:1;line-height:1.2';
+    var montoStyle='font-size:10.5px;font-weight:800;color:'+purpleDark+';white-space:nowrap';
+    var h='<div style="background:'+purpleLight+';border:1px solid #BFDBFE;border-radius:0 0 6px 6px;border-top:0;padding:10px">';
+    h+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">';
+    for(var i=0;i<nAbonos;i++){
+      var fd=new Date(fIni.getTime()+((i+1)*15*24*60*60*1000));
+      h+='<div style="'+cellWrap+'">'
+        +'<span style="'+numBadge+'">'+(i+1)+'</span>'
+        +'<span style="'+fechaStyle+'">'+fd.getDate()+' '+MESES_C[fd.getMonth()]+' '+String(fd.getFullYear()).slice(-2)+'</span>'
+        +'<span style="'+montoStyle+'">$'+abonoMonto.toFixed(2)+'</span>'
+        +'</div>';
+    }
+    h+='</div></div>';
+    return h;
+  })();
 
   // ── Datos del Arrendatario ───────────────────────────────────────────────
   var cliNom = V(cli.nombre||c.cli);
@@ -210,28 +226,25 @@ function _renderContratoArrendamiento(){
     </table>
     <p style="${sub}">El Arrendatario deberá enviar el comprobante de pago por WhatsApp al <strong>+58 424-217-7798</strong>. Cuando un pago sea realizado en bolívares, se aplicará el tipo de cambio oficial publicado por el Banco Central de Venezuela vigente en la fecha de recepción efectiva del pago, salvo acuerdo escrito distinto.</p>
 
-    <!-- Cuadro referencial de cánones (informativo) -->
+    <!-- Plan de abonos quincenales (referencial) -->
     <div style="margin:14px 0 6px;page-break-inside:avoid">
-      <div style="background:${purple};color:#fff;text-align:center;padding:7px 10px;font-size:11px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;border-radius:3px 3px 0 0">Cuadro Referencial de Cánones</div>
-      <table style="width:100%;border-collapse:collapse;font-size:10.5px">
+      <div style="background:${purple};color:#fff;text-align:center;padding:8px 10px;border-radius:6px 6px 0 0">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.3px;text-transform:uppercase">Plan de Abonos Quincenales</div>
+        <div style="font-size:9.5px;opacity:.9;margin-top:2px;font-weight:600">Referencial · ${nAbonos} abonos de US$ ${fmtUSD(abonoMonto)} · Cada dos (2) abonos conforman un Canon Mensual de US$ ${fmtUSD(canonMensual)}</div>
+      </div>
+      ${abonosHtml}
+      <table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-top:6px">
         <tr>
-          <th style="padding:5px 8px;border:1px solid #BFDBFE;background:${purpleLight};color:${purpleDark};font-size:9.5px;text-transform:uppercase;width:8%">N°</th>
-          <th style="padding:5px 8px;border:1px solid #BFDBFE;background:${purpleLight};color:${purpleDark};font-size:9.5px;text-transform:uppercase;text-align:left">Mes del canon</th>
-          <th style="padding:5px 8px;border:1px solid #BFDBFE;background:${purpleLight};color:${purpleDark};font-size:9.5px;text-transform:uppercase;width:24%">Vence (último día hábil)</th>
-          <th style="padding:5px 8px;border:1px solid #BFDBFE;background:${purpleLight};color:${purpleDark};font-size:9.5px;text-transform:uppercase;text-align:right;width:22%">Canon Mensual</th>
-        </tr>
-        ${canonRows}
-        <tr>
-          <td colspan="3" style="padding:6px 8px;border:1px solid #BFDBFE;background:${purpleLight};text-align:right;font-weight:800;color:${purpleDark}">Total de Cánones (${plazoMeses} meses)</td>
-          <td style="padding:6px 8px;border:1px solid #BFDBFE;background:${purpleLight};text-align:right;font-weight:900;color:${purpleDark}">US$ ${fmtUSD(totalCanones)}</td>
+          <td style="padding:6px 9px;border:1px solid #BFDBFE;background:${purpleLight};font-weight:800;color:${purpleDark}">Total de Cánones (${numTexto(plazoMeses).toLowerCase()} meses)</td>
+          <td style="padding:6px 9px;border:1px solid #BFDBFE;background:${purpleLight};text-align:right;font-weight:900;color:${purpleDark};width:26%">US$ ${fmtUSD(totalCanones)}</td>
         </tr>
         <tr>
-          <td colspan="3" style="padding:6px 8px;border:1px solid #DBEAFE;text-align:right;font-weight:700">Precio de Ejercicio de la Opción de Compra (Sección 4.3)</td>
-          <td style="padding:6px 8px;border:1px solid #DBEAFE;text-align:right;font-weight:800">US$ ${fmtUSD(precioEjercicio)}</td>
+          <td style="padding:6px 9px;border:1px solid #DBEAFE;font-weight:700">Precio de Ejercicio de la Opción de Compra (Sección 4.3) — adicional</td>
+          <td style="padding:6px 9px;border:1px solid #DBEAFE;text-align:right;font-weight:800">US$ ${fmtUSD(precioEjercicio)}</td>
         </tr>
       </table>
       <div style="font-size:9.5px;color:#666;line-height:1.5;margin-top:5px;text-align:justify">
-        Cuadro <strong>referencial e informativo</strong>, elaborado a partir de las Secciones 2.1 y 3.1 de este Contrato; no modifica, sustituye ni amplía los términos allí previstos. Conforme a la <strong>Sección 2.2(a)</strong>, cada Canon Mensual puede pagarse en uno o varios abonos parciales dentro del mes calendario correspondiente. Las fechas de vencimiento indicadas no consideran feriados nacionales; de coincidir el último día hábil con un feriado, se aplicará lo previsto en la definición de “Día Hábil”. El Precio de Ejercicio es adicional a los Cánones Mensuales, conforme a la Sección 4.5.
+        Plan <strong>referencial e informativo</strong>: no modifica, sustituye ni amplía los términos de este Contrato. Las fechas indicadas <strong>no son fechas de vencimiento</strong>. Conforme a la <strong>Sección 2.2(a)</strong>, el Canon Mensual puede pagarse mediante uno o varios abonos parciales dentro del mes calendario, y <strong>vence el último Día Hábil de dicho mes</strong>. Bajo este plan, el primer Canon Mensual vence el <strong>${fmtFechaLarga(venc1)}</strong> y el último el <strong>${fmtFechaLarga(vencN)}</strong>. Los abonos aquí sugeridos buscan facilitar el cumplimiento oportuno; su falta de pago en la fecha sugerida no genera mora, la cual se causa únicamente conforme a las Secciones 2.2(b) y 2.4.
       </div>
     </div>
 
