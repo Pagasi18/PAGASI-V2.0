@@ -112,6 +112,32 @@ function _renderContratoArrendamiento(){
   var ENT = ['CERO','UNO','DOS','TRES','CUATRO','CINCO','SEIS','SIETE','OCHO','NUEVE','DIEZ','ONCE','DOCE','TRECE','CATORCE','QUINCE','DIECISÉIS','DIECISIETE','DIECIOCHO','DIECINUEVE','VEINTE','VEINTIUNO','VEINTIDÓS','VEINTITRÉS','VEINTICUATRO','VEINTICINCO','VEINTISÉIS','VEINTISIETE','VEINTIOCHO','VEINTINUEVE','TREINTA','TREINTA Y UNO','TREINTA Y DOS','TREINTA Y TRES','TREINTA Y CUATRO','TREINTA Y CINCO','TREINTA Y SEIS'];
   var numTexto = function(n){ n=parseInt(n)||0; return ENT[n] || String(n); };
 
+  // ── Cuadro de cánones ────────────────────────────────────────────────────
+  // Sección 2.1: el canon se paga "a partir del primer mes completo en que se
+  // encuentre en posesión del Vehículo". Sección 2.2(a): vence el último Día
+  // Hábil de cada mes. No se consideran feriados nacionales (solo sáb/dom).
+  var MESES_L = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var ultimoDiaHabil = function(y, m){
+    var d = new Date(y, m+1, 0);
+    while(d.getDay()===0 || d.getDay()===6){ d.setDate(d.getDate()-1); }
+    return d;
+  };
+  var fIni = c.fecha ? new Date(c.fecha+'T12:00:00') : new Date();
+  // Si no arranca el día 1, el primer mes completo es el mes siguiente
+  var mes0 = fIni.getDate()===1 ? fIni.getMonth() : fIni.getMonth()+1;
+  var canonRows = '';
+  var totalCanones = 0;
+  for(var i=0; i<plazoMeses; i++){
+    var dv = ultimoDiaHabil(fIni.getFullYear(), mes0+i);
+    totalCanones += canonMensual;
+    canonRows += '<tr>'
+      + '<td style="padding:5px 8px;border:1px solid #DBEAFE;text-align:center">'+(i+1)+'</td>'
+      + '<td style="padding:5px 8px;border:1px solid #DBEAFE;text-transform:capitalize">'+MESES_L[dv.getMonth()]+' '+dv.getFullYear()+'</td>'
+      + '<td style="padding:5px 8px;border:1px solid #DBEAFE;text-align:center">'+String(dv.getDate()).padStart(2,'0')+'/'+String(dv.getMonth()+1).padStart(2,'0')+'/'+dv.getFullYear()+'</td>'
+      + '<td style="padding:5px 8px;border:1px solid #DBEAFE;text-align:right;font-weight:700">US$ '+fmtUSD(canonMensual)+'</td>'
+      + '</tr>';
+  }
+
   // ── Datos del Arrendatario ───────────────────────────────────────────────
   var cliNom = V(cli.nombre||c.cli);
   var cliCi = V(cli.cedula);
@@ -183,6 +209,31 @@ function _renderContratoArrendamiento(){
       <tr><td style="padding:6px 9px;border:1px solid #DBEAFE;background:${purpleLight};font-weight:700">d) Transferencia o depósito en bolívares</td><td style="padding:6px 9px;border:1px solid #DBEAFE">100% Banco, Banco Universal · titular PAGASI 18, C.A. · RIF J-50.829.589-7 · cuenta N° 0156-0030-62-0301030594</td></tr>
     </table>
     <p style="${sub}">El Arrendatario deberá enviar el comprobante de pago por WhatsApp al <strong>+58 424-217-7798</strong>. Cuando un pago sea realizado en bolívares, se aplicará el tipo de cambio oficial publicado por el Banco Central de Venezuela vigente en la fecha de recepción efectiva del pago, salvo acuerdo escrito distinto.</p>
+
+    <!-- Cuadro referencial de cánones (informativo) -->
+    <div style="margin:14px 0 6px;page-break-inside:avoid">
+      <div style="background:${purple};color:#fff;text-align:center;padding:7px 10px;font-size:11px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;border-radius:3px 3px 0 0">Cuadro Referencial de Cánones</div>
+      <table style="width:100%;border-collapse:collapse;font-size:10.5px">
+        <tr>
+          <th style="padding:5px 8px;border:1px solid #BFDBFE;background:${purpleLight};color:${purpleDark};font-size:9.5px;text-transform:uppercase;width:8%">N°</th>
+          <th style="padding:5px 8px;border:1px solid #BFDBFE;background:${purpleLight};color:${purpleDark};font-size:9.5px;text-transform:uppercase;text-align:left">Mes del canon</th>
+          <th style="padding:5px 8px;border:1px solid #BFDBFE;background:${purpleLight};color:${purpleDark};font-size:9.5px;text-transform:uppercase;width:24%">Vence (último día hábil)</th>
+          <th style="padding:5px 8px;border:1px solid #BFDBFE;background:${purpleLight};color:${purpleDark};font-size:9.5px;text-transform:uppercase;text-align:right;width:22%">Canon Mensual</th>
+        </tr>
+        ${canonRows}
+        <tr>
+          <td colspan="3" style="padding:6px 8px;border:1px solid #BFDBFE;background:${purpleLight};text-align:right;font-weight:800;color:${purpleDark}">Total de Cánones (${plazoMeses} meses)</td>
+          <td style="padding:6px 8px;border:1px solid #BFDBFE;background:${purpleLight};text-align:right;font-weight:900;color:${purpleDark}">US$ ${fmtUSD(totalCanones)}</td>
+        </tr>
+        <tr>
+          <td colspan="3" style="padding:6px 8px;border:1px solid #DBEAFE;text-align:right;font-weight:700">Precio de Ejercicio de la Opción de Compra (Sección 4.3)</td>
+          <td style="padding:6px 8px;border:1px solid #DBEAFE;text-align:right;font-weight:800">US$ ${fmtUSD(precioEjercicio)}</td>
+        </tr>
+      </table>
+      <div style="font-size:9.5px;color:#666;line-height:1.5;margin-top:5px;text-align:justify">
+        Cuadro <strong>referencial e informativo</strong>, elaborado a partir de las Secciones 2.1 y 3.1 de este Contrato; no modifica, sustituye ni amplía los términos allí previstos. Conforme a la <strong>Sección 2.2(a)</strong>, cada Canon Mensual puede pagarse en uno o varios abonos parciales dentro del mes calendario correspondiente. Las fechas de vencimiento indicadas no consideran feriados nacionales; de coincidir el último día hábil con un feriado, se aplicará lo previsto en la definición de “Día Hábil”. El Precio de Ejercicio es adicional a los Cánones Mensuales, conforme a la Sección 4.5.
+      </div>
+    </div>
 
     <!-- 3. PERÍODO DE VIGENCIA -->
     <h3 style="${clausH}">3. Período de Vigencia</h3>
