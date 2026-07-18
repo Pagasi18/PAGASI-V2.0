@@ -473,7 +473,7 @@ function _renderPagare(){
 
     <!-- Cláusula de mora -->
     <h3 style="${clausH}">MORA Y CONSECUENCIAS DEL INCUMPLIMIENTO</h3>
-    <p style="${p}">Los montos vencidos e insolutos generarán <strong>intereses moratorios a razón del dos coma cinco por ciento (2,5%) mensual</strong>, calculados en forma simple y proporcional por cada día calendario de mora sobre el saldo vencido y pendiente de pago, adicional al capital adeudado, conforme a lo establecido en la Sección 2.4 del contrato principal.</p>
+    <p style="${p}">El atraso en el pago de cualquier cuota por más de <strong>cuatro (4) días</strong> contados desde la fecha de vencimiento, generará un recargo de mora equivalente al <strong>5% sobre el monto de la cuota vencida</strong>, adicional al capital adeudado, conforme a lo establecido en la Cláusula Sexta del contrato principal.</p>
     <p style="${p}">En caso de incumplimiento del pago de <strong>cuatro (4) o más cuotas consecutivas</strong>, o de atraso superior a <strong>sesenta (60) días</strong>, la totalidad del saldo adeudado se considerará de <strong>plazo vencido</strong>, quedando facultado el tenedor del presente pagaré para exigir el pago inmediato e íntegro de la suma pendiente por la vía judicial o extrajudicial que estime conveniente.</p>
 
     <!-- Renuncia de aviso y protesto -->
