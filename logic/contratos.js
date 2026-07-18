@@ -168,6 +168,14 @@ function _renderContratoArrendamiento(){
   var mUso = V(c.uso||ctx.moto.uso||'PARTICULAR');
   var mTipo = V(c.tipo||ctx.moto.tipo||'');
 
+  // ── Datos del Fiador / Garante (si aplica) ───────────────────────────────
+  var tieneFiador = (cli.fiador_tiene==='si' || cli.fiador_tiene===true || cli.fiador==='si');
+  var fiadNom = V(cli.fiador_nom);
+  var fiadCi  = V(cli.fiador_ci);
+  var fiadRif = V(cli.fiador_rif);
+  var fiadDir = V(cli.fiador_dir);
+  var fiadTel = V(cli.fiador_tel);
+
   // Campo vacío -> línea para llenar a mano
   var blank = function(val, len){ len=len||30; var v=val||'';
     return v ? '<strong>'+v+'</strong>' : '<span style="display:inline-block;border-bottom:1px solid #888;min-width:'+(len*6)+'px;vertical-align:bottom">&nbsp;</span>'; };
@@ -359,6 +367,21 @@ function _renderContratoArrendamiento(){
         <div style="border-top:1px solid #444;max-width:330px;padding-top:6px;font-size:11px;line-height:1.75">
           <strong>${cliNom||'________________________________'}</strong><br>
           C.I. ${cliCi||'________________________'}<br>
+          FECHA: _____ / _____ / __________
+        </div>
+      </div>
+    </div>
+
+    <!-- FIANZA / GARANTÍA PERSONAL SOLIDARIA: declaración + datos + firma juntos -->
+    <div style="page-break-inside:avoid;margin-top:20px;padding-top:14px;border-top:1px dashed ${purple}">
+      <h3 style="${clausH}">Fianza — Garantía Personal Solidaria</h3>
+      <p style="${sub}">Quien suscribe, ${blank(fiadNom,32)}, venezolano(a), mayor de edad, titular de la cédula de identidad N° ${blank(fiadCi,14)}, con RIF N° ${blank(fiadRif,14)}, domiciliado(a) en ${blank(fiadDir,36)}, teléfono N° ${blank(fiadTel,14)} (el “<strong>Fiador</strong>”), declara que <strong>se constituye en fiador solidario y principal pagador</strong> del Arrendatario frente al Arrendador, respecto de todas y cada una de las obligaciones de pago y demás obligaciones asumidas por el Arrendatario bajo el presente Contrato, incluyendo el Canon Mensual, los intereses moratorios, el Precio de Ejercicio, los Impuestos aplicables, los daños y perjuicios, y los gastos de cobranza que se causaren.</p>
+      <p style="${sub}">El Fiador renuncia expresamente a los beneficios de excusión y de división previstos en los artículos 1.812 y siguientes del Código Civil, obligándose de manera solidaria e indivisible junto con el Arrendatario, de forma que el Arrendador podrá exigir el cumplimiento total de las obligaciones garantizadas, indistintamente, al Arrendatario o al Fiador. Esta fianza se mantendrá vigente hasta la total y definitiva extinción de las obligaciones garantizadas.</p>
+      <div style="margin-top:22px">
+        <div style="font-weight:800;font-size:11px;color:${purpleDark};margin-bottom:26px">POR EL FIADOR / GARANTE</div>
+        <div style="border-top:1px solid #444;max-width:330px;padding-top:6px;font-size:11px;line-height:1.75">
+          <strong>${fiadNom||'________________________________'}</strong><br>
+          C.I. ${fiadCi||'________________________'}<br>
           FECHA: _____ / _____ / __________
         </div>
       </div>
