@@ -205,11 +205,13 @@ PG.pagos = function(){
       `<div class="tw"><table>
       <thead><tr>
         ${_thSort(_cu,'setCuotasSort','cli','Cliente')}
+        <th>Teléfono</th>
         ${_thSort(_cu,'setCuotasSort','id','Crédito')}
         ${_thSort(_cu,'setCuotasSort','cuota','Cuota N°')}
         ${_thSort(_cu,'setCuotasSort','estado','Estado')}
         ${_thSort(_cu,'setCuotasSort','vence','Vence')}
         ${_thSort(_cu,'setCuotasSort','monto','Monto')}
+        <th>Concesionario</th>
         <th>Notas</th>
         <th>Gestión de cobro</th>
         <th></th>
@@ -222,13 +224,17 @@ PG.pagos = function(){
         const bcls = diff<0?'b-r':diff<=1?'b-a':'b-g';
         const _vd = (item.venceStr||'').split('-');
         const fechaFmt = _vd.length===3 ? new Date(+_vd[0],+_vd[1]-1,+_vd[2]).toLocaleDateString('es-VE',{weekday:'short',day:'numeric',month:'short'}) : '';
+        const cl = S.clientes.find(function(x){return c.clienteId && String(x.id)===String(c.clienteId);}) || S.clientes.find(function(x){return x.nombre===c.cli && c.cli;}) || {};
+        const conc = ((c.concesionarioId && typeof _concGetById==='function') ? ((_concGetById(c.concesionarioId)||{}).nombre||'') : '') || c.sede || '';
         return `<tr>
           <td class="tdm"><span onclick="verClienteDeCred('${c.id}')" title="Ver perfil del cliente (teléfono, dirección, créditos)" style="cursor:pointer;color:var(--p1);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px">${c.cli}</span></td>
+          <td class="tds" style="font-family:var(--fd);white-space:nowrap">${cl.tel||'—'}</td>
           <td class="tds" style="font-family:var(--fd)">${c.id}</td>
           <td class="tds">${item.cuotaNum}/${c.totalCuotas||c.plazo*2||24}</td>
           <td><span class="bdg ${bcls}" style="font-size:9px">${badge}</span></td>
           <td class="tds"><div style="color:${col};font-weight:700">${lbl}</div>${fechaFmt?`<div style="font-size:10px;color:var(--ink3);font-weight:600;margin-top:2px;text-transform:capitalize">${fechaFmt}</div>`:''}</td>
           <td style="font-weight:800;font-family:var(--fd);color:var(--ink)">${fmt(c.cuotaQ||c.cuota)}</td>
+          <td class="tds" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${conc||''}">${conc||'—'}</td>
           <td>${_cuotaNotaSelect(c)}</td>
           <td>${_gestionCobroCell(c)}</td>
           <td><div style="display:flex;gap:4px;flex-wrap:wrap">
