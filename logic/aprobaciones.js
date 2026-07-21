@@ -92,7 +92,7 @@ function _aprAprobar(credId){
     + '<div style="background:var(--gs);border:1px solid var(--rim2);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px">Inicial según el plan ('+((parseFloat(c.inicialPct)||0)*100).toFixed(0)+'%): <b style="font-family:var(--fd)">'+fmt(iniPlan)+'</b></div>'
     + '<div class="fg"><label>Inicial recibida (USD) *</label><input class="fi" id="apr_ini_monto" type="number" step="0.01" value="'+iniPlan.toFixed(2)+'"></div>'
     + '<div class="fg" style="margin-top:8px"><label>Método / cuenta de la inicial *</label><select class="fs" id="apr_ini_metodo">'+opts+'</select></div>'
-    + '<div class="fg" style="margin-top:8px"><label>Referencia (opcional)</label><input class="fi" id="apr_ini_ref" type="text" placeholder="N° de referencia, Zelle, etc."></div>'
+    + '<div class="fg" style="margin-top:8px"><label>Referencia (opcional)</label><input class="fi" id="apr_ini_ref" type="text" placeholder="N° de referencia, Binance, etc."></div>'
     + '<div id="apr_ini_warn" style="font-size:11px;color:var(--amber);margin-top:8px;display:none"></div>';
   $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
     + '<button class="btn btn-p" onclick="_aprAprobarConfirm(\''+credId+'\')">✓ Aprobar y registrar inicial</button>';

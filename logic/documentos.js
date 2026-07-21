@@ -40,7 +40,7 @@ var _wzDocDefs={
   wz_doc_inicial:{label:'Comprobante de Pago Inicial',icon:'',group:'Pagos',accept:'image/*,.pdf'},
   wz_doc_cuotas:{label:'Comprobantes de Cuotas',icon:'',group:'Pagos',accept:'image/*,.pdf'},
   wz_doc_transfer:{label:'Capturas de Transferencias',icon:'',group:'Pagos',accept:'image/*,.pdf'},
-  wz_doc_pago_var:{label:'Soportes Zelle / Pago Móvil / Efectivo',icon:'',group:'Pagos',accept:'image/*,.pdf'}
+  wz_doc_pago_var:{label:'Soportes Binance / Transferencia / Efectivo',icon:'',group:'Pagos',accept:'image/*,.pdf'}
 };
 function _wzDocTotal(){ return Object.keys(_wzDocDefs).length; }
 // ── Formato de cédula Venezuela: siempre V-12345678 (o E-, J-, G-) ──

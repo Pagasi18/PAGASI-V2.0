@@ -237,7 +237,7 @@ function openAddPago(preCredId){
   $('ov').style.display='flex';
 }
 
-var _cuentas = ['Bancamiga Cta. 0172-xxxx','Banesco Cta. 0134-xxxx','Zelle: pagasi@email.com'];
+var _cuentas = ['Bancamiga Cta. 0172-xxxx','Banesco Cta. 0134-xxxx'];
 
 
 function updPagoMonto(sel){

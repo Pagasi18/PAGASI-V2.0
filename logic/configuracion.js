@@ -145,8 +145,8 @@ function agregarCuentaBanc(){
   setMicon('banco'); $('mtt').textContent='Agregar Cuenta / Método de Pago'; $('msb').textContent='Se usará como método de cobro y en el módulo Cuentas';
   $('modal-box').className='modal';
   $('mbd').innerHTML='<div class="fgr c1" style="gap:10px">'
-    +'<div class="fg"><label>Nombre *</label><input class="fi" id="cb_nombre" placeholder="Ej: Bancamiga Bs, Zelle USD, Efectivo..."></div>'
-    +'<div class="fg"><label>Tipo</label><select class="fs" id="cb_tipo"><option value="banco">Banco / Transferencia</option><option value="efectivo">Efectivo</option><option value="digital">Pago Digital / Zelle</option><option value="otro">Otro</option></select></div>'
+    +'<div class="fg"><label>Nombre *</label><input class="fi" id="cb_nombre" placeholder="Ej: Bancamiga Bs, Binance USDT, Efectivo..."></div>'
+    +'<div class="fg"><label>Tipo</label><select class="fs" id="cb_tipo"><option value="banco">Banco / Transferencia</option><option value="efectivo">Efectivo</option><option value="digital">Pago Digital</option><option value="otro">Otro</option></select></div>'
     +'<div class="fg"><label>Moneda</label><select class="fs" id="cb_moneda"><option value="USD">USD ($)</option><option value="BS">Bolívares (Bs)</option></select></div>'
     +'<div class="fg"><label>Número de cuenta (opcional)</label><input class="fi" id="cb_numero" placeholder="Ej: 0172-xxxx-xxxx"></div>'
     +'</div>';

@@ -610,7 +610,7 @@ function _renderCartaInstrucciones(){
     <p style="${p}">Acepto que cualquier notificación remitida por ${empresaUp} a través de estos medios se considerará válidamente efectuada para todos los efectos contractuales y legales. Me comprometo a informar por escrito cualquier cambio en mis datos de contacto dentro de los cinco (5) días siguientes a la modificación.</p>
 
     <h3 style="${clausH}">QUINTA: INSTRUCCIONES DE PAGO</h3>
-    <p style="${p}">Acepto que todos los pagos derivados del contrato se realizarán exclusivamente en <strong>Dólares Americanos (USD)</strong>, mediante los medios de pago que ${empresaUp} tenga habilitados (transferencia, pago móvil, Zelle, efectivo u otros autorizados). Reconozco que los pagos parciales se aplicarán primero a la cuota más antigua pendiente y luego a la mora generada, y que solo se detendrá el cómputo de mora cuando la cuota vencida quede totalmente cubierta.</p>
+    <p style="${p}">Acepto que todos los pagos derivados del contrato se realizarán exclusivamente en <strong>Dólares Americanos (USD)</strong>, mediante los medios de pago que ${empresaUp} tenga habilitados conforme al contrato principal (Binance, transferencia o depósito en dólares, u otros que ${empresaUp} autorice por escrito). Reconozco que los pagos parciales se aplicarán primero a la cuota más antigua pendiente y luego a la mora generada, y que solo se detendrá el cómputo de mora cuando la cuota vencida quede totalmente cubierta.</p>
 
     <h3 style="${clausH}">SEXTA: DATOS DE LA UNIDAD ARRENDADA</h3>
     <p style="${p}">Declaro haber recibido a mi entera satisfacción, en buen estado de funcionamiento, limpieza y conservación, la unidad que se describe a continuación:</p>
