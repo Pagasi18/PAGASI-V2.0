@@ -988,7 +988,7 @@ function _concOpenAnticipo(cid){
     + '<div class="fg"><label>Monto (USD) <span style="color:var(--red)">*</span></label><input class="fi" id="cant_monto" type="number" step="0.01" placeholder="10000"></div>'
     + '</div>'
     + '<div class="fgr" style="gap:10px">'
-    + '<div class="fg"><label>Método</label><select class="fs" id="cant_metodo"><option>Binance</option><option>Zelle</option><option>Efectivo</option><option>Transferencia bancaria</option><option>Otro</option></select></div>'
+    + '<div class="fg"><label>Método</label><select class="fs" id="cant_metodo"><option>Binance</option><option>Efectivo</option><option>Transferencia bancaria</option><option>Otro</option></select></div>'
     + '<div class="fg"><label>Referencia (opcional)</label><input class="fi" id="cant_ref" placeholder="N° de operación / hash"></div>'
     + '</div>'
     + '<div class="fg"><label>Nota (opcional)</label><input class="fi" id="cant_nota" placeholder="Ej: anticipo para lote de 10 motos"></div>'
