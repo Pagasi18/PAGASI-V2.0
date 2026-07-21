@@ -67,7 +67,7 @@ PG.config = function(){
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">por dólar</div>
     </div>
     <div class="stat" style="">
-      <div class="st-v" style="font-size:20px">${PLAN.inicial*100}% ini · ${PLAN.moraPct||5}% mora</div>
+      <div class="st-v" style="font-size:20px">${PLAN.inicial*100}% ini · ${PLAN.moraPct||2.5}% mora</div>
       <div class="st-l">Parámetros clave</div>
       <div style="font-size:10px;color:var(--ink3);margin-top:2px">${PLAN.diasGracia||5}d de gracia</div>
     </div>
@@ -154,7 +154,7 @@ PG.config = function(){
           <div class="ch"><div><div class="ct">Mora y Gracia</div><div class="cs">Penalización por atraso</div></div></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
             <div class="fg"><label>Días de gracia</label><input class="fi" id="cfg_gracia" type="number" value="${PLAN.diasGracia||5}"><div style="font-size:10px;color:var(--ink3);margin-top:3px">Días sin penalización tras vencer</div></div>
-            <div class="fg"><label>% mora mensual</label><input class="fi" id="cfg_mora" type="number" step="0.1" value="${PLAN.moraPct||5}"><div style="font-size:10px;color:var(--ink3);margin-top:3px">Se aplica tras días de gracia</div></div>
+            <div class="fg"><label>% mora mensual</label><input class="fi" id="cfg_mora" type="number" step="0.1" value="${PLAN.moraPct||2.5}"><div style="font-size:10px;color:var(--ink3);margin-top:3px">Se aplica tras días de gracia</div></div>
           </div>
           <div style="padding-top:8px;border-top:1px solid var(--rim2);margin-top:4px">
             <button class="btn btn-p btn-sm" onclick="guardarPlan()">Guardar</button>

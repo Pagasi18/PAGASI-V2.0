@@ -524,7 +524,7 @@ function _mGuardarPlanApy(){
   if(!(precio>0)||!(apy>0)||!(plazo>0)){ if(typeof toast==='function') toast('Completa precio, APY y plazo','error'); return; }
   const r=calcApyPlan(precio,iniSel,apy,plazo);
   const nombre='APY '+apy.toFixed(1)+'% · '+plazo+'m · Ini '+(iniSel*100).toFixed(0)+'%';
-  const newPlan={nombre:nombre, plazo:plazo, factor:parseFloat(r.factor.toFixed(4)), inicial:iniSel, tasaMensual:parseFloat(r.tasaMensual.toFixed(2)), apy:apy, moraPct:(PLAN.moraPct||5), diasGracia:(PLAN.diasGracia||5), origen:'apy'};
+  const newPlan={nombre:nombre, plazo:plazo, factor:parseFloat(r.factor.toFixed(4)), inicial:iniSel, tasaMensual:parseFloat(r.tasaMensual.toFixed(2)), apy:apy, moraPct:(PLAN.moraPct||2.5), diasGracia:(PLAN.diasGracia||5), origen:'apy'};
   if(!window._planesExtra) window._planesExtra=[];
   window._planesExtra.push(newPlan);
   try{ localStorage.setItem('pagasi_planes_extra', JSON.stringify(window._planesExtra)); }catch(_e){}

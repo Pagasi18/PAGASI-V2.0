@@ -106,7 +106,8 @@ function _renderContratoArrendamiento(){
   var cuotaQ = parseFloat(c.cuotaQ||c.cuota||0);
   var canonMensual = Math.round(cuotaQ*2*100)/100;
   var plazoMeses = parseInt(c.plazo||0) || ((typeof PLAN!=='undefined'&&PLAN.plazo)||12);
-  var precioEjercicio = canonMensual; // Sección 4.3: UN (1) CANON MENSUAL
+  var precioEjercicio = canonMensual; // Sección 4.3: equivale al último Canon Mensual del Plazo
+  var iniMonto = Math.round((parseFloat(c.ini)||0)*100)/100; // Pago Inicial (Sección 2.6)
 
   var fmtUSD = function(n){ return (parseFloat(n)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); };
   var enLetrasUSD = function(n){
@@ -169,7 +170,6 @@ function _renderContratoArrendamiento(){
   var mTipo = V(c.tipo||ctx.moto.tipo||'');
 
   // ── Datos del Fiador / Garante (si aplica) ───────────────────────────────
-  var tieneFiador = (cli.fiador_tiene==='si' || cli.fiador_tiene===true || cli.fiador==='si');
   var fiadNom = V(cli.fiador_nom);
   var fiadCi  = V(cli.fiador_ci);
   var fiadRif = V(cli.fiador_rif);
@@ -225,10 +225,10 @@ function _renderContratoArrendamiento(){
     <p style="${sub}"><span style="${subN}">2.1 Canon Mensual.</span> El Arrendatario pagará al Arrendador de forma mensual durante el Período de Vigencia, a partir del primer mes completo en que se encuentre en posesión del Vehículo, el monto de <strong>${enLetrasUSD(canonMensual)}</strong> (<strong>US$ ${fmtUSD(canonMensual)}</strong>) (dicho monto, el “Canon Mensual”).</p>
     <p style="${sub}"><span style="${subN}">2.2 Pago del Canon Mensual.</span></p>
     <p style="${sub};margin-left:14px">(a) El Canon Mensual de cada mes podrá ser pagado en cualquier momento durante el mes calendario en curso, mediante uno o varios pagos parciales o abonos, y vencerá el último Día Hábil de dicho mes.</p>
-    <p style="${sub};margin-left:14px">(b) Si vencido dicho período el(los) pago(s) parcial(es) efectuado(s) por el Arrendatario no alcanza(n) el monto del Canon Mensual, el saldo insoluto causará intereses moratorios desde el primer Día Hábil siguiente y hasta la fecha en que el pago se haga efectivo, calculados sobre el saldo pendiente del canon insoluto a la Tasa de Intereses Moratorios indicada en la Sección 2.4.</p>
-    <p style="${sub};margin-left:14px">(c) Si el(los) pago(s) efectuado(s) durante un mes exceden el monto del Canon Mensual, el excedente se imputará automáticamente al Canon Mensual del mes calendario inmediatamente siguiente.</p>
+    <p style="${sub};margin-left:14px">(b) Si vencido dicho período el(los) pago(s) parcial(es) efectuado(s) por el Arrendatario no alcanza(n) el monto del Canon Mensual, el saldo insoluto causará intereses moratorios desde el primer Día Hábil siguiente y hasta la fecha en que el pago se haga efectivo, calculados sobre el saldo pendiente del canon insoluto a la Tasa de Intereses Moratorios indicada en la Sección 2.4; sin perjuicio del período de gracia previsto en dicha Sección 2.4.</p>
+    <p style="${sub};margin-left:14px">(c) Si el(los) pago(s) efectuado(s) durante un mes exceden el monto del Canon Mensual, el excedente se imputará automáticamente al Canon Mensual del mes calendario inmediatamente siguiente, salvo los pagos designados como Precio de Ejercicio conforme a la Sección 4.3.</p>
     <p style="${sub}"><span style="${subN}">2.3 Imputación de los Pagos.</span> Todo pago recibido del Arrendatario se imputará en el siguiente orden: (i) en primer lugar, al capital pendiente de cánones de meses anteriores que se encuentren en mora; (ii) en segundo lugar, a los intereses moratorios causados sobre dichos meses anteriores en mora, calculados hasta la fecha en que el pago se haga efectivo a favor del Arrendador; (iii) y en tercer lugar, al canon correspondiente al mes en curso. Una vez cubiertos esos conceptos, cualquier excedente se imputará al canon del mes siguiente conforme a lo establecido precedentemente en la Sección 2.2(c).</p>
-    <p style="${sub}"><span style="${subN}">2.4 Intereses Moratorios.</span> Los montos vencidos e insolutos del Canon Mensual causarán intereses moratorios a una tasa de <strong>dos coma cinco por ciento (2,5%) mensual</strong>, calculada en forma simple y proporcional por cada día calendario de mora sobre el saldo vencido y pendiente de pago (la “Tasa de Intereses Moratorios”), sin exceder el máximo permitido por la legislación venezolana aplicable.</p>
+    <p style="${sub}"><span style="${subN}">2.4 Intereses Moratorios.</span> Los montos vencidos e insolutos del Canon Mensual causarán intereses moratorios a una tasa de <strong>dos coma cinco por ciento (2,5%) mensual</strong>, calculada en forma simple y proporcional por cada día calendario de mora sobre el saldo vencido y pendiente de pago (la “Tasa de Intereses Moratorios”), sin exceder el máximo permitido por la legislación venezolana aplicable. No obstante, se concede al Arrendatario un <strong>período de gracia de cinco (5) días continuos</strong> siguientes al vencimiento de cada Canon Mensual: si el saldo insoluto es pagado íntegramente dentro de dicho período, no se causarán intereses moratorios; transcurrido el período de gracia sin pago íntegro, los intereses moratorios se causarán conforme a la Sección 2.2(b), calculados desde el primer Día Hábil siguiente al vencimiento.</p>
     <p style="${sub}"><span style="${subN}">2.5 Forma de Pago.</span> Todo pago a favor del Arrendador podrá efectuarse mediante cualquiera de los siguientes medios:</p>
     <table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0 8px">
       <tr><td style="padding:6px 9px;border:1px solid #DBEAFE;background:${purpleLight};font-weight:700;width:26%">a) Pago Móvil</td><td style="padding:6px 9px;border:1px solid #DBEAFE">100% Banco · RIF J-50.829.589-7 · teléfono 0424-2177798</td></tr>
@@ -237,6 +237,7 @@ function _renderContratoArrendamiento(){
       <tr><td style="padding:6px 9px;border:1px solid #DBEAFE;background:${purpleLight};font-weight:700">d) Transferencia o depósito en bolívares</td><td style="padding:6px 9px;border:1px solid #DBEAFE">100% Banco, Banco Universal · titular PAGASI 18, C.A. · RIF J-50.829.589-7 · cuenta N° 0156-0030-62-0301030594</td></tr>
     </table>
     <p style="${sub}">El Arrendatario deberá enviar el comprobante de pago por WhatsApp al <strong>+58 424-217-7798</strong>. Cuando un pago sea realizado en bolívares, se aplicará el tipo de cambio oficial publicado por el Banco Central de Venezuela vigente en la fecha de recepción efectiva del pago, salvo acuerdo escrito distinto.</p>
+    <p style="${sub}"><span style="${subN}">2.6 Pago Inicial.</span> En la Fecha de Celebración y como condición para la entrega material del Vehículo, el Arrendatario paga al Arrendador la cantidad de ${iniMonto>0 ? '<strong>'+enLetrasUSD(iniMonto)+'</strong> (<strong>US$ '+fmtUSD(iniMonto)+'</strong>)' : blank(null,30)} (el “Pago Inicial”), en cualquiera de las formas previstas en la Sección 2.5. El Pago Inicial: (a) constituye contraprestación por la celebración de este Contrato y la entrega material del Vehículo en la Fecha de Celebración; (b) no constituye Canon Mensual ni es imputable a los Cánones Mensuales del Plazo ni al Precio de Ejercicio; (c) no será reembolsable en caso de terminación del Contrato por cualquier causa, salvo disposición legal imperativa en contrario; y (d) en caso de ejercicio de la Opción de Compra, se entenderá que forma parte de la contraprestación total de la operación, a tenor de lo previsto en la Sección 4.5 y el artículo 1.579 del Código Civil.</p>
 
     <!-- Plan de abonos quincenales (referencial) -->
     <div style="margin:14px 0 6px;page-break-inside:avoid">
@@ -247,12 +248,20 @@ function _renderContratoArrendamiento(){
       ${abonosHtml}
       <table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-top:6px">
         <tr>
-          <td style="padding:6px 9px;border:1px solid #BFDBFE;background:${purpleLight};font-weight:800;color:${purpleDark}">Total de Cánones (${numTexto(plazoMeses).toLowerCase()} meses)</td>
-          <td style="padding:6px 9px;border:1px solid #BFDBFE;background:${purpleLight};text-align:right;font-weight:900;color:${purpleDark};width:26%">US$ ${fmtUSD(totalCanones)}</td>
+          <td style="padding:6px 9px;border:1px solid #DBEAFE;font-weight:700">Pago Inicial — pagadero en la Fecha de Celebración (Sección 2.6)</td>
+          <td style="padding:6px 9px;border:1px solid #DBEAFE;text-align:right;font-weight:800;width:26%">${iniMonto>0 ? 'US$ '+fmtUSD(iniMonto) : '________'}</td>
         </tr>
         <tr>
-          <td style="padding:6px 9px;border:1px solid #DBEAFE;font-weight:700">Precio de Ejercicio de la Opción de Compra (Sección 4.3) — adicional</td>
-          <td style="padding:6px 9px;border:1px solid #DBEAFE;text-align:right;font-weight:800">US$ ${fmtUSD(precioEjercicio)}</td>
+          <td style="padding:6px 9px;border:1px solid #DBEAFE;font-weight:700">Total de Cánones (${numTexto(plazoMeses).toLowerCase()} meses)</td>
+          <td style="padding:6px 9px;border:1px solid #DBEAFE;text-align:right;font-weight:800">US$ ${fmtUSD(totalCanones)}</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 9px;border:1px solid #DBEAFE;font-weight:700">Precio de Ejercicio de la Opción de Compra (Sección 4.3)</td>
+          <td style="padding:6px 9px;border:1px solid #DBEAFE;text-align:right;font-weight:700">Incluido — corresponde al último Canon Mensual</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 9px;border:1px solid #BFDBFE;background:${purpleLight};font-weight:800;color:${purpleDark}">Total general de la operación (Pago Inicial + Cánones)</td>
+          <td style="padding:6px 9px;border:1px solid #BFDBFE;background:${purpleLight};text-align:right;font-weight:900;color:${purpleDark}">${iniMonto>0 ? 'US$ '+fmtUSD(iniMonto+totalCanones) : '________'}</td>
         </tr>
       </table>
       <div style="font-size:9.5px;color:#666;line-height:1.5;margin-top:5px;text-align:justify">
@@ -269,8 +278,8 @@ function _renderContratoArrendamiento(){
     <!-- 4. OPCIÓN A COMPRA -->
     <h3 style="${clausH}">4. Opción a Compra</h3>
     <p style="${sub}"><span style="${subN}">4.1 Opción a Compra.</span> El Arrendador concede al Arrendatario una opción de compra sobre el Vehículo (la “Opción de Compra”), la cual podrá ser ejercida en cualquier momento durante la vigencia del presente Contrato, en la forma prevista en esta Cláusula 4; siempre y cuando el Arrendatario no se encuentre en mora respecto de sus obligaciones previstas en este Contrato al momento del ejercicio de dicha Opción de Compra.</p>
-    <p style="${sub}"><span style="${subN}">4.2 Ejercicio.</span> Para ejercer la Opción de Compra, el Arrendatario deberá (a) enviar al Arrendador una comunicación escrita manifestando su intención expresa de ejercer dicha Opción de Compra; acompañada de (b) evidencia de pago del Precio de Ejercicio, a favor del Arrendador, realizado en la forma prevista en la Sección 2.5; sin perjuicio que el Arrendatario deba pagar simultáneamente cualquier Canon Mensual en mora o intereses moratorios existente para el momento de ejercicio de la Opción de Compra. Recibido lo anterior, el Arrendador aceptará el ejercicio de la Opción de Compra mediante cualquier manifestación escrita de aceptación al Arrendatario.</p>
-    <p style="${sub}"><span style="${subN}">4.3 Precio de Ejercicio.</span> El precio para ejercer la Opción de Compra será equivalente a <strong>UN (1) CANON MENSUAL</strong> (<strong>US$ ${fmtUSD(precioEjercicio)}</strong>) (el “Precio de Ejercicio”), más los Impuestos que correspondan.</p>
+    <p style="${sub}"><span style="${subN}">4.2 Ejercicio.</span> Para ejercer la Opción de Compra, el Arrendatario deberá (a) enviar al Arrendador una comunicación escrita manifestando su intención expresa de ejercer dicha Opción de Compra; acompañada de (b) evidencia de pago del Precio de Ejercicio, a favor del Arrendador, realizado en la forma prevista en la Sección 2.5, o, en su caso, evidencia de haber pagado íntegramente la totalidad de los Cánones Mensuales del Plazo, cuyo último canon comprende el Precio de Ejercicio conforme a la Sección 4.3; sin perjuicio que el Arrendatario deba pagar simultáneamente cualquier Canon Mensual en mora o intereses moratorios existente para el momento de ejercicio de la Opción de Compra. Recibido lo anterior, el Arrendador aceptará el ejercicio de la Opción de Compra mediante cualquier manifestación escrita de aceptación al Arrendatario.</p>
+    <p style="${sub}"><span style="${subN}">4.3 Precio de Ejercicio.</span> El precio para ejercer la Opción de Compra será equivalente a <strong>UN (1) CANON MENSUAL</strong> (<strong>US$ ${fmtUSD(precioEjercicio)}</strong>), el cual <strong>se corresponde con el último Canon Mensual del Plazo</strong> (el “Precio de Ejercicio”), más los Impuestos que correspondan. En consecuencia, el pago íntegro de la totalidad de los Cánones Mensuales del Plazo comprende el Precio de Ejercicio, sin que el ejercicio de la Opción de Compra cause pago adicional alguno; en el entendido que, si la Opción de Compra se ejerce antes del vencimiento del último Canon Mensual, el pago del Precio de Ejercicio se imputará a dicho último Canon Mensual.</p>
     <p style="${sub}"><span style="${subN}">4.4 Transferencia de la Propiedad.</span> Una vez aceptada la Opción de Compra por el Arrendador, se entenderá materializada la transferencia de la propiedad del Vehículo a favor del Arrendatario, en los términos y con las limitaciones previstas en la Cláusula 5 y este Contrato en general. Quedará habilitado el Arrendatario, a partir de ese momento, a realizar los actos, trámites y diligencias para la inscripción y/o registro del título de propiedad correspondiente; lo cual deberá realizar en estricto cumplimiento de lo previsto en las Cláusulas 9 y 5.3 del Contrato.</p>
     <p style="${sub}"><span style="${subN}">4.5 Efectos de la Opción de Compra.</span> Las Partes expresamente declaran, manifiestan y reconocen que, una vez ejecutada y perfeccionada la Opción de Compra, el resto de las disposiciones, términos y condiciones del Contrato mantienen su plena vigencia, incluyendo las obligaciones del Arrendatario bajo las Cláusulas 1, 2, 5, 6 y 7, así como del resto del Contrato en general. Específicamente, y para evitar dudas, expresamente se reconoce que las obligaciones de continuar pagando el Canon Mensual aplicable para la totalidad del Plazo, durante el Período de Vigencia, continúa plenamente vigente, exactamente en los términos previstos en la Cláusula 2, incluso cuando se haga ejercicio de la Opción de Compra. Es decir, incluso si el Arrendatario ejerciera la Opción de Compra en la propia Fecha de Celebración, se mantendrá exactamente igual su obligación de pagar los Cánones Mensuales correspondientes a todo el Plazo, en el entendido que en ese caso los Cánones Mensuales tendrán el carácter de cuota del precio, a tenor de lo previsto en el artículo 1.579 del Código Civil.</p>
 
@@ -344,13 +353,14 @@ function _renderContratoArrendamiento(){
       <div>“INTT” tiene el significado dado en la Sección 5.3.</div>
       <div>“IVA” tiene el significado dado en la Sección 6.2.</div>
       <div>“Opción de Compra” tiene el significado dado en la Sección 4.1.</div>
+      <div>“Pago Inicial” tiene el significado dado en la Sección 2.6.</div>
       <div>“Partes” tiene el significado dado en el preámbulo del mismo.</div>
       <div>“Período de Vigencia” tiene el significado dado en la Sección 3.1.</div>
       <div>“Plazo” tiene el significado dado en la Sección 3.1.</div>
       <div>“Póliza de Seguro” tiene el significado dado en la Sección 1.5.</div>
       <div>“Precio de Ejercicio” tiene el significado dado en la Sección 4.3.</div>
       <div>“Prohibición de Enajenar y Gravar” tiene el significado dado en la Sección 5.1.</div>
-      <div>“Reglamento LTT—Motos” tiene el significado dado en los “Considerandos” del mismo.</div>
+      <div>“Reglamento LTT—Motos” significa la normativa reglamentaria de la Ley de Transporte Terrestre aplicable al uso, circulación y registro de motocicletas en Venezuela.</div>
       <div>“RIF” tiene el significado dado en el preámbulo del mismo.</div>
       <div>“Tasa de Intereses Moratorios” tiene el significado dado en la Sección 2.4.</div>
       <div>“Vehículo” tiene el significado dado en los “Considerandos” del mismo.</div>
@@ -375,7 +385,7 @@ function _renderContratoArrendamiento(){
     <!-- FIANZA / GARANTÍA PERSONAL SOLIDARIA: declaración + datos + firma juntos -->
     <div style="page-break-inside:avoid;margin-top:20px;padding-top:14px;border-top:1px dashed ${purple}">
       <h3 style="${clausH}">Fianza — Garantía Personal Solidaria</h3>
-      <p style="${sub}">Quien suscribe, ${blank(fiadNom,32)}, venezolano(a), mayor de edad, titular de la cédula de identidad N° ${blank(fiadCi,14)}, con RIF N° ${blank(fiadRif,14)}, domiciliado(a) en ${blank(fiadDir,36)}, teléfono N° ${blank(fiadTel,14)} (el “<strong>Fiador</strong>”), declara que <strong>se constituye en fiador solidario y principal pagador</strong> del Arrendatario frente al Arrendador, respecto de todas y cada una de las obligaciones de pago y demás obligaciones asumidas por el Arrendatario bajo el presente Contrato, incluyendo el Canon Mensual, los intereses moratorios, el Precio de Ejercicio, los Impuestos aplicables, los daños y perjuicios, y los gastos de cobranza que se causaren.</p>
+      <p style="${sub}">Quien suscribe, ${blank(fiadNom,32)}, venezolano(a), mayor de edad, titular de la cédula de identidad N° ${blank(fiadCi,14)}, con RIF N° ${blank(fiadRif,14)}, domiciliado(a) en ${blank(fiadDir,36)}, teléfono N° ${blank(fiadTel,14)} (el “<strong>Fiador</strong>”), declara que <strong>se constituye en fiador solidario y principal pagador</strong> del Arrendatario frente al Arrendador, respecto de todas y cada una de las obligaciones de pago y demás obligaciones asumidas por el Arrendatario bajo el presente Contrato, incluyendo el Pago Inicial, el Canon Mensual, los intereses moratorios, el Precio de Ejercicio, los Impuestos aplicables, los daños y perjuicios, y los gastos de cobranza que se causaren.</p>
       <p style="${sub}">El Fiador renuncia expresamente a los beneficios de excusión y de división previstos en los artículos 1.812 y siguientes del Código Civil, obligándose de manera solidaria e indivisible junto con el Arrendatario, de forma que el Arrendador podrá exigir el cumplimiento total de las obligaciones garantizadas, indistintamente, al Arrendatario o al Fiador. Esta fianza se mantendrá vigente hasta la total y definitiva extinción de las obligaciones garantizadas.</p>
       <div style="margin-top:22px">
         <div style="font-weight:800;font-size:11px;color:${purpleDark};margin-bottom:26px">POR EL FIADOR / GARANTE</div>
@@ -395,7 +405,10 @@ function _renderContratoArrendamiento(){
       <p style="${sub}">Caracas, _____ de ________________ de __________.</p>
       <p style="${sub}"><strong>Señores</strong><br><strong>PAGASI 18, C.A.</strong><br>Presente.-</p>
       <p style="${sub}">Yo, ${blank(cliNom,32)}, titular de la cédula de identidad N° ${blank(cliCi,14)}, en mi carácter de Arrendatario bajo el Contrato de Arriendo-Venta de Vehículo Automotor celebrado en fecha ${blank(fechaContrato,20)} (el “Contrato”), notifico formal e irrevocablemente mi decisión de ejercer la Opción de Compra sobre la motocicleta identificada en dicho contrato como marca ${blank(mMarca,12)}, modelo ${blank(mModelo,14)}, año ${blank(mAnio,7)}, placa N° ${blank(mPlaca,11)}, serial de carrocería o chasis N° ${blank(mSerialChasis,18)} y serial de motor N° ${blank(mSerialMotor,18)}.</p>
-      <p style="${sub}">A tales efectos, en esta misma fecha realizo el pago del Precio de Ejercicio por la cantidad de <strong>US$ ${fmtUSD(precioEjercicio)}</strong>, mediante ____________________________. Solicito al Arrendador registrar y procesar el ejercicio de la Opción de Compra conforme al Contrato.</p>
+      <p style="${sub}">A tales efectos, declaro que <em>(marcar lo que corresponda)</em>:</p>
+      <p style="${sub};margin-left:14px">☐ En esta misma fecha realizo el pago del Precio de Ejercicio por la cantidad de <strong>US$ ${fmtUSD(precioEjercicio)}</strong>, correspondiente al último Canon Mensual del Plazo conforme a la Sección 4.3 del Contrato, mediante ____________________________; o</p>
+      <p style="${sub};margin-left:14px">☐ He pagado íntegramente la totalidad de los Cánones Mensuales del Plazo, cuyo último canon comprende el Precio de Ejercicio conforme a la Sección 4.3 del Contrato, por lo que no corresponde pago adicional alguno.</p>
+      <p style="${sub}">Solicito al Arrendador registrar y procesar el ejercicio de la Opción de Compra conforme al Contrato.</p>
       <p style="${sub}">Atentamente,</p>
       <div style="margin-top:34px;border-top:1px solid #444;max-width:330px;padding-top:6px;font-size:11.5px;line-height:1.8">
         <strong>${cliNom||'________________________________'}</strong><br>
@@ -416,8 +429,11 @@ function _renderPagare(){
   var c=ctx.c, cli=ctx.cli, emp=ctx.emp, empresaUp=ctx.empresaUp, logoSrc=ctx.logoSrc, hoy=ctx.hoy, fechaContrato=ctx.fechaContrato, V=ctx.V, Vm=ctx.Vm;
   var purple=ctx.purple, purpleDark=ctx.purpleDark, purpleLight=ctx.purpleLight;
   var tableHdr=ctx.tableHdr, clausH=ctx.clausH, p=ctx.p, lblCell=ctx.lblCell, valCell=ctx.valCell;
-  // El pagaré cubre el monto sujeto a canon (lo que financia) — si prefieres el total, cambia c.fin por c.total
-  var monto = parseFloat(c.fin)||parseFloat(c.total)||0;
+  // El pagaré debe cuadrar con las cuotas que él mismo describe: cuotaQ x totalCuotas.
+  // Fallback al saldo financiado (c.fin) solo si faltan datos de cuotas.
+  var _pgCuota = parseFloat(c.cuotaQ||c.cuota)||0;
+  var _pgN = parseInt(c.totalCuotas||0) || (c.plazo ? parseInt(c.plazo)*2 : 0);
+  var monto = (_pgCuota>0 && _pgN>0) ? Math.round(_pgCuota*_pgN*100)/100 : (parseFloat(c.fin)||parseFloat(c.total)||0);
   var montoLetras = _numALetras(monto);
   var plazoMeses = c.plazo || 12;
   var cuotaQ = parseFloat(c.cuotaQ||c.cuota)||0;
@@ -473,7 +489,7 @@ function _renderPagare(){
 
     <!-- Cláusula de mora -->
     <h3 style="${clausH}">MORA Y CONSECUENCIAS DEL INCUMPLIMIENTO</h3>
-    <p style="${p}">El atraso en el pago de cualquier cuota por más de <strong>cuatro (4) días</strong> contados desde la fecha de vencimiento, generará un recargo de mora equivalente al <strong>5% sobre el monto de la cuota vencida</strong>, adicional al capital adeudado, conforme a lo establecido en la Cláusula Sexta del contrato principal.</p>
+    <p style="${p}">El atraso en el pago por más de <strong>cinco (5) días continuos</strong> contados desde la fecha de vencimiento generará <strong>intereses moratorios a razón del dos coma cinco por ciento (2,5%) mensual</strong>, calculados retroactivamente desde el primer día hábil siguiente al vencimiento, en forma simple y proporcional por cada día calendario de mora sobre el saldo vencido y pendiente de pago, adicional al capital adeudado, conforme a lo establecido en la Sección 2.4 del contrato principal.</p>
     <p style="${p}">En caso de incumplimiento del pago de <strong>cuatro (4) o más cuotas consecutivas</strong>, o de atraso superior a <strong>sesenta (60) días</strong>, la totalidad del saldo adeudado se considerará de <strong>plazo vencido</strong>, quedando facultado el tenedor del presente pagaré para exigir el pago inmediato e íntegro de la suma pendiente por la vía judicial o extrajudicial que estime conveniente.</p>
 
     <!-- Renuncia de aviso y protesto -->
@@ -580,7 +596,7 @@ function _renderCartaInstrucciones(){
     <p style="${p}">Autorizo de manera expresa e irrevocable el monitoreo continuo de la ubicación del vehículo arrendado durante toda la vigencia del contrato, mediante el dispositivo GPS instalado en la motocicleta. Reconozco que esta autorización es condición esencial del arrendamiento y que cualquier intento de desactivación, bloqueo o manipulación del GPS facultará al arrendador para recuperar la unidad de forma inmediata.</p>
 
     <h3 style="${clausH}">SEGUNDA: AUTORIZACIÓN DE RECUPERACIÓN EXTRAJUDICIAL</h3>
-    <p style="${p}">Autorizo expresamente a ${empresaUp}, o a los representantes que ésta designe, para recuperar la motocicleta objeto del arrendamiento, sin necesidad de notificación previa ni intervención judicial, en cualquiera de los supuestos de resolución contemplados en la Cláusula Novena del contrato, especialmente en caso de falta de pago de cuatro (4) o más cánones quincenales consecutivos, manipulación del GPS, uso ilícito del vehículo o traslado del mismo fuera del territorio nacional sin autorización.</p>
+    <p style="${p}">Autorizo expresamente a ${empresaUp}, o a los representantes que ésta designe, para recuperar la motocicleta objeto del arrendamiento, sin necesidad de notificación previa ni intervención judicial, en cualquiera de los supuestos de incumplimiento y terminación anticipada contemplados en la Cláusula 8 del contrato, especialmente en caso de falta de pago de dos (2) o más Cánones Mensuales consecutivos, manipulación del GPS, uso ilícito del vehículo o traslado del mismo fuera del territorio nacional sin autorización.</p>
 
     <h3 style="${clausH}">TERCERA: AUTORIZACIÓN DE CONSULTA Y REPORTE CREDITICIO</h3>
     <p style="${p}">Autorizo a ${empresaUp} a consultar, procesar, conservar y reportar mi información crediticia y comercial ante cualquier central de riesgo, buró de crédito o base de datos financiera pública o privada, en Venezuela o en el exterior, durante la vigencia del contrato y por el tiempo que la legislación permita con posterioridad a su terminación.</p>

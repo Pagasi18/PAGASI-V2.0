@@ -121,7 +121,7 @@ function guardarPlan(){
   var tasa = Number.isFinite(tasaIn) ? tasaIn : PLAN.tasaMensual;
   var plazo = Number.isFinite(plazoIn) ? plazoIn : PLAN.plazo;
   var gracia = Number.isFinite(graciaIn) ? graciaIn : (PLAN.diasGracia||5);
-  var mora = Number.isFinite(moraIn) ? moraIn : (PLAN.moraPct||5);
+  var mora = Number.isFinite(moraIn) ? moraIn : (PLAN.moraPct||2.5);
   PLAN.factor = factor;
   PLAN.inicial = inicial;
   PLAN.tasaMensual = tasa;
