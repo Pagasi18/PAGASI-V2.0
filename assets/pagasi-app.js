@@ -1656,8 +1656,11 @@ function _aplicarConcesionarioActivoRealtime(){
     if(typeof isAdminUser==='function' && isAdminUser()) return;
     var conc = S.concesionarios || [];
     var savedConc = localStorage.getItem('concesionarioActivo');
-    if(savedConc && conc.find(function(c){return c.id === savedConc;})) S.concesionarioActivo = savedConc;
-    if(S.currentUser){
+    // El usuario eligió explícitamente "todas mis sedes": respetarlo.
+    var eligioTodas = (typeof _concEligioTodas === 'function') && _concEligioTodas();
+    if(eligioTodas) S.concesionarioActivo = null;
+    else if(savedConc && conc.find(function(c){return c.id === savedConc;})) S.concesionarioActivo = savedConc;
+    if(S.currentUser && !eligioTodas){
       var asignados = S.currentUser.concesionarios || [];
       if(asignados.length === 1){
         S.concesionarioActivo = asignados[0];
@@ -1953,7 +1956,11 @@ var DB = {
       // Si el usuario tiene UNA sola sede asignada, forzarla como activa (no permitir "Todos")
       // EXCEPCIÓN: el Administrador siempre puede quedarse en "Todos".
       try{
-        if(S.currentUser && !(typeof isAdminUser==='function' && isAdminUser())){
+        var _eligioTodas = (typeof _concEligioTodas === 'function') && _concEligioTodas();
+        if(_eligioTodas){
+          // Elección explícita del usuario: ver todas sus sedes juntas.
+          S.concesionarioActivo = null;
+        } else if(S.currentUser && !(typeof isAdminUser==='function' && isAdminUser())){
           var asignados = S.currentUser.concesionarios || [];
           if(asignados.length === 1){
             S.concesionarioActivo = asignados[0];
@@ -2455,8 +2462,9 @@ function _attachCurrentUserListener(uid){
       // Auto-set sede activa si tiene 1 sola asignada
       try{
         var _asgn = S.currentUser.concesionarios || [];
-        if((typeof isAdminUser==='function' && isAdminUser())){
-          /* Administrador: se queda en "Todos", no se fuerza sede */
+        var _todas = (typeof _concEligioTodas === 'function') && _concEligioTodas();
+        if((typeof isAdminUser==='function' && isAdminUser()) || _todas){
+          /* Administrador, o el usuario eligió "todas": no forzar sede */
         } else if(_asgn.length === 1){
           S.concesionarioActivo = _asgn[0];
           try{ localStorage.setItem('concesionarioActivo', _asgn[0]); }catch(e){}

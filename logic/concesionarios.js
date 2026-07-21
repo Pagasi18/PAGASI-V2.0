@@ -123,11 +123,18 @@ function _concContarSinAsignar(){
 }
 
 // Cambia el concesionario activo y guarda en localStorage
+// Marcador explícito de "ver todas las sedes". Antes se borraba la preferencia,
+// lo que era indistinguible de "nunca eligió", y el arranque devolvía al usuario
+// a su primera sede pisando su elección.
+var CONC_TODAS = '__TODAS__';
+function _concEligioTodas(){
+  try{ return localStorage.getItem('concesionarioActivo') === CONC_TODAS; }catch(e){ return false; }
+}
 function _concSetActivo(id){
   S.concesionarioActivo = id || null;
   try{
     if(id) localStorage.setItem('concesionarioActivo', id);
-    else localStorage.removeItem('concesionarioActivo');
+    else localStorage.setItem('concesionarioActivo', CONC_TODAS);
   }catch(e){}
   if(typeof toast === 'function'){
     var nombre = id ? ((_concGetById(id)||{}).nombre || id) : 'Todos los concesionarios';
@@ -180,16 +187,19 @@ function _renderConcSwitcher(){
     S.concesionarioActivo = null;
     activo = null;
   }
-  // Admin total (sin asignaciones específicas) ve "Todos" como opción
-  // Usuario con asignaciones específicas (varias) NO ve "Todos" — solo sus sedes
-  var puedeVerTodos = esAdminPuro;
+  // Cualquiera que legítimamente vea MÁS DE UNA sede puede elegir verlas todas
+  // juntas. No amplía el acceso: al poner activo=null, _concPasaFiltro sigue
+  // restringiendo a las sedes asignadas del usuario (solo las une en una vista).
+  // El caso de UNA sola sede asignada ya se resolvió arriba (queda fijo).
+  var puedeVerTodos = esAdminPuro || visibles.length > 1;
   // Si NO puede ver todos y no tiene activo, forzar a su primera sede
   if(!puedeVerTodos && !activo && asignados.length){
     S.concesionarioActivo = asignados[0];
     activo = asignados[0];
     try{ localStorage.setItem('concesionarioActivo', asignados[0]); }catch(e){}
   }
-  var labelActivo = activo ? ((_concGetById(activo)||{}).nombre || '?') : 'Todos';
+  var labelTodos = (esAdminPuro || !asignados.length) ? 'Todos los concesionarios' : 'Todas mis sedes';
+  var labelActivo = activo ? ((_concGetById(activo)||{}).nombre || '?') : (esAdminPuro || !asignados.length ? 'Todos' : 'Todas mis sedes');
   wrap.style.display = 'flex';
   wrap.style.alignItems = 'center';
   wrap.innerHTML = ''
@@ -204,7 +214,7 @@ function _renderConcSwitcher(){
       + (puedeVerTodos
         ? '<button type="button" onclick="_concSetActivo(null);_concCloseDropdown()" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 11px;background:'+(!activo?'rgba(0,184,118,.1)':'transparent')+';border:none;border-radius:7px;cursor:pointer;font-size:12.5px;color:var(--ink);font-weight:'+(!activo?'700':'500')+'">'
           + '<span style="width:6px;height:6px;border-radius:50%;background:var(--green)"></span>'
-          + '<span>Todos los concesionarios</span>'
+          + '<span>'+labelTodos+'</span>'
           + (!activo ? '<span style="margin-left:auto;color:var(--green);font-size:10px">✓</span>' : '')
           + '</button>'
           + '<div style="height:1px;background:var(--rim2);margin:4px 0"></div>'
