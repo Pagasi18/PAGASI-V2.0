@@ -881,7 +881,7 @@ function openCreateDemoUser(){
   setTimeout(updatePreview, 50);
 
   S.saveFn = function(){
-    var email = (($('du_email')&&$('du_email').value)||'').trim();
+    var email = (($('du_email')&&$('du_email').value)||'').trim().toLowerCase();
     var nombre = (($('du_nombre')&&$('du_nombre').value)||'').trim();
     if(!email || !email.includes('@')){ toast('Email inválido','error'); return false; }
     var rol = ($('du_rol')&&$('du_rol').value)||'Vendedor';
@@ -1021,7 +1021,7 @@ function openInviteUser(){
   }, 60);
 
   S.saveFn=function(){
-    var email=(($('invu_email')&&$('invu_email').value)||'').trim();
+    var email=(($('invu_email')&&$('invu_email').value)||'').trim().toLowerCase();
     var nombre=(($('invu_nombre')&&$('invu_nombre').value)||'').trim();
     var cumple=(($('invu_cumple')&&$('invu_cumple').value)||'').trim();
     if(!email||!email.includes('@')){ toast('Ingresa un email válido','error'); return false; }
@@ -1480,6 +1480,9 @@ function _showInviteScreenForDoc(docData){
 }
 function _resolverInvitacionPendiente(){
   if(!auth) return;
+  // Durante una activación en curso este flujo pisaría S.pendingInvite con el
+  // placeholder (rol Empleado, permisos []) y limpiaría el formulario.
+  if(window._activandoInvitacion) return;
   var token = _getInviteToken();
   if(!token) return;
 
@@ -1569,12 +1572,31 @@ function aceptarInvitacion() {
     return;
   }
 
+  // Sin token no se puede crear la ficha (la regla de Firestore lo exige):
+  // avisar ANTES de crear la cuenta en Auth, para no dejarla huérfana.
+  if (!(pending.token || pending.inviteToken)) {
+    if (errEl) { errEl.textContent = 'El link de invitación no es válido o está incompleto. Pídele al administrador que te reenvíe la invitación.'; errEl.style.display = 'block'; }
+    return;
+  }
+  // Reentrada (doble Enter): los inputs tienen onkeydown y no se deshabilitan.
+  if (window._activandoInvitacion) return;
+
   var btn = $('inv-btn');
   if (btn) btn.disabled = true;
   showLoader('Activando cuenta...', '');
 
+  // ── FIX: carrera al aceptar una invitación ──
+  // createUserWithEmailAndPassword dispara onAuthStateChanged ANTES de que
+  // finalizarActivacion escriba la ficha en /usuarios. El listener no la
+  // encontraba, hacía signOut() por seguridad y la escritura fallaba por
+  // permisos: la cuenta quedaba creada en Auth pero sin ficha, y el usuario
+  // ya no podía reintentar (email-already-in-use). Esta bandera le dice al
+  // listener que hay una activación en curso y debe esperar.
+  window._activandoInvitacion = true;
+
   var token = pending.token || pending.inviteToken || null;
   var isLegacy = !!(pending._legacy && pending.inviteTempPass);
+  var _activacionData = null;
 
   function finalizarActivacion(user) {
     return user.updateProfile({ displayName: nombre })
@@ -1587,26 +1609,58 @@ function aceptarInvitacion() {
           nombre: nombre,
           email: user.email,
           rol: pending.rol || 'Empleado',
-          permisos: pending.permisos || [],
+          // Nunca escribir permisos vacíos: el listener de arranque rellena un
+          // array vacío con el set COMPLETO (incluido users/config/perm_delete),
+          // así que un [] aquí se convertiría en acceso total en el siguiente login.
+          permisos: (Array.isArray(pending.permisos) && pending.permisos.length)
+                      ? pending.permisos
+                      : ((typeof ROL_PERMISOS!=='undefined' && ROL_PERMISOS[pending.rol||'Empleado']) || ROL_PERMISOS.Empleado || ['dash']),
           inviteStatus: 'aceptada',
           inviteAcceptedAt: new Date().toISOString(),
           debeActualizar: false
         };
-        // Limpiar campos temporales del flujo legacy
-        if(pending.inviteTempPass !== undefined){
+        // Limpiar campos temporales del flujo legacy. Solo cuando el doc YA existe:
+        // si fuese una creación, borrar inviteToken viola la regla de Firestore
+        // (exige que inviteToken sea string) y la escritura se denegaría.
+        if(isLegacy && pending.inviteTempPass && pending.uid === user.uid){
           updateData.inviteTempPass = firebase.firestore.FieldValue.delete();
-          updateData.inviteToken = firebase.firestore.FieldValue.delete();
           updateData.inviteLink = firebase.firestore.FieldValue.delete();
         }
+        _activacionData = updateData;
         return db.collection('usuarios').doc(user.uid).set(updateData, { merge: true });
       })
       .then(function(){
-        if(token){ try{ DB.usarInvitacion(token, user.uid); }catch(_e){} }
+        // Hidratar la sesión ANTES de arrancar la app: el listener salió temprano
+        // (la ficha aún no existía), y onAuthStateChanged no se vuelve a disparar
+        // con el mismo uid. Sin esto, S.currentUser queda null → sidebar vacío y
+        // nav() sin control de permisos.
+        S.currentUser = Object.assign({}, _activacionData, {
+          uid: user.uid,
+          email: user.email,
+          nombre: _activacionData.nombre || user.email,
+          concesionarios: _activacionData.concesionarios || [],
+          comisiones: _activacionData.comisiones || null,
+          lastLogin: new Date().toISOString()
+        });
+        var _sbUn = document.querySelector('.sb-un');
+        if (_sbUn) _sbUn.textContent = S.currentUser.nombre;
+        var _sbAv = document.querySelector('.sb-av');
+        if (_sbAv) _sbAv.textContent = (S.currentUser.nombre||'A').split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
+        if(typeof updateSidebarFooter === 'function') updateSidebarFooter();
+        if(typeof _attachCurrentUserListener === 'function') _attachCurrentUserListener(user.uid);
+        db.collection('usuarios').doc(user.uid).set({ lastLogin: S.currentUser.lastLogin }, {merge:true}).catch(function(){});
+        if(typeof logActividad === 'function') logActividad('login','auth',user.uid,{rol:S.currentUser.rol,via:'invitacion'});
+        // Recién ahora es seguro soltar la bandera: la ficha existe y la sesión
+        // está hidratada, así que cualquier get() en vuelo del listener validará bien.
+        window._activandoInvitacion = false;
+        // Marcar la invitación como usada. Puede fallar por permisos si las reglas
+        // aún no permiten que el invitado la marque; no debe molestar al usuario.
+        if(token){ try{ Promise.resolve(DB.usarInvitacion(token, user.uid)).catch(function(){}); }catch(_e){} }
         hideLoader();
         _clearInviteParams();
         S.pendingInvite = null;
         $('invite-screen').style.display = 'none';
-        init();
+        if (!window._appInited) { window._appInited = true; init(); }
       });
   }
 
@@ -1627,15 +1681,31 @@ function aceptarInvitacion() {
     var doSignOut = auth.currentUser ? auth.signOut() : Promise.resolve();
     p = doSignOut
       .then(function(){ return auth.createUserWithEmailAndPassword(pending.email, pass); })
+      .catch(function(e){
+        // RECUPERACIÓN: la cuenta ya existe en Auth pero la invitación sigue
+        // pendiente (activación previa que quedó a medias). Como el invitado
+        // llegó con un token válido, se intenta iniciar sesión con la clave que
+        // acaba de escribir para poder completar su ficha en /usuarios.
+        if(e && e.code === 'auth/email-already-in-use'){
+          return auth.signInWithEmailAndPassword(pending.email, pass).catch(function(){
+            var err = new Error('Ya existe una cuenta con este correo y la contraseña no coincide. Si ya intentaste activarla antes, escribe la MISMA contraseña que usaste esa vez. Si no la recuerdas, usa «¿Olvidaste tu contraseña?» en la pantalla de inicio.');
+            err.code = 'pagasi/clave-no-coincide';
+            throw err;
+          });
+        }
+        throw e;
+      })
       .then(function(r){ return r.user; })
       .then(finalizarActivacion);
   }
 
   p.catch(function(e) {
+    window._activandoInvitacion = false;
     hideLoader();
     if (btn) btn.disabled = false;
     var msg = e.message || 'Error al activar la cuenta';
     if(e.code === 'auth/email-already-in-use') msg = 'Este email ya tiene una cuenta. Inicia sesión con tu contraseña, o usa «¿Olvidaste tu contraseña?» en la pantalla de inicio para restablecerla y entrar.';
+    if(e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') msg = 'La contraseña no coincide con la cuenta existente. Si ya intentaste activarla antes, escribe la MISMA contraseña de esa vez.';
     if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
   });
 }
@@ -1666,6 +1736,10 @@ if (auth) {
           // TODOS los permisos para cualquier usuario autenticado (incluido un lead del
           // formulario público) — agujero gravísimo. Ahora se DENIEGA y se cierra sesión.
           if (!doc.exists) {
+            // Si hay una activación de invitación en curso, la ficha se está
+            // escribiendo en este mismo instante: NO cerrar sesión (eso abortaba
+            // la escritura y dejaba la cuenta creada pero sin ficha).
+            if (window._activandoInvitacion) return;
             try{ auth.signOut(); }catch(e){}
             S.currentUser = null;
             var _lsD = $('login-screen'); if (_lsD) _lsD.style.display = 'flex';
@@ -1679,8 +1753,14 @@ if (auth) {
           if (!data.email) needsUpdate.email = user.email;
           if (!data.nombre) needsUpdate.nombre = user.displayName || (user.email||'').split('@')[0] || 'Usuario';
           if (!data.rol || data.rol === 'admin') needsUpdate.rol = 'Administrador'; // normalizar minúscula legacy
-          if (!Array.isArray(data.permisos) || data.permisos.length === 0) {
-            needsUpdate.permisos = ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','conta','plan','config','users','perm_delete'];
+          // SEGURIDAD: solo rellenar si el campo FALTA por completo, y con los
+          // permisos del ROL — nunca con el set total de administrador. Antes, una
+          // ficha con permisos:[] (p. ej. creada por una invitación sin permisos)
+          // se auto-escalaba a users/config/perm_delete en el siguiente login.
+          if (!Array.isArray(data.permisos)) {
+            needsUpdate.permisos = (data.rol === 'Administrador' || data.rol === 'admin')
+              ? ['dash','clientes','motos','creditos','pagos','cobranza','contratos','notif','reportes','cuentas','conta','plan','config','users','perm_delete']
+              : ((typeof ROL_PERMISOS!=='undefined' && ROL_PERMISOS[data.rol]) || ['dash']);
           }
           if (Object.keys(needsUpdate).length > 0) {
             db.collection('usuarios').doc(user.uid).set(needsUpdate, {merge:true}).catch(function(){});
@@ -1715,6 +1795,8 @@ if (auth) {
           // Inicializar la app SOLO para usuarios autorizados (con ficha válida en 'usuarios').
           if (!window._appInited) { window._appInited = true; init(); }
         }).catch(function(){
+          // Misma salvedad: durante una activación en curso, esperar.
+          if (window._activandoInvitacion) return;
           // ── SEGURIDAD: ante un error validando la ficha, NO conceder admin: denegar acceso. ──
           try{ auth.signOut(); }catch(e){}
           S.currentUser = null;

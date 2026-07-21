@@ -32,13 +32,16 @@ service cloud.firestore {
     // puede auto-asignarse acceso sin haber sido invitado por un admin.
     match /usuarios/{uid} {
       allow read: if esStaff();
+      // Comparaciones de email en minusculas: Firebase Auth normaliza el email
+      // del token, pero la invitacion pudo guardarse con mayusculas. Sin .lower()
+      // la creacion se denegaba y la cuenta quedaba en Auth sin ficha.
       allow create: if esAdmin()
         || ( noAnonimo()
              && request.auth.uid == uid
-             && request.resource.data.email == request.auth.token.email
+             && request.resource.data.email.lower() == request.auth.token.email.lower()
              && request.resource.data.inviteToken is string
              && exists(/databases/$(database)/documents/invitaciones/$(request.resource.data.inviteToken))
-             && get(/databases/$(database)/documents/invitaciones/$(request.resource.data.inviteToken)).data.email == request.auth.token.email );
+             && get(/databases/$(database)/documents/invitaciones/$(request.resource.data.inviteToken)).data.email.lower() == request.auth.token.email.lower() );
       // Editar la ficha propia, pero SIN poder cambiarse el rol uno mismo.
       allow update: if esAdmin()
         || ( noAnonimo()
@@ -49,11 +52,21 @@ service cloud.firestore {
 
     // == Invitaciones ==
     // get(): el invitado abre su link (el token es un secreto en la URL).
-    // list(): solo staff puede enumerarlas. Crear/editar/borrar: solo admin.
+    // list(): solo staff puede enumerarlas. Crear/borrar: solo admin.
+    // update: admin, o el propio invitado SOLO para marcarla como usada al
+    // activarse (sin esto la escritura se denegaba, la invitacion quedaba
+    // usado:false para siempre y el link seguia siendo reutilizable).
     match /invitaciones/{token} {
       allow get: if true;
       allow list: if esStaff();
-      allow create, update, delete: if esAdmin();
+      allow create, delete: if esAdmin();
+      allow update: if esAdmin()
+        || ( noAnonimo()
+             && request.auth.token.email.lower() == resource.data.email.lower()
+             && request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly(['usado','uid','fechaUso'])
+             && request.resource.data.usado == true
+             && request.resource.data.uid == request.auth.uid );
     }
 
     // == Configuracion ==
