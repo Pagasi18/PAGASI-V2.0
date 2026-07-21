@@ -554,6 +554,17 @@ function llamarCliente(credId){
   window.open('tel:+58'+tel.replace(/^0/,''));
 }
 
+// Abre la ficha del cliente (modal de Clientes) desde una fila de Cobranza,
+// que solo conoce el crédito. Resuelve por clienteId y cae al nombre si falta.
+function verClienteDeCred(credId){
+  var c=S.creds.find(function(x){return String(x.id)===String(credId);});
+  if(!c){toast('Crédito no encontrado','error');return;}
+  var cl=S.clientes.find(function(x){return c.clienteId && String(x.id)===String(c.clienteId);})
+       ||S.clientes.find(function(x){return x.nombre===c.cli && c.cli;});
+  if(!cl){toast('Este crédito no tiene cliente asociado en el sistema','error');return;}
+  verCliente(cl.id);
+}
+
 function whatsappCliente(credId){
   var c=S.creds.find(function(x){return x.id===credId;});
   if(!c){toast('Crédito no encontrado','error');return;}

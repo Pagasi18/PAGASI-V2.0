@@ -223,7 +223,7 @@ PG.pagos = function(){
         const _vd = (item.venceStr||'').split('-');
         const fechaFmt = _vd.length===3 ? new Date(+_vd[0],+_vd[1]-1,+_vd[2]).toLocaleDateString('es-VE',{weekday:'short',day:'numeric',month:'short'}) : '';
         return `<tr>
-          <td class="tdm">${c.cli}</td>
+          <td class="tdm"><span onclick="verClienteDeCred('${c.id}')" title="Ver perfil del cliente (teléfono, dirección, créditos)" style="cursor:pointer;color:var(--p1);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px">${c.cli}</span></td>
           <td class="tds" style="font-family:var(--fd)">${c.id}</td>
           <td class="tds">${item.cuotaNum}/${c.totalCuotas||c.plazo*2||24}</td>
           <td><span class="bdg ${bcls}" style="font-size:9px">${badge}</span></td>
