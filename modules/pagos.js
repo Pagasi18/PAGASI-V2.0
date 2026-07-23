@@ -80,17 +80,28 @@ PG.pagos = function(){
   // (a) EXCLUÍA a los créditos con estado 'mora' y (b) calculaba el vencimiento a mano
   // con c.pagado, por lo que la lista mostraba muchos menos atrasados que el Dashboard.
   var _gracia=(typeof PLAN!=='undefined'&&PLAN.diasGracia!=null)?PLAN.diasGracia:5;
+  var _hoyISO=fechaLocalISO(new Date());
   var proximasCuotas = _concFiltrar(S.creds||[]).filter(function(c){
     return c && !c.eliminado && (c.estado==='activo'||c.estado==='mora') && c.fecha;
   }).map(function(c){
-    var mora=0, cuotaNum, venceStr, diff, prox=null;
+    var mora=0, cuotaNum, venceStr, diff, prox=null, vencidoTotal=0, nVencidas=0;
+    var cuotaMonto=parseFloat(c.cuotaQ||c.cuota)||0;
     if(typeof CreditoLedger!=='undefined' && CreditoLedger.generarEstadoCredito){
       try{
         var est=CreditoLedger.generarEstadoCredito(c, S.pagos, {diasGracia:_gracia});
         mora=est.moraDias||0;
         prox=(est.cuotas&&est.cuotas[est.cuotasPagadas])||null;
+        // Deuda realmente vencida = suma del saldo de TODAS las cuotas cuya fecha
+        // de vencimiento ya pasó (descuenta pagos parciales). Antes la columna
+        // solo mostraba una cuota, ocultando cuánto debe de verdad el moroso.
+        (est.cuotas||[]).forEach(function(q){
+          if(q && q.saldo>0.001 && q.fechaVence && q.fechaVence <= _hoyISO){
+            vencidoTotal += q.saldo; nVencidas++;
+          }
+        });
       }catch(e){ prox=null; }
     }
+    vencidoTotal=Math.round(vencidoTotal*100)/100;
     if(prox && prox.fechaVence){
       cuotaNum=prox.numero;
       venceStr=prox.fechaVence;
@@ -104,7 +115,7 @@ PG.pagos = function(){
       venceStr=fechaLocalISO(vf);
       if(!mora) mora=parseInt(c.mora||0,10)||0;
     }
-    return { cred:c, cuotaNum:cuotaNum, diff:diff, venceStr:venceStr, mora:mora };
+    return { cred:c, cuotaNum:cuotaNum, diff:diff, venceStr:venceStr, mora:mora, vencido:vencidoTotal, nVencidas:nVencidas, cuotaMonto:cuotaMonto };
   }).filter(function(it){ return it.diff<=30 || it.mora>0; });
   // Filtro por fecha de vencimiento
   if(_cuDesde) proximasCuotas = proximasCuotas.filter(function(it){ return it.venceStr >= _cuDesde; });
@@ -133,7 +144,7 @@ PG.pagos = function(){
     if(col==='id'){var na=parseInt(String(a.cred.id).replace(/\D/g,''),10)||0,nb=parseInt(String(b.cred.id).replace(/\D/g,''),10)||0;return dir*(na<nb?-1:na>nb?1:0);}
     if(col==='cuota'){return dir*((a.cuotaNum||0)-(b.cuotaNum||0));}
     if(col==='estado'){return dir*((a.diff||0)-(b.diff||0));}
-    if(col==='monto'){return dir*(parseFloat(a.cred.cuotaQ||a.cred.cuota||0)-parseFloat(b.cred.cuotaQ||b.cred.cuota||0));}
+    if(col==='monto'){var _ma=a.nVencidas>=1?a.vencido:a.cuotaMonto,_mb=b.nVencidas>=1?b.vencido:b.cuotaMonto;return dir*(_ma-_mb);}
     return dir*((a.diff||0)-(b.diff||0)); // 'vence'
   });
 
@@ -233,7 +244,7 @@ PG.pagos = function(){
           <td class="tds">${item.cuotaNum}/${c.totalCuotas||c.plazo*2||24}</td>
           <td><span class="bdg ${bcls}" style="font-size:9px">${badge}</span></td>
           <td class="tds"><div style="color:${col};font-weight:700">${lbl}</div>${fechaFmt?`<div style="font-size:10px;color:var(--ink3);font-weight:600;margin-top:2px;text-transform:capitalize">${fechaFmt}</div>`:''}</td>
-          <td style="font-weight:800;font-family:var(--fd);color:var(--ink)">${fmt(c.cuotaQ||c.cuota)}</td>
+          <td style="font-weight:800;font-family:var(--fd);color:${item.nVencidas>=1?'var(--red)':'var(--ink)'}">${item.nVencidas>=1?fmt(item.vencido):fmt(item.cuotaMonto)}${item.nVencidas>=2?`<div style="font-size:9.5px;font-weight:700;color:var(--ink3);margin-top:2px;white-space:nowrap">${item.nVencidas} cuotas vencidas · ${fmt(item.cuotaMonto)} c/u</div>`:(item.nVencidas===1?`<div style="font-size:9.5px;font-weight:600;color:var(--ink3);margin-top:2px;white-space:nowrap">1 cuota vencida</div>`:`<div style="font-size:9.5px;font-weight:600;color:var(--ink3);margin-top:2px;white-space:nowrap">próxima cuota</div>`)}</td>
           <td class="tds" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${conc||''}">${conc||'—'}</td>
           <td>${_cuotaNotaSelect(c)}</td>
           <td>${_gestionCobroCell(c)}</td>
