@@ -743,6 +743,8 @@ function _wzHydrate(){
       if(!WZ.vendedorUid && S.currentUser && S.currentUser.uid){ _vs.value = S.currentUser.uid; }
       if(_vs.value){ _wzSetVendedor(_vs); }
     }
+    // Poblar el resto de vendedores en segundo plano si el cache está vacío
+    if(typeof _wzEnsureVendedores==='function') _wzEnsureVendedores();
   }
   // Restaurar radios de cashea y fiador desde WZ al editar
   (function(){
@@ -1019,8 +1021,15 @@ function _wzPickMotoInv(sel){
 // ── Vendedor de la solicitud (para atribuir la comisión de venta) ──
 // Lista los usuarios no suspendidos; por defecto marca al usuario actual.
 function _wzVendedorOpts(){
-  var lista = (typeof _usersCache!=='undefined' && Array.isArray(_usersCache)) ? _usersCache : [];
-  var sel = WZ.vendedorUid || (S.currentUser && S.currentUser.uid) || '';
+  var lista = (typeof _usersCache!=='undefined' && Array.isArray(_usersCache)) ? _usersCache.slice() : [];
+  // Garantizar que el usuario CONECTADO siempre aparezca como vendedor, aunque
+  // _usersCache no haya cargado (un empleado que va directo a Nueva Solicitud sin
+  // pasar por el módulo Usuarios tenía el cache vacío y no veía su propio nombre).
+  var cu = S.currentUser;
+  if(cu && cu.uid && !lista.some(function(u){ return u && String(u.uid)===String(cu.uid); })){
+    lista.push({ uid:cu.uid, nombre:cu.nombre, email:cu.email, rol:cu.rol });
+  }
+  var sel = WZ.vendedorUid || (cu && cu.uid) || '';
   var esc = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); };
   var opts = '<option value="">— Seleccionar vendedor —</option>';
   lista.filter(function(u){ return u && !u.suspendido; })
@@ -1036,6 +1045,23 @@ function _wzSetVendedor(selEl){
   WZ.vendedorUid = selEl.value || '';
   WZ.vendedorNombre = (opt && opt.getAttribute('data-nombre')) || '';
   WZ['wz_vendedor'] = WZ.vendedorUid;
+}
+
+// Carga bajo demanda la lista completa de vendedores si el cache está vacío
+// (empleados que no abren el módulo Usuarios). Con las reglas nuevas, cualquier
+// staff puede leer /usuarios, así que también funciona para no-admins. Al terminar
+// re-dibuja el selector conservando la selección actual.
+function _wzEnsureVendedores(){
+  if(typeof _usersCache!=='undefined' && Array.isArray(_usersCache) && _usersCache.length>0) return;
+  if(typeof DB==='undefined' || !DB.getUsuarios) return;
+  DB.getUsuarios().then(function(lista){
+    if(Array.isArray(lista) && lista.length){ _usersCache = lista; }
+    var _vs = document.getElementById('wz_vendedor');
+    if(!_vs) return;
+    var keep = WZ.vendedorUid || _vs.value || (S.currentUser && S.currentUser.uid) || '';
+    _vs.innerHTML = _wzVendedorOpts();
+    if(keep){ _vs.value = keep; _wzSetVendedor(_vs); }
+  }).catch(function(){});
 }
 
 // ── Selección de moto del catálogo ──
