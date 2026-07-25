@@ -286,7 +286,7 @@ details summary::-webkit-details-marker{display:none}
     <div style="text-align:center;margin-top:16px">
       <a class="lnk" id="lgWa" href="https://wa.me/584242177798?text=Hola%2C%20necesito%20ayuda%20para%20entrar%20a%20Mi%20Cuenta%20Pagasi" target="_blank" rel="noopener">¿Problemas para entrar? Escríbenos</a>
       <div style="margin-top:12px">
-        <button class="lnk" id="lgStaff" onclick="toggleStaff()" style="color:var(--ink-4);text-decoration:none">Soy del equipo Pagasi</button>
+        <button class="lnk" id="lgStaff" onclick="toggleStaff()" style="color:var(--ink-4);text-decoration:none">Pagasi</button>
       </div>
     </div>
     <div id="recaptcha-container"></div>
@@ -378,8 +378,8 @@ details summary::-webkit-details-marker{display:none}
 <script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <!-- Mismo motor de calculo que usa el admin: el cliente ve exactamente las
      mismas cifras que el cobrador, sin posibilidad de divergencia. -->
-<script src="logic/credito-ledger.js?v=20260725-1943"></script>
-<script src="logic/gamificacion.js?v=20260725-1943"></script>
+<script src="logic/credito-ledger.js?v=20260725-1952"></script>
+<script src="logic/gamificacion.js?v=20260725-1952"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
    PORTAL DEL CLIENTE — Pagasi
@@ -452,6 +452,9 @@ function telE164(v){
   var qs = new URLSearchParams(location.search);
   S.token = qs.get('t') || '';
   S.clienteId = qs.get('c') || '';
+  // micuenta.html?equipo=1 -> entrada directa del equipo. Sirve para cuando el
+  // navegador tiene guardada la sesion de un cliente (soporte, pruebas).
+  S.equipo = qs.get('equipo') === '1' || location.hash === '#equipo';
 
   $('cod').addEventListener('keydown', function(e){ if(e.key==='Enter') verificarCodigo(); });
   $('tel').addEventListener('keydown', function(e){ if(e.key==='Enter') pedirCodigo(); });
@@ -463,6 +466,18 @@ function telE164(v){
 
   auth.onAuthStateChanged(function(u){
     if(!u){ prepararLogin(); return; }
+
+    // El equipo va PRIMERO. Una cuenta con correo nunca es un cliente (los
+    // clientes entran por telefono o por enlace anonimo), asi que si hay correo
+    // mandamos a modo Pagasi sin mirar sesiones_cliente. Al reves, una sesion de
+    // cliente guardada en el navegador se quedaba con el control y el equipo
+    // terminaba dentro de la cuenta de ese cliente.
+    if(u.email){ return verificarStaff(u); }
+
+    // Pidieron entrar como equipo pero lo que hay guardado es un cliente:
+    // cerramos esa sesion y mostramos el formulario del equipo.
+    if(S.equipo){ return auth.signOut().then(prepararLogin).catch(prepararLogin); }
+
     db.collection('sesiones_cliente').doc(u.uid).get().then(function(d){
       if(d.exists && d.data().clienteId){
         var ses = d.data();
@@ -476,9 +491,6 @@ function telE164(v){
       }
       // Autenticado por SMS pero sin sesion: la rearmamos sin gastar otro codigo
       if(u.phoneNumber){ return abrirSesionPorTelefono(u.phoneNumber); }
-      // Cuenta con correo: puede ser del equipo Pagasi (misma cuenta del admin).
-      // Lo confirma la ficha en /usuarios, que es lo que miran las reglas.
-      if(u.email){ return verificarStaff(u); }
       prepararLogin();
     }).catch(function(){ prepararLogin(); });
   });
@@ -487,18 +499,34 @@ function telE164(v){
 function prepararLogin(){
   $('scApp').classList.add('hide');
   $('scLogin').classList.remove('hide');
-  var conEnlace = !!(S.token && S.clienteId);
+  $('mBar').classList.add('hide');
+  // S.equipo manda: si pidieron entrar como equipo, el formulario del equipo
+  // sigue abierto aunque el cierre de la sesion anterior vuelva a pasar por aqui.
+  mostrarPaso(S.equipo);
+}
+
+// Un solo lugar decide que paso del login se ve. Antes estaba repartido y al
+// cerrar una sesion de cliente el formulario del equipo se cerraba solo.
+function mostrarPaso(equipo){
+  hideErr('lgErr');
+  $('stepCod').classList.add('hide');
+  $('stepStaff').classList.toggle('hide', !equipo);
+  $('lgStaff').textContent = equipo ? 'Cliente' : 'Pagasi';
+  if(equipo){
+    $('stepTel').classList.add('hide');
+    $('stepCed').classList.add('hide');
+    $('lgSub').textContent = 'Entra con tu cuenta Pagasi para ver a cualquier cliente.';
+    setTimeout(function(){ if(!$('stEmail').value) $('stEmail').focus(); }, 150);
+    return;
+  }
   // Con enlace personal: pedimos la cedula. Sin enlace: telefono + codigo SMS.
+  var conEnlace = !!(S.token && S.clienteId);
   $('stepCed').classList.toggle('hide', !conEnlace);
   $('stepTel').classList.toggle('hide', conEnlace);
-  $('stepCod').classList.add('hide');
-  $('stepStaff').classList.add('hide');
-  $('lgStaff').textContent = 'Soy del equipo Pagasi';
-  $('mBar').classList.add('hide');
   $('lgSub').textContent = conEnlace
     ? 'Escribe tu cédula para entrar.'
     : 'Consulta tu crédito y envía tus pagos.';
-  setTimeout(function(){ var f = conEnlace ? $('ced') : $('tel'); if(f) f.focus(); }, 250);
+  setTimeout(function(){ var f = conEnlace ? $('ced') : $('tel'); if(f) f.focus(); }, 200);
 }
 
 function volverATel(){
@@ -646,17 +674,8 @@ function entrarConEnlace(){
    ════════════════════════════════════════════════════════════════════════ */
 
 function toggleStaff(){
-  hideErr('lgErr');
-  var abrir = $('stepStaff').classList.contains('hide');
-  $('stepStaff').classList.toggle('hide', !abrir);
-  $('stepTel').classList.toggle('hide', abrir);
-  $('stepCed').classList.add('hide');
-  $('stepCod').classList.add('hide');
-  $('lgStaff').textContent = abrir ? 'Soy cliente' : 'Soy del equipo Pagasi';
-  $('lgSub').textContent = abrir
-    ? 'Entra con tu cuenta Pagasi para ver a cualquier cliente.'
-    : 'Consulta tu crédito y envía tus pagos.';
-  setTimeout(function(){ var f = abrir ? $('stEmail') : $('tel'); if(f) f.focus(); }, 120);
+  S.equipo = $('stepStaff').classList.contains('hide');
+  mostrarPaso(S.equipo);
 }
 
 function loginStaff(){
@@ -664,7 +683,13 @@ function loginStaff(){
   var em = String($('stEmail').value||'').trim(), pw = $('stPass').value||'';
   if(!em || !pw){ showErr('lgErr','Escribe tu correo y tu contraseña.'); return; }
   var b = $('btnStaff'); b.disabled = true; b.textContent = 'Entrando...';
-  auth.signInWithEmailAndPassword(em, pw).catch(function(e){
+  S.equipo = true;   // que el cierre de la sesion anterior no cambie de paso
+  // Si el navegador trae guardada la sesion de un cliente, la cerramos antes:
+  // si no, quedan dos identidades peleandose y gana la vieja.
+  var limpiar = auth.currentUser ? auth.signOut().catch(function(){}) : Promise.resolve();
+  limpiar.then(function(){
+    return auth.signInWithEmailAndPassword(em, pw);
+  }).catch(function(e){
     b.disabled = false; b.textContent = 'Entrar';
     var c = e && e.code;
     showErr('lgErr',
@@ -692,6 +717,10 @@ function verificarStaff(u){
 }
 
 function entrarModoMaster(){
+  S.equipo = true;
+  // Un ?t=/?c= viejo en la barra de direcciones no debe elegir el cliente por
+  // nosotros: en modo Pagasi el cliente se elige siempre en el selector.
+  S.token = ''; S.clienteId = '';
   $('scLogin').classList.add('hide');
   $('scApp').classList.remove('hide');
   $('mBar').classList.remove('hide');
@@ -798,7 +827,9 @@ function elegirCliente(id){
 function salir(){
   var u = auth.currentUser;
   try{ localStorage.removeItem('pagasi_master_cliente'); }catch(e){}
-  var fin = function(){ location.href = 'micuenta.html'; };
+  // Al salir del modo Pagasi volvemos a la entrada del equipo, no a la del cliente
+  var destino = S.master ? 'micuenta.html?equipo=1' : 'micuenta.html';
+  var fin = function(){ location.href = destino; };
   if(u){ auth.signOut().then(fin).catch(fin); } else { fin(); }
 }
 
