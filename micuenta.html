@@ -165,7 +165,6 @@ input::placeholder{color:var(--ink-4);font-weight:500}
 .pnom{font-size:13px;font-weight:800;letter-spacing:-.2px;line-height:1.2}
 .pdesc{font-size:10.5px;font-weight:600;color:var(--ink-4);margin-top:4px;line-height:1.35}
 .pnota{font-size:12.5px;font-weight:600;color:var(--ink-3);margin-top:14px;line-height:1.55}
-.e164{font-family:ui-monospace,Menlo,monospace;font-size:13.5px;font-weight:700;color:var(--p);background:rgba(37,99,235,.07);padding:8px 12px;border-radius:10px;margin-top:8px;text-align:center}
 .tiny{font-size:11.5px;color:var(--ink-4);font-weight:600;line-height:1.5;margin-top:11px;text-align:center}
 details summary{cursor:pointer;font-size:13px;font-weight:800;color:var(--p);list-style:none;padding:4px 0}
 details summary::-webkit-details-marker{display:none}
@@ -202,7 +201,6 @@ details summary::-webkit-details-marker{display:none}
       <div class="fg">
         <label for="tel">Tu número de teléfono</label>
         <input id="tel" type="tel" inputmode="numeric" placeholder="04143081617" autocomplete="tel">
-        <div class="e164" id="e164">+58…</div>
       </div>
       <button id="btnCodigo" class="btn btn-p" onclick="pedirCodigo()">Enviar código</button>
       <div class="tiny">Te llega un mensaje de texto con un código. Usa el mismo número que tienes registrado con Pagasi.</div>
@@ -299,8 +297,8 @@ details summary::-webkit-details-marker{display:none}
 <script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <!-- Mismo motor de calculo que usa el admin: el cliente ve exactamente las
      mismas cifras que el cobrador, sin posibilidad de divergencia. -->
-<script src="logic/credito-ledger.js?v=20260725-1220"></script>
-<script src="logic/gamificacion.js?v=20260725-1220"></script>
+<script src="logic/credito-ledger.js?v=20260725-1751"></script>
+<script src="logic/gamificacion.js?v=20260725-1751"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
    PORTAL DEL CLIENTE — Pagasi
@@ -373,11 +371,6 @@ function telE164(v){
   S.token = qs.get('t') || '';
   S.clienteId = qs.get('c') || '';
 
-  $('tel').addEventListener('input', function(){
-    var e = telE164(this.value);
-    $('e164').textContent = e || (soloDigitos(this.value) ? 'Número no válido' : '+58…');
-    $('e164').style.color = (!e && soloDigitos(this.value).length>=10) ? 'var(--red)' : 'var(--p)';
-  });
   $('cod').addEventListener('keydown', function(e){ if(e.key==='Enter') verificarCodigo(); });
   $('tel').addEventListener('keydown', function(e){ if(e.key==='Enter') pedirCodigo(); });
 
