@@ -212,6 +212,9 @@ function portalCompMarcar(compId, estado, nota){
       if(typeof logActividad==='function') logActividad('comprobante_'+estado,'pagos',compId,upd);
       toast(estado==='aprobado' ? 'Comprobante aprobado' : 'Comprobante rechazado', estado==='aprobado'?'success':'info');
       if(S.page==='pagos' && typeof nav==='function') nav('pagos');
+      // El momento de dopamina: avisarle que su pago entro y como quedo su racha.
+      // Es lo que de verdad mueve el comportamiento de pago.
+      if(estado==='aprobado') setTimeout(function(){ portalFelicitar(compId); }, 500);
     })
     .catch(function(e){ toast('No se pudo actualizar: '+(e.message||e),'error'); });
 }
@@ -341,4 +344,73 @@ function portalNormalizarAplicar(){
     });
   }
   correrLote(0);
+}
+
+// ── 3. Aviso de felicitacion al cliente (el "momento de dopamina") ──────
+// Al aprobar el pago le mandamos por WhatsApp la confirmacion + como quedo su
+// racha y cuanto le falta para el proximo nivel. El mensaje va listo: el
+// empleado solo toca enviar.
+function portalFelicitar(compId){
+  var comp = _PORTAL_COMPS.find(function(x){ return x.id===compId; });
+  if(!comp) return;
+  var cred = (S.creds||[]).find(function(x){ return String(x.id)===String(comp.credId); });
+  var cli = (S.clientes||[]).find(function(x){
+    return (comp.clienteId && String(x.id)===String(comp.clienteId))
+        || (cred && x.nombre===cred.cli);
+  }) || {};
+
+  // Recalcular su racha y nivel YA con este pago aplicado
+  var g = null;
+  try{
+    if(cred && typeof CreditoLedger!=='undefined' && typeof Gamificacion!=='undefined'){
+      var gracia = (typeof PLAN!=='undefined' && PLAN.diasGracia!=null) ? PLAN.diasGracia : 5;
+      var est = CreditoLedger.generarEstadoCredito(cred, S.pagos, {diasGracia:gracia});
+      var pgc = (S.pagos||[]).filter(function(p){ return String(p.cred)===String(cred.id); });
+      g = Gamificacion.calcularRacha(est, pgc, gracia, hoyLocalISO());
+    }
+  }catch(e){ g = null; }
+
+  var nombre = String(cli.nombre || (cred&&cred.cli) || '').split(' ')[0];
+  var txt = 'Hola ' + nombre + ', recibimos tu pago de $' + (parseFloat(comp.monto)||0).toFixed(2) + '. Gracias!';
+  if(g){
+    if(g.racha > 0){
+      txt += '\n\nLlevas ' + g.racha + (g.racha===1?' pago puntual':' pagos puntuales seguidos')
+           + ' y tienes ' + g.puntos + ' puntos.';
+    } else {
+      txt += '\n\nTienes ' + g.puntos + ' puntos acumulados.';
+    }
+    if(g.nivel && g.nivel.cupo > 0){
+      txt += '\nEres cliente ' + g.nivel.nom + ': puedes pedir hasta $' + g.nivel.cupo
+           + ' en cauchos, casco, aceite, repuestos o mantenimiento en tu concesionario, financiado en tus cuotas.';
+    }
+    if(g.siguiente && g.faltan > 0){
+      txt += '\nTe ' + (g.faltan===1?'falta':'faltan') + ' ' + g.faltan
+           + (g.faltan===1?' pago puntual':' pagos puntuales') + ' para nivel ' + g.siguiente.nom + '.';
+    }
+  }
+  txt += '\n\nRevisa tu cuenta: ' + _pBaseUrl();
+
+  var tel = _pDigitos(cli.tel);
+  var wa = tel ? ('https://wa.me/58' + tel.replace(/^0/,'') + '?text=' + encodeURIComponent(txt)) : '';
+
+  setMicon && setMicon('pago');
+  $('mtt').textContent = 'Avisarle al cliente';
+  $('msb').textContent = (cli.nombre || (cred&&cred.cli) || '') + ' · ' + (comp.credId||'');
+  $('modal-box').className = 'modal';
+  $('mbd').innerHTML =
+    (g && g.nivel ? '<div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">'
+      + '<span style="font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:4px 11px;border-radius:20px;color:'
+      + g.nivel.col + ';background:' + g.nivel.bg + '">' + g.nivel.nom + '</span>'
+      + (g.racha>0 ? '<span style="font-size:12px;font-weight:700;color:var(--ink2)">' + g.racha + ' pagos puntuales seguidos</span>' : '')
+      + '<span style="font-size:12px;font-weight:700;color:var(--ink3);margin-left:auto">' + g.puntos + ' pts</span>'
+      + '</div>' : '')
+    + '<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:13px 15px;font-size:12.5px;color:var(--ink2);line-height:1.6;white-space:pre-wrap">'
+    + _pEsc(txt) + '</div>'
+    + '<div style="font-size:11.5px;color:var(--ink3);margin-top:11px;line-height:1.5">'
+    + (wa ? 'El mensaje va listo. Al enviarlo, el cliente ve que su pago entró y cuánto le falta para su próximo premio.'
+          : 'Este cliente no tiene teléfono registrado, así que no podemos avisarle. Agrégalo en su ficha.')
+    + '</div>';
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Después</button>'
+    + (wa ? '<a class="btn btn-s" href="' + wa + '" target="_blank" rel="noopener" onclick="closeM()">Enviar por WhatsApp</a>' : '');
+  $('ov').style.display = 'flex';
 }

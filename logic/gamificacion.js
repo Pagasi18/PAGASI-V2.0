@@ -23,6 +23,18 @@
     {id:'platino', nom:'Platino', min:20, cupo:150, col:'#2563EB', bg:'#EAF1FF'}
   ];
 
+  // Catalogo de premios. SOLO cosas que el concesionario ya tiene en el estante:
+  // Pagasi financia, el concesionario entrega (mismo modelo que con las motos,
+  // sin inventario propio). Los precios los pone el concesionario, asi que aqui
+  // no se muestran cifras: se listan las categorias y el cliente consulta.
+  var PREMIOS = [
+    {id:'casco',    nom:'Casco',         desc:'Para rodar seguro',        ico:'casco'},
+    {id:'caucho',   nom:'Cauchos',       desc:'Delantero o trasero',      ico:'caucho'},
+    {id:'aceite',   nom:'Aceite',        desc:'Cambio con filtro',        ico:'aceite'},
+    {id:'repuesto', nom:'Repuestos',     desc:'Frenos, batería, cadena',  ico:'repuesto'},
+    {id:'servicio', nom:'Mantenimiento', desc:'Servicio de tu moto',      ico:'servicio'}
+  ];
+
   var PTS_ADELANTADA = 15;   // pago antes del vencimiento: vale mas (mejora la caja)
   var PTS_PUNTUAL    = 10;   // pago dentro de los dias de gracia
   var PTS_TARDE      = 0;    // no se castiga con puntos negativos: el castigo es perder la racha
@@ -112,6 +124,7 @@
 
   var api = {
     NIVELES: NIVELES,
+    PREMIOS: PREMIOS,
     calcularRacha: calcularRacha,
     sumarDias: sumarDias
   };

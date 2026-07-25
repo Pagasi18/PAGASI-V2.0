@@ -154,6 +154,17 @@ input::placeholder{color:var(--ink-4);font-weight:500}
 .nprem-t{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;color:var(--ink-4)}
 .nprem-v{font-size:23px;letter-spacing:-.8px;color:var(--p-d);margin-top:5px;line-height:1.1}
 .nprem-s{font-size:12.5px;font-weight:600;color:var(--ink-3);margin-top:7px;line-height:1.5}
+
+/* ── Catálogo de premios ── */
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.pcard{background:var(--off);border-radius:16px;padding:13px 10px;text-align:center;transition:.15s}
+.pcard.plock{opacity:.5}
+.pico{width:40px;height:40px;margin:0 auto 8px;border-radius:13px;background:var(--white);
+  color:var(--p);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(11,11,30,.07)}
+.pcard.plock .pico{color:var(--ink-4)}
+.pnom{font-size:13px;font-weight:800;letter-spacing:-.2px;line-height:1.2}
+.pdesc{font-size:10.5px;font-weight:600;color:var(--ink-4);margin-top:4px;line-height:1.35}
+.pnota{font-size:12.5px;font-weight:600;color:var(--ink-3);margin-top:14px;line-height:1.55}
 .e164{font-family:ui-monospace,Menlo,monospace;font-size:13.5px;font-weight:700;color:var(--p);background:rgba(37,99,235,.07);padding:8px 12px;border-radius:10px;margin-top:8px;text-align:center}
 .tiny{font-size:11.5px;color:var(--ink-4);font-weight:600;line-height:1.5;margin-top:11px;text-align:center}
 details summary{cursor:pointer;font-size:13px;font-weight:800;color:var(--p);list-style:none;padding:4px 0}
@@ -288,8 +299,8 @@ details summary::-webkit-details-marker{display:none}
 <script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <!-- Mismo motor de calculo que usa el admin: el cliente ve exactamente las
      mismas cifras que el cobrador, sin posibilidad de divergencia. -->
-<script src="logic/credito-ledger.js?v=20260725-0259"></script>
-<script src="logic/gamificacion.js?v=20260725-0259"></script>
+<script src="logic/credito-ledger.js?v=20260725-0314"></script>
+<script src="logic/gamificacion.js?v=20260725-0314"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
    PORTAL DEL CLIENTE — Pagasi
@@ -653,6 +664,36 @@ var ICO_MOTO = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stro
 var ICO_CHECK = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#00A854" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 var ICO_FUEGO = '<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 2s1.5 3.5 3.5 5.5C17.7 9.7 19 11.6 19 14a7 7 0 11-14 0c0-2 1-3.6 2.3-5 .3 1 .9 1.8 1.7 2 0-2.6 1-5.3 3-9zm0 17a3.5 3.5 0 003.5-3.5c0-1.4-.8-2.4-1.8-3.4-.7-.7-1.3-1.4-1.7-2.3-.6 1.2-1.6 2-1.6 3.4 0 .6.2 1 .5 1.5-.8-.2-1.4-.8-1.8-1.5-.4.7-.6 1.5-.6 2.3A3.5 3.5 0 0012 19z"/></svg>';
 
+// Iconos del catálogo de premios (SVG: sin emojis en la UI del producto)
+var ICO_PREMIO = {
+  casco:    '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14a9 9 0 0118 0v3a2 2 0 01-2 2h-4l-1-3H8a5 5 0 01-5-5z"/><path d="M3.5 13h11"/></svg>',
+  caucho:   '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3v5M12 16v5M3 12h5M16 12h5"/></svg>',
+  aceite:   '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s5.5 6 5.5 10a5.5 5.5 0 11-11 0C6.5 9 12 3 12 3z"/></svg>',
+  repuesto: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.2 2.2M17.6 17.6l2.2 2.2M2 12h3M19 12h3M4.2 19.8l2.2-2.2M17.6 6.4l2.2-2.2"/></svg>',
+  servicio: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 105 5L21 21H3l9.7-9.7z"/><path d="M15 9l-3-3 3-3 3 3-3 3z"/></svg>'
+};
+
+// El catálogo se muestra SIEMPRE, incluso en Bronce: ver el premio antes de
+// ganarlo es justamente lo que motiva.
+function premiosHTML(g){
+  var nv = g.nivel;
+  var abierto = nv.cupo > 0;
+  var h = '<div class="card"><div class="ct">Qué puedes pedir con tu vale</div><div class="pgrid">';
+  ((typeof Gamificacion!=='undefined' && Gamificacion.PREMIOS) || []).forEach(function(p){
+    h += '<div class="pcard' + (abierto ? '' : ' plock') + '">'
+      + '<div class="pico">' + (ICO_PREMIO[p.ico] || '') + '</div>'
+      + '<div class="pnom">' + esc(p.nom) + '</div>'
+      + '<div class="pdesc">' + esc(p.desc) + '</div>'
+      + '</div>';
+  });
+  h += '</div><div class="pnota">'
+    + (abierto
+        ? 'Tienes <b>hasta $' + nv.cupo + '</b> disponibles. Lo pides en tu concesionario y lo financiamos en tus cuotas; el precio final lo confirma el concesionario.'
+        : 'Con <b>' + Gamificacion.NIVELES[1].min + ' pagos al día</b> desbloqueas tu primer vale y puedes pedir cualquiera de estos.')
+    + '</div></div>';
+  return h;
+}
+
 function nivelHTML(g, c){
   var nv = g.nivel, sig = g.siguiente;
   var h = '<div class="card">';
@@ -756,6 +797,7 @@ function creditoHTML(c){
   try{
     var g = Gamificacion.calcularRacha(est, S.pagosPorCred[c.id]||[], DIAS_GRACIA, hoyISO());
     h += nivelHTML(g, c);
+    h += premiosHTML(g);
   }catch(e){ console.warn('racha:', e); }
 
   /* ── 3 datos grandes ── */

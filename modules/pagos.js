@@ -84,13 +84,20 @@ PG.pagos = function(){
   var proximasCuotas = _concFiltrar(S.creds||[]).filter(function(c){
     return c && !c.eliminado && (c.estado==='activo'||c.estado==='mora') && c.fecha;
   }).map(function(c){
-    var mora=0, cuotaNum, venceStr, diff, prox=null, vencidoTotal=0, nVencidas=0;
+    var mora=0, cuotaNum, venceStr, diff, prox=null, vencidoTotal=0, nVencidas=0, gam=null;
     var cuotaMonto=parseFloat(c.cuotaQ||c.cuota)||0;
     if(typeof CreditoLedger!=='undefined' && CreditoLedger.generarEstadoCredito){
       try{
         var est=CreditoLedger.generarEstadoCredito(c, S.pagos, {diasGracia:_gracia});
         mora=est.moraDias||0;
         prox=(est.cuotas&&est.cuotas[est.cuotasPagadas])||null;
+        // Nivel del cliente: al cobrador le sirve saber a quién está llamando
+        if(typeof Gamificacion!=='undefined' && Gamificacion.calcularRacha){
+          try{
+            var _pgc = (S.pagos||[]).filter(function(p){ return String(p.cred)===String(c.id); });
+            gam = Gamificacion.calcularRacha(est, _pgc, _gracia, _hoyISO);
+          }catch(e2){ gam=null; }
+        }
         // Deuda realmente vencida = suma del saldo de TODAS las cuotas cuya fecha
         // de vencimiento ya pasó (descuenta pagos parciales). Antes la columna
         // solo mostraba una cuota, ocultando cuánto debe de verdad el moroso.
@@ -115,7 +122,7 @@ PG.pagos = function(){
       venceStr=fechaLocalISO(vf);
       if(!mora) mora=parseInt(c.mora||0,10)||0;
     }
-    return { cred:c, cuotaNum:cuotaNum, diff:diff, venceStr:venceStr, mora:mora, vencido:vencidoTotal, nVencidas:nVencidas, cuotaMonto:cuotaMonto };
+    return { cred:c, cuotaNum:cuotaNum, diff:diff, venceStr:venceStr, mora:mora, vencido:vencidoTotal, nVencidas:nVencidas, cuotaMonto:cuotaMonto, gam:gam };
   }).filter(function(it){ return it.diff<=30 || it.mora>0; });
   // Filtro por fecha de vencimiento
   if(_cuDesde) proximasCuotas = proximasCuotas.filter(function(it){ return it.venceStr >= _cuDesde; });
@@ -241,7 +248,7 @@ PG.pagos = function(){
         const cl = S.clientes.find(function(x){return c.clienteId && String(x.id)===String(c.clienteId);}) || S.clientes.find(function(x){return x.nombre===c.cli && c.cli;}) || {};
         const conc = ((c.concesionarioId && typeof _concGetById==='function') ? ((_concGetById(c.concesionarioId)||{}).nombre||'') : '') || c.sede || '';
         return `<tr>
-          <td class="tdm"><span onclick="verClienteDeCred('${c.id}')" title="Ver perfil del cliente (teléfono, dirección, créditos)" style="cursor:pointer;color:var(--p1);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px">${c.cli}</span></td>
+          <td class="tdm"><span onclick="verClienteDeCred('${c.id}')" title="Ver perfil del cliente (teléfono, dirección, créditos)" style="cursor:pointer;color:var(--p1);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px">${c.cli}</span>${item.gam&&item.gam.nivel&&item.gam.nivel.cupo>0?`<div style="margin-top:3px;display:flex;align-items:center;gap:5px"><span style="font-size:9px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;padding:2px 7px;border-radius:20px;color:${item.gam.nivel.col};background:${item.gam.nivel.bg}" title="Nivel del cliente en el programa de puntos">${item.gam.nivel.nom}</span>${item.gam.racha>0?`<span style="font-size:9.5px;font-weight:700;color:var(--ink3)" title="Pagos puntuales seguidos">${item.gam.racha} al día</span>`:''}</div>`:''}</td>
           <td class="tds" style="font-family:var(--fd);white-space:nowrap">${cl.tel||'—'}</td>
           <td class="tds" style="font-family:var(--fd)">${c.id}</td>
           <td class="tds">${item.cuotaNum}/${c.totalCuotas||c.plazo*2||24}</td>
