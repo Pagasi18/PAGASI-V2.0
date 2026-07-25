@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prueba de SMS — Pagasi</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Manrope',-apple-system,Arial,sans-serif;background:#F5F6FA;color:#0A0A0F;padding:22px 16px;font-size:15px;line-height:1.5}
+.w{max-width:440px;margin:0 auto}
+.card{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:20px;padding:20px;margin-bottom:14px}
+h1{font-size:20px;font-weight:800;letter-spacing:-.4px;margin-bottom:5px}
+.sub{font-size:13px;color:#7A7A8C;margin-bottom:18px;line-height:1.5}
+label{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#7A7A8C;margin-bottom:7px}
+input{width:100%;font-family:inherit;font-size:17px;font-weight:700;background:#F5F6FA;border:1.5px solid rgba(0,0,0,.08);border-radius:14px;padding:14px 15px;outline:none}
+input:focus{border-color:#2563EB;background:#fff}
+button{width:100%;font-family:inherit;font-size:15.5px;font-weight:800;border:none;border-radius:14px;padding:15px;cursor:pointer;margin-top:12px;background:#2563EB;color:#fff}
+button:disabled{opacity:.5}
+button.g{background:#EEF0F7;color:#3D3D4E}
+.e164{font-family:ui-monospace,Menlo,monospace;font-size:14px;font-weight:700;color:#2563EB;background:rgba(37,99,235,.07);padding:9px 12px;border-radius:10px;margin-top:9px;text-align:center}
+.log{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;line-height:1.7;background:#0B0B1E;color:#7CFFB2;border-radius:14px;padding:14px;margin-top:14px;white-space:pre-wrap;word-break:break-word;max-height:280px;overflow-y:auto}
+.ok{background:#E6F7EE;color:#00713A;font-weight:700;font-size:13.5px;padding:12px 14px;border-radius:12px;margin-top:12px}
+.bad{background:#FDECF0;color:#B3123B;font-weight:700;font-size:13.5px;padding:12px 14px;border-radius:12px;margin-top:12px}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="w">
+  <div class="card">
+    <h1>Prueba de entrega de SMS</h1>
+    <div class="sub">Página temporal para verificar si los códigos por SMS llegan a los operadores venezolanos. Borrar después de la prueba.</div>
+
+    <div id="p1">
+      <label for="tel">Tu número de teléfono</label>
+      <input id="tel" type="tel" inputmode="numeric" placeholder="04143081617" autocomplete="off">
+      <div class="e164" id="e164">+58…</div>
+      <button id="b1" onclick="enviar()">Enviar código</button>
+    </div>
+
+    <div id="p2" class="hide">
+      <label for="cod">Código que recibiste</label>
+      <input id="cod" type="tel" inputmode="numeric" placeholder="123456" autocomplete="one-time-code">
+      <button id="b2" onclick="verificar()">Verificar código</button>
+      <button class="g" onclick="location.reload()">Empezar de nuevo</button>
+    </div>
+
+    <div id="msg"></div>
+    <div id="recaptcha-container"></div>
+    <div class="log" id="log">Listo. Escribe tu número y toca "Enviar código".</div>
+  </div>
+</div>
+
+<script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script>
+var CFG = {
+  apiKey: 'AIzaSyDt07EYdmvIqjU5a9CGPMQdYz8iBJ69Su8',
+  authDomain: 'pagasi-v2.firebaseapp.com',
+  projectId: 'pagasi-v2',
+  storageBucket: 'pagasi-v2.firebasestorage.app',
+  messagingSenderId: '951911859002',
+  appId: '1:951911859002:web:1eb8f0af7bcbd508474603'
+};
+var t0 = null, confirmacion = null, verifier = null;
+
+function $(i){ return document.getElementById(i); }
+function log(s){ var l=$('log'); l.textContent += '\n' + new Date().toLocaleTimeString('es-VE') + '  ' + s; l.scrollTop=l.scrollHeight; }
+function msg(txt, bad){ $('msg').innerHTML = '<div class="'+(bad?'bad':'ok')+'">'+txt+'</div>'; }
+
+// Venezuela -> E.164. Acepta 04143081617 / 4143081617 / +584143081617
+function toE164(v){
+  var d = String(v||'').replace(/\D/g,'');
+  if(d.indexOf('58')===0 && d.length>=12) return '+'+d;
+  if(d.indexOf('0')===0) d = d.slice(1);
+  if(d.length===10) return '+58'+d;
+  return d ? '+58'+d : '';
+}
+$('tel').addEventListener('input', function(){ $('e164').textContent = toE164(this.value) || '+58…'; });
+
+try{
+  firebase.initializeApp(CFG);
+  log('Firebase inicializado (proyecto pagasi-v2).');
+}catch(e){ log('ERROR al inicializar: '+e.message); }
+
+function enviar(){
+  var e164 = toE164($('tel').value);
+  if(!e164 || e164.length < 12){ msg('Escribe tu número completo.', true); return; }
+  $('b1').disabled = true; $('b1').textContent = 'Enviando...';
+  $('msg').innerHTML='';
+  log('Enviando código a ' + e164 + ' ...');
+  t0 = Date.now();
+
+  try{
+    if(!verifier){
+      verifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {size:'invisible'});
+      log('reCAPTCHA invisible listo.');
+    }
+  }catch(e){ log('ERROR reCAPTCHA: '+e.message); }
+
+  firebase.auth().signInWithPhoneNumber(e164, verifier)
+    .then(function(res){
+      confirmacion = res;
+      log('OK: Firebase aceptó el envío. Esperando el SMS...');
+      msg('Código enviado. Si te llega, escríbelo abajo y anota cuánto tardó.');
+      $('p1').classList.add('hide'); $('p2').classList.remove('hide');
+      setTimeout(function(){ $('cod').focus(); }, 200);
+    })
+    .catch(function(e){
+      $('b1').disabled=false; $('b1').textContent='Enviar código';
+      log('FALLO: ' + (e.code||'') + ' — ' + (e.message||e));
+      var m = 'No se pudo enviar.';
+      if(String(e.code).indexOf('operation-not-allowed')>-1) m = 'Falta activar "Phone" en Firebase → Authentication → Sign-in method.';
+      else if(String(e.code).indexOf('captcha')>-1) m = 'Problema con reCAPTCHA: revisa que el dominio esté autorizado en Authentication → Settings.';
+      else if(String(e.code).indexOf('invalid-phone-number')>-1) m = 'Firebase rechazó el formato del número.';
+      else if(String(e.code).indexOf('too-many-requests')>-1) m = 'Demasiados intentos. Espera un rato.';
+      else if(String(e.code).indexOf('quota')>-1) m = 'Se agotó la cuota de SMS del proyecto.';
+      msg(m + ' Detalle: ' + (e.code||e.message), true);
+    });
+}
+
+function verificar(){
+  var c = String($('cod').value||'').replace(/\D/g,'');
+  if(c.length < 4){ msg('Escribe el código completo.', true); return; }
+  if(!confirmacion){ msg('Primero envía el código.', true); return; }
+  $('b2').disabled=true; $('b2').textContent='Verificando...';
+  var seg = t0 ? Math.round((Date.now()-t0)/1000) : 0;
+
+  confirmacion.confirm(c)
+    .then(function(r){
+      log('VERIFICADO. El SMS llegó y el código es válido.');
+      log('Tardó aproximadamente ' + seg + ' segundos desde el envío.');
+      log('Teléfono verificado por Firebase: ' + (r.user && r.user.phoneNumber));
+      msg('Funciona. El SMS llegó en ~' + seg + ' segundos y el código fue válido. Podemos usar este método para el portal.');
+      // No dejamos la sesion abierta: esto es solo una prueba.
+      firebase.auth().signOut().then(function(){ log('Sesión de prueba cerrada.'); });
+      $('b2').textContent='Verificado';
+    })
+    .catch(function(e){
+      $('b2').disabled=false; $('b2').textContent='Verificar código';
+      log('FALLO al verificar: ' + (e.code||'') + ' — ' + (e.message||e));
+      msg('El código no es válido o expiró. Detalle: ' + (e.code||e.message), true);
+    });
+}
+</script>
+</body>
+</html>
