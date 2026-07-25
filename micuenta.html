@@ -75,6 +75,8 @@ input::placeholder{color:var(--ink-4);font-weight:500}
 .t-gray{background:var(--off-2);color:var(--ink-3)}
 .empty{text-align:center;color:var(--ink-4);font-size:13px;font-weight:600;padding:14px 0}
 .foot{text-align:center;font-size:11.5px;color:var(--ink-4);font-weight:600;margin-top:24px;line-height:1.6}
+.e164{font-family:ui-monospace,Menlo,monospace;font-size:13.5px;font-weight:700;color:var(--p);background:rgba(37,99,235,.07);padding:8px 12px;border-radius:10px;margin-top:8px;text-align:center}
+.tiny{font-size:11.5px;color:var(--ink-4);font-weight:600;line-height:1.5;margin-top:11px;text-align:center}
 details summary{cursor:pointer;font-size:13px;font-weight:800;color:var(--p);list-style:none;padding:4px 0}
 details summary::-webkit-details-marker{display:none}
 
@@ -101,17 +103,47 @@ details summary::-webkit-details-marker{display:none}
 <div id="scLogin" class="lg">
   <div class="lg-card">
     <img id="lgLogo" alt="Pagasi">
-    <div class="lg-t">Mi Cuenta</div>
-    <div class="lg-s" id="lgSub">Ingresa tu cédula para ver el estado de tu crédito.</div>
+    <div class="lg-t" id="lgT">Mi Cuenta</div>
+    <div class="lg-s" id="lgSub">Consulta tu crédito y envía tus pagos.</div>
     <div id="lgErr" class="err hide"></div>
-    <div class="fg">
-      <label for="ced">Cédula de identidad</label>
-      <input id="ced" type="tel" inputmode="numeric" placeholder="Ej: 18456789" autocomplete="off">
+
+    <!-- Paso 1: teléfono -->
+    <div id="stepTel">
+      <div class="fg">
+        <label for="tel">Tu número de teléfono</label>
+        <input id="tel" type="tel" inputmode="numeric" placeholder="04143081617" autocomplete="tel">
+        <div class="e164" id="e164">+58…</div>
+      </div>
+      <button id="btnCodigo" class="btn btn-p" onclick="pedirCodigo()">Enviar código</button>
+      <div class="tiny">Te llega un mensaje de texto con un código. Usa el mismo número que tienes registrado con Pagasi.</div>
     </div>
-    <button id="btnEntrar" class="btn btn-p" onclick="entrar()">Entrar</button>
+
+    <!-- Paso 2: código -->
+    <div id="stepCod" class="hide">
+      <div class="fg">
+        <label for="cod">Código que recibiste</label>
+        <input id="cod" type="tel" inputmode="numeric" placeholder="123456" autocomplete="one-time-code" maxlength="6">
+      </div>
+      <button id="btnVerificar" class="btn btn-p" onclick="verificarCodigo()">Entrar</button>
+      <div style="display:flex;gap:8px;margin-top:9px">
+        <button class="btn btn-g" onclick="volverATel()">Cambiar número</button>
+        <button class="btn btn-g" id="btnReenviar" onclick="pedirCodigo()">Reenviar</button>
+      </div>
+    </div>
+
+    <!-- Paso alterno: enlace personal (respaldo, solo si viene ?t= en el URL) -->
+    <div id="stepCed" class="hide">
+      <div class="fg">
+        <label for="ced">Cédula de identidad</label>
+        <input id="ced" type="tel" inputmode="numeric" placeholder="Ej: 18456789" autocomplete="off">
+      </div>
+      <button id="btnEntrar" class="btn btn-p" onclick="entrarConEnlace()">Entrar</button>
+    </div>
+
     <div style="text-align:center;margin-top:16px">
-      <a class="lnk" href="https://wa.me/584242177798?text=Hola%2C%20necesito%20ayuda%20para%20entrar%20a%20mi%20cuenta%20Pagasi" target="_blank" rel="noopener">¿Problemas para entrar? Escríbenos</a>
+      <a class="lnk" id="lgWa" href="https://wa.me/584242177798?text=Hola%2C%20necesito%20ayuda%20para%20entrar%20a%20Mi%20Cuenta%20Pagasi" target="_blank" rel="noopener">¿Problemas para entrar? Escríbenos</a>
     </div>
+    <div id="recaptcha-container"></div>
   </div>
 </div>
 
@@ -168,7 +200,7 @@ details summary::-webkit-details-marker{display:none}
 <script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <!-- Mismo motor de calculo que usa el admin: el cliente ve exactamente las
      mismas cifras que el cobrador, sin posibilidad de divergencia. -->
-<script src="logic/credito-ledger.js?v=20260725-0045"></script>
+<script src="logic/credito-ledger.js?v=20260725-0130"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
    PORTAL DEL CLIENTE — Pagasi
@@ -222,6 +254,17 @@ function initFB(){
   }catch(e){ console.error('init:',e); return false; }
 }
 
+/* ── Telefono venezolano -> E.164 (+584141234567) ─────────────────────── */
+var PREFIJOS = ['412','414','416','424','426'];
+function telE164(v){
+  var d = soloDigitos(v);
+  if(d.indexOf('58')===0 && d.length===12) d = d.slice(2);
+  else if(d.indexOf('0')===0) d = d.slice(1);
+  if(d.length !== 10) return '';
+  if(PREFIJOS.indexOf(d.slice(0,3)) === -1) return '';   // fijo: no recibe SMS
+  return '+58' + d;
+}
+
 /* ── Arranque ─────────────────────────────────────────────────────────── */
 (function boot(){
   $('lgLogo').src = LOGO; $('apLogo').src = LOGO;
@@ -230,23 +273,32 @@ function initFB(){
   S.token = qs.get('t') || '';
   S.clienteId = qs.get('c') || '';
 
+  $('tel').addEventListener('input', function(){
+    var e = telE164(this.value);
+    $('e164').textContent = e || (soloDigitos(this.value) ? 'Número no válido' : '+58…');
+    $('e164').style.color = (!e && soloDigitos(this.value).length>=10) ? 'var(--red)' : 'var(--p)';
+  });
+  $('cod').addEventListener('keydown', function(e){ if(e.key==='Enter') verificarCodigo(); });
+  $('tel').addEventListener('keydown', function(e){ if(e.key==='Enter') pedirCodigo(); });
+
   if(!initFB()){ showErr('lgErr','No se pudo conectar. Revisa tu internet e intenta de nuevo.'); return; }
 
-  // ¿Sesion previa en este telefono?
   auth.onAuthStateChanged(function(u){
-    if(!u) { prepararLogin(); return; }
+    if(!u){ prepararLogin(); return; }
     db.collection('sesiones_cliente').doc(u.uid).get().then(function(d){
       if(d.exists && d.data().clienteId){
         var ses = d.data();
-        // Si el link es de OTRO cliente, cerramos y pedimos cedula de nuevo
-        if(S.clienteId && String(ses.clienteId)!==String(S.clienteId)){
+        // Si el enlace del URL es de OTRO cliente, cerramos y volvemos a pedir
+        if(S.token && S.clienteId && String(ses.clienteId)!==String(S.clienteId)){
           return auth.signOut().then(prepararLogin);
         }
         S.clienteId = ses.clienteId; S.token = ses.token || S.token;
         cargarPortal();
-      } else {
-        prepararLogin();
+        return;
       }
+      // Autenticado por SMS pero sin sesion: la rearmamos sin gastar otro codigo
+      if(u.phoneNumber){ return abrirSesionPorTelefono(u.phoneNumber); }
+      prepararLogin();
     }).catch(function(){ prepararLogin(); });
   });
 })();
@@ -254,19 +306,124 @@ function initFB(){
 function prepararLogin(){
   $('scApp').classList.add('hide');
   $('scLogin').classList.remove('hide');
-  if(!S.token || !S.clienteId){
-    $('lgSub').innerHTML = 'Para entrar necesitas el enlace que te envía Pagasi por WhatsApp. Escríbenos y te lo mandamos.';
-    $('ced').classList.add('hide'); $('btnEntrar').classList.add('hide');
-    var w=document.createElement('a');
-    w.className='btn btn-wa'; w.href='https://wa.me/'+WA_PAGASI+'?text=Hola%2C%20quiero%20el%20enlace%20para%20entrar%20a%20Mi%20Cuenta%20Pagasi';
-    w.target='_blank'; w.rel='noopener'; w.textContent='Pedir mi enlace por WhatsApp';
-    $('btnEntrar').parentNode.insertBefore(w, $('btnEntrar'));
-  }
-  setTimeout(function(){ var c=$('ced'); if(c && !c.classList.contains('hide')) c.focus(); },250);
+  var conEnlace = !!(S.token && S.clienteId);
+  // Con enlace personal: pedimos la cedula. Sin enlace: telefono + codigo SMS.
+  $('stepCed').classList.toggle('hide', !conEnlace);
+  $('stepTel').classList.toggle('hide', conEnlace);
+  $('stepCod').classList.add('hide');
+  $('lgSub').textContent = conEnlace
+    ? 'Escribe tu cédula para entrar.'
+    : 'Consulta tu crédito y envía tus pagos.';
+  setTimeout(function(){ var f = conEnlace ? $('ced') : $('tel'); if(f) f.focus(); }, 250);
 }
 
-/* ── Entrar: canjea token + cedula por una sesion ─────────────────────── */
-function entrar(){
+function volverATel(){
+  hideErr('lgErr');
+  $('stepCod').classList.add('hide');
+  $('stepTel').classList.remove('hide');
+  $('lgT').textContent = 'Mi Cuenta';
+  $('btnCodigo').disabled = false; $('btnCodigo').textContent = 'Enviar código';
+  setTimeout(function(){ $('tel').focus(); }, 150);
+}
+
+/* ── Entrar con teléfono + código SMS (autoservicio) ──────────────────── */
+var _confirm = null, _verifier = null, _telPend = '';
+
+function pedirCodigo(){
+  hideErr('lgErr');
+  var e164 = telE164($('tel').value || _telPend);
+  if(!e164){ showErr('lgErr','Escribe tu número de celular completo (por ejemplo 04143081617).'); return; }
+  _telPend = e164;
+  var b = $('btnCodigo'); b.disabled = true; b.innerHTML = '<span class="spin"></span> Verificando...';
+
+  // Buscamos primero si el número está registrado: así no gastamos un SMS
+  // en alguien que no es cliente, y le damos un mensaje claro.
+  db.collection('indice_clientes').doc(e164).get().then(function(d){
+    if(!d.exists || !d.data().clienteId){
+      b.disabled = false; b.textContent = 'Enviar código';
+      showErr('lgErr','No encontramos ese número entre nuestros clientes. Puede estar registrado con otro número: escríbenos por WhatsApp y lo revisamos.');
+      return null;
+    }
+    S.clienteId = String(d.data().clienteId);
+    try{
+      if(!_verifier) _verifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {size:'invisible'});
+    }catch(e){ console.warn('recaptcha:', e); }
+    return auth.signInWithPhoneNumber(e164, _verifier);
+  }).then(function(res){
+    if(!res) return;
+    _confirm = res;
+    $('stepTel').classList.add('hide');
+    $('stepCod').classList.remove('hide');
+    $('lgT').textContent = 'Escribe tu código';
+    $('lgSub').textContent = 'Te enviamos un mensaje de texto al ' + e164.replace('+58','0') + '.';
+    setTimeout(function(){ $('cod').focus(); }, 200);
+  }).catch(function(e){
+    b.disabled = false; b.textContent = 'Enviar código';
+    console.error('pedirCodigo:', e);
+    var c = String((e && e.code) || '');
+    if(c.indexOf('too-many-requests')>-1) showErr('lgErr','Demasiados intentos desde este teléfono. Espera unos minutos e intenta de nuevo.');
+    else if(c.indexOf('invalid-phone-number')>-1) showErr('lgErr','El número no tiene un formato válido. Revísalo e intenta de nuevo.');
+    else if(c.indexOf('quota')>-1) showErr('lgErr','No pudimos enviar el mensaje en este momento. Escríbenos por WhatsApp y te ayudamos.');
+    else showErr('lgErr','No pudimos enviar el código. Revisa tu internet o escríbenos por WhatsApp.');
+  });
+}
+
+function verificarCodigo(){
+  hideErr('lgErr');
+  var c = soloDigitos($('cod').value);
+  if(c.length < 4){ showErr('lgErr','Escribe el código completo que te llegó.'); return; }
+  if(!_confirm){ showErr('lgErr','Pide el código de nuevo, por favor.'); return; }
+  var b = $('btnVerificar'); b.disabled = true; b.innerHTML = '<span class="spin"></span> Entrando...';
+
+  _confirm.confirm(c).then(function(r){
+    return abrirSesionPorTelefono((r.user && r.user.phoneNumber) || _telPend);
+  }).catch(function(e){
+    b.disabled = false; b.textContent = 'Entrar';
+    console.error('verificarCodigo:', e);
+    var cd = String((e && e.code) || '');
+    if(cd.indexOf('invalid-verification-code')>-1) showErr('lgErr','Ese código no es correcto. Revísalo o toca "Reenviar".');
+    else if(cd.indexOf('code-expired')>-1) showErr('lgErr','El código venció. Toca "Reenviar" para recibir uno nuevo.');
+    else showErr('lgErr','No pudimos verificar el código. Intenta de nuevo.');
+  });
+}
+
+// Con el telefono ya verificado por Firebase, abrimos la sesion. Las reglas
+// comprueban que ese telefono sea el registrado en la ficha del cliente.
+function abrirSesionPorTelefono(phone){
+  var e164 = String(phone||'');
+  var seguir = S.clienteId
+    ? Promise.resolve(S.clienteId)
+    : db.collection('indice_clientes').doc(e164).get().then(function(d){
+        if(!d.exists || !d.data().clienteId) throw new Error('sin-indice');
+        return String(d.data().clienteId);
+      });
+
+  return seguir.then(function(cid){
+    S.clienteId = cid;
+    return db.collection('sesiones_cliente').doc(auth.currentUser.uid).set({
+      clienteId: cid,
+      via: 'sms',
+      telE164: e164,
+      creadoEn: new Date().toISOString()
+    });
+  }).then(function(){
+    cargarPortal();
+  }).catch(function(e){
+    console.error('abrirSesion:', e);
+    var b = $('btnVerificar'); if(b){ b.disabled=false; b.textContent='Entrar'; }
+    prepararLogin();
+    if(String(e.message)==='sin-indice'){
+      showErr('lgErr','No encontramos ese número entre nuestros clientes. Escríbenos por WhatsApp y lo revisamos.');
+    } else if((e && e.code)==='permission-denied'){
+      showErr('lgErr','Ese número no coincide con el que tenemos registrado en tu ficha. Escríbenos por WhatsApp para actualizarlo.');
+    } else {
+      showErr('lgErr','No pudimos abrir tu cuenta. Intenta de nuevo o escríbenos por WhatsApp.');
+    }
+  });
+}
+
+/* ── Entrar con enlace personal (respaldo si el SMS no llega) ─────────── */
+function entrarConEnlace(){
   hideErr('lgErr');
   var ced = soloDigitos($('ced').value);
   if(ced.length < 5){ showErr('lgErr','Escribe tu cédula completa, solo los números.'); return; }
@@ -291,7 +448,7 @@ function entrar(){
     } else {
       showErr('lgErr','No pudimos verificarte. Intenta de nuevo o escríbenos por WhatsApp.');
     }
-    console.error('entrar:',e);
+    console.error('entrarConEnlace:',e);
   });
 }
 

@@ -104,21 +104,43 @@ service cloud.firestore {
       allow create, update, delete: if esStaff();
     }
 
-    // sesiones_cliente/{uid}: el cliente canjea token + cedula + clienteId.
-    // Las tres cosas se validan aqui contra el doc de acceso (server-side), asi
-    // que el cliente no puede inventarse de quien es.
+    // indice_clientes/{telE164}: permite que el portal encuentre al cliente ANTES
+    // de tener sesion (sin poder listar /clientes). Se lee solo con el numero
+    // exacto y contiene apenas un id interno opaco: sin ese id no se accede a
+    // nada, porque igual hace falta el codigo SMS.
+    match /indice_clientes/{telE164} {
+      allow get: if true;
+      allow list: if esStaff();
+      allow create, update, delete: if esStaff();
+    }
+
+    // sesiones_cliente/{uid}: dos formas de abrir sesion, ambas validadas aqui.
+    //  (a) SMS  — Firebase ya verifico el telefono y lo pone en el token; debe
+    //      coincidir con el telefono registrado del cliente. Es autoservicio.
+    //  (b) LINK — respaldo cuando el SMS no llega: token secreto + cedula +
+    //      clienteId, validados contra el doc de acceso.
     match /sesiones_cliente/{uid} {
       allow get: if request.auth != null && request.auth.uid == uid;
       allow list: if esStaff();
       allow create: if request.auth != null
         && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['clienteId','token','cedulaNorm','creadoEn'])
-        && request.resource.data.token is string
         && request.resource.data.clienteId is string
-        && exists(/databases/$(database)/documents/accesos_cliente/$(request.resource.data.token))
-        && get(/databases/$(database)/documents/accesos_cliente/$(request.resource.data.token)).data.activo == true
-        && get(/databases/$(database)/documents/accesos_cliente/$(request.resource.data.token)).data.clienteId == request.resource.data.clienteId
-        && get(/databases/$(database)/documents/accesos_cliente/$(request.resource.data.token)).data.cedulaNorm == request.resource.data.cedulaNorm;
+        && (
+          // (a) via SMS
+          ( request.resource.data.keys().hasOnly(['clienteId','via','telE164','creadoEn'])
+            && request.resource.data.via == 'sms'
+            && request.auth.token.phone_number != null
+            && request.resource.data.telE164 == request.auth.token.phone_number
+            && get(/databases/$(database)/documents/clientes/$(request.resource.data.clienteId)).data.telE164 == request.auth.token.phone_number )
+          ||
+          // (b) via enlace personal
+          ( request.resource.data.keys().hasOnly(['clienteId','token','cedulaNorm','creadoEn'])
+            && request.resource.data.token is string
+            && exists(/databases/$(database)/documents/accesos_cliente/$(request.resource.data.token))
+            && get(/databases/$(database)/documents/accesos_cliente/$(request.resource.data.token)).data.activo == true
+            && get(/databases/$(database)/documents/accesos_cliente/$(request.resource.data.token)).data.clienteId == request.resource.data.clienteId
+            && get(/databases/$(database)/documents/accesos_cliente/$(request.resource.data.token)).data.cedulaNorm == request.resource.data.cedulaNorm )
+        );
       allow update: if false;   // una sesion no se puede mover a otro cliente
       allow delete: if esStaff();
     }

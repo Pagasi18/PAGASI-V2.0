@@ -184,6 +184,17 @@ PG.config = function(){
   <div id="cfg-tab-pagos" style="display:${cfgTab==='pagos'?'block':'none'}">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
 
+      <div class="card" style="grid-column:1/-1">
+        <div class="ch">
+          <div><div class="ct">Portal del cliente (Mi Cuenta)</div><div class="cs">Prepara los datos para que los clientes entren con su teléfono y código SMS</div></div>
+          <button class="btn btn-p btn-sm" onclick="portalNormalizar()">Revisar datos</button>
+        </div>
+        <div style="font-size:11.5px;color:var(--ink3);line-height:1.6;margin-top:8px">
+          Normaliza las cédulas y los teléfonos de todos los clientes a un formato único y arma el índice que usa el portal.
+          Primero muestra un informe de lo que va a cambiar; no escribe nada hasta que lo confirmes.
+        </div>
+      </div>
+
       <div class="card">
         <div class="ch">
           <div><div class="ct">Cuentas Bancarias</div><div class="cs">Métodos disponibles para cobros y pagos</div></div>
