@@ -62,6 +62,16 @@ function portalAcceso(clienteId){
         return {token:token, data:payload, nuevo:true};
       });
     })
+    // Restaurar tambien la entrada del indice: asi devolver el acceso rehabilita
+    // la entrada por SMS y "revocar" no queda como algo irreversible.
+    .then(function(res){
+      var tel = (typeof _pTelE164==='function') ? _pTelE164(cli.tel) : '';
+      if(!tel) return res;
+      return db.collection('indice_clientes').doc(tel)
+        .set({clienteId:String(clienteId), actualizadoEn:new Date().toISOString()})
+        .then(function(){ return res; })
+        .catch(function(){ return res; });
+    })
     .then(function(res){
       var link = _pBaseUrl() + '?t=' + encodeURIComponent(res.token) + '&c=' + encodeURIComponent(clienteId);
       var tel = _pDigitos(cli.tel);
@@ -102,15 +112,55 @@ function portalCopiar(link){
   }catch(e){ toast('Copia el enlace manualmente','info'); }
 }
 
+// Revocar de VERDAD. Hay tres puertas y hay que cerrar las tres:
+//   1. el enlace personal  -> accesos_cliente.activo = false
+//   2. la sesion ya abierta -> borrar sesiones_cliente (si no, el que ya entro
+//      sigue viendo su informacion aunque le "quites" el acceso)
+//   3. la entrada por SMS  -> borrar del indice; si no, pide otro codigo y entra
 function portalRevocar(token, clienteId){
-  if(!confirm('¿Revocar el acceso al portal? El cliente ya no podrá entrar con ese enlace.')) return;
-  db.collection('accesos_cliente').doc(token).update({activo:false, revocadoEn:new Date().toISOString()})
+  if(!confirm('¿Revocar el acceso al portal?\n\n· Se invalida su enlace personal\n· Se cierra la sesión que tenga abierta ahora\n· No podrá entrar con el código por SMS\n\nPuedes devolverle el acceso después con el mismo botón Portal.')) return;
+
+  var cid = String(clienteId);
+  var cli = (S.clientes||[]).find(function(x){ return String(x.id)===cid; }) || {};
+  var tel = (typeof _pTelE164==='function') ? _pTelE164(cli.tel) : '';
+  var cerradas = 0;
+
+  // 1. Desactivar TODOS los accesos activos del cliente (no solo el que se ve)
+  db.collection('accesos_cliente').where('clienteId','==',cid).where('activo','==',true).get()
+    .then(function(snap){
+      var ops = snap.docs.map(function(d){
+        return d.ref.update({activo:false, revocadoEn:new Date().toISOString()});
+      });
+      // por si el token abierto en pantalla no salio en la consulta
+      if(token && !snap.docs.some(function(d){ return d.id===token; })){
+        ops.push(db.collection('accesos_cliente').doc(token)
+          .update({activo:false, revocadoEn:new Date().toISOString()}).catch(function(){}));
+      }
+      return Promise.all(ops);
+    })
+    // 2. Cerrar las sesiones abiertas
     .then(function(){
-      toast('Acceso revocado','success');
-      if(typeof logActividad==='function') logActividad('portal_acceso_revocado','clientes',clienteId,{token:token});
+      return db.collection('sesiones_cliente').where('clienteId','==',cid).get();
+    })
+    .then(function(snap){
+      cerradas = snap.size;
+      return Promise.all(snap.docs.map(function(d){ return d.ref.delete(); }));
+    })
+    // 3. Quitarlo del indice para que no pueda entrar con SMS
+    .then(function(){
+      if(!tel) return null;
+      return db.collection('indice_clientes').doc(tel).delete().catch(function(){});
+    })
+    .then(function(){
+      toast('Acceso revocado' + (cerradas ? ' · ' + cerradas + ' sesión(es) cerrada(s)' : ''), 'success');
+      if(typeof logActividad==='function') logActividad('portal_acceso_revocado','clientes',cid,
+        {token:token, sesionesCerradas:cerradas, indiceBorrado:!!tel});
       closeM();
     })
-    .catch(function(e){ toast('No se pudo revocar: '+(e.message||e),'error'); });
+    .catch(function(e){
+      console.error('portalRevocar:', e);
+      toast('No se pudo revocar del todo: '+(e.message||e),'error');
+    });
 }
 
 // ── 2. Bandeja de comprobantes ──────────────────────────────────────────
