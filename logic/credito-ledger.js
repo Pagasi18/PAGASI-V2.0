@@ -145,10 +145,20 @@
       aplicaciones = aplicaciones.concat(desc.aplicaciones);
     }
 
+    // La mora se RECALCULA aqui, ya con los pagos aplicados. crearCalendario-
+    // Cuotas la calcula sobre el calendario "en seco" (todas las cuotas con su
+    // saldo completo), asi que una cuota pagada tarde seguia contando como mora
+    // para siempre: un credito al dia con historial de atraso reportaba mora.
+    // Solo debe contar la mora de lo que HOY sigue sin pagarse.
+    var hoyRef = opts.today ? dateFromISO(opts.today) : dateFromISO(isoDate(new Date()));
+    var graciaRef = opts.diasGracia != null ? i(opts.diasGracia) : 5;
     cuotas.forEach(function(c){
       c.aplicaciones = aplicaciones.filter(function(a){ return a.cuota === c.numero; });
-      if(c.saldo <= 0.001) c.estado = 'pagada';
-      else if(c.pagado > 0.001 && c.estado !== 'mora') c.estado = 'parcial';
+      if(c.saldo <= 0.001){ c.diasMora = 0; c.estado = 'pagada'; return; }
+      var venceRef = dateFromISO(c.fechaVence);
+      var atraso = (venceRef && hoyRef) ? Math.floor((hoyRef.getTime() - venceRef.getTime()) / DAY_MS) : 0;
+      c.diasMora = atraso > graciaRef ? atraso : 0;
+      c.estado = c.diasMora > 0 ? 'mora' : (c.pagado > 0.001 ? 'parcial' : 'pendiente');
     });
 
     var pagadas = 0;
