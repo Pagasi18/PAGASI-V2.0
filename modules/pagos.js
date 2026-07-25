@@ -162,6 +162,9 @@ PG.pagos = function(){
     ]
   )}
 
+  <!-- Comprobantes que subieron los clientes desde Mi Cuenta (portal) -->
+  ${typeof portalComprobantesCard==='function' ? portalComprobantesCard() : ''}
+
   ${isEmpleadoRole() ? '' : `
   <!-- KPI cards -->
   <div class="sg" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:14px">

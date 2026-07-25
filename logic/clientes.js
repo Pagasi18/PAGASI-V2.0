@@ -773,7 +773,7 @@ function verCliente(id){
   $('mbd').innerHTML = html;
 
   var _credActivoId = creditos.length>0 ? creditos.find(function(cr){return cr.estado==='activo';})||creditos[0] : null;
-  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button>${_credActivoId?`<button class="btn btn-g" onclick="closeM();openAmort('${_credActivoId.id}')">Ver crédito</button>`:''}<button class="btn btn-p" onclick="closeM();editCliente('${id}')">Editar</button>${creditosCompletados.length?`<button class="btn btn-s btn-sm" onclick="abrirFiniquito('${creditosCompletados[creditosCompletados.length-1].id}')">Ver Finiquito</button>`:''}`;
+  $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cerrar</button>${_credActivoId?`<button class="btn btn-g" onclick="closeM();openAmort('${_credActivoId.id}')">Ver crédito</button>`:''}<button class="btn btn-g" onclick="portalAcceso('${id}')" title="Generar el enlace de Mi Cuenta para este cliente">Portal</button><button class="btn btn-p" onclick="closeM();editCliente('${id}')">Editar</button>${creditosCompletados.length?`<button class="btn btn-s btn-sm" onclick="abrirFiniquito('${creditosCompletados[creditosCompletados.length-1].id}')">Ver Finiquito</button>`:''}`;
   $('ov').style.display='flex';
 
   // Render charts después de que el DOM esté visible

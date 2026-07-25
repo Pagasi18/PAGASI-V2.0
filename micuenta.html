@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#2563EB">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<title>Mi Cuenta — Pagasi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --p:#2563EB;--p-d:#1D4ED8;--p-l:#3B82F6;
+  --ink:#0A0A0F;--ink-2:#3D3D4E;--ink-3:#7A7A8C;--ink-4:#ADADBC;
+  --line:rgba(0,0,0,.08);--white:#fff;--off:#F5F6FA;--off-2:#EEF0F7;
+  --green:#00A854;--green-bg:#E6F7EE;
+  --red:#E8335A;--red-bg:#FDECF0;
+  --amber:#E08700;--amber-bg:#FFF6E5;
+  --r:14px;--rl:20px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Manrope',-apple-system,'Helvetica Neue',Arial,sans-serif;background:var(--off);color:var(--ink);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5}
+.money{font-family:Georgia,'Times New Roman',serif;font-weight:700;letter-spacing:-.5px}
+.wrap{max-width:520px;margin:0 auto;padding:0 16px 40px}
+.hide{display:none!important}
+
+/* ── Topbar ── */
+.top{background:var(--white);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50}
+.top-in{max-width:520px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.top img{height:26px;width:auto;display:block}
+.who{font-size:11.5px;font-weight:700;color:var(--ink-3);text-align:right;line-height:1.3}
+.lnk{background:none;border:none;font-family:inherit;font-size:11.5px;font-weight:700;color:var(--p);cursor:pointer;padding:0;text-decoration:underline}
+
+/* ── Login ── */
+.lg{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px 20px;background:linear-gradient(165deg,#2563EB,#1D4ED8)}
+.lg-card{background:var(--white);border-radius:24px;padding:30px 24px;width:100%;max-width:400px;box-shadow:0 20px 50px rgba(0,0,0,.22)}
+.lg-card img{height:34px;margin:0 auto 20px;display:block}
+.lg-t{font-size:20px;font-weight:800;letter-spacing:-.5px;text-align:center;margin-bottom:6px}
+.lg-s{font-size:13.5px;color:var(--ink-3);text-align:center;margin-bottom:22px;line-height:1.5}
+label{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-3);margin-bottom:7px}
+input,select,textarea{width:100%;font-family:inherit;font-size:16px;font-weight:600;color:var(--ink);background:var(--off);border:1.5px solid var(--line);border-radius:var(--r);padding:14px 15px;outline:none;transition:.15s}
+input:focus,select,textarea:focus{border-color:var(--p);background:var(--white)}
+input::placeholder{color:var(--ink-4);font-weight:500}
+.btn{width:100%;font-family:inherit;font-size:15.5px;font-weight:800;border:none;border-radius:var(--r);padding:15px;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-p{background:var(--p);color:#fff}
+.btn-p:active{background:var(--p-d)}
+.btn-p:disabled{opacity:.55;cursor:default}
+.btn-g{background:var(--off-2);color:var(--ink-2)}
+.btn-wa{background:#25D366;color:#fff}
+.err{background:var(--red-bg);color:#B3123B;font-size:13px;font-weight:600;padding:11px 13px;border-radius:11px;margin-bottom:14px;line-height:1.45}
+.ok{background:var(--green-bg);color:#00713A;font-size:13px;font-weight:600;padding:11px 13px;border-radius:11px;margin-bottom:14px;line-height:1.45}
+
+/* ── Cards ── */
+.card{background:var(--white);border:1px solid var(--line);border-radius:var(--rl);padding:18px;margin-top:14px}
+.ct{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--ink-3);margin-bottom:12px}
+.hero{background:linear-gradient(160deg,var(--p-l),var(--p-d));color:#fff;border:none;padding:22px 20px}
+.hero .lb{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;opacity:.82}
+.hero .big{font-size:44px;line-height:1.05;margin:6px 0 2px}
+.hero .sm{font-size:13px;font-weight:600;opacity:.9}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;padding:5px 11px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px}
+.pill-ok{background:rgba(255,255,255,.22);color:#fff}
+.pill-bad{background:#fff;color:var(--red)}
+.bar{height:9px;background:var(--off-2);border-radius:6px;overflow:hidden;margin:10px 0 7px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--p-l),var(--p));border-radius:6px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:none;padding-bottom:0}
+.row:first-of-type{padding-top:0}
+.rl{font-size:13.5px;font-weight:600;color:var(--ink-2)}
+.rl small{display:block;font-size:11.5px;color:var(--ink-4);font-weight:600;margin-top:2px}
+.rv{font-size:14.5px;font-weight:800;white-space:nowrap}
+.tag{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.t-ok{background:var(--green-bg);color:var(--green)}
+.t-bad{background:var(--red-bg);color:var(--red)}
+.t-wait{background:var(--amber-bg);color:var(--amber)}
+.t-gray{background:var(--off-2);color:var(--ink-3)}
+.empty{text-align:center;color:var(--ink-4);font-size:13px;font-weight:600;padding:14px 0}
+.foot{text-align:center;font-size:11.5px;color:var(--ink-4);font-weight:600;margin-top:24px;line-height:1.6}
+details summary{cursor:pointer;font-size:13px;font-weight:800;color:var(--p);list-style:none;padding:4px 0}
+details summary::-webkit-details-marker{display:none}
+
+/* ── Modal ── */
+.ov{position:fixed;inset:0;background:rgba(10,10,15,.55);z-index:100;display:flex;align-items:flex-end;justify-content:center;padding:0}
+.md{background:var(--white);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;padding:22px 18px 28px}
+.md-t{font-size:18px;font-weight:800;letter-spacing:-.3px;margin-bottom:4px}
+.md-s{font-size:13px;color:var(--ink-3);margin-bottom:18px;line-height:1.5}
+.fg{margin-bottom:14px}
+.fgr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.drop{border:2px dashed var(--line);border-radius:var(--r);padding:22px 14px;text-align:center;cursor:pointer;background:var(--off)}
+.drop.on{border-color:var(--p);background:rgba(37,99,235,.05)}
+.drop .dt{font-size:13.5px;font-weight:700;color:var(--p);margin-top:6px}
+.drop .ds{font-size:11.5px;color:var(--ink-4);font-weight:600;margin-top:3px}
+.prev{max-width:100%;max-height:170px;border-radius:11px;margin-top:10px;display:block}
+.spin{width:17px;height:17px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(min-width:521px){.ov{align-items:center}.md{border-radius:24px}}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="scLogin" class="lg">
+  <div class="lg-card">
+    <img id="lgLogo" alt="Pagasi">
+    <div class="lg-t">Mi Cuenta</div>
+    <div class="lg-s" id="lgSub">Ingresa tu cédula para ver el estado de tu crédito.</div>
+    <div id="lgErr" class="err hide"></div>
+    <div class="fg">
+      <label for="ced">Cédula de identidad</label>
+      <input id="ced" type="tel" inputmode="numeric" placeholder="Ej: 18456789" autocomplete="off">
+    </div>
+    <button id="btnEntrar" class="btn btn-p" onclick="entrar()">Entrar</button>
+    <div style="text-align:center;margin-top:16px">
+      <a class="lnk" href="https://wa.me/584242177798?text=Hola%2C%20necesito%20ayuda%20para%20entrar%20a%20mi%20cuenta%20Pagasi" target="_blank" rel="noopener">¿Problemas para entrar? Escríbenos</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PORTAL ══ -->
+<div id="scApp" class="hide">
+  <div class="top"><div class="top-in">
+    <img id="apLogo" alt="Pagasi">
+    <div>
+      <div class="who" id="apWho"></div>
+      <button class="lnk" onclick="salir()">Salir</button>
+    </div>
+  </div></div>
+  <div class="wrap" id="apBody"></div>
+</div>
+
+<!-- ══ MODAL REPORTAR PAGO ══ -->
+<div id="ovPago" class="ov hide">
+  <div class="md">
+    <div class="md-t">Reportar mi pago</div>
+    <div class="md-s">Sube la foto del comprobante. Nuestro equipo lo revisa y lo aplica a tu crédito.</div>
+    <div id="pgErr" class="err hide"></div>
+    <div class="fgr">
+      <div class="fg"><label for="pMonto">Monto pagado (USD)</label><input id="pMonto" type="number" step="0.01" inputmode="decimal" placeholder="0.00"></div>
+      <div class="fg"><label for="pFecha">Fecha del pago</label><input id="pFecha" type="date"></div>
+    </div>
+    <div class="fg">
+      <label for="pMetodo">¿Cómo pagaste?</label>
+      <select id="pMetodo">
+        <option value="Binance">Binance</option>
+        <option value="Transferencia USD">Transferencia o depósito en dólares</option>
+        <option value="Efectivo">Efectivo</option>
+        <option value="Otro">Otro</option>
+      </select>
+    </div>
+    <div class="fg"><label for="pRef">N° de referencia (opcional)</label><input id="pRef" type="text" placeholder="Referencia del banco o Binance"></div>
+    <div class="fg">
+      <label>Foto del comprobante</label>
+      <div class="drop" id="pDrop" onclick="document.getElementById('pFile').click()">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round"><path d="M12 16V4m0 0L8 8m4-4l4 4"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        <div class="dt" id="pDropT">Toca para subir la foto</div>
+        <div class="ds">Imagen o PDF, máximo 8 MB</div>
+      </div>
+      <input id="pFile" type="file" accept="image/*,application/pdf" class="hide" onchange="prevFile(this)">
+      <img id="pPrev" class="prev hide" alt="">
+    </div>
+    <button id="btnEnviar" class="btn btn-p" onclick="enviarComprobante()">Enviar comprobante</button>
+    <button class="btn btn-g" style="margin-top:9px" onclick="cerrarPago()">Cancelar</button>
+  </div>
+</div>
+
+<script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+<!-- Mismo motor de calculo que usa el admin: el cliente ve exactamente las
+     mismas cifras que el cobrador, sin posibilidad de divergencia. -->
+<script src="logic/credito-ledger.js?v=20260725-0045"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   PORTAL DEL CLIENTE — Pagasi
+   Acceso: link con token (?t=) + clienteId (?c=) + cedula como 2do factor.
+   El doc accesos_cliente NO es legible por el cliente: la validacion de
+   token+cedula+clienteId la hacen las reglas de Firestore (server-side).
+   Disenado para que el codigo por WhatsApp reemplace el link sin rehacer nada:
+   solo cambia como llega el token (ver enviarCodigoWhatsApp()).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+var FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyDt07EYdmvIqjU5a9CGPMQdYz8iBJ69Su8',
+  authDomain: 'pagasi-v2.firebaseapp.com',
+  projectId: 'pagasi-v2',
+  storageBucket: 'pagasi-v2.firebasestorage.app',
+  messagingSenderId: '951911859002',
+  appId: '1:951911859002:web:1eb8f0af7bcbd508474603'
+};
+var DIAS_GRACIA = 5;          // igual que PLAN.diasGracia del admin
+var WA_PAGASI = '584242177798';
+var LOGO = 'assets/pagasi-logo.png';
+
+var app=null, auth=null, db=null, storage=null;
+var S = { clienteId:'', token:'', cliente:null, creditos:[], pagosPorCred:{}, comprobantes:[], credSel:'' };
+
+function $(id){ return document.getElementById(id); }
+function soloDigitos(s){ return String(s||'').replace(/\D/g,''); }
+function fmt(n){ return '$ ' + (parseFloat(n)||0).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function hoyISO(){ var d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+function fechaLarga(iso){
+  if(!iso) return '';
+  var p=String(iso).slice(0,10).split('-'); if(p.length!==3) return iso;
+  return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
+}
+function fechaCorta(iso){
+  if(!iso) return '';
+  var p=String(iso).slice(0,10).split('-'); if(p.length!==3) return iso;
+  return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString('es-VE',{day:'2-digit',month:'short'});
+}
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showErr(id,msg){ var e=$(id); e.textContent=msg; e.classList.remove('hide'); }
+function hideErr(id){ $(id).classList.add('hide'); }
+
+function initFB(){
+  try{
+    if(typeof firebase==='undefined') return false;
+    app = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
+    auth = firebase.auth(app); db = firebase.firestore(app);
+    try{ storage = firebase.storage(app); }catch(e){ storage=null; }
+    return true;
+  }catch(e){ console.error('init:',e); return false; }
+}
+
+/* ── Arranque ─────────────────────────────────────────────────────────── */
+(function boot(){
+  $('lgLogo').src = LOGO; $('apLogo').src = LOGO;
+  $('pFecha').value = hoyISO();
+  var qs = new URLSearchParams(location.search);
+  S.token = qs.get('t') || '';
+  S.clienteId = qs.get('c') || '';
+
+  if(!initFB()){ showErr('lgErr','No se pudo conectar. Revisa tu internet e intenta de nuevo.'); return; }
+
+  // ¿Sesion previa en este telefono?
+  auth.onAuthStateChanged(function(u){
+    if(!u) { prepararLogin(); return; }
+    db.collection('sesiones_cliente').doc(u.uid).get().then(function(d){
+      if(d.exists && d.data().clienteId){
+        var ses = d.data();
+        // Si el link es de OTRO cliente, cerramos y pedimos cedula de nuevo
+        if(S.clienteId && String(ses.clienteId)!==String(S.clienteId)){
+          return auth.signOut().then(prepararLogin);
+        }
+        S.clienteId = ses.clienteId; S.token = ses.token || S.token;
+        cargarPortal();
+      } else {
+        prepararLogin();
+      }
+    }).catch(function(){ prepararLogin(); });
+  });
+})();
+
+function prepararLogin(){
+  $('scApp').classList.add('hide');
+  $('scLogin').classList.remove('hide');
+  if(!S.token || !S.clienteId){
+    $('lgSub').innerHTML = 'Para entrar necesitas el enlace que te envía Pagasi por WhatsApp. Escríbenos y te lo mandamos.';
+    $('ced').classList.add('hide'); $('btnEntrar').classList.add('hide');
+    var w=document.createElement('a');
+    w.className='btn btn-wa'; w.href='https://wa.me/'+WA_PAGASI+'?text=Hola%2C%20quiero%20el%20enlace%20para%20entrar%20a%20Mi%20Cuenta%20Pagasi';
+    w.target='_blank'; w.rel='noopener'; w.textContent='Pedir mi enlace por WhatsApp';
+    $('btnEntrar').parentNode.insertBefore(w, $('btnEntrar'));
+  }
+  setTimeout(function(){ var c=$('ced'); if(c && !c.classList.contains('hide')) c.focus(); },250);
+}
+
+/* ── Entrar: canjea token + cedula por una sesion ─────────────────────── */
+function entrar(){
+  hideErr('lgErr');
+  var ced = soloDigitos($('ced').value);
+  if(ced.length < 5){ showErr('lgErr','Escribe tu cédula completa, solo los números.'); return; }
+  var b=$('btnEntrar'); b.disabled=true; b.innerHTML='<span class="spin"></span> Verificando...';
+
+  var doSignIn = auth.currentUser ? Promise.resolve(auth.currentUser) : auth.signInAnonymously().then(function(r){ return r.user; });
+  doSignIn.then(function(u){
+    // Las reglas validan token + clienteId + cedula. Si algo no cuadra -> denegado.
+    return db.collection('sesiones_cliente').doc(u.uid).set({
+      clienteId: String(S.clienteId),
+      token: String(S.token),
+      cedulaNorm: ced,
+      creadoEn: new Date().toISOString()
+    });
+  }).then(function(){
+    cargarPortal();
+  }).catch(function(e){
+    b.disabled=false; b.textContent='Entrar';
+    var code = (e && e.code) || '';
+    if(code==='permission-denied'){
+      showErr('lgErr','La cédula no coincide con este enlace, o el enlace ya no está activo. Verifica e intenta de nuevo.');
+    } else {
+      showErr('lgErr','No pudimos verificarte. Intenta de nuevo o escríbenos por WhatsApp.');
+    }
+    console.error('entrar:',e);
+  });
+}
+
+function salir(){
+  var u = auth.currentUser;
+  var fin = function(){ location.href = 'micuenta.html'; };
+  if(u){ auth.signOut().then(fin).catch(fin); } else { fin(); }
+}
+
+/* ── Cargar datos del cliente ─────────────────────────────────────────── */
+function cargarPortal(){
+  $('scLogin').classList.add('hide');
+  $('scApp').classList.remove('hide');
+  $('apBody').innerHTML = '<div class="card"><div class="empty">Cargando tu información...</div></div>';
+
+  db.collection('clientes').doc(String(S.clienteId)).get().then(function(d){
+    S.cliente = d.exists ? Object.assign({id:d.id}, d.data()) : {id:S.clienteId, nombre:'Cliente'};
+    return db.collection('creditos').where('clienteId','==',String(S.clienteId)).get();
+  }).then(function(snap){
+    S.creditos = snap.docs.map(function(x){ return Object.assign({id:x.id}, x.data()); })
+      .filter(function(c){ return !c.eliminado; })
+      .sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
+    // Pagos de cada credito (consulta por credito: pocas y acotadas)
+    return Promise.all(S.creditos.map(function(c){
+      return db.collection('pagos').where('cred','==',c.id).get()
+        .then(function(s){
+          S.pagosPorCred[c.id] = s.docs.map(function(x){ return Object.assign({id:x.id}, x.data()); })
+            .filter(function(p){ return !p.eliminado; });
+        })
+        .catch(function(){ S.pagosPorCred[c.id] = []; });
+    }));
+  }).then(function(){
+    return db.collection('comprobantes').where('clienteId','==',String(S.clienteId)).get()
+      .then(function(s){ S.comprobantes = s.docs.map(function(x){ return Object.assign({id:x.id}, x.data()); }); })
+      .catch(function(){ S.comprobantes = []; });
+  }).then(render)
+  .catch(function(e){
+    console.error('cargar:',e);
+    $('apBody').innerHTML = '<div class="card"><div class="err">No pudimos cargar tu información. Cierra y vuelve a entrar, o escríbenos por WhatsApp.</div>'
+      + '<a class="btn btn-wa" href="https://wa.me/'+WA_PAGASI+'" target="_blank" rel="noopener">Escribir a Pagasi</a></div>';
+  });
+}
+
+/* ── Estado de un credito (mismo motor que el admin) ──────────────────── */
+function estadoDe(c){
+  var pagos = S.pagosPorCred[c.id] || [];
+  var est = null;
+  try{
+    est = CreditoLedger.generarEstadoCredito(c, pagos, {diasGracia:DIAS_GRACIA, today:hoyISO()});
+  }catch(e){ est = null; }
+  if(!est) return null;
+  var hoy = hoyISO(), vencido=0, nVenc=0;
+  (est.cuotas||[]).forEach(function(q){
+    if(q && q.saldo>0.001 && q.fechaVence && q.fechaVence <= hoy){ vencido += q.saldo; nVenc++; }
+  });
+  est._vencido = Math.round(vencido*100)/100;
+  est._nVencidas = nVenc;
+  est._prox = (est.cuotas||[])[est.cuotasPagadas] || null;
+  return est;
+}
+
+function render(){
+  var cli = S.cliente || {};
+  $('apWho').textContent = String(cli.nombre||'').split(' ').slice(0,2).join(' ');
+
+  if(!S.creditos.length){
+    $('apBody').innerHTML = '<div class="card" style="margin-top:18px"><div class="ct">Mi cuenta</div>'
+      + '<div class="empty" style="padding:22px 0">Todavía no tienes créditos activos registrados a tu nombre.</div>'
+      + '<a class="btn btn-wa" href="https://wa.me/'+WA_PAGASI+'" target="_blank" rel="noopener">Escribir a Pagasi</a></div>' + pieHTML();
+    return;
+  }
+
+  var html = '';
+  S.creditos.forEach(function(c){ html += creditoHTML(c); });
+  html += comprobantesHTML();
+  html += '<div class="card"><div class="ct">¿Necesitas ayuda?</div>'
+    + '<a class="btn btn-wa" href="https://wa.me/'+WA_PAGASI+'?text=Hola%2C%20soy%20'+encodeURIComponent(cli.nombre||'')+'%20y%20tengo%20una%20consulta%20sobre%20mi%20crédito" target="_blank" rel="noopener">'
+    + 'Escribir a Pagasi por WhatsApp</a></div>';
+  html += pieHTML();
+  $('apBody').innerHTML = html;
+}
+
+function creditoHTML(c){
+  var est = estadoDe(c);
+  var moto = [c.marca, c.modelo].filter(Boolean).join(' ') || 'Motocicleta';
+  var h = '';
+
+  if(!est){
+    return '<div class="card"><div class="ct">'+esc(c.id)+'</div><div class="empty">No pudimos calcular el estado de este crédito. Escríbenos.</div></div>';
+  }
+
+  var atrasado = est._nVencidas > 0;
+  var completado = est.cuotasPagadas >= est.totalCuotas;
+
+  // ── Card principal ──
+  h += '<div class="card hero">';
+  h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">';
+  h += '<div><div class="lb">'+(completado ? 'Crédito pagado' : (atrasado ? 'Debes ahora' : 'Próxima cuota'))+'</div>';
+  var monto = completado ? 0 : (atrasado ? est._vencido : (est._prox ? est._prox.saldo : 0));
+  h += '<div class="big money">'+fmt(monto)+'</div>';
+  if(completado){
+    h += '<div class="sm">¡Terminaste de pagar! Gracias por tu confianza.</div>';
+  } else if(atrasado){
+    h += '<div class="sm">'+est._nVencidas+' '+(est._nVencidas===1?'cuota vencida':'cuotas vencidas')+'</div>';
+  } else if(est._prox){
+    h += '<div class="sm">Vence el '+fechaLarga(est._prox.fechaVence)+'</div>';
+  }
+  h += '</div>';
+  h += '<span class="pill '+(atrasado?'pill-bad':'pill-ok')+'">'+(completado?'Completado':(atrasado?'En atraso':'Al día'))+'</span>';
+  h += '</div>';
+  // progreso
+  var pct = est.totalCuotas ? Math.round(est.cuotasPagadas/est.totalCuotas*100) : 0;
+  h += '<div style="margin-top:16px"><div class="bar"><i style="width:'+pct+'%"></i></div>';
+  h += '<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;opacity:.92">';
+  h += '<span>'+est.cuotasPagadas+' de '+est.totalCuotas+' cuotas pagadas</span><span>'+pct+'%</span></div></div>';
+  h += '</div>';
+
+  if(!completado){
+    h += '<button class="btn btn-p" style="margin-top:14px" onclick="abrirPago(\''+esc(c.id)+'\')">Reportar mi pago</button>';
+  }
+
+  // ── Detalle ──
+  h += '<div class="card"><div class="ct">Mi crédito '+esc(c.id)+'</div>';
+  h += '<div class="row"><div class="rl">Mi moto<small>'+esc(c.placa && c.placa!=='—' ? 'Placa '+c.placa : (c.anio||''))+'</small></div><div class="rv">'+esc(moto)+'</div></div>';
+  h += '<div class="row"><div class="rl">Cuota</div><div class="rv money">'+fmt(c.cuotaQ||c.cuota||0)+'</div></div>';
+  h += '<div class="row"><div class="rl">Saldo total pendiente</div><div class="rv money">'+fmt(est.saldoPendiente)+'</div></div>';
+  h += '<div class="row"><div class="rl">Total pagado</div><div class="rv money" style="color:var(--green)">'+fmt(est.totalPagado)+'</div></div>';
+  if(est._prox && !completado){
+    h += '<div class="row"><div class="rl">Próximo vencimiento</div><div class="rv">'+fechaCorta(est._prox.fechaVence)+'</div></div>';
+  }
+  h += '</div>';
+
+  // ── Calendario de cuotas ──
+  h += '<div class="card"><details><summary>Ver mi calendario de cuotas</summary><div style="margin-top:10px">';
+  (est.cuotas||[]).forEach(function(q){
+    var t = q.saldo<=0.001 ? '<span class="tag t-ok">Pagada</span>'
+          : (q.fechaVence<=hoyISO() ? '<span class="tag t-bad">Vencida</span>'
+          : '<span class="tag t-gray">Pendiente</span>');
+    var pend = (q.saldo>0.001 && q.pagado>0.001) ? '<small>Abonado '+fmt(q.pagado)+' · falta '+fmt(q.saldo)+'</small>' : '';
+    h += '<div class="row"><div class="rl">Cuota '+q.numero+'<small>'+fechaCorta(q.fechaVence)+'</small>'+pend+'</div>'
+       + '<div style="display:flex;align-items:center;gap:9px"><span class="rv money">'+fmt(q.monto)+'</span>'+t+'</div></div>';
+  });
+  h += '</div></details></div>';
+
+  // ── Historial de pagos ──
+  var pagos = (S.pagosPorCred[c.id]||[]).slice().sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
+  h += '<div class="card"><div class="ct">Mis pagos ('+pagos.length+')</div>';
+  if(!pagos.length){ h += '<div class="empty">Aún no hay pagos registrados.</div>'; }
+  else {
+    pagos.slice(0,12).forEach(function(p){
+      h += '<div class="row"><div class="rl">'+fechaLarga(p.fecha)+'<small>'+esc(p.metodo||'')+(p.referencia?' · Ref '+esc(p.referencia):'')+'</small></div>'
+         + '<div class="rv money" style="color:var(--green)">'+fmt(p.monto)+'</div></div>';
+    });
+    if(pagos.length>12) h += '<div class="empty">Mostrando los 12 más recientes</div>';
+  }
+  h += '</div>';
+
+  return h;
+}
+
+function comprobantesHTML(){
+  if(!S.comprobantes.length) return '';
+  var arr = S.comprobantes.slice().sort(function(a,b){ return String(b.creadoEn||'').localeCompare(String(a.creadoEn||'')); });
+  var h = '<div class="card"><div class="ct">Comprobantes que enviaste</div>';
+  arr.forEach(function(x){
+    var t = x.estado==='aprobado' ? '<span class="tag t-ok">Aprobado</span>'
+          : x.estado==='rechazado' ? '<span class="tag t-bad">Rechazado</span>'
+          : '<span class="tag t-wait">En revisión</span>';
+    var nota = x.estado==='rechazado' && x.notaStaff ? '<small>'+esc(x.notaStaff)+'</small>' : '';
+    h += '<div class="row"><div class="rl">'+fechaLarga(x.fecha)+'<small>'+esc(x.metodo||'')+'</small>'+nota+'</div>'
+       + '<div style="display:flex;align-items:center;gap:9px"><span class="rv money">'+fmt(x.monto)+'</span>'+t+'</div></div>';
+  });
+  h += '<div style="font-size:11.5px;color:var(--ink-4);font-weight:600;margin-top:12px;line-height:1.5">Los comprobantes en revisión se aplican a tu crédito cuando nuestro equipo los confirma.</div>';
+  h += '</div>';
+  return h;
+}
+
+function pieHTML(){
+  return '<div class="foot">PAGASI 18, C.A. · RIF J-50829589-7<br>Esta información es referencial. Ante cualquier diferencia, prevalece tu contrato.</div>';
+}
+
+/* ── Reportar pago ────────────────────────────────────────────────────── */
+var _file = null;
+function abrirPago(credId){
+  S.credSel = credId; _file = null;
+  hideErr('pgErr');
+  $('pMonto').value=''; $('pRef').value=''; $('pFecha').value=hoyISO();
+  $('pPrev').classList.add('hide'); $('pPrev').src='';
+  $('pDropT').textContent='Toca para subir la foto';
+  $('pDrop').classList.remove('on');
+  $('pFile').value='';
+  var est = estadoDe(S.creditos.find(function(c){return c.id===credId;}));
+  if(est){ $('pMonto').value = (est._nVencidas>0 ? est._vencido : (est._prox ? est._prox.saldo : '')) || ''; }
+  $('ovPago').classList.remove('hide');
+  document.body.style.overflow='hidden';
+}
+function cerrarPago(){ $('ovPago').classList.add('hide'); document.body.style.overflow=''; }
+
+function prevFile(inp){
+  var f = inp.files && inp.files[0];
+  if(!f) return;
+  if(f.size > 8*1024*1024){ showErr('pgErr','La imagen es muy grande (máximo 8 MB). Toma la foto con menos calidad.'); inp.value=''; return; }
+  hideErr('pgErr');
+  _file = f;
+  $('pDrop').classList.add('on');
+  $('pDropT').textContent = 'Archivo listo: ' + (f.name.length>28 ? f.name.slice(0,25)+'...' : f.name);
+  if(/^image\//.test(f.type)){
+    var r = new FileReader();
+    r.onload = function(e){ $('pPrev').src=e.target.result; $('pPrev').classList.remove('hide'); };
+    r.readAsDataURL(f);
+  } else {
+    $('pPrev').classList.add('hide');
+  }
+}
+
+function enviarComprobante(){
+  hideErr('pgErr');
+  var monto = parseFloat($('pMonto').value);
+  var fecha = $('pFecha').value;
+  if(!monto || monto<=0){ showErr('pgErr','Escribe el monto que pagaste.'); return; }
+  if(!fecha){ showErr('pgErr','Indica la fecha del pago.'); return; }
+  if(!_file){ showErr('pgErr','Sube la foto del comprobante para que podamos verificarlo.'); return; }
+
+  var b=$('btnEnviar'); b.disabled=true; b.innerHTML='<span class="spin"></span> Enviando...';
+
+  var stamp = Date.now();
+  var ext = (_file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+  var path = 'comprobantes/'+S.clienteId+'/'+stamp+'.'+(ext||'jpg');
+
+  var subir = storage
+    ? storage.ref().child(path).put(_file).then(function(snap){ return snap.ref.getDownloadURL(); })
+    : Promise.reject(new Error('storage-no-disponible'));
+
+  subir.then(function(url){
+    return db.collection('comprobantes').add({
+      clienteId: String(S.clienteId),
+      clienteNombre: (S.cliente&&S.cliente.nombre)||'',
+      credId: String(S.credSel),
+      monto: monto,
+      fecha: fecha,
+      metodo: $('pMetodo').value || 'Otro',
+      referencia: ($('pRef').value||'').trim(),
+      fotoUrl: url,
+      fotoPath: path,
+      estado: 'pendiente',
+      origen: 'portal',
+      creadoEn: new Date().toISOString()
+    });
+  }).then(function(){
+    cerrarPago();
+    b.disabled=false; b.textContent='Enviar comprobante';
+    // Recargar para que aparezca en "Comprobantes que enviaste"
+    $('apBody').innerHTML = '<div class="card"><div class="ok">¡Recibido! Tu comprobante quedó en revisión. Te avisamos cuando se aplique a tu crédito.</div></div>';
+    setTimeout(cargarPortal, 1400);
+  }).catch(function(e){
+    console.error('comprobante:',e);
+    b.disabled=false; b.textContent='Enviar comprobante';
+    var code=(e&&e.code)||'';
+    if(String(code).indexOf('unauthorized')>-1 || code==='permission-denied'){
+      showErr('pgErr','Tu sesión expiró. Sal y vuelve a entrar con tu enlace.');
+    } else {
+      showErr('pgErr','No se pudo enviar. Revisa tu internet e intenta de nuevo, o mándanos la foto por WhatsApp.');
+    }
+  });
+}
+
+/* ── Punto de enganche para el codigo por WhatsApp (Fase 1.5) ──────────
+   Cuando Meta apruebe la plantilla, una Cloud Function generara el token y
+   lo enviara por WhatsApp. Aqui solo cambia COMO llega el token: el resto
+   del portal (sesion, reglas, lectura de datos) queda igual.
+   ------------------------------------------------------------------- */
+function enviarCodigoWhatsApp(cedula){
+  // TODO Fase 1.5: fetch a la Cloud Function que crea accesos_cliente y
+  // manda el codigo por la WhatsApp Cloud API con la linea dedicada.
+  return Promise.reject(new Error('pendiente-aprobacion-meta'));
+}
+</script>
+</body>
+</html>

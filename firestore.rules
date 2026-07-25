@@ -25,6 +25,30 @@ service cloud.firestore {
         && request.resource.data.origen == 'web';
     }
 
+    // == Identidad del CLIENTE (portal micuenta.html) ==
+    // El cliente entra con un link que lleva un token secreto + su cedula.
+    // A diferencia de las invitaciones de empleados, el doc de acceso NO es
+    // legible por el cliente: asi la cedula es un segundo factor REAL (un link
+    // filtrado no sirve sin la cedula correcta). La sesion se guarda en
+    // sesiones_cliente/{uid} y es la unica fuente de "de quien soy".
+    function esCliente() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/sesiones_cliente/$(request.auth.uid));
+    }
+    function miClienteId() {
+      return get(/databases/$(database)/documents/sesiones_cliente/$(request.auth.uid)).data.clienteId;
+    }
+    function esClienteDe(cid) {
+      return esCliente() && cid != null && miClienteId() == cid;
+    }
+    // El credito indicado pertenece al cliente de la sesion (para leer sus pagos)
+    function esMiCredito(credId) {
+      return esCliente()
+        && credId != null
+        && exists(/databases/$(database)/documents/creditos/$(credId))
+        && get(/databases/$(database)/documents/creditos/$(credId)).data.clienteId == miClienteId();
+    }
+
     // == Usuarios ==
     // Crear la ficha propia SOLO al aceptar una invitacion valida (el email del
     // doc debe coincidir con el de la cuenta, y debe existir una invitacion
@@ -72,19 +96,64 @@ service cloud.firestore {
     // == Configuracion ==
     match /config/{id} { allow read, write: if esStaff(); }
 
+    // == Portal del cliente: accesos y sesiones ==
+    // accesos_cliente/{token}: lo crea un empleado desde la ficha del cliente.
+    // Guarda clienteId + cedulaNorm (solo digitos). NUNCA legible por el cliente.
+    match /accesos_cliente/{token} {
+      allow read: if esStaff();
+      allow create, update, delete: if esStaff();
+    }
+
+    // sesiones_cliente/{uid}: el cliente canjea token + cedula + clienteId.
+    // Las tres cosas se validan aqui contra el doc de acceso (server-side), asi
+    // que el cliente no puede inventarse de quien es.
+    match /sesiones_cliente/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list: if esStaff();
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['clienteId','token','cedulaNorm','creadoEn'])
+        && request.resource.data.token is string
+        && request.resource.data.clienteId is string
+        && exists(/databases/$(database)/documents/accesos_cliente/$(request.resource.data.token))
+        && get(/databases/$(database)/documents/accesos_cliente/$(request.resource.data.token)).data.activo == true
+        && get(/databases/$(database)/documents/accesos_cliente/$(request.resource.data.token)).data.clienteId == request.resource.data.clienteId
+        && get(/databases/$(database)/documents/accesos_cliente/$(request.resource.data.token)).data.cedulaNorm == request.resource.data.cedulaNorm;
+      allow update: if false;   // una sesion no se puede mover a otro cliente
+      allow delete: if esStaff();
+    }
+
+    // == Comprobantes que sube el cliente ==
+    // NO son pagos. Entran a una cola en estado 'pendiente' y un empleado los
+    // confirma desde el admin (ahi si se crea el pago real). El cliente jamas
+    // escribe en /pagos ni puede cambiar el estado de su propio comprobante.
+    match /comprobantes/{id} {
+      allow read: if esStaff() || esClienteDe(resource.data.clienteId);
+      allow create: if esClienteDe(request.resource.data.clienteId)
+        && esMiCredito(request.resource.data.credId)   // no puede reportar sobre el credito de otro
+        && request.resource.data.estado == 'pendiente'
+        && request.resource.data.monto is number
+        && request.resource.data.monto > 0
+        && request.resource.data.monto <= 100000;
+      allow update, delete: if esStaff();
+    }
+
     // == Clientes ==
-    // Lectura y edicion: solo staff. El formulario publico puede CREAR un lead
-    // (no leer, no editar, no borrar datos existentes).
+    // Staff ve todo. El cliente lee UNICAMENTE su propia ficha (nunca list).
+    // El formulario publico puede CREAR un lead (no leer, no editar, no borrar).
     match /clientes/{id} {
-      allow read:   if esStaff();
+      allow get:    if esStaff() || esClienteDe(id);
+      allow list:   if esStaff();
       allow create: if esStaff() || (request.auth != null && esLeadWeb());
       allow update: if esStaff();
       allow delete: if esAdmin();
     }
 
     // == Resto de colecciones internas: solo staff ==
-    match /creditos/{id}          { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
-    match /pagos/{id}             { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
+    // creditos/pagos: el cliente puede LEER solo lo suyo (creditos con su
+    // clienteId, y los pagos de esos creditos). Escribir: solo staff.
+    match /creditos/{id}          { allow read: if esStaff() || esClienteDe(resource.data.clienteId); allow create, update: if esStaff(); allow delete: if esAdmin(); }
+    match /pagos/{id}             { allow read: if esStaff() || esMiCredito(resource.data.cred); allow create, update: if esStaff(); allow delete: if esAdmin(); }
     match /motos/{id}             { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
     match /facturas/{id}          { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
     match /cuentas/{id}           { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
