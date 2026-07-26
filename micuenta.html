@@ -534,8 +534,8 @@ details summary::-webkit-details-marker{display:none}
 <script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <!-- Mismo motor de calculo que usa el admin: el cliente ve exactamente las
      mismas cifras que el cobrador, sin posibilidad de divergencia. -->
-<script src="logic/credito-ledger.js?v=20260725-2227"></script>
-<script src="logic/gamificacion.js?v=20260725-2227"></script>
+<script src="logic/credito-ledger.js?v=20260725-2229"></script>
+<script src="logic/gamificacion.js?v=20260725-2229"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
    PORTAL DEL CLIENTE — Pagasi
@@ -1117,11 +1117,13 @@ function render(){
 /* La pagina se arma sola al entrar: las tarjetas suben escalonadas, el anillo
    de la moto se llena y las barras crecen. Es lo que separa "una lista de
    datos" de "una app". Respeta prefers-reduced-motion via CSS. */
-function animarEntrada(){
-  var bloques = $('apBody').querySelectorAll('.rev');
+function animarEntrada(cont){
+  var raiz = cont || $('apBody');
+  var bloques = raiz.querySelectorAll('.rev');
   [].forEach.call(bloques, function(el, i){
     setTimeout(function(){ el.classList.add('in'); }, 60 + i * 70);
   });
+  if(cont) return;   // la pantalla de racha anima sus propias barras
   // Anillo y barras: arrancan en 0 y van al valor real una vez pintado.
   // Con setTimeout y NO requestAnimationFrame: rAF no corre en pestañas en
   // segundo plano, asi que si el cliente abria la pagina y se iba a otra app,
@@ -1311,11 +1313,14 @@ function abrirRacha(credId){
   $('scRacha').classList.remove('hide');
   $('scRacha').scrollTop = 0;
   document.body.style.overflow = 'hidden';
-  // La barra crece al entrar (arranca en 0 por CSS)
+  // Las tarjetas de esta pantalla tambien llevan .rev (opacidad 0): sin esto
+  // quedaban invisibles, porque animarEntrada solo recorria #apBody.
+  animarEntrada($('rcBody'));
+  // La barra de meta crece al entrar (arranca en 0 por CSS)
   setTimeout(function(){
     var b = $('rcBody').querySelector('.rc-meta i');
     if(b) b.style.width = b.getAttribute('data-w') + '%';
-  }, 220);
+  }, 240);
 }
 
 function cerrarRacha(){
