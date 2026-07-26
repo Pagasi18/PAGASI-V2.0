@@ -1505,8 +1505,9 @@ function nextCredId(){
 // que un contador nuevo (o atrasado por una importacion) nunca entregue
 // un numero que ya esta en uso.
 // ════════════════════════════════════════════════════════════════════
-function reservarNumero(nombre, minimo){
+function reservarNumero(nombre, minimo, intentos){
   var ref = db.collection('contadores').doc(String(nombre));
+  var quedan = intentos == null ? 6 : intentos;
   return db.runTransaction(function(tx){
     return tx.get(ref).then(function(d){
       var actual = (d.exists && typeof d.data().ultimo === 'number') ? d.data().ultimo : 0;
@@ -1514,6 +1515,15 @@ function reservarNumero(nombre, minimo){
       tx.set(ref, { ultimo: siguiente, actualizado: new Date().toISOString() }, { merge:true });
       return siguiente;
     });
+  }).catch(function(e){
+    // Con varios vendedores guardando al mismo tiempo la transaccion puede
+    // agotar sus reintentos internos. Reintentamos con espera creciente.
+    // NUNCA devolvemos un numero calculado localmente: seria justamente el
+    // numero repetido que borro los creditos 271 y 313.
+    if(quedan <= 0) throw e;
+    var espera = (7 - quedan) * 120;
+    return new Promise(function(res){ setTimeout(res, espera); })
+      .then(function(){ return reservarNumero(nombre, minimo, quedan - 1); });
   });
 }
 
@@ -1532,33 +1542,27 @@ function _maxNumeroDe(coleccion, regex){
   });
 }
 
+// Si la reserva no se puede hacer, estas funciones RECHAZAN. Antes caian en un
+// fallback que calculaba el numero con la lista local, y ese es precisamente el
+// numero repetido que destruye ventas. Es mejor no crear el credito y avisar,
+// que crearlo encima del de otro cliente.
 function nextCredIdAsync(){
   if(!db) return Promise.resolve(nextCredId());
   return _maxNumeroDe('creditos', /CRED-(\d+)/)
     .then(function(max){ return reservarNumero('creditos', max); })
-    .then(function(n){ return 'CRED-' + String(n).padStart(3, '0'); })
-    .catch(function(e){
-      // Sin red: devolvemos el tentativo local. La red de seguridad real es
-      // DB.crearCred(), que se niega a escribir sobre un ID ya ocupado.
-      console.error('reservarNumero creditos:', e && e.message);
-      return nextCredId();
-    });
+    .then(function(n){ return 'CRED-' + String(n).padStart(3, '0'); });
 }
 
 function nextClienteIdAsync(){
-  var local = function(){ return (S&&S.clientes&&S.clientes.length)?Math.max.apply(null,S.clientes.map(function(x){return parseInt(x.id,10)||0;}))+1:1; };
-  if(!db) return Promise.resolve(local());
+  if(!db) return Promise.resolve((S&&S.clientes&&S.clientes.length)?Math.max.apply(null,S.clientes.map(function(x){return parseInt(x.id,10)||0;}))+1:1);
   return _maxNumeroDe('clientes', null)
-    .then(function(max){ return reservarNumero('clientes', max); })
-    .catch(function(e){ console.error('reservarNumero clientes:', e && e.message); return local(); });
+    .then(function(max){ return reservarNumero('clientes', max); });
 }
 
 function nextMotoIdAsync(){
-  var local = function(){ return (S&&S.motos&&S.motos.length)?Math.max.apply(null,S.motos.map(function(x){return parseInt(x.id,10)||0;}))+1:1; };
-  if(!db) return Promise.resolve(local());
+  if(!db) return Promise.resolve((S&&S.motos&&S.motos.length)?Math.max.apply(null,S.motos.map(function(x){return parseInt(x.id,10)||0;}))+1:1);
   return _maxNumeroDe('motos', null)
-    .then(function(max){ return reservarNumero('motos', max); })
-    .catch(function(e){ console.error('reservarNumero motos:', e && e.message); return local(); });
+    .then(function(max){ return reservarNumero('motos', max); });
 }
 
 function esMovimientoInicialCredito(m){

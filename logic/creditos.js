@@ -2271,7 +2271,12 @@ function _wzGuardar(){
   _wzClose();
   nav('creditos');
   toast(' Solicitud creada · '+credId+' · Inicial '+fmt(r.ini)+' → '+iniMetodo,'success');
-  }); // end nextCredIdAsync
+  }).catch(function(e){   // no se pudo reservar el numero: NO creamos nada
+    console.error('reservar numero de credito:', e);
+    alert('No se pudo reservar el número del crédito.\n\n'
+        + 'NO se guardó nada y NO se sobrescribió ninguna venta. '
+        + 'Revisa tu conexión y presiona Guardar otra vez.');
+  });
   }); // end nextClienteIdAsync
 }
 
