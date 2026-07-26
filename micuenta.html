@@ -435,8 +435,8 @@ details summary::-webkit-details-marker{display:none}
 <script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <!-- Mismo motor de calculo que usa el admin: el cliente ve exactamente las
      mismas cifras que el cobrador, sin posibilidad de divergencia. -->
-<script src="logic/credito-ledger.js?v=20260725-2011"></script>
-<script src="logic/gamificacion.js?v=20260725-2011"></script>
+<script src="logic/credito-ledger.js?v=20260725-2014"></script>
+<script src="logic/gamificacion.js?v=20260725-2014"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
    PORTAL DEL CLIENTE — Pagasi
@@ -527,6 +527,12 @@ function telE164(v){
   $('stPass').addEventListener('keydown', function(e){ if(e.key==='Enter') loginStaff(); });
   $('stEmail').addEventListener('keydown', function(e){ if(e.key==='Enter') $('stPass').focus(); });
   $('psQ').addEventListener('input', function(){ pintarSelector(this.value); });
+  // Red de seguridad del anillo: si la pestaña estaba dormida cuando toco
+  // animar, al volver a primer plano ponemos los valores. Se registra una sola
+  // vez aqui (dentro de render se acumularia un listener por cada cliente).
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible') aplicarValores();
+  });
 
   if(!initFB()){ showErr('lgErr','No se pudo conectar. Revisa tu internet e intenta de nuevo.'); return; }
 
@@ -1017,15 +1023,20 @@ function animarEntrada(){
   [].forEach.call(bloques, function(el, i){
     setTimeout(function(){ el.classList.add('in'); }, 60 + i * 70);
   });
-  // Anillo y barras: arrancan en 0 y van al valor real una vez pintado
-  requestAnimationFrame(function(){ setTimeout(function(){
-    [].forEach.call($('apBody').querySelectorAll('.ring .rfg'), function(el){
-      el.style.strokeDashoffset = el.getAttribute('data-off');
-    });
-    [].forEach.call($('apBody').querySelectorAll('.nbar i[data-w]'), function(el){
-      el.style.width = el.getAttribute('data-w') + '%';
-    });
-  }, 260); });
+  // Anillo y barras: arrancan en 0 y van al valor real una vez pintado.
+  // Con setTimeout y NO requestAnimationFrame: rAF no corre en pestañas en
+  // segundo plano, asi que si el cliente abria la pagina y se iba a otra app,
+  // volvia y encontraba el anillo vacio para siempre.
+  setTimeout(aplicarValores, 240);
+}
+
+function aplicarValores(){
+  [].forEach.call($('apBody').querySelectorAll('.ring .rfg'), function(el){
+    el.style.strokeDashoffset = el.getAttribute('data-off');
+  });
+  [].forEach.call($('apBody').querySelectorAll('.nbar i[data-w]'), function(el){
+    el.style.width = el.getAttribute('data-w') + '%';
+  });
 }
 
 var ICO_MOTO = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="17" r="3"/><circle cx="19" cy="17" r="3"/><path d="M5 17h3l3-5h6l2 5"/><path d="M14 12l-2-4h-3"/><path d="M16 8h3"/></svg>';
