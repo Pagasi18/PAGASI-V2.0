@@ -1488,35 +1488,77 @@ function nextCredId(){
   });
   return 'CRED-' + String(max + 1).padStart(3, '0');
 }
-function nextCredIdAsync(){
-  // Consulta Firestore en tiempo real para evitar colisión de IDs entre vendedores
-  if(!db) return Promise.resolve(nextCredId());
-  return db.collection('creditos').get().then(function(snap){
+// ════════════════════════════════════════════════════════════════════
+// RESERVA ATOMICA DE NUMEROS
+//
+// Antes, el siguiente numero se sacaba leyendo el maximo existente y
+// sumandole 1. Entre esa lectura y el guardado pasan segundos, asi que
+// dos vendedores guardando a la vez obtenian EL MISMO numero, y el
+// segundo `set()` sobrescribia el credito del primero sin avisar.
+// Paso de verdad: CRED-271 y CRED-313 (jul-2026).
+//
+// Ahora el numero se reserva dentro de una transaccion de Firestore
+// sobre contadores/{coleccion}. La transaccion serializa a los
+// vendedores: si dos piden a la vez, uno recibe N y el otro N+1.
+//
+// `minimo` siembra el contador con el maximo realmente existente, para
+// que un contador nuevo (o atrasado por una importacion) nunca entregue
+// un numero que ya esta en uso.
+// ════════════════════════════════════════════════════════════════════
+function reservarNumero(nombre, minimo){
+  var ref = db.collection('contadores').doc(String(nombre));
+  return db.runTransaction(function(tx){
+    return tx.get(ref).then(function(d){
+      var actual = (d.exists && typeof d.data().ultimo === 'number') ? d.data().ultimo : 0;
+      var siguiente = Math.max(actual, parseInt(minimo,10)||0) + 1;
+      tx.set(ref, { ultimo: siguiente, actualizado: new Date().toISOString() }, { merge:true });
+      return siguiente;
+    });
+  });
+}
+
+// Maximo numero realmente presente en una coleccion (para sembrar el contador)
+function _maxNumeroDe(coleccion, regex){
+  return db.collection(coleccion).get().then(function(snap){
     var max = 0;
     snap.forEach(function(d){
-      var id = d.id || (d.data && d.data().id) || '';
-      var m = String(id).match(/CRED-(\d+)/);
-      if(m){ var n = parseInt(m[1], 10); if(!isNaN(n) && n > max) max = n; }
+      var raw = d.id || (d.data && d.data().id) || '';
+      var n;
+      if(regex){ var m = String(raw).match(regex); n = m ? parseInt(m[1],10) : NaN; }
+      else { n = parseInt((d.data && d.data().id) || d.id, 10); }
+      if(!isNaN(n) && n > max) max = n;
     });
-    return 'CRED-' + String(max + 1).padStart(3, '0');
-  }).catch(function(){ return nextCredId(); });
+    return max;
+  });
+}
+
+function nextCredIdAsync(){
+  if(!db) return Promise.resolve(nextCredId());
+  return _maxNumeroDe('creditos', /CRED-(\d+)/)
+    .then(function(max){ return reservarNumero('creditos', max); })
+    .then(function(n){ return 'CRED-' + String(n).padStart(3, '0'); })
+    .catch(function(e){
+      // Sin red: devolvemos el tentativo local. La red de seguridad real es
+      // DB.crearCred(), que se niega a escribir sobre un ID ya ocupado.
+      console.error('reservarNumero creditos:', e && e.message);
+      return nextCredId();
+    });
 }
 
 function nextClienteIdAsync(){
-  if(!db) return Promise.resolve((S&&S.clientes&&S.clientes.length)?Math.max.apply(null,S.clientes.map(function(x){return parseInt(x.id,10)||0;}))+1:1);
-  return db.collection('clientes').get().then(function(snap){
-    var max = 0;
-    snap.forEach(function(d){ var n=parseInt((d.data&&d.data().id)||d.id,10); if(!isNaN(n)&&n>max) max=n; });
-    return max + 1;
-  }).catch(function(){ return (S&&S.clientes&&S.clientes.length)?Math.max.apply(null,S.clientes.map(function(x){return parseInt(x.id,10)||0;}))+1:1; });
+  var local = function(){ return (S&&S.clientes&&S.clientes.length)?Math.max.apply(null,S.clientes.map(function(x){return parseInt(x.id,10)||0;}))+1:1; };
+  if(!db) return Promise.resolve(local());
+  return _maxNumeroDe('clientes', null)
+    .then(function(max){ return reservarNumero('clientes', max); })
+    .catch(function(e){ console.error('reservarNumero clientes:', e && e.message); return local(); });
 }
+
 function nextMotoIdAsync(){
-  if(!db) return Promise.resolve((S&&S.motos&&S.motos.length)?Math.max.apply(null,S.motos.map(function(x){return parseInt(x.id,10)||0;}))+1:1);
-  return db.collection('motos').get().then(function(snap){
-    var max = 0;
-    snap.forEach(function(d){ var n=parseInt((d.data&&d.data().id)||d.id,10); if(!isNaN(n)&&n>max) max=n; });
-    return max + 1;
-  }).catch(function(){ return (S&&S.motos&&S.motos.length)?Math.max.apply(null,S.motos.map(function(x){return parseInt(x.id,10)||0;}))+1:1; });
+  var local = function(){ return (S&&S.motos&&S.motos.length)?Math.max.apply(null,S.motos.map(function(x){return parseInt(x.id,10)||0;}))+1:1; };
+  if(!db) return Promise.resolve(local());
+  return _maxNumeroDe('motos', null)
+    .then(function(max){ return reservarNumero('motos', max); })
+    .catch(function(e){ console.error('reservarNumero motos:', e && e.message); return local(); });
 }
 
 function esMovimientoInicialCredito(m){
@@ -2008,6 +2050,30 @@ var DB = {
   saveCliente: function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('clientes').doc(String(o.id)).set(clean(o), {merge:true}); }); },
   delCliente: function(id){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('clientes').doc(String(id)).delete(); }); },
   saveCred: function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('creditos').doc(o.id).set(clean(o)); }); },
+  // Alta de un credito NUEVO. A diferencia de saveCred (que usa set() y pisa en
+  // silencio lo que hubiera), esta se niega a escribir si el ID ya existe.
+  // Es la red que impide que una venta borre a otra: rechaza en vez de destruir.
+  // Rechaza con err.code === 'ID_OCUPADO' para que quien llama pida otro numero.
+  crearCred: function(o){
+    if(!db) return Promise.resolve(false);
+    var ref = db.collection('creditos').doc(o.id);
+    return db.runTransaction(function(tx){
+      return tx.get(ref).then(function(d){
+        if(d.exists){ var e = new Error('El credito '+o.id+' ya existe'); e.code = 'ID_OCUPADO'; throw e; }
+        tx.set(ref, clean(o));
+      });
+    });
+  },
+  crearMoto: function(o){
+    if(!db) return Promise.resolve(false);
+    var ref = db.collection('motos').doc(String(o.id));
+    return db.runTransaction(function(tx){
+      return tx.get(ref).then(function(d){
+        if(d.exists){ var e = new Error('La moto '+o.id+' ya existe'); e.code = 'ID_OCUPADO'; throw e; }
+        tx.set(ref, clean(o));
+      });
+    }).then(function(r){ upsertMotoCache(o); return r; });
+  },
   updateCred: function(id,u){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('creditos').doc(id).update(u); }); },
   savePago: function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('pagos').doc(o.id).set(clean(o)); }); },
   saveEgreso: function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('egresos').doc(String(o.id)).set(clean(o)); }); },

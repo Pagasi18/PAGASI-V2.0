@@ -2135,7 +2135,18 @@ function _wzGuardar(){
     conocio: WZ.conocio||''
   };
   S.creds.push(newCred);
-  DB.saveCred(newCred);
+  // Alta con candado: si el numero ya esta ocupado NO lo pisamos. Antes, un
+  // set() sobre un ID existente borraba la venta de otro cliente sin avisar
+  // (paso con CRED-271 y CRED-313). Ahora se rechaza y se avisa.
+  DB.crearCred(newCred).catch(function(e){
+    if(!e || e.code !== 'ID_OCUPADO'){ console.error('crear credito:', e && e.message); return; }
+    var i = S.creds.findIndex(function(x){ return x === newCred; });
+    if(i >= 0) S.creds.splice(i, 1);   // fuera de la lista: nunca se guardo
+    if(typeof logActividad==='function') logActividad('credito_colision','creditos',newCred.id,{cliente:newCred.cli});
+    alert('No se guardó el crédito: el número ' + newCred.id + ' ya lo tomó otra venta.\n\n'
+        + 'NO se sobrescribió nada. Vuelve a guardar y el sistema te dará un número nuevo.');
+    if(typeof render==='function') render();
+  });
   if(typeof logActividad==='function') logActividad('credito_creado','creditos',newCred.id,{cliente:newCred.cli, modelo:newCred.modelo||'', total:newCred.total||newCred.fin||0});
 
   // Marcar moto como financiada o crearla desde catálogo
@@ -2188,7 +2199,15 @@ function _wzGuardar(){
       concesionarioId: newCred.concesionarioId || _concDefaultId()
     };
     S.motos.push(motoInvNueva);
-    DB.saveMoto(motoInvNueva);
+    // Mismo candado que el credito: la moto de Bastidas desaparecio del
+    // inventario porque otra venta escribio sobre su mismo numero.
+    DB.crearMoto(motoInvNueva).catch(function(e){
+      if(e && e.code === 'ID_OCUPADO'){
+        console.error('colision de moto:', motoInvNueva.id);
+        alert('El número de moto ' + motoInvNueva.id + ' ya estaba ocupado.\n\n'
+            + 'NO se sobrescribió nada, pero revisa el inventario de este crédito.');
+      } else { console.error('crear moto:', e && e.message); }
+    });
     newCred.motoId = motoInvNueva.id;
     DB.saveCred(newCred);
     // ── Crear egresos + movimientos por la compra de la moto (catálogo) ──

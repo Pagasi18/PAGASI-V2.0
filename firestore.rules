@@ -187,6 +187,19 @@ service cloud.firestore {
     match /recursos/{id}          { allow read, create, update, delete: if esStaff(); }
     match /notas_cobranza/{id}    { allow read, create: if esStaff(); allow update, delete: if esAdmin(); }
 
+    // Contadores de numeracion (creditos, motos, clientes). El numero se reserva
+    // dentro de una transaccion para que dos vendedores nunca reciban el mismo.
+    // Solo pueden SUBIR: un contador que retrocede vuelve a entregar numeros ya
+    // usados, que es exactamente lo que borro los creditos 271 y 313.
+    match /contadores/{id} {
+      allow read: if esStaff();
+      allow create: if esStaff() && request.resource.data.ultimo is int;
+      allow update: if esStaff()
+        && request.resource.data.ultimo is int
+        && request.resource.data.ultimo > resource.data.ultimo;
+      allow delete: if false;
+    }
+
     match /logs/{id} {
       allow read: if esAdmin();
       allow create: if esStaff();
