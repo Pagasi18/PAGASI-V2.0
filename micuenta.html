@@ -191,8 +191,86 @@ input::placeholder{color:var(--ink-4);font-weight:500}
 .rev.in{opacity:1;transform:none;transition:opacity .55s ease,transform .55s cubic-bezier(.22,1,.36,1)}
 @media (prefers-reduced-motion:reduce){
   .rev,.rev.in{opacity:1;transform:none;transition:none}
-  .ring .rfg,.nbar i{transition:none}
+  .ring .rfg,.nbar i,.rc-meta i{transition:none}
 }
+
+/* ══ PANTALLA "MI RACHA" ══
+   Pantalla propia, no una tarjeta mas: la racha es el gancho para que el
+   cliente pague a tiempo. Adaptada de los patrones de racha DIARIA, pero
+   medida en QUINCENAS, que es como cobra Pagasi. */
+.rcs{position:fixed;inset:0;background:var(--white);z-index:150;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.rc-top{position:relative;overflow:hidden;padding:16px 16px 74px;
+  background:radial-gradient(120% 100% at 20% 0%,#4C8DFF 0%,#2563EB 48%,#1B45C4 100%)}
+/* Anillos concentricos: profundidad sin usar imagenes */
+.rc-top::before{content:'';position:absolute;left:50%;top:-200px;width:640px;height:640px;
+  transform:translateX(-50%);border-radius:50%;pointer-events:none;
+  background:repeating-radial-gradient(circle at center,
+    rgba(255,255,255,.10) 0 1px, rgba(255,255,255,0) 1px 46px)}
+.rc-bar{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rc-t{font-size:19px;font-weight:900;letter-spacing:-.5px;color:#fff}
+.rc-x{width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;flex-shrink:0;
+  background:rgba(255,255,255,.94);color:#1B45C4;display:flex;align-items:center;justify-content:center}
+.rc-x:active{transform:scale(.94)}
+/* El pegaso monta el borde entre el azul y el blanco, como la mascota del patron */
+.rc-hero{position:relative;margin-top:-64px;text-align:center;padding:0 16px}
+.rc-peg{position:relative;width:118px;height:118px;margin:0 auto;border-radius:50%;
+  background:var(--white);box-shadow:0 10px 30px rgba(27,69,196,.22);
+  display:flex;align-items:center;justify-content:center}
+.rc-peg img{width:72px;height:72px;object-fit:contain;display:block}
+.rc-peg.off img{filter:grayscale(1);opacity:.3}
+.rc-halo{position:absolute;inset:-13px;border-radius:50%;border:2px solid rgba(37,99,235,.16)}
+.rc-n{font-size:66px;font-weight:900;letter-spacing:-3.5px;line-height:1;color:var(--p);
+  margin-top:15px;font-variant-numeric:tabular-nums}
+.rc-n.off{color:var(--ink-4)}
+.rc-l{font-size:15.5px;font-weight:800;color:var(--p);letter-spacing:-.3px;margin-top:3px}
+.rc-l.off{color:var(--ink-3)}
+.rc-sub{font-size:13px;font-weight:600;color:var(--ink-3);margin-top:10px;line-height:1.5}
+
+/* Tira de quincenas: el equivalente a los dias de la semana del patron */
+.rc-strip{display:flex;gap:7px;justify-content:flex-start;margin:24px 0 0;overflow-x:auto;
+  padding-bottom:4px;scrollbar-width:none}
+.rc-strip::-webkit-scrollbar{display:none}
+.rc-q{flex:0 0 52px;border:1.5px solid var(--off-2);border-radius:26px;padding:9px 0 10px;
+  text-align:center;background:var(--white)}
+.rc-q .d{font-size:10.5px;font-weight:800;color:var(--ink-4);letter-spacing:.2px}
+.rc-q .b{width:30px;height:30px;margin:6px auto 0;border-radius:50%;background:var(--off);
+  display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:900;color:var(--ink-4)}
+.rc-q.ok{border-color:rgba(37,99,235,.3);background:#F4F8FF}
+.rc-q.ok .d{color:var(--p)}
+.rc-q.ok .b{background:var(--p);color:#fff}
+.rc-q.late{border-color:rgba(232,51,90,.3);background:var(--red-bg)}
+.rc-q.late .d{color:var(--red)}
+.rc-q.late .b{background:var(--red);color:#fff}
+.rc-q.now{border-color:var(--p);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.rc-q.now .d{color:var(--p)}
+
+/* Barra de meta con hitos, como el reto de dias del patron */
+.rc-meta{position:relative;height:10px;background:var(--off-2);border-radius:6px;margin:18px 4px 34px}
+.rc-meta i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#4C8DFF,#2563EB);
+  border-radius:6px;width:0;transition:width 1s cubic-bezier(.22,1,.36,1)}
+.rc-hito{position:absolute;top:-9px;width:28px;height:28px;border-radius:50%;background:var(--white);
+  border:2px solid var(--off-2);transform:translateX(-50%);display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:900;color:var(--ink-4)}
+.rc-hito.done{border-color:var(--p);background:var(--p);color:#fff}
+.rc-hito.cur{border-color:var(--p);color:var(--p);box-shadow:0 0 0 4px rgba(37,99,235,.14)}
+.rc-hl{position:absolute;top:31px;left:50%;transform:translateX(-50%);font-size:10px;
+  font-weight:800;color:var(--ink-4);white-space:nowrap;letter-spacing:.2px}
+.rc-hito.done .rc-hl,.rc-hito.cur .rc-hl{color:var(--p)}
+/* Dos datos: desde cuando y el record a superar */
+.rc-2{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.rc-2 > div{padding:16px 14px;text-align:center}
+.rc-2 > div + div{border-left:1px solid var(--line)}
+.rc-2 .v{font-size:17px;font-weight:900;letter-spacing:-.5px}
+.rc-2 .k{font-size:11.5px;font-weight:700;color:var(--ink-4);margin-top:4px}
+/* Metas por nivel */
+.rc-goal{display:flex;align-items:center;gap:13px;padding:14px 0;border-bottom:1px solid var(--line)}
+.rc-goal:last-child{border-bottom:none}
+.rc-gi{width:42px;height:42px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.rc-gi img{width:24px;height:24px;object-fit:contain}
+.rc-gi.lock img{filter:grayscale(1);opacity:.32}
+.rc-gn{font-size:14.5px;font-weight:800;letter-spacing:-.25px}
+.rc-gs{font-size:12px;font-weight:600;color:var(--ink-3);margin-top:2px}
+.rc-gt{margin-left:auto;font-size:10.5px;font-weight:800;padding:5px 10px;border-radius:20px;white-space:nowrap}
 
 /* ── Linea de tiempo de cuotas ── */
 .tl-i{position:relative;display:flex;align-items:center;gap:14px;padding:11px 0 11px 2px}
@@ -229,9 +307,11 @@ input::placeholder{color:var(--ink-4);font-weight:500}
 .tl-wrap:not(.open) .tl-hid{display:none}
 
 /* ── Racha y niveles ── */
+/* Azul Pagasi, no naranja: el icono es el pegaso, no una llama genérica */
 .fuego{width:52px;height:52px;border-radius:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  color:#FF6A1A;background:linear-gradient(150deg,#FFF0E3,#FFE0C7)}
-.fuego.off{color:var(--ink-4);background:var(--off-2)}
+  background:linear-gradient(150deg,#EAF1FF,#D3E3FF)}
+.fuego.off{background:var(--off-2)}
+.fuego.off img{filter:grayscale(1);opacity:.34}
 .rnum{font-size:34px;line-height:1;letter-spacing:-1.4px}
 .rlbl{font-size:12.5px;font-weight:700;color:var(--ink-3);margin-top:3px;line-height:1.3}
 .nbadge{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;padding:8px 14px;border-radius:20px;white-space:nowrap}
@@ -383,6 +463,25 @@ details summary::-webkit-details-marker{display:none}
   <div class="wrap" id="apBody"></div>
 </div>
 
+<!-- ══ PANTALLA MI RACHA ══ -->
+<div id="scRacha" class="rcs hide">
+  <div class="rc-top">
+    <div class="rc-bar">
+      <div class="rc-t">Mi racha</div>
+      <button class="rc-x" onclick="cerrarRacha()" aria-label="Volver">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="rc-hero">
+    <div class="rc-peg" id="rcPeg"><div class="rc-halo"></div><img id="rcPegImg" alt=""></div>
+    <div class="rc-n" id="rcN">0</div>
+    <div class="rc-l" id="rcL">quincenas al día seguidas</div>
+    <div class="rc-sub" id="rcSub"></div>
+  </div>
+  <div class="wrap" id="rcBody" style="padding-top:4px"></div>
+</div>
+
 <!-- ══ SELECTOR DE CLIENTE (solo cuenta Pagasi) ══ -->
 <div id="psheet" class="psheet hide" onclick="if(event.target===this)cerrarSelector()">
   <div class="psheet-in">
@@ -435,8 +534,8 @@ details summary::-webkit-details-marker{display:none}
 <script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <!-- Mismo motor de calculo que usa el admin: el cliente ve exactamente las
      mismas cifras que el cobrador, sin posibilidad de divergencia. -->
-<script src="logic/credito-ledger.js?v=20260725-2213"></script>
-<script src="logic/gamificacion.js?v=20260725-2213"></script>
+<script src="logic/credito-ledger.js?v=20260725-2227"></script>
+<script src="logic/gamificacion.js?v=20260725-2227"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
    PORTAL DEL CLIENTE — Pagasi
@@ -1041,7 +1140,6 @@ function aplicarValores(){
 
 var ICO_MOTO = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="17" r="3"/><circle cx="19" cy="17" r="3"/><path d="M5 17h3l3-5h6l2 5"/><path d="M14 12l-2-4h-3"/><path d="M16 8h3"/></svg>';
 var ICO_CHECK = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#00A854" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
-var ICO_FUEGO = '<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 2s1.5 3.5 3.5 5.5C17.7 9.7 19 11.6 19 14a7 7 0 11-14 0c0-2 1-3.6 2.3-5 .3 1 .9 1.8 1.7 2 0-2.6 1-5.3 3-9zm0 17a3.5 3.5 0 003.5-3.5c0-1.4-.8-2.4-1.8-3.4-.7-.7-1.3-1.4-1.7-2.3-.6 1.2-1.6 2-1.6 3.4 0 .6.2 1 .5 1.5-.8-.2-1.4-.8-1.8-1.5-.4.7-.6 1.5-.6 2.3A3.5 3.5 0 0012 19z"/></svg>';
 
 // Iconos del catálogo de premios (SVG: sin emojis en la UI del producto)
 var ICO_PREMIO = {
@@ -1087,13 +1185,18 @@ function nivelHTML(g, c){
   var nv = g.nivel, sig = g.siguiente;
   var h = '<div class="card rev">';
 
-  h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">'
+  // El pegaso reemplaza la llama naranja: la racha es de Pagasi, no un icono
+  // genérico. Toda la fila abre la pantalla completa de racha.
+  h += '<div onclick="abrirRacha(\'' + esc(c.id) + '\')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px">'
     + '<div style="display:flex;align-items:center;gap:13px">'
-    + '<div class="fuego' + (g.racha>0?'':' off') + '">' + ICO_FUEGO + '</div>'
+    + '<div class="fuego' + (g.racha>0?'':' off') + '"><img src="assets/pegaso.png" alt="" style="width:30px;height:30px;object-fit:contain"></div>'
     + '<div><div class="rnum money">' + g.racha + '</div>'
-    + '<div class="rlbl">' + (g.racha===1 ? 'pago puntual seguido' : 'pagos puntuales seguidos') + '</div></div>'
+    + '<div class="rlbl">' + (g.racha===1 ? 'quincena al día' : 'quincenas al día seguidas') + '</div></div>'
     + '</div>'
-    + '<div class="nbadge" style="color:' + nv.col + ';background:' + nv.bg + '">' + nv.nom + '</div>'
+    + '<div style="display:flex;align-items:center;gap:9px">'
+    +   '<div class="nbadge" style="color:' + nv.col + ';background:' + nv.bg + '">' + nv.nom + '</div>'
+    +   '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#ADADBC" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>'
+    + '</div>'
     + '</div>';
 
   // El camino completo Bronce -> Platino: ver los cuatro escalones de un vistazo
@@ -1177,6 +1280,123 @@ function motoHTML(c, est, moto, completado){
     +   '<div class="rpct"><b>' + pct + '%</b><i>tuya</i></div>'
     + '</div>'
     + '</div></div>';
+}
+
+/* ══ PANTALLA "MI RACHA" ═══════════════════════════════════════════════════
+   El patron de "racha" de las apps cuenta DIAS seguidos. Aqui la unidad es la
+   QUINCENA, porque es cuando Pagasi cobra: la tira muestra cuotas, no lunes a
+   domingo, y los hitos son los niveles (4 / 12 / 20 pagos puntuales).
+   ═════════════════════════════════════════════════════════════════════════ */
+function abrirRacha(credId){
+  var c = S.creditos.filter(function(x){ return String(x.id) === String(credId); })[0];
+  if(!c) return;
+  var est = estadoDe(c);
+  if(!est) return;
+  var g;
+  try{ g = Gamificacion.calcularRacha(est, S.pagosPorCred[c.id]||[], DIAS_GRACIA, hoyISO()); }
+  catch(e){ return; }
+
+  var activa = g.racha > 0;
+  $('rcPegImg').src = 'assets/pegaso.png';
+  $('rcPeg').classList.toggle('off', !activa);
+  $('rcN').textContent = g.racha;
+  $('rcN').classList.toggle('off', !activa);
+  $('rcL').textContent = g.racha === 1 ? 'quincena al día' : 'quincenas al día seguidas';
+  $('rcL').classList.toggle('off', !activa);
+  $('rcSub').innerHTML = activa
+    ? 'Sigue así y en tu próxima meta desbloqueas un vale para tu moto.'
+    : 'Paga tu próxima cuota a tiempo y arrancas tu racha.';
+
+  $('rcBody').innerHTML = rachaStripHTML(est, g) + rachaMetaHTML(g) + rachaGoalsHTML(g);
+  $('scRacha').classList.remove('hide');
+  $('scRacha').scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+  // La barra crece al entrar (arranca en 0 por CSS)
+  setTimeout(function(){
+    var b = $('rcBody').querySelector('.rc-meta i');
+    if(b) b.style.width = b.getAttribute('data-w') + '%';
+  }, 220);
+}
+
+function cerrarRacha(){
+  $('scRacha').classList.add('hide');
+  document.body.style.overflow = '';
+}
+
+// Tira de quincenas: las 3 ya evaluadas antes de la actual y las que vienen
+function rachaStripHTML(est, g){
+  var estadoDeCorte = {};
+  (g.evs||[]).forEach(function(e){ estadoDeCorte[String(e.numero)] = e.puntual ? 'ok' : 'late'; });
+  var cuotas = est.cuotas || [];
+  var evaluadas = (g.evs||[]).length;
+  var desde = Math.max(0, evaluadas - 4);
+  var ventana = cuotas.slice(desde, desde + 7);
+
+  var h = '<div class="sec" style="margin-top:26px">Tus quincenas</div><div class="rc-strip">';
+  ventana.forEach(function(q, i){
+    var st = estadoDeCorte[String(q.numero)] || '';
+    var esProxima = !st && (desde + i) === evaluadas;
+    var cls = st + (esProxima ? ' now' : '');
+    var marca = st === 'ok' ? '&#10003;' : st === 'late' ? '&times;' : q.numero;
+    h += '<div class="rc-q ' + cls + '">'
+      +   '<div class="d">' + esc(fechaCorta(q.fechaVence)) + '</div>'
+      +   '<div class="b">' + marca + '</div>'
+      + '</div>';
+  });
+  h += '</div>';
+  if(!ventana.length) h = '';
+  return h;
+}
+
+// Barra con hitos: mismos numeros que los niveles, no dias inventados
+function rachaMetaHTML(g){
+  var niveles = (Gamificacion.NIVELES || []).filter(function(n){ return n.min > 0; });
+  if(!niveles.length) return '';
+  var tope = niveles[niveles.length - 1].min;
+  var logrados = g.puntuales;
+  var pct = Math.min(100, Math.round(logrados / tope * 100));
+
+  var h = '<div class="sec">Tu próxima meta<span>'
+        + (g.siguiente
+            ? logrados + ' de ' + g.siguiente.min + ' pagos puntuales para ' + esc(g.siguiente.nom)
+            : 'Llegaste al nivel más alto')
+        + '</span></div>'
+        + '<div class="card rev"><div class="rc-meta"><i data-w="' + pct + '"></i>';
+  niveles.forEach(function(n){
+    var x = Math.min(100, Math.round(n.min / tope * 100));
+    var cls = logrados >= n.min ? 'done' : (g.siguiente && g.siguiente.id === n.id ? 'cur' : '');
+    h += '<div class="rc-hito ' + cls + '" style="left:' + x + '%">' + n.min
+      +   '<span class="rc-hl">' + esc(n.nom) + '</span></div>';
+  });
+  h += '</div>'
+    + '<div class="rc-2">'
+    +   '<div><div class="v">' + (g.rachaDesde ? esc(fechaCorta(g.rachaDesde)) : '—') + '</div>'
+    +   '<div class="k">Tu racha empezó</div></div>'
+    +   '<div><div class="v">' + g.rachaRecord + (g.rachaRecord === 1 ? ' quincena' : ' quincenas') + '</div>'
+    +   '<div class="k">Tu mejor racha</div></div>'
+    + '</div></div>';
+  return h;
+}
+
+// Metas por nivel, con el vale que desbloquea cada una
+function rachaGoalsHTML(g){
+  var h = '<div class="sec">Tus metas</div><div class="card rev">';
+  (Gamificacion.NIVELES || []).forEach(function(n){
+    var logrado = g.puntuales >= n.min;
+    var actual = g.nivel && g.nivel.id === n.id;
+    h += '<div class="rc-goal">'
+      +   '<div class="rc-gi' + (logrado ? '' : ' lock') + '" style="background:' + n.bg + '">'
+      +     '<img src="assets/pegaso.png" alt="">'
+      +   '</div>'
+      +   '<div><div class="rc-gn">' + esc(n.nom) + '</div>'
+      +   '<div class="rc-gs">' + (n.min === 0 ? 'Desde tu primer crédito'
+            : n.min + ' pagos puntuales' + (n.cupo ? ' · vale de $' + n.cupo : '')) + '</div></div>'
+      +   (actual ? '<span class="rc-gt" style="color:' + n.col + ';background:' + n.bg + '">Tu nivel</span>'
+            : logrado ? '<span class="rc-gt t-ok">Logrado</span>'
+            : '<span class="rc-gt t-gray">Faltan ' + (n.min - g.puntuales) + '</span>')
+      + '</div>';
+  });
+  return h + '</div>';
 }
 
 function creditoHTML(c){

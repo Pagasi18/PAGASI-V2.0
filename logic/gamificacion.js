@@ -83,6 +83,7 @@
       var req = acum - 0.01;
       evs.push({
         numero: q.numero,
+        fechaVence: q.fechaVence,
         fechaCorte: corte,
         puntual:    pagadoHasta(corte) >= req,
         adelantada: pagadoHasta(sumarDias(q.fechaVence, -1)) >= req
@@ -101,6 +102,17 @@
       if(evs[k].puntual) racha++; else break;
     }
 
+    // Mejor racha historica y desde cuando corre la actual. Sirven para que el
+    // cliente vea que tiene algo que superar y algo que cuidar: sin esto la
+    // racha es solo un numero sin memoria.
+    var record = 0, corrida = 0;
+    evs.forEach(function(e){
+      if(e.puntual){ corrida++; if(corrida > record) record = corrida; }
+      else corrida = 0;
+    });
+    // La racha actual arranca en el primer corte puntual de la corrida final
+    var desde = racha > 0 ? (evs[evs.length - racha].fechaVence || evs[evs.length - racha].fechaCorte) : '';
+
     // El nivel se basa en el TOTAL de cortes puntuales, no en la racha: un
     // tropiezo no debe quitarle un beneficio que ya se gano.
     var nivel = NIVELES[0], sig = NIVELES[1] || null;
@@ -116,6 +128,8 @@
       tarde: evs.length - puntuales,
       puntos: puntos,
       racha: racha,
+      rachaRecord: record,
+      rachaDesde: desde,
       nivel: nivel,
       siguiente: sig,
       faltan: sig ? Math.max(0, sig.min - puntuales) : 0

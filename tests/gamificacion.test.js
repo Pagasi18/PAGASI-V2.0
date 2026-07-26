@@ -116,4 +116,31 @@ test('no cuenta pagos eliminados, no confirmados ni la inicial', () => {
   assert.strictEqual(r.puntos, 0);
 });
 
+test('la mejor racha se conserva aunque la actual se caiga', () => {
+  // Puntual c1..c5, falla c6, y vuelve a ponerse al dia en c7 y c8.
+  // La racha actual baja a 2, pero el record debe seguir siendo 5.
+  const pagos = [];
+  [0,1,2,3,4].forEach(k => pagos.push(P(cal[k].fechaVence, 50)));
+  pagos.push(P(cal[6].fechaVence, 100));   // cubre la c6 atrasada + la c7
+  pagos.push(P(cal[7].fechaVence, 50));
+  const r = G.calcularRacha(est(pagos, '2026-05-20'), pagos, 5, '2026-05-20');
+  assert.strictEqual(r.rachaRecord, 5, 'el record de 5 no se borra');
+  assert.ok(r.rachaRecord >= r.racha, 'el record nunca es menor que la racha actual');
+});
+
+test('rachaDesde apunta a la primera cuota de la racha actual', () => {
+  const pagos = [];
+  [0,1,2].forEach(k => pagos.push(P(cal[k].fechaVence, 50)));
+  const r = G.calcularRacha(est(pagos, '2026-02-25'), pagos, 5, '2026-02-25');
+  assert.strictEqual(r.racha, 3, 'tres puntuales seguidos');
+  assert.strictEqual(r.rachaDesde, cal[0].fechaVence, 'arranca en la cuota 1');
+});
+
+test('sin racha no hay fecha de inicio ni record', () => {
+  const r = G.calcularRacha(est([], '2026-02-25'), [], 5, '2026-02-25');
+  assert.strictEqual(r.racha, 0);
+  assert.strictEqual(r.rachaRecord, 0, 'sin puntuales el record es 0');
+  assert.strictEqual(r.rachaDesde, '', 'sin racha no hay fecha');
+});
+
 console.log('\nGamificacion tests passed.');
