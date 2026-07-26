@@ -140,11 +140,56 @@ input::placeholder{color:var(--ink-4);font-weight:500}
 .tile .tv{font-size:19px;font-weight:800;letter-spacing:-.7px;line-height:1.15}
 .tile .tl{font-size:11px;font-weight:700;color:var(--ink-4);margin-top:5px;line-height:1.3}
 
-/* ── Mi moto ── */
-.moto{display:flex;align-items:center;gap:14px}
-.moto .mi{width:46px;height:46px;border-radius:14px;background:rgba(37,99,235,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.moto .mn{font-size:19px;font-weight:800;letter-spacing:-.5px;line-height:1.2}
-.moto .ms{font-size:12.5px;font-weight:600;color:var(--ink-3);margin-top:3px}
+/* ── Titulos de seccion FUERA de las tarjetas ──
+   Antes todo era una etiqueta gris diminuta dentro de otra tarjeta blanca
+   igual a la anterior: la pagina no tenia ritmo, se leia como una lista. */
+.sec{font-size:16px;font-weight:900;letter-spacing:-.45px;color:var(--ink);margin:28px 3px 11px}
+.sec span{display:block;font-size:12.5px;font-weight:650;color:var(--ink-4);letter-spacing:-.1px;margin-top:3px}
+
+/* ── "Tu moto": el centro emocional de la pagina ──
+   El cliente no esta pagando una deuda, esta comprando SU moto. El anillo
+   dice cuanto de la moto ya es suyo, que es la cifra que de verdad motiva. */
+.mcard{position:relative;overflow:hidden;border:none;color:#fff;padding:22px 20px;
+  background:radial-gradient(125% 120% at 100% 0%,#2A3A52 0%,#151E2E 55%,#0A0F1A 100%)}
+.mcard::after{content:'';position:absolute;left:-34px;bottom:-44px;width:176px;height:184px;
+  background:url('assets/pegaso.png') no-repeat center/contain;filter:brightness(0) invert(1);opacity:.055;pointer-events:none}
+.mrow{position:relative;display:flex;align-items:center;gap:16px}
+.mtxt{flex:1;min-width:0}
+.mlb{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.1px;opacity:.5}
+.mnom{font-size:21px;font-weight:900;letter-spacing:-.65px;line-height:1.15;margin-top:7px}
+.msede{font-size:12.5px;font-weight:600;opacity:.55;margin-top:6px}
+.mpag{font-size:12.5px;font-weight:700;opacity:.8;margin-top:13px;line-height:1.45}
+.mpag b{color:#5EE9A0}
+.rwrap{position:relative;width:96px;height:96px;flex-shrink:0}
+.ring{width:96px;height:96px;transform:rotate(-90deg);display:block}
+.ring circle{fill:none;stroke-width:9;stroke-linecap:round}
+.ring .rbg{stroke:rgba(255,255,255,.12)}
+.ring .rfg{transition:stroke-dashoffset 1.2s cubic-bezier(.22,1,.36,1)}
+.rpct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.rpct b{font-size:23px;font-weight:900;letter-spacing:-1.1px;line-height:1;font-variant-numeric:tabular-nums}
+.rpct i{font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;opacity:.5;margin-top:3px;font-style:normal}
+
+/* ── Camino de niveles: Bronce -> Plata -> Oro -> Platino ── */
+.ntrack{display:flex;align-items:flex-start;margin:20px 0 2px}
+.ntk{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative}
+.ntk::before{content:'';position:absolute;top:8px;right:50%;width:100%;height:3px;background:var(--off-2);z-index:0}
+.ntk:first-child::before{display:none}
+.ntk.done::before{background:var(--p)}
+.ntd{position:relative;z-index:1;width:19px;height:19px;border-radius:50%;background:var(--off-2);
+  box-shadow:0 0 0 3px var(--white);transition:.3s}
+.ntk.done .ntd{background:var(--p)}
+.ntk.cur .ntd{background:var(--p);box-shadow:0 0 0 3px var(--white),0 0 0 7px rgba(37,99,235,.16)}
+.ntl{font-size:10.5px;font-weight:800;color:var(--ink-4);letter-spacing:.1px;text-align:center}
+.ntk.done .ntl{color:var(--ink-3)}
+.ntk.cur .ntl{color:var(--p);font-weight:900}
+
+/* ── Entrada escalonada: la pagina "aparece" en vez de estar ahi de golpe ── */
+.rev{opacity:0;transform:translateY(15px)}
+.rev.in{opacity:1;transform:none;transition:opacity .55s ease,transform .55s cubic-bezier(.22,1,.36,1)}
+@media (prefers-reduced-motion:reduce){
+  .rev,.rev.in{opacity:1;transform:none;transition:none}
+  .ring .rfg,.nbar i{transition:none}
+}
 
 /* ── Linea de tiempo de cuotas ── */
 .tl-i{position:relative;display:flex;align-items:center;gap:14px;padding:11px 0 11px 2px}
@@ -198,11 +243,14 @@ input::placeholder{color:var(--ink-4);font-weight:500}
 
 /* ── Catálogo de premios ── */
 .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
-.pcard{background:var(--off);border-radius:16px;padding:13px 10px;text-align:center;transition:.15s}
-.pcard.plock{opacity:.5}
-.pico{width:40px;height:40px;margin:0 auto 8px;border-radius:13px;background:var(--white);
-  color:var(--p);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(11,11,30,.07)}
-.pcard.plock .pico{color:var(--ink-4)}
+/* Cada premio con su color: en gris todos se leian como "bloqueado" aunque
+   el cliente ya los tuviera desbloqueados. */
+.pcard{background:var(--pbg,var(--off));border-radius:16px;padding:14px 10px;text-align:center;transition:.15s}
+.pcard.plock{background:var(--off)}
+.pico{width:40px;height:40px;margin:0 auto 9px;border-radius:13px;background:var(--white);
+  color:var(--pc,var(--p));display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(11,11,30,.08)}
+.pcard.plock .pico{color:var(--ink-4);box-shadow:none;background:var(--off-2)}
+.pcard.plock .pnom{color:var(--ink-3)}
 .pnom{font-size:13px;font-weight:800;letter-spacing:-.2px;line-height:1.2}
 .pdesc{font-size:10.5px;font-weight:600;color:var(--ink-4);margin-top:4px;line-height:1.35}
 .pnota{font-size:12.5px;font-weight:600;color:var(--ink-3);margin-top:14px;line-height:1.55}
@@ -378,8 +426,8 @@ details summary::-webkit-details-marker{display:none}
 <script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <!-- Mismo motor de calculo que usa el admin: el cliente ve exactamente las
      mismas cifras que el cobrador, sin posibilidad de divergencia. -->
-<script src="logic/credito-ledger.js?v=20260725-1952"></script>
-<script src="logic/gamificacion.js?v=20260725-1952"></script>
+<script src="logic/credito-ledger.js?v=20260725-2003"></script>
+<script src="logic/gamificacion.js?v=20260725-2003"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
    PORTAL DEL CLIENTE — Pagasi
@@ -421,6 +469,15 @@ function fechaCorta(iso){
   return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString('es-VE',{day:'2-digit',month:'short'});
 }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Dias que faltan para una fecha (negativo si ya paso). Sin horas: comparamos
+// dias calendario, que es como lo cuenta el cliente.
+function diasHasta(iso){
+  var p = String(iso||'').split('-'); if(p.length !== 3) return null;
+  var meta = new Date(+p[0], +p[1]-1, +p[2]);
+  var h = hoyISO().split('-');
+  var hoy = new Date(+h[0], +h[1]-1, +h[2]);
+  return Math.round((meta - hoy) / 86400000);
+}
 function showErr(id,msg){ var e=$(id); e.textContent=msg; e.classList.remove('hide'); }
 function hideErr(id){ $(id).classList.add('hide'); }
 
@@ -940,6 +997,26 @@ function render(){
     + 'Escribir a Pagasi por WhatsApp</a></div>';
   html += pieHTML();
   $('apBody').innerHTML = html;
+  animarEntrada();
+}
+
+/* La pagina se arma sola al entrar: las tarjetas suben escalonadas, el anillo
+   de la moto se llena y las barras crecen. Es lo que separa "una lista de
+   datos" de "una app". Respeta prefers-reduced-motion via CSS. */
+function animarEntrada(){
+  var bloques = $('apBody').querySelectorAll('.rev');
+  [].forEach.call(bloques, function(el, i){
+    setTimeout(function(){ el.classList.add('in'); }, 60 + i * 70);
+  });
+  // Anillo y barras: arrancan en 0 y van al valor real una vez pintado
+  requestAnimationFrame(function(){ setTimeout(function(){
+    [].forEach.call($('apBody').querySelectorAll('.ring .rfg'), function(el){
+      el.style.strokeDashoffset = el.getAttribute('data-off');
+    });
+    [].forEach.call($('apBody').querySelectorAll('.nbar i[data-w]'), function(el){
+      el.style.width = el.getAttribute('data-w') + '%';
+    });
+  }, 260); });
 }
 
 var ICO_MOTO = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="17" r="3"/><circle cx="19" cy="17" r="3"/><path d="M5 17h3l3-5h6l2 5"/><path d="M14 12l-2-4h-3"/><path d="M16 8h3"/></svg>';
@@ -957,12 +1034,22 @@ var ICO_PREMIO = {
 
 // El catálogo se muestra SIEMPRE, incluso en Bronce: ver el premio antes de
 // ganarlo es justamente lo que motiva.
+// Color propio por premio: en gris todos parecian bloqueados
+var COL_PREMIO = {
+  casco:    {c:'#2563EB', bg:'#EAF1FF'},
+  caucho:   {c:'#0F172A', bg:'#EEF0F7'},
+  aceite:   {c:'#E08700', bg:'#FFF6E5'},
+  repuesto: {c:'#8B3FD9', bg:'#F5EDFF'},
+  servicio: {c:'#00A854', bg:'#E6F7EE'}
+};
+
 function premiosHTML(g){
   var nv = g.nivel;
   var abierto = nv.cupo > 0;
-  var h = '<div class="card"><div class="ct">Qué puedes pedir con tu vale</div><div class="pgrid">';
+  var h = '<div class="card rev"><div class="ct">Qué puedes pedir con tu vale</div><div class="pgrid">';
   ((typeof Gamificacion!=='undefined' && Gamificacion.PREMIOS) || []).forEach(function(p){
-    h += '<div class="pcard' + (abierto ? '' : ' plock') + '">'
+    var col = COL_PREMIO[p.ico] || {c:'#2563EB', bg:'#EAF1FF'};
+    h += '<div class="pcard' + (abierto ? '' : ' plock') + '" style="--pc:' + col.c + ';--pbg:' + col.bg + '">'
       + '<div class="pico">' + (ICO_PREMIO[p.ico] || '') + '</div>'
       + '<div class="pnom">' + esc(p.nom) + '</div>'
       + '<div class="pdesc">' + esc(p.desc) + '</div>'
@@ -978,7 +1065,7 @@ function premiosHTML(g){
 
 function nivelHTML(g, c){
   var nv = g.nivel, sig = g.siguiente;
-  var h = '<div class="card">';
+  var h = '<div class="card rev">';
 
   h += '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">'
     + '<div style="display:flex;align-items:center;gap:13px">'
@@ -989,10 +1076,19 @@ function nivelHTML(g, c){
     + '<div class="nbadge" style="color:' + nv.col + ';background:' + nv.bg + '">' + nv.nom + '</div>'
     + '</div>';
 
+  // El camino completo Bronce -> Platino: ver los cuatro escalones de un vistazo
+  // motiva mucho mas que una barra suelta hacia el siguiente.
+  h += '<div class="ntrack">';
+  (Gamificacion.NIVELES || []).forEach(function(n){
+    var cls = n.id === nv.id ? 'cur' : (g.puntuales >= n.min ? 'done' : '');
+    h += '<div class="ntk ' + cls + '"><div class="ntd"></div><div class="ntl">' + esc(n.nom) + '</div></div>';
+  });
+  h += '</div>';
+
   if(sig){
     var base = nv.min, meta = sig.min;
     var pctN = meta > base ? Math.min(100, Math.max(0, Math.round((g.puntuales-base)/(meta-base)*100))) : 0;
-    h += '<div style="margin-top:16px"><div class="nbar"><i style="width:'+pctN+'%;background:'+sig.col+'"></i></div>'
+    h += '<div style="margin-top:16px"><div class="nbar"><i data-w="'+pctN+'" style="width:0;background:'+sig.col+'"></i></div>'
       + '<div class="nsub">Te ' + (g.faltan===1?'falta':'faltan') + ' <b>' + g.faltan + '</b> '
       + (g.faltan===1?'pago puntual':'pagos puntuales') + ' para <b style="color:'+sig.col+'">' + sig.nom + '</b></div></div>';
   } else {
@@ -1023,12 +1119,50 @@ function nivelHTML(g, c){
   return h;
 }
 
+/* La moto, no la deuda. El anillo mide cuanto del valor total ya pago el
+   cliente: es la cifra que da ganas de seguir pagando. Se anima al entrar
+   (ver animarEntrada), por eso arranca en dashoffset = circunferencia. */
+var RING_R = 43, RING_C = 2 * Math.PI * RING_R;
+
+function motoHTML(c, est, moto, completado){
+  var totalMoto = (parseFloat(c.ini)||0) + (parseFloat(c.total)||0);
+  var pagadoMoto = (parseFloat(c.ini)||0) + (parseFloat(est.totalPagado)||0);
+  var pct = totalMoto > 0 ? Math.min(100, Math.round(pagadoMoto / totalMoto * 100)) : 0;
+  var meta = [ (c.placa && c.placa !== '—' ? 'Placa ' + c.placa : ''), (c.anio ? 'Año ' + c.anio : ''), c.sede, c.id ]
+               .filter(Boolean).map(esc).join(' · ');
+  // Id unico por credito: con dos motos, dos <defs> con el mismo id y el
+  // navegador pinta ambos anillos con el primero.
+  var gid = 'gring-' + String(c.id).replace(/[^A-Za-z0-9_-]/g, '');
+
+  return '<div class="card mcard rev"><div class="mrow">'
+    + '<div class="mtxt">'
+    +   '<div class="mlb">' + (completado ? 'Tu moto es 100% tuya' : 'Tu moto') + '</div>'
+    +   '<div class="mnom">' + esc(moto) + '</div>'
+    +   '<div class="msede">' + meta + '</div>'
+    +   '<div class="mpag">Ya pagaste <b>' + fmt(pagadoMoto) + '</b> de ' + fmt(totalMoto) + '</div>'
+    + '</div>'
+    + '<div class="rwrap">'
+    +   '<svg class="ring" viewBox="0 0 100 100" aria-hidden="true">'
+    +     '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="1" y2="1">'
+    +       '<stop offset="0%" stop-color="#5EE9A0"/><stop offset="100%" stop-color="#4C8DFF"/>'
+    +     '</linearGradient></defs>'
+    +     '<circle class="rbg" cx="50" cy="50" r="' + RING_R + '"/>'
+    +     '<circle class="rfg" cx="50" cy="50" r="' + RING_R + '" stroke="url(#' + gid + ')"'
+    +       ' stroke-dasharray="' + RING_C.toFixed(1) + '"'
+    +       ' stroke-dashoffset="' + RING_C.toFixed(1) + '"'
+    +       ' data-off="' + (RING_C * (1 - pct/100)).toFixed(1) + '"/>'
+    +   '</svg>'
+    +   '<div class="rpct"><b>' + pct + '%</b><i>tuya</i></div>'
+    + '</div>'
+    + '</div></div>';
+}
+
 function creditoHTML(c){
   var est = estadoDe(c);
   if(!est){
     return '<div class="card"><div class="ct">'+esc(c.id)+'</div><div class="empty">No pudimos calcular el estado de este crédito. Escríbenos.</div></div>';
   }
-  var moto = [c.marca, c.modelo].filter(Boolean).join(' ') || 'Motocicleta';
+  var moto = [c.marca, c.modelo].filter(Boolean).join(' ') || c.moto || 'Motocicleta';
   var atrasado = est._nVencidas > 0;
   var completado = est.cuotasPagadas >= est.totalCuotas;
   var cuotaPlena = parseFloat(c.cuotaQ||c.cuota||0);
@@ -1036,7 +1170,7 @@ function creditoHTML(c){
 
   /* ── HERO ── */
   var monto = completado ? est.totalPagado : (atrasado ? est._vencido : (est._prox ? est._prox.saldo : 0));
-  h += '<div class="card hero">'
+  h += '<div class="card hero rev">'
     + '<div style="position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:10px">'
     + '<div class="lb">' + (completado ? 'Crédito pagado' : (atrasado ? 'Debes ahora' : 'Tu próximo pago')) + '</div>'
     + '<span class="pill ' + (atrasado?'pill-bad':'pill-ok') + '">' + (completado?'Completado':(atrasado?'En atraso':'Al día')) + '</span>'
@@ -1049,7 +1183,13 @@ function creditoHTML(c){
     h += '<div class="sm">' + est._nVencidas + ' ' + (est._nVencidas===1?'cuota vencida':'cuotas vencidas') + '</div>'
       + '<div class="note">Ponte al día para evitar más intereses de mora.</div>';
   } else if(est._prox){
-    h += '<div class="sm">Vence el ' + fechaLarga(est._prox.fechaVence) + '</div>';
+    // Cuenta regresiva: "en 15 dias" mueve mas que una fecha suelta
+    var dd = diasHasta(est._prox.fechaVence);
+    var cuando = dd === 0 ? 'Vence hoy'
+               : dd === 1 ? 'Vence mañana'
+               : dd > 1   ? 'Vence en ' + dd + ' días'
+               : 'Vence el ' + fechaLarga(est._prox.fechaVence);
+    h += '<div class="sm">' + cuando + (dd > 1 ? ' · ' + fechaCorta(est._prox.fechaVence) : '') + '</div>';
     // Si ya abonó parte de esta cuota, decirlo claro (si no, el monto confunde)
     if(est._prox.pagado > 0.001 && cuotaPlena > 0){
       h += '<div class="note">Ya abonaste ' + fmt(est._prox.pagado) + ' de la cuota de ' + fmt(cuotaPlena) + '.</div>';
@@ -1075,32 +1215,33 @@ function creditoHTML(c){
     h += '<button class="btn btn-p" style="margin-top:14px" onclick="abrirPago(\''+esc(c.id)+'\')">Reportar mi pago</button>';
   }
 
-  /* ── Racha y nivel (el gancho: va arriba, se ve siempre) ── */
+  /* ── El relato: lo que debo -> lo que estoy construyendo -> mi premio -> el detalle ── */
+
+  /* ── Tu moto: anillo de "cuanto ya es tuya" ── */
+  h += motoHTML(c, est, moto, completado);
+
+  /* ── Racha, nivel y premios ── */
   try{
     var g = Gamificacion.calcularRacha(est, S.pagosPorCred[c.id]||[], DIAS_GRACIA, hoyISO());
+    h += '<div class="sec">Tu constancia<span>Paga a tiempo y desbloqueas premios en tu concesionario</span></div>';
     h += nivelHTML(g, c);
     h += premiosHTML(g);
   }catch(e){ console.warn('racha:', e); }
 
   /* ── 3 datos grandes ── */
-  h += '<div class="tiles">'
+  h += '<div class="sec">Tus números</div>'
+    + '<div class="tiles rev">'
     + '<div class="tile"><div class="tv money" style="color:var(--green)">' + fmt(est.totalPagado) + '</div><div class="tl">Ya pagaste</div></div>'
     + '<div class="tile"><div class="tv money">' + fmt(est.saldoPendiente) + '</div><div class="tl">Te falta</div></div>'
     + '<div class="tile"><div class="tv money">' + fmt(cuotaPlena) + '</div><div class="tl">Tu cuota</div></div>'
     + '</div>';
 
-  /* ── Mi moto ── */
-  h += '<div class="card"><div class="moto">'
-    + '<div class="mi">' + ICO_MOTO + '</div>'
-    + '<div><div class="mn">' + esc(moto) + '</div><div class="ms">'
-    + [(c.placa && c.placa!=='—' ? 'Placa '+esc(c.placa) : ''), (c.anio?'Año '+esc(c.anio):''), esc(c.id)].filter(Boolean).join(' · ')
-    + '</div></div></div></div>';
-
   /* ── Línea de tiempo de cuotas ── */
   var cuotas = est.cuotas || [];
   var desde = Math.max(0, est.cuotasPagadas - 1);
   var hasta = Math.min(cuotas.length, desde + 6);
-  h += '<div class="card"><div class="ct">Mi calendario de cuotas</div>'
+  h += '<div class="sec">Tu calendario<span>' + est.cuotasPagadas + ' de ' + est.totalCuotas + ' cuotas pagadas</span></div>'
+    + '<div class="card rev">'
     + '<div class="tl-wrap" id="tlw-'+esc(c.id)+'">';
   cuotas.forEach(function(q, idx){
     var pagada = q.saldo <= 0.001;
@@ -1129,7 +1270,8 @@ function creditoHTML(c){
 
   /* ── Mis pagos ── */
   var pagos = (S.pagosPorCred[c.id]||[]).slice().sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
-  h += '<div class="card"><div class="ct">Mis pagos ('+pagos.length+')</div>';
+  h += '<div class="sec">Tus pagos<span>' + (pagos.length === 1 ? '1 pago registrado' : pagos.length + ' pagos registrados') + '</span></div>'
+    + '<div class="card rev">';
   if(!pagos.length){ h += '<div class="empty">Aún no hay pagos registrados.</div>'; }
   else {
     pagos.slice(0,12).forEach(function(p){
@@ -1155,7 +1297,7 @@ function toggleCuotas(credId, btn){
 function comprobantesHTML(){
   if(!S.comprobantes.length) return '';
   var arr = S.comprobantes.slice().sort(function(a,b){ return String(b.creadoEn||'').localeCompare(String(a.creadoEn||'')); });
-  var h = '<div class="card"><div class="ct">Comprobantes que enviaste</div>';
+  var h = '<div class="card rev"><div class="ct">Comprobantes que enviaste</div>';
   arr.forEach(function(x){
     var t = x.estado==='aprobado' ? '<span class="tag t-ok">Aprobado</span>'
           : x.estado==='rechazado' ? '<span class="tag t-bad">Rechazado</span>'
