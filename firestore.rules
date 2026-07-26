@@ -115,9 +115,9 @@ service cloud.firestore {
     }
 
     // sesiones_cliente/{uid}: dos formas de abrir sesion, ambas validadas aqui.
-    //  (a) SMS  — Firebase ya verifico el telefono y lo pone en el token; debe
+    //  (a) SMS  - Firebase ya verifico el telefono y lo pone en el token; debe
     //      coincidir con el telefono registrado del cliente. Es autoservicio.
-    //  (b) LINK — respaldo cuando el SMS no llega: token secreto + cedula +
+    //  (b) LINK - respaldo cuando el SMS no llega: token secreto + cedula +
     //      clienteId, validados contra el doc de acceso.
     match /sesiones_cliente/{uid} {
       allow get: if request.auth != null && request.auth.uid == uid;
