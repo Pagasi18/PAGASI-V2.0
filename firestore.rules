@@ -193,9 +193,9 @@ service cloud.firestore {
     // usados, que es exactamente lo que borro los creditos 271 y 313.
     match /contadores/{id} {
       allow read: if esStaff();
-      allow create: if esStaff() && request.resource.data.ultimo is int;
+      allow create: if esStaff() && request.resource.data.ultimo is number;
       allow update: if esStaff()
-        && request.resource.data.ultimo is int
+        && request.resource.data.ultimo is number
         && request.resource.data.ultimo > resource.data.ultimo;
       allow delete: if false;
     }
