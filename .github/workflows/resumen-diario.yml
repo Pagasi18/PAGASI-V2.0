@@ -5,11 +5,20 @@ on:
     - cron: '0 22 * * *'
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   resumen:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: pagasi-v2
+          workload_identity_provider: projects/951911859002/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: firebase-adminsdk-fbsvc@pagasi-v2.iam.gserviceaccount.com
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -17,7 +26,6 @@ jobs:
         run: npm install --omit=dev
       - working-directory: bot
         env:
-          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: node resumen.js
