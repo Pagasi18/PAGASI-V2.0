@@ -15,7 +15,7 @@
      - TELEGRAM_CHAT_ID   : opcional; si no esta, usa el chat por defecto de abajo
    ══════════════════════════════════════════════════════════════════════════ */
 
-const admin = require('firebase-admin');
+const { Firestore } = require('@google-cloud/firestore');
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
 const CHAT  = process.env.TELEGRAM_CHAT_ID || '8571975984';   // chat por defecto del dueno
@@ -25,8 +25,11 @@ if (!TOKEN) {
   process.exit(1);
 }
 
-admin.initializeApp({ projectId: 'pagasi-v2' });   // credenciales del entorno (WIF/ADC)
-const db = admin.firestore();
+// Cliente directo de Firestore. Usa las credenciales del entorno (WIF/ADC) via
+// google-auth-library, que SI entiende el formato "external_account" que arma
+// el paso auth del workflow. firebase-admin no lo entendia y por eso daba
+// "Invalid contents in the credentials file".
+const db = new Firestore({ projectId: 'pagasi-v2' });
 
 // "Hoy" segun el reloj de Venezuela (el Action corre en UTC).
 const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });         // 2026-07-27

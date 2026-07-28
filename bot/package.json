@@ -5,6 +5,6 @@
   "description": "Resumen diario de Pagasi por Telegram",
   "main": "resumen.js",
   "dependencies": {
-    "firebase-admin": "^12.7.0"
+    "@google-cloud/firestore": "^7.10.0"
   }
 }
