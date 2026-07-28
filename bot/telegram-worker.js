@@ -15,8 +15,11 @@ const KEYBOARD = {
   keyboard: [
     [{ text: '📊 Resumen ahora' }],
     [{ text: '💰 Cobranza hoy' }, { text: '⚠️ Mora' }],
-    [{ text: '📅 Vencen mañana' }, { text: '🏍️ Ventas del mes' }],
-    [{ text: '📸 Comprobantes' }, { text: '🔍 Buscar cliente' }]
+    [{ text: '📉 Por caer' }, { text: '📅 Vencen mañana' }],
+    [{ text: '🏍️ Ventas del mes' }, { text: '🏆 Ranking' }],
+    [{ text: '📈 Meta del mes' }, { text: '📦 Inventario' }],
+    [{ text: '👥 Leads' }, { text: '📸 Comprobantes' }],
+    [{ text: '🔍 Buscar cliente' }]
   ],
   resize_keyboard: true,
   is_persistent: true
@@ -26,8 +29,13 @@ const KEYBOARD = {
 const MODOS = {
   '💰 Cobranza hoy': 'cobranza',
   '⚠️ Mora': 'mora',
+  '📉 Por caer': 'porcaer',
   '📅 Vencen mañana': 'vencen',
   '🏍️ Ventas del mes': 'ventas',
+  '🏆 Ranking': 'ranking',
+  '📈 Meta del mes': 'meta',
+  '📦 Inventario': 'inventario',
+  '👥 Leads': 'leads',
   '📸 Comprobantes': 'comprobantes'
 };
 
