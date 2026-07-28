@@ -5,8 +5,12 @@
    Lee Firestore (solo lectura), arma el resumen del dia y lo manda a Telegram.
    NO modifica nada de la base de datos.
 
-   Secretos que necesita (se configuran en GitHub, no van en el codigo):
-     - FIREBASE_SA        : el JSON de la cuenta de servicio de Firebase
+   Autenticacion con Google: SIN llave descargable. El paso
+   google-github-actions/auth del workflow le prueba a Google la identidad de
+   GitHub (Workload Identity Federation) y deja las credenciales en el entorno;
+   firebase-admin las toma solo (ADC). Por eso aca no hay ningun JSON.
+
+   Secreto que necesita (se configura en GitHub, no va en el codigo):
      - TELEGRAM_TOKEN     : el token del bot (@BotFather)
      - TELEGRAM_CHAT_ID   : opcional; si no esta, usa el chat por defecto de abajo
    ══════════════════════════════════════════════════════════════════════════ */
@@ -15,14 +19,13 @@ const admin = require('firebase-admin');
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
 const CHAT  = process.env.TELEGRAM_CHAT_ID || '8571975984';   // chat por defecto del dueno
-const SA    = process.env.FIREBASE_SA;
 
-if (!TOKEN || !SA) {
-  console.error('Faltan secretos: TELEGRAM_TOKEN y/o FIREBASE_SA no estan configurados.');
+if (!TOKEN) {
+  console.error('Falta el secreto TELEGRAM_TOKEN.');
   process.exit(1);
 }
 
-admin.initializeApp({ credential: admin.credential.cert(JSON.parse(SA)) });
+admin.initializeApp({ projectId: 'pagasi-v2' });   // credenciales del entorno (WIF/ADC)
 const db = admin.firestore();
 
 // "Hoy" segun el reloj de Venezuela (el Action corre en UTC).
