@@ -6,9 +6,9 @@
    NO modifica nada de la base de datos.
 
    Autenticacion con Google: SIN llave descargable. El paso
-   google-github-actions/auth del workflow le prueba a Google la identidad de
-   GitHub (Workload Identity Federation) y deja las credenciales en el entorno;
-   firebase-admin las toma solo (ADC). Por eso aca no hay ningun JSON.
+   google-github-actions/auth del workflow prueba la identidad de GitHub
+   (Workload Identity Federation) y deja las credenciales en el entorno;
+   @google-cloud/firestore las toma solo (ADC).
 
    Secreto que necesita (se configura en GitHub, no va en el codigo):
      - TELEGRAM_TOKEN     : el token del bot (@BotFather)
@@ -16,95 +16,180 @@
    ══════════════════════════════════════════════════════════════════════════ */
 
 const { Firestore } = require('@google-cloud/firestore');
+const Ledger = require('../logic/credito-ledger.js');   // mismo motor de cuotas que el admin
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
 const CHAT  = process.env.TELEGRAM_CHAT_ID || '8571975984';   // chat por defecto del dueno
+const DIAS_GRACIA = 5;
 
-if (!TOKEN) {
-  console.error('Falta el secreto TELEGRAM_TOKEN.');
-  process.exit(1);
-}
+if (!TOKEN) { console.error('Falta el secreto TELEGRAM_TOKEN.'); process.exit(1); }
 
-// Cliente directo de Firestore. Usa las credenciales del entorno (WIF/ADC) via
-// google-auth-library, que SI entiende el formato "external_account" que arma
-// el paso auth del workflow. firebase-admin no lo entendia y por eso daba
-// "Invalid contents in the credentials file".
 const db = new Firestore({ projectId: 'pagasi-v2' });
 
-// "Hoy" segun el reloj de Venezuela (el Action corre en UTC).
-const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });         // 2026-07-27
+/* ── Fechas, ancladas al reloj de Venezuela (el Action corre en UTC) ── */
+const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });   // 2026-07-27
+const ancla = new Date(hoy + 'T12:00:00Z');
+const ayer  = new Date(ancla.getTime() - 86400000).toISOString().slice(0, 10);
+const manana = new Date(ancla.getTime() + 86400000).toISOString().slice(0, 10);
+const mes = hoy.slice(0, 7);
 const hoyLindo = new Date().toLocaleDateString('es-VE',
   { timeZone: 'America/Caracas', weekday: 'long', day: '2-digit', month: 'long' });
+const mesNombre = ancla.toLocaleDateString('es-VE', { month: 'long', timeZone: 'UTC' });
 
-const money = n => '$' + (Math.round((Number(n) || 0) * 100) / 100)
-  .toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const esc = s => String(s == null ? '' : s)
-  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const esInicial = p => p.esInicial === true || p.tipoOperacion === 'inicial_credito';
+const money = n => '$' + Math.round(Number(n) || 0).toLocaleString('es-VE');
+const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const pagoOK = p => !p.eliminado && (p.estado || 'confirmado') === 'confirmado';
+const esIni = p => p.esInicial === true || p.tipoOperacion === 'inicial_credito';
 
 async function main() {
-  const [credHoySnap, pagosHoySnap, moraSnap, clientesSnap] = await Promise.all([
-    db.collection('creditos').where('fecha', '==', hoy).get(),
-    db.collection('pagos').where('fecha', '==', hoy).get(),
-    db.collection('creditos').where('estado', '==', 'mora').get(),
-    db.collection('clientes').get()
+  const [credSnap, pagoSnap, cliSnap, concSnap, compSnap] = await Promise.all([
+    db.collection('creditos').get(),
+    db.collection('pagos').get(),
+    db.collection('clientes').get(),
+    db.collection('concesionarios').get(),
+    db.collection('comprobantes').where('estado', '==', 'pendiente').get()
   ]);
 
-  const credHoy = credHoySnap.docs.map(d => ({ id: d.id, ...d.data() }))
-    .filter(c => !c.eliminado && c.estado !== 'cancelado');
-  const pagosHoy = pagosHoySnap.docs.map(d => ({ id: d.id, ...d.data() }))
-    .filter(p => !p.eliminado && (p.estado || 'confirmado') === 'confirmado');
+  const creds = credSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(c => !c.eliminado);
+  const pagos = pagoSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(pagoOK);
+  const clientes = cliSnap.docs.map(d => d.data());
+  const concNom = {}; concSnap.docs.forEach(d => { concNom[d.id] = (d.data().nombre) || '—'; });
 
-  // ── Ventas del dia ──
-  const nVentas = credHoy.length;
+  const credById = {}; creds.forEach(c => { credById[c.id] = c; });
+  const pagosByCred = {}; pagos.forEach(p => { (pagosByCred[p.cred] = pagosByCred[p.cred] || []).push(p); });
+
+  // ── HOY ──
+  const credHoy = creds.filter(c => c.fecha === hoy && c.estado !== 'cancelado');
+  const pagosHoy = pagos.filter(p => p.fecha === hoy);
+  const inisHoy = pagosHoy.filter(esIni);
+  const cuotasHoy = pagosHoy.filter(p => !esIni(p));
   const montoVentas = credHoy.reduce((a, c) => a + (Number(c.precio) || 0), 0);
-
-  // ── Iniciales y cuotas cobradas hoy ──
-  const inis = pagosHoy.filter(esInicial);
-  const cuotas = pagosHoy.filter(p => !esInicial(p));
-  const montoIni = inis.reduce((a, p) => a + (Number(p.monto) || 0), 0);
-  const montoCuotas = cuotas.reduce((a, p) => a + (Number(p.monto) || 0), 0);
+  const montoIni = inisHoy.reduce((a, p) => a + (Number(p.monto) || 0), 0);
+  const montoCuotas = cuotasHoy.reduce((a, p) => a + (Number(p.monto) || 0), 0);
   const entroHoy = montoIni + montoCuotas;
 
-  // ── Snapshot de mora y clientes nuevos ──
-  const enMora = moraSnap.size;
-  const nNuevos = clientesSnap.docs.map(d => d.data())
-    .filter(c => String(c.creado || '').slice(0, 10) === hoy).length;
+  // Caja por metodo de pago
+  const porMetodo = {};
+  pagosHoy.forEach(p => { const k = p.metodo || 'Otro'; porMetodo[k] = (porMetodo[k] || 0) + (Number(p.monto) || 0); });
 
-  // ── Vigilante de integridad (solo lo que paso HOY) ──
-  const sinMoto = credHoy.filter(c => c.motoId === null || c.motoId === undefined || c.motoId === '');
-  const iniPorCred = {};
-  inis.forEach(p => { iniPorCred[p.cred] = (iniPorCred[p.cred] || 0) + (Number(p.monto) || 0); });
+  // Leads del dia
+  const leadsHoy = clientes.filter(c => String(c.creado || '').slice(0, 10) === hoy);
+  const leadsTop = leadsHoy.filter(c => (Number(c.score_indexa) || 0) > 700).length;
+
+  // Comparativo vs ayer
+  const entroAyer = pagos.filter(p => p.fecha === ayer).reduce((a, p) => a + (Number(p.monto) || 0), 0);
+  let comp = '';
+  if (entroAyer > 0) {
+    const pct = Math.round((entroHoy - entroAyer) / entroAyer * 100);
+    comp = pct >= 0 ? ` (▲ +${pct}% vs ayer)` : ` (▼ ${pct}% vs ayer)`;
+  }
+
+  // Por concesionario (ventas del dia + cobranza del dia)
+  const sede = {};
+  const getSede = id => (sede[id] = sede[id] || { ventas: 0, cobrado: 0 });
+  credHoy.forEach(c => { getSede(c.concesionarioId).ventas++; });
+  pagosHoy.forEach(p => { const c = credById[p.cred]; if (c) getSede(c.concesionarioId).cobrado += Number(p.monto) || 0; });
+  const sedesOrden = Object.keys(sede).sort((a, b) => (sede[b].cobrado - sede[a].cobrado) || (sede[b].ventas - sede[a].ventas));
+
+  // Ranking de vendedores (por ventas del dia)
+  const vend = {};
+  credHoy.forEach(c => {
+    const k = c.creadoPor || c.vendedorNombre || '—';
+    vend[k] = vend[k] || { n: 0, precio: 0 };
+    vend[k].n++; vend[k].precio += Number(c.precio) || 0;
+  });
+  const vendOrden = Object.keys(vend).sort((a, b) => vend[b].precio - vend[a].precio);
+
+  // Cobranza: mora + los mas atrasados
+  const moraCreds = creds.filter(c => c.estado === 'mora');
+  const moraMonto = moraCreds.reduce((a, c) => a + Math.max(0, (Number(c.total) || 0) - (Number(c.pagado) || 0)), 0);
+  const moraTop = moraCreds.slice().sort((a, b) => (Number(b.mora) || 0) - (Number(a.mora) || 0)).slice(0, 3);
+
+  // Cuotas que vencen manana (usando el motor de cuotas real)
+  let vmCount = 0, vmMonto = 0;
+  creds.filter(c => c.estado === 'activo' || c.estado === 'mora').forEach(c => {
+    let est;
+    try { est = Ledger.generarEstadoCredito(c, pagosByCred[c.id] || [], { today: hoy, diasGracia: DIAS_GRACIA }); }
+    catch (e) { return; }
+    (est.cuotas || []).forEach(q => {
+      if (q.fechaVence === manana && (Number(q.saldo) || 0) > 0.01) { vmCount++; vmMonto += Number(q.saldo) || 0; }
+    });
+  });
+
+  // Mes acumulado
+  const credMes = creds.filter(c => String(c.fecha || '').slice(0, 7) === mes && c.estado !== 'cancelado');
+  const cobradoMes = pagos.filter(p => String(p.fecha || '').slice(0, 7) === mes).reduce((a, p) => a + (Number(p.monto) || 0), 0);
+
+  // Portal: comprobantes por revisar
+  const compPend = compSnap.size;
+
+  // Vigilante de integridad (solo lo que paso hoy)
+  const sinMoto = credHoy.filter(c => c.motoId == null || c.motoId === '');
+  const iniPorCred = {}; inisHoy.forEach(p => { iniPorCred[p.cred] = (iniPorCred[p.cred] || 0) + (Number(p.monto) || 0); });
   const iniExcede = credHoy
     .map(c => ({ id: c.id, cli: c.cli, plan: Number(c.ini) || 0, pagado: iniPorCred[c.id] || 0 }))
     .filter(x => x.pagado - x.plan > 1);
 
-  // ── Armar el mensaje ──
-  let m = `<b>🐴 Pagasi — Resumen del ${hoyLindo}</b>\n\n`;
-  m += `🏍️ <b>Ventas:</b> ${nVentas} ${nVentas === 1 ? 'moto' : 'motos'}`;
-  if (nVentas) m += ` · ${money(montoVentas)} en precio`;
-  m += `\n`;
-  m += `💵 <b>Iniciales cobradas:</b> ${money(montoIni)}\n`;
-  m += `✅ <b>Cuotas cobradas:</b> ${cuotas.length} · ${money(montoCuotas)}\n`;
-  m += `📥 <b>Entró hoy:</b> ${money(entroHoy)}\n`;
-  m += `👤 <b>Clientes nuevos:</b> ${nNuevos}\n`;
-  m += `⚠️ <b>En mora:</b> ${enMora} ${enMora === 1 ? 'crédito' : 'créditos'}\n\n`;
+  /* ── Armar el mensaje ── */
+  const L = [];
+  L.push(`<b>🐴 Pagasi — ${hoyLindo}</b>`);
+
+  L.push('');
+  L.push('<b>━━ HOY ━━</b>');
+  L.push(`🏍️ Ventas: <b>${credHoy.length}</b>${credHoy.length ? ' · ' + money(montoVentas) : ''}`);
+  L.push(`💵 Iniciales: <b>${money(montoIni)}</b>`);
+  L.push(`✅ Cuotas: ${cuotasHoy.length} · <b>${money(montoCuotas)}</b>`);
+  L.push(`📥 Entró: <b>${money(entroHoy)}</b>${comp}`);
+  const metLine = Object.keys(porMetodo).sort((a, b) => porMetodo[b] - porMetodo[a])
+    .map(k => `${esc(k)} ${money(porMetodo[k])}`).join(' · ');
+  if (metLine) L.push(`   ${metLine}`);
+  L.push(`👤 Leads: <b>${leadsHoy.length}</b>${leadsTop ? ` (${leadsTop} con score &gt;700)` : ''}`);
+
+  if (sedesOrden.length) {
+    L.push('');
+    L.push('<b>━━ POR CONCESIONARIO ━━</b>');
+    sedesOrden.forEach(id => {
+      const s = sede[id];
+      const parts = [];
+      if (s.ventas) parts.push(`${s.ventas} ${s.ventas === 1 ? 'moto' : 'motos'}`);
+      if (s.cobrado) parts.push(`cobró ${money(s.cobrado)}`);
+      L.push(`${esc(concNom[id] || 'Sin sede')}: ${parts.join(' · ')}`);
+    });
+  }
+
+  if (vendOrden.length) {
+    L.push('');
+    L.push('<b>━━ VENDEDORES (hoy) ━━</b>');
+    vendOrden.slice(0, 5).forEach(k => L.push(`${esc(k)}: ${vend[k].n} · ${money(vend[k].precio)}`));
+  }
+
+  L.push('');
+  L.push('<b>━━ COBRANZA ━━</b>');
+  L.push(`⚠️ En mora: <b>${moraCreds.length}</b> · ${money(moraMonto)}`);
+  moraTop.forEach(c => {
+    const saldo = Math.max(0, (Number(c.total) || 0) - (Number(c.pagado) || 0));
+    L.push(`   • ${esc(c.cli)} — ${Number(c.mora) || 0} días · ${money(saldo)}`);
+  });
+  L.push(`📅 Vencen mañana: <b>${vmCount}</b> ${vmCount === 1 ? 'cuota' : 'cuotas'} · ${money(vmMonto)}`);
+
+  L.push('');
+  L.push('<b>━━ PORTAL ━━</b>');
+  L.push(`📸 Comprobantes por revisar: <b>${compPend}</b>`);
+
+  L.push('');
+  L.push(`<b>━━ MES (${esc(mesNombre)}) ━━</b>`);
+  L.push(`🏍️ ${credMes.length} motos · 💰 cobrado ${money(cobradoMes)}`);
 
   const alertas = [];
-  if (sinMoto.length) {
-    alertas.push(`• ${sinMoto.length} venta(s) sin moto asignada: ${sinMoto.map(c => esc(c.id)).join(', ')}`);
-  }
-  iniExcede.forEach(x => {
-    alertas.push(`• ${esc(x.id)} (${esc(x.cli)}): inicial cobrada ${money(x.pagado)} supera el plan ${money(x.plan)} — ¿inicial de otro cliente?`);
-  });
+  if (sinMoto.length) alertas.push(`• ${sinMoto.length} venta(s) sin moto: ${sinMoto.map(c => esc(c.id)).join(', ')}`);
+  iniExcede.forEach(x => alertas.push(`• ${esc(x.id)} (${esc(x.cli)}): inicial ${money(x.pagado)} &gt; plan ${money(x.plan)} — ¿de otro cliente?`));
+  L.push('');
+  if (alertas.length) { L.push('<b>🚨 Revisar hoy:</b>'); alertas.forEach(a => L.push(a)); }
+  else L.push('🟢 Integridad: todo en orden.');
 
-  if (alertas.length) {
-    m += `<b>🚨 Revisar hoy:</b>\n${alertas.join('\n')}`;
-  } else {
-    m += `🟢 <b>Integridad:</b> todo en orden.`;
-  }
+  const m = L.join('\n');
 
-  // ── Enviar a Telegram ──
+  /* ── Enviar a Telegram ── */
   const res = await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
