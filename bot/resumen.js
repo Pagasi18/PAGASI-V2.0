@@ -76,12 +76,17 @@ async function main() {
   const leadsHoy = clientes.filter(c => String(c.creado || '').slice(0, 10) === hoy);
   const leadsTop = leadsHoy.filter(c => (Number(c.score_indexa) || 0) > 700).length;
 
-  // Comparativo vs ayer
-  const entroAyer = pagos.filter(p => p.fecha === ayer).reduce((a, p) => a + (Number(p.monto) || 0), 0);
+  // Comparativo vs el promedio diario de los ultimos 7 dias. Mas estable que
+  // "vs ayer": un domingo casi sin cobranza disparaba porcentajes absurdos.
+  const hace7 = new Date(ancla.getTime() - 7 * 86400000).toISOString().slice(0, 10);
+  const promDia = pagos.filter(p => p.fecha >= hace7 && p.fecha < hoy)
+    .reduce((a, p) => a + (Number(p.monto) || 0), 0) / 7;
   let comp = '';
-  if (entroAyer > 0) {
-    const pct = Math.round((entroHoy - entroAyer) / entroAyer * 100);
-    comp = pct >= 0 ? ` (▲ +${pct}% vs ayer)` : ` (▼ ${pct}% vs ayer)`;
+  if (promDia > 1) {
+    const pct = Math.round((entroHoy - promDia) / promDia * 100);
+    // Si el promedio es raro (semana atipica), un porcentaje enorme confunde
+    // mas que ayuda: solo lo mostramos cuando cae en un rango con sentido.
+    if (Math.abs(pct) <= 500) comp = pct >= 0 ? ` (▲ +${pct}% vs promedio)` : ` (▼ ${pct}% vs promedio)`;
   }
 
   // Por concesionario (ventas del dia + cobranza del dia)
@@ -100,21 +105,28 @@ async function main() {
   });
   const vendOrden = Object.keys(vend).sort((a, b) => vend[b].precio - vend[a].precio);
 
-  // Cobranza: mora + los mas atrasados
-  const moraCreds = creds.filter(c => c.estado === 'mora');
-  const moraMonto = moraCreds.reduce((a, c) => a + Math.max(0, (Number(c.total) || 0) - (Number(c.pagado) || 0)), 0);
-  const moraTop = moraCreds.slice().sort((a, b) => (Number(b.mora) || 0) - (Number(a.mora) || 0)).slice(0, 3);
-
-  // Cuotas que vencen manana (usando el motor de cuotas real)
+  // Un solo recorrido con el motor de cuotas: cuanto esta realmente VENCIDO por
+  // credito (cuotas ya pasadas sin pagar) y cuantas cuotas vencen manana.
   let vmCount = 0, vmMonto = 0;
+  const vencidoPorCred = {};
   creds.filter(c => c.estado === 'activo' || c.estado === 'mora').forEach(c => {
     let est;
     try { est = Ledger.generarEstadoCredito(c, pagosByCred[c.id] || [], { today: hoy, diasGracia: DIAS_GRACIA }); }
     catch (e) { return; }
+    let venc = 0;
     (est.cuotas || []).forEach(q => {
-      if (q.fechaVence === manana && (Number(q.saldo) || 0) > 0.01) { vmCount++; vmMonto += Number(q.saldo) || 0; }
+      const saldo = Number(q.saldo) || 0;
+      if (saldo <= 0.01) return;
+      if (q.fechaVence === manana) { vmCount++; vmMonto += saldo; }
+      if (q.fechaVence <= hoy) venc += saldo;
     });
+    vencidoPorCred[c.id] = venc;
   });
+
+  // Mora: lo vencido (no el saldo total del credito) y los mas atrasados.
+  const moraCreds = creds.filter(c => c.estado === 'mora');
+  const moraMonto = moraCreds.reduce((a, c) => a + (vencidoPorCred[c.id] || 0), 0);
+  const moraTop = moraCreds.slice().sort((a, b) => (Number(b.mora) || 0) - (Number(a.mora) || 0)).slice(0, 3);
 
   // Mes acumulado
   const credMes = creds.filter(c => String(c.fecha || '').slice(0, 7) === mes && c.estado !== 'cancelado');
@@ -165,10 +177,9 @@ async function main() {
 
   L.push('');
   L.push('<b>━━ COBRANZA ━━</b>');
-  L.push(`⚠️ En mora: <b>${moraCreds.length}</b> · ${money(moraMonto)}`);
+  L.push(`⚠️ En mora: <b>${moraCreds.length}</b> · ${money(moraMonto)} vencido`);
   moraTop.forEach(c => {
-    const saldo = Math.max(0, (Number(c.total) || 0) - (Number(c.pagado) || 0));
-    L.push(`   • ${esc(c.cli)} — ${Number(c.mora) || 0} días · ${money(saldo)}`);
+    L.push(`   • ${esc(c.cli)} — ${Number(c.mora) || 0} días · ${money(vencidoPorCred[c.id] || 0)}`);
   });
   L.push(`📅 Vencen mañana: <b>${vmCount}</b> ${vmCount === 1 ? 'cuota' : 'cuotas'} · ${money(vmMonto)}`);
 
