@@ -2143,8 +2143,10 @@ function _wzGuardar(){
     var i = S.creds.findIndex(function(x){ return x === newCred; });
     if(i >= 0) S.creds.splice(i, 1);   // fuera de la lista: nunca se guardo
     if(typeof logActividad==='function') logActividad('credito_colision','creditos',newCred.id,{cliente:newCred.cli});
-    alert('No se guardó el crédito: el número ' + newCred.id + ' ya lo tomó otra venta.\n\n'
-        + 'NO se sobrescribió nada. Vuelve a guardar y el sistema te dará un número nuevo.');
+    alert('✅ Tranquilo, no se dañó nada.\n\n'
+        + 'Otra persona guardó una venta al mismo tiempo y se cruzaron los números, '
+        + 'así que esta todavía no se guardó.\n\n'
+        + '👉 Dale a GUARDAR otra vez y listo — el sistema le pone un número nuevo solo.');
     if(typeof render==='function') render();
   });
   if(typeof logActividad==='function') logActividad('credito_creado','creditos',newCred.id,{cliente:newCred.cli, modelo:newCred.modelo||'', total:newCred.total||newCred.fin||0});
@@ -2204,8 +2206,9 @@ function _wzGuardar(){
     DB.crearMoto(motoInvNueva).catch(function(e){
       if(e && e.code === 'ID_OCUPADO'){
         console.error('colision de moto:', motoInvNueva.id);
-        alert('El número de moto ' + motoInvNueva.id + ' ya estaba ocupado.\n\n'
-            + 'NO se sobrescribió nada, pero revisa el inventario de este crédito.');
+        alert('✅ Tranquilo, no se dañó nada.\n\n'
+            + 'Se cruzó el número de la moto con otra venta guardada al mismo tiempo.\n\n'
+            + '👉 Dale a GUARDAR otra vez. Si después ves algo raro con la moto de este crédito, avísale al admin.');
       } else { console.error('crear moto:', e && e.message); }
     });
     newCred.motoId = motoInvNueva.id;
@@ -2493,10 +2496,23 @@ function ejecutarDelCred(audit){
 
     var mi = S.motos.findIndex(function(x){return String(x.id)===String(S.creds[ci].motoId);});
     if(mi>=0 && (S.motos[mi].estado==='financiada' || S.motos[mi].estado==='recuperada')){
-      S.motos[mi].estado='recuperada';
-      S.motos[mi].cliente=null;
-      S.motos[mi].creditoId=null;
-      DB.saveMoto(S.motos[mi]);
+      // Si OTRA venta activa usa esta misma moto, no la tocamos: es de ese credito.
+      var motoDeOtro = S.creds.some(function(x){
+        return x.id!==credId && !x.eliminado
+          && x.estado!=='cancelado' && x.estado!=='recuperado' && x.estado!=='recuperada'
+          && String(x.motoId)===String(S.creds[ci].motoId);
+      });
+      if(!motoDeOtro){
+        // Cancelar un credito NO es recuperar la moto. Vuelve al inventario como
+        // DISPONIBLE, que es justo lo que promete el dialogo. Antes se marcaba
+        // 'recuperada' y eso creaba motos "recuperadas" fantasma al limpiar
+        // duplicados. Una recuperacion real (el cliente no pago y se quito la moto)
+        // se marca a mano en el modulo de Motos.
+        S.motos[mi].estado='disponible';
+        S.motos[mi].cliente=null;
+        S.motos[mi].creditoId=null;
+        DB.saveMoto(S.motos[mi]);
+      }
     }
   }
   syncTodosEstadosClientes();
