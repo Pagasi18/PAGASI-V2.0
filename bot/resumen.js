@@ -19,7 +19,10 @@ const { Firestore } = require('@google-cloud/firestore');
 const Ledger = require('../logic/credito-ledger.js');   // mismo motor de cuotas que el admin
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
-const CHAT  = process.env.TELEGRAM_CHAT_ID || '8571975984';   // chat por defecto del dueno
+// A quienes les llega el resumen: dueno + socio. Para sumar a alguien, agrega
+// su chat id aqui (lo saca escribiendole a @userinfobot).
+const CHATS = (process.env.TELEGRAM_CHAT_ID || '8571975984,1280343056')
+  .split(',').map(function (s) { return s.trim(); }).filter(Boolean);
 const DIAS_GRACIA = 5;
 
 if (!TOKEN) { console.error('Falta el secreto TELEGRAM_TOKEN.'); process.exit(1); }
@@ -200,15 +203,19 @@ async function main() {
 
   const m = L.join('\n');
 
-  /* ── Enviar a Telegram ── */
-  const res = await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: CHAT, text: m, parse_mode: 'HTML', disable_web_page_preview: true })
-  });
-  const body = await res.json();
-  if (!body.ok) { console.error('Error de Telegram:', body); process.exit(1); }
-  console.log('Resumen enviado. message_id:', body.result && body.result.message_id);
+  /* ── Enviar a Telegram (a cada destinatario) ── */
+  let algunoOk = false;
+  for (const chat of CHATS) {
+    const res = await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chat, text: m, parse_mode: 'HTML', disable_web_page_preview: true })
+    });
+    const body = await res.json();
+    if (body.ok) { algunoOk = true; console.log('Resumen enviado a', chat); }
+    else console.error('Telegram', chat + ':', body.description);   // ej: el socio aun no le dio /start
+  }
+  if (!algunoOk) process.exit(1);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

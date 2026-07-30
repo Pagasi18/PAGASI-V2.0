@@ -10,6 +10,10 @@
 
 const REPO = 'Pagasi18/PAGASI-V2.0';
 
+// Quienes pueden usar el bot (dueno + socio). Para sumar a alguien, agrega su
+// chat id aqui. El bot ignora a cualquier otro, aunque tenga el enlace.
+const ALLOWED = ['8571975984', '1280343056'];
+
 // Teclado de botones que se muestra en Telegram
 const KEYBOARD = {
   keyboard: [
@@ -49,7 +53,7 @@ export default {
     const msg = update.message || update.edited_message;
     const chatId = msg && msg.chat && msg.chat.id;
     const text = (msg && msg.text) || '';
-    if (String(chatId) !== String(env.CHAT_ID)) return new Response('ignored');
+    if (!ALLOWED.includes(String(chatId))) return new Response('ignored');
 
     const tg = (method, body) => fetch(
       `https://api.telegram.org/bot${env.TELEGRAM_TOKEN}/${method}`,

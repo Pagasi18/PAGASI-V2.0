@@ -20,7 +20,10 @@ const { Firestore } = require('@google-cloud/firestore');
 const Ledger = require('../logic/credito-ledger.js');
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
-const CHAT  = process.env.CHAT || process.env.TELEGRAM_CHAT_ID || '8571975984';
+// Si el Worker pasa un CHAT (boton a pedido) respondemos solo a quien pidio.
+// Si no viene (push programado, ej. Buenos dias) va a todos: dueno + socio.
+const OWNERS = ['8571975984', '1280343056'];
+const DESTINOS = process.env.CHAT ? [process.env.CHAT.trim()] : OWNERS;
 const MODO  = (process.env.MODO || '').trim();
 const ARG   = (process.env.ARG || '').trim();
 const DIAS_GRACIA = 5;
@@ -333,9 +336,13 @@ async function main() {
   else if (MODO === 'leads') m = leads(D);
   else m = 'Modo no reconocido: ' + esc(MODO);
 
-  const r = await tg('sendMessage', { chat_id: CHAT, text: m, parse_mode: 'HTML', disable_web_page_preview: true });
-  if (!r.ok) { console.error('Telegram:', r); process.exit(1); }
-  console.log('Reporte', MODO, 'enviado. message_id:', r.result && r.result.message_id);
+  let algunoOk = false;
+  for (const chat of DESTINOS) {
+    const r = await tg('sendMessage', { chat_id: chat, text: m, parse_mode: 'HTML', disable_web_page_preview: true });
+    if (r.ok) { algunoOk = true; console.log('Reporte', MODO, 'enviado a', chat); }
+    else console.error('Telegram', chat + ':', r.description);
+  }
+  if (!algunoOk) process.exit(1);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
