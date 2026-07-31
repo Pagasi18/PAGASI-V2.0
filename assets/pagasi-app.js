@@ -1548,9 +1548,25 @@ function _maxNumeroDe(coleccion, regex){
 // que crearlo encima del de otro cliente.
 function nextCredIdAsync(){
   if(!db) return Promise.resolve(nextCredId());
-  return _maxNumeroDe('creditos', /CRED-(\d+)/)
-    .then(function(max){ return reservarNumero('creditos', max); })
-    .then(function(n){ return 'CRED-' + String(n).padStart(3, '0'); });
+  // Rellena huecos primero: si faltan numeros en la secuencia (ej. 319-326 que
+  // quedaron reservados en pruebas), la proxima venta toma el mas bajo libre.
+  // Cuando no quedan huecos, sigue con el siguiente numero atomico (max+1).
+  // El candado DB.crearCred cubre las carreras: si dos toman el mismo hueco a la
+  // vez, uno entra y el otro reintenta y agarra el siguiente libre.
+  return db.collection('creditos').get().then(function(snap){
+    var usados = {}, max = 0;
+    snap.forEach(function(d){
+      var m = String((d.data && d.data().id) || d.id || '').match(/CRED-(\d+)/);
+      if(m){ var n = parseInt(m[1], 10); if(!isNaN(n)){ usados[n] = 1; if(n > max) max = n; } }
+    });
+    for(var g = 1; g <= max; g++){
+      if(!usados[g]) return 'CRED-' + String(g).padStart(3, '0');   // hueco mas bajo
+    }
+    // Sin huecos: numero siguiente, reservado de forma atomica.
+    return reservarNumero('creditos', max).then(function(n){
+      return 'CRED-' + String(n).padStart(3, '0');
+    });
+  });
 }
 
 function nextClienteIdAsync(){
