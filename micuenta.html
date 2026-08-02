@@ -536,8 +536,8 @@ details summary::-webkit-details-marker{display:none}
 <script charset="utf-8" src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 <!-- Mismo motor de calculo que usa el admin: el cliente ve exactamente las
      mismas cifras que el cobrador, sin posibilidad de divergencia. -->
-<script src="logic/credito-ledger.js?v=20260731-2201"></script>
-<script src="logic/gamificacion.js?v=20260731-2201"></script>
+<script src="logic/credito-ledger.js?v=20260802-1948"></script>
+<script src="logic/gamificacion.js?v=20260802-1948"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
    PORTAL DEL CLIENTE — Pagasi
@@ -570,12 +570,16 @@ function fmt(n){ return '$' + (parseFloat(n)||0).toLocaleString('es-VE',{minimum
 function hoyISO(){ var d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
 function fechaLarga(iso){
   if(!iso) return '';
-  var p=String(iso).slice(0,10).split('-'); if(p.length!==3) return iso;
+  // Estas funciones se concatenan directo en innerHTML. Si la fecha no tiene el
+  // formato esperado, devolvemos el valor ESCAPADO: un comprobante del cliente
+  // con una "fecha" tipo <img onerror=...> podia ejecutar codigo en la sesion
+  // del staff (XSS almacenado). esc() lo neutraliza.
+  var p=String(iso).slice(0,10).split('-'); if(p.length!==3) return esc(String(iso));
   return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'});
 }
 function fechaCorta(iso){
   if(!iso) return '';
-  var p=String(iso).slice(0,10).split('-'); if(p.length!==3) return iso;
+  var p=String(iso).slice(0,10).split('-'); if(p.length!==3) return esc(String(iso));
   return new Date(+p[0],+p[1]-1,+p[2]).toLocaleDateString('es-VE',{day:'2-digit',month:'short'});
 }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }

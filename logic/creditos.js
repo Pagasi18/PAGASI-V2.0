@@ -2034,10 +2034,23 @@ function _wzGuardar(){
         if(_newMotoId){
           var _nmi = S.motos.findIndex(function(x){return String(x.id)===String(_newMotoId);});
           if(_nmi>=0){
-            S.motos[_nmi].creditoId=_editId;
-            S.motos[_nmi].cliente=_cliNombre;
-            if(_credActivo && S.motos[_nmi].estado!=='financiada') S.motos[_nmi].estado='financiada';
-            DB.saveMoto(S.motos[_nmi]);
+            // No robarle la moto a OTRO credito activo: si ya esta asignada a
+            // otro cliente vigente, avisamos y no la reasignamos.
+            var _motoDeOtro = S.creds.some(function(x){
+              return x.id!==_editId && !x.eliminado
+                && x.estado!=='cancelado' && x.estado!=='recuperado' && x.estado!=='recuperada'
+                && String(x.motoId)===String(_newMotoId);
+            });
+            if(_motoDeOtro){
+              alert('⚠️ Esa moto ya está asignada a otro crédito activo.\n\n'
+                  + 'No se cambió la moto de este crédito para no quitársela al otro cliente. '
+                  + 'Verifica el número de moto.');
+            } else {
+              S.motos[_nmi].creditoId=_editId;
+              S.motos[_nmi].cliente=_cliNombre;
+              if(_credActivo && S.motos[_nmi].estado!=='financiada') S.motos[_nmi].estado='financiada';
+              DB.saveMoto(S.motos[_nmi]);
+            }
           }
         }
       }catch(_e){ console.warn('re-vinculo moto (edit):', _e && _e.message); }
@@ -2138,10 +2151,23 @@ function _wzGuardar(){
   // Alta con candado: si el numero ya esta ocupado NO lo pisamos. Antes, un
   // set() sobre un ID existente borraba la venta de otro cliente sin avisar
   // (paso con CRED-271 y CRED-313). Ahora se rechaza y se avisa.
-  DB.crearCred(newCred).catch(function(e){
-    if(!e || e.code !== 'ID_OCUPADO'){ console.error('crear credito:', e && e.message); return; }
+  //
+  // IMPORTANTE: TODO el post-proceso (moto, inicial, movimiento) va DENTRO del
+  // .then — solo corre si el credito se guardo de verdad. Si corriera pase lo
+  // que pase (como antes), una colision dejaria moto/pago/movimiento huerfanos
+  // y ademas un saveCred() suelto pisaria al credito ganador. Eso reabria justo
+  // el bug de CRED-271/313 por la ruta de moto de catalogo.
+  DB.crearCred(newCred).then(function(){
+    _altaCreditoContinuar();
+  }).catch(function(e){
     var i = S.creds.findIndex(function(x){ return x === newCred; });
     if(i >= 0) S.creds.splice(i, 1);   // fuera de la lista: nunca se guardo
+    if(!e || e.code !== 'ID_OCUPADO'){
+      console.error('crear credito:', e && e.message);
+      alert('No se pudo guardar el crédito (problema de conexión).\n\n👉 Dale a GUARDAR otra vez.');
+      if(typeof render==='function') render();
+      return;
+    }
     if(typeof logActividad==='function') logActividad('credito_colision','creditos',newCred.id,{cliente:newCred.cli});
     alert('✅ Tranquilo, no se dañó nada.\n\n'
         + 'Otra persona guardó una venta al mismo tiempo y se cruzaron los números, '
@@ -2149,6 +2175,9 @@ function _wzGuardar(){
         + '👉 Dale a GUARDAR otra vez y listo — el sistema le pone un número nuevo solo.');
     if(typeof render==='function') render();
   });
+
+  // Todo lo que sigue solo se ejecuta si el credito se guardo (crearCred OK).
+  function _altaCreditoContinuar(){
   if(typeof logActividad==='function') logActividad('credito_creado','creditos',newCred.id,{cliente:newCred.cli, modelo:newCred.modelo||'', total:newCred.total||newCred.fin||0});
 
   // Marcar moto como financiada o crearla desde catálogo
@@ -2168,55 +2197,56 @@ function _wzGuardar(){
       // Si la moto del inventario tenía concesionarioId, el crédito lo hereda
       if(S.motos[mi].concesionarioId && !newCred.concesionarioId){
         newCred.concesionarioId = S.motos[mi].concesionarioId;
-        DB.saveCred(newCred);
+        DB.updateCred(newCred.id, { concesionarioId: newCred.concesionarioId });
       }
       DB.saveMoto(S.motos[mi]);
     }
   } else if(WZ.motoModelo){
-    var newMotoId = S.motos.length ? Math.max.apply(null, S.motos.map(function(x){ return x.id||0; })) + 1 : 1;
-    var motoInvNueva = {
-      id:newMotoId,
-      modelo:WZ.motoModelo||'',
-      precio:parseFloat(WZ.precio)||0,
-      precioBaseReal:r.precioBaseReal||parseFloat(WZ.precio)||0,
-      planModo:r.mode||'global',
-      marca:WZ.marca||'',
-      color:WZ.color||'',
-      anio:WZ.anio||'',
-      vin:WZ.vin||'',
-      placa:WZ.placa||'',
-      serialMotor:WZ.serialMotor||'',
-      serialChasis:WZ.serialChasis||'',
-      gpsNum:WZ.gpsNum||'',
-      estado:'financiada',
-      cliente:((existing&&existing.nombre)||WZ.nom)||null,
-      gps:false,
-      notas:'Creada automáticamente desde catálogo al registrar financiamiento '+credId,
-      ini:r.ini,
-      fin:r.fin,
-      total:r.total,
-      cuotaQ:r.cuotaQ,
-      cuotaM:r.cuotaM||r.cuotaQ*2,
-      totalPagado:r.totalPagado||0,
-      concesionarioId: newCred.concesionarioId || _concDefaultId()
-    };
-    S.motos.push(motoInvNueva);
-    // Mismo candado que el credito: la moto de Bastidas desaparecio del
-    // inventario porque otra venta escribio sobre su mismo numero.
-    DB.crearMoto(motoInvNueva).catch(function(e){
-      if(e && e.code === 'ID_OCUPADO'){
-        console.error('colision de moto:', motoInvNueva.id);
-        alert('✅ Tranquilo, no se dañó nada.\n\n'
-            + 'Se cruzó el número de la moto con otra venta guardada al mismo tiempo.\n\n'
-            + '👉 Dale a GUARDAR otra vez. Si después ves algo raro con la moto de este crédito, avísale al admin.');
-      } else { console.error('crear moto:', e && e.message); }
+    // Numero de moto ATOMICO (igual que el credito). Antes se calculaba con
+    // Math.max local: dos ventas simultaneas tomaban el mismo numero y una
+    // pisaba a la otra (asi desaparecio la moto de Bastidas). Con
+    // nextMotoIdAsync + crearMoto (candado) eso ya no pasa.
+    nextMotoIdAsync().then(function(newMotoId){
+      var motoInvNueva = {
+        id:newMotoId,
+        modelo:WZ.motoModelo||'',
+        precio:parseFloat(WZ.precio)||0,
+        precioBaseReal:r.precioBaseReal||parseFloat(WZ.precio)||0,
+        planModo:r.mode||'global',
+        marca:WZ.marca||'',
+        color:WZ.color||'',
+        anio:WZ.anio||'',
+        vin:WZ.vin||'',
+        placa:WZ.placa||'',
+        serialMotor:WZ.serialMotor||'',
+        serialChasis:WZ.serialChasis||'',
+        gpsNum:WZ.gpsNum||'',
+        estado:'financiada',
+        cliente:((existing&&existing.nombre)||WZ.nom)||null,
+        gps:false,
+        notas:'Creada automáticamente desde catálogo al registrar financiamiento '+credId,
+        ini:r.ini,
+        fin:r.fin,
+        total:r.total,
+        cuotaQ:r.cuotaQ,
+        cuotaM:r.cuotaM||r.cuotaQ*2,
+        totalPagado:r.totalPagado||0,
+        concesionarioId: newCred.concesionarioId || _concDefaultId()
+      };
+      S.motos.push(motoInvNueva);
+      return DB.crearMoto(motoInvNueva).then(function(){
+        newCred.motoId = motoInvNueva.id;
+        DB.updateCred(newCred.id, { motoId: motoInvNueva.id });
+        // ── Crear egresos + movimientos por la compra de la moto (catálogo) ──
+        if(WZ._pagosMoto && WZ._pagosMoto.length){
+          _mpagoCrearGastos(motoInvNueva, WZ._pagosMoto, {fecha: newCred.fecha});
+        }
+      });
+    }).catch(function(e){
+      // El credito ya quedo guardado; si la moto no se pudo crear, se vincula
+      // luego desde Inventario. NO pedimos re-guardar (duplicaria el credito).
+      console.error('crear moto catálogo:', e && (e.code||e.message));
     });
-    newCred.motoId = motoInvNueva.id;
-    DB.saveCred(newCred);
-    // ── Crear egresos + movimientos por la compra de la moto (catálogo) ──
-    if(WZ._pagosMoto && WZ._pagosMoto.length){
-      _mpagoCrearGastos(motoInvNueva, WZ._pagosMoto, {fecha: newCred.fecha});
-    }
   }
 
   // Si el crédito quedó como pendiente_revision (Vendedor Concesionario),
@@ -2231,7 +2261,7 @@ function _wzGuardar(){
   // Registrar la inicial también en Pagos
   var iniMetodo = ($('wz_ini_metodo')&&$('wz_ini_metodo').value) || (_cuentasBanc&&_cuentasBanc.length?_cuentasBanc[0].nombre:'Efectivo USD');
   var iniRef = ($('wz_ini_ref')&&$('wz_ini_ref').value) || '';
-  var pagoIniId = 'PAG-'+Date.now();
+  var pagoIniId = 'PAG-'+Date.now()+'-'+Math.floor(Math.random()*10000);
   var pagoIni = {
     id:pagoIniId,
     cli:newCred.cli,
@@ -2254,7 +2284,7 @@ function _wzGuardar(){
 
   // Movimiento de inicial
   var movIni = {
-    id:'MOV-'+Date.now(),
+    id:'MOV-'+Date.now()+'-'+Math.floor(Math.random()*10000),
     tipo:'deposito',
     tipoOperacion:'inicial_credito',
     conceptoPago:pagoIniId,
@@ -2274,6 +2304,7 @@ function _wzGuardar(){
   _wzClose();
   nav('creditos');
   toast(' Solicitud creada · '+credId+' · Inicial '+fmt(r.ini)+' → '+iniMetodo,'success');
+  }   // ← fin de _altaCreditoContinuar (solo corre si crearCred tuvo exito)
   }).catch(function(e){   // no se pudo reservar el numero: NO creamos nada
     console.error('reservar numero de credito:', e);
     alert('No se pudo reservar el número del crédito.\n\n'
