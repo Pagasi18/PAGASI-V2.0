@@ -153,10 +153,21 @@ service cloud.firestore {
       allow read: if esStaff() || esClienteDe(resource.data.clienteId);
       allow create: if esClienteDe(request.resource.data.clienteId)
         && esMiCredito(request.resource.data.credId)   // no puede reportar sobre el credito de otro
+        // Solo estos campos: el cliente NO puede inyectar otros (ej. una "fecha"
+        // con HTML que se ejecutaria en la sesion del staff = XSS almacenado).
+        && request.resource.data.keys().hasOnly(['clienteId','clienteNombre','credId','monto','fecha','metodo','referencia','fotoUrl','fotoPath','estado','origen','creadoEn'])
         && request.resource.data.estado == 'pendiente'
+        && request.resource.data.origen == 'portal'
         && request.resource.data.monto is number
         && request.resource.data.monto > 0
-        && request.resource.data.monto <= 100000;
+        && request.resource.data.monto <= 100000
+        && request.resource.data.clienteNombre is string && request.resource.data.clienteNombre.size() < 120
+        && request.resource.data.fecha is string && request.resource.data.fecha.size() < 40
+        && request.resource.data.metodo is string && request.resource.data.metodo.size() < 60
+        && request.resource.data.referencia is string && request.resource.data.referencia.size() < 200
+        && request.resource.data.fotoUrl is string && request.resource.data.fotoUrl.size() < 2000
+        && request.resource.data.fotoPath is string && request.resource.data.fotoPath.size() < 500
+        && request.resource.data.creadoEn is string;
       allow update, delete: if esStaff();
     }
 
