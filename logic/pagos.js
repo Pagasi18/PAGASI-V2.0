@@ -51,7 +51,7 @@ function openAddPago(preCredId){
       <div class="fg"><label>Frecuencia</label><input class="fi" value="Quincenal (cada 15 días)" readonly style="color:var(--p1);font-weight:700;background:var(--surf)"></div>
       <div class="fg"><label>Fecha de pago</label><input class="fi" id="p_fecha" type="date" value="${hoyLocalISO()}"></div>
       <div class="fg"><label>Monto ($)</label><input class="fi" id="p_monto" type="number" placeholder="0.00"></div>
-<div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">${(_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[]).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}${(!_cuentasBanc||!_cuentasBanc.length)?'<option value="">— Sin cuentas configuradas —</option>':''}</select></div>
+<div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">${_cuentasOrdenadasPago().map(c=>`<option value="${c.nombre}">${c.label}</option>`).join('')}${(!_cuentasBanc||!_cuentasBanc.length)?'<option value="">— Sin cuentas configuradas —</option>':''}</select></div>
       <div class="fg"><label>N° Referencia</label><input class="fi" id="p_ref" placeholder="Número de referencia o comprobante"></div>
       <div class="fg"><label>Cobrador</label><select class="fs" id="p_cobrador">${getCobradoresList().map(u=>`<option>${u}</option>`).join('')}</select></div>
     </div>`;
@@ -1176,8 +1176,8 @@ function openEditPago(pagoId){
   var p = S.pagos.find(function(x){return x.id===pagoId;}); if(!p) return;
   setMicon('editar'); $('mtt').textContent='Editar Pago'; $('msb').textContent=pagoId+' · '+p.cli;
   $('modal-box').className='modal';
-  var metOpts = (_cuentasBanc||[]).map(function(c){
-    return '<option value="'+c.nombre+'" '+(p.metodo===c.nombre?'selected':'')+'>'+c.nombre+'</option>';
+  var metOpts = _cuentasOrdenadasPago().map(function(c){
+    return '<option value="'+c.nombre+'" '+(p.metodo===c.nombre?'selected':'')+'>'+c.label+'</option>';
   }).join('');
   var cobrOpts = getCobradoresList().map(function(u){
     return '<option '+(p.cobrador===u?'selected':'')+'>'+u+'</option>';
@@ -1460,6 +1460,31 @@ function liveSearchCuotas(q){
 
 // ── Buscador del "Registro de pagos" ──────────────────────────
 // Debounce + re-render + restaurar foco (nav() reconstruye el DOM).
+// Orden preferido del selector "Recibido en" al registrar/editar un pago.
+// Ordena y reetiqueta SOLO la vista: el value sigue siendo el nombre de la cuenta
+// tal como esta guardado, porque los saldos de Cuentas se calculan cruzando por
+// ese nombre (saldoCuenta) y renombrarlas dejaria huerfanos los movimientos.
+var _ORDEN_PAGO = [
+  { match:'pago movil', label:'Pago móvil' },
+  { match:'100% banco', label:'Depósito en efectivo a 100% Banco' },
+  { match:'binance',    label:'Binance: Pagos@pagasi.io' },
+  { match:'efectivo',   label:'Efectivo' }
+];
+function _cuentasOrdenadasPago(){
+  var norm=function(x){ return String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); };
+  var resto=(_cuentasBanc||[]).slice(), out=[];
+  _ORDEN_PAGO.forEach(function(pref){
+    for(var i=0;i<resto.length;i++){
+      if(norm(resto[i].nombre).indexOf(norm(pref.match))>-1){
+        out.push({ nombre:resto[i].nombre, label:pref.label });
+        resto.splice(i,1); return;
+      }
+    }
+  });
+  resto.forEach(function(c){ out.push({ nombre:c.nombre, label:c.nombre }); });
+  return out;
+}
+
 function liveSearchPagos(q){
   S.pagosQ = q;
   pgSet('pagos',1);

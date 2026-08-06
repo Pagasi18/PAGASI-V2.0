@@ -62,7 +62,7 @@ PG.pagos = function(){
   var _pHasta = S.pagosHasta||'';
   if(_pDesde) filtered = filtered.filter(function(p){ return (p.fecha||'') >= _pDesde; });
   if(_pHasta) filtered = filtered.filter(function(p){ return (p.fecha||'') <= _pHasta; });
-  // ─── Buscador: cliente, crédito, cobrador, ID, método o monto ───
+  // ─── Buscador: cliente, crédito, cobrador, ID, método, N° referencia o monto ───
   var _pQ = String(S.pagosQ||'').toLowerCase().trim();
   if(_pQ) filtered = filtered.filter(function(p){
     return String(p.cli||'').toLowerCase().indexOf(_pQ)>-1
@@ -70,6 +70,7 @@ PG.pagos = function(){
         || String(p.cobrador||'').toLowerCase().indexOf(_pQ)>-1
         || String(p.id||'').toLowerCase().indexOf(_pQ)>-1
         || String(p.metodo||p.cuenta||'').toLowerCase().indexOf(_pQ)>-1
+        || String(p.referencia||'').toLowerCase().indexOf(_pQ)>-1
         || String(p.monto||'').indexOf(_pQ)>-1;
   });
 
@@ -274,7 +275,7 @@ PG.pagos = function(){
 
   <!-- Filtro por fecha + buscador -->
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-    <input type="text" id="pagosQ" value="${String(S.pagosQ||'').replace(/</g,'&lt;').replace(/"/g,'&quot;')}" placeholder="Buscar cliente, crédito, cobrador, monto..." oninput="liveSearchPagos(this.value)" style="flex:1;min-width:220px;border:1px solid var(--rim);border-radius:8px;padding:6px 10px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
+    <input type="text" id="pagosQ" value="${String(S.pagosQ||'').replace(/</g,'&lt;').replace(/"/g,'&quot;')}" placeholder="Buscar cliente, crédito, cobrador, N° referencia, monto..." oninput="liveSearchPagos(this.value)" style="flex:1;min-width:220px;border:1px solid var(--rim);border-radius:8px;padding:6px 10px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
     <label style="font-size:11px;color:var(--ink3);font-weight:700">Desde:</label>
     <input type="date" value="${S.pagosDesde||''}" onchange="S.pagosDesde=this.value;pgSet('pagos',1);nav('pagos')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
     <label style="font-size:11px;color:var(--ink3);font-weight:700">Hasta:</label>
