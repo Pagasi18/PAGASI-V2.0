@@ -5,6 +5,7 @@ function renderContrato(){
   if(tipo==='carta') return _renderCartaInstrucciones();
   if(tipo==='cesion') return _renderCesionCuotas();
   if(tipo==='ambos') return _renderAmbosContratos();
+  if(tipo==='unificado') return _renderContratoUnificado();
   // 'arriendo' conserva el contrato de arriendo-venta anterior para los creditos
   // ya firmados bajo esa estructura. Todo lo demas sale con el contrato nuevo.
   if(tipo==='arriendo') return _renderContratoArrendamiento();
@@ -695,7 +696,7 @@ function _docFinanzas(c){
            saldo:saldo, total:total, comision:comision };
 }
 
-function _htmlContratoAgenteCobro(){
+function _htmlContratoAgenteCobro(unificado){
   var ctx = _docCtx();
   if(!ctx){ return null; }
   var c=ctx.c, cli=ctx.cli, logoSrc=ctx.logoSrc, fechaContrato=ctx.fechaContrato, V=ctx.V;
@@ -709,6 +710,13 @@ function _htmlContratoAgenteCobro(){
 
   var p = 'font-size:10.4px;line-height:1.45;color:#222;margin:5px 0;text-align:justify';
   var clausH = 'color:'+purple+';font-weight:900;font-size:11.5px;text-transform:uppercase;letter-spacing:.3px;margin:12px 0 5px;padding-bottom:3px;border-bottom:2px solid '+purple;
+  // Numeracion corrida: en modo unificado se intercalan las clausulas de cesion
+  // antes de Jurisdiccion, por lo que los ordinales no pueden ir escritos a mano.
+  var _ORD = ['Primera','Segunda','Tercera','Cuarta','Quinta','Sexta','Séptima','Octava','Novena','Décima',
+              'Décima primera','Décima segunda','Décima tercera','Décima cuarta','Décima quinta','Décima sexta',
+              'Décima séptima','Décima octava','Décima novena','Vigésima','Vigésima primera','Vigésima segunda'];
+  var _nCl = 0;
+  var CL = function(t){ return '<div style="'+clausH+'">'+(_ORD[_nCl++]||('Clausula '+_nCl))+': '+t+'</div>'; };
   var lbl = 'background:#EFF6FF;color:'+purpleDark+';font-weight:700;font-size:10px;padding:6px 8px;width:26%;border:1px solid #DBEAFE';
   var val = 'padding:6px 8px;font-size:10px;border:1px solid #DBEAFE;width:24%';
 
@@ -746,12 +754,12 @@ function _htmlContratoAgenteCobro(){
 
     <div style="background:${purple};color:#fff;text-align:center;padding:11px 16px;border-radius:4px;margin-bottom:10px;border-bottom:4px solid ${purpleDark}">
       <div style="font-size:15px;font-weight:900;letter-spacing:.3px">CONTRATO DE VENTA DE MOTOCICLETA EN CUOTAS</div>
-      <div style="font-size:10px;font-weight:700;margin-top:3px;opacity:.92">CON RESERVA DE DOMINIO Y AGENTE DE COBRO</div>
+      <div style="font-size:10px;font-weight:700;margin-top:3px;opacity:.92">${unificado?'CON RESERVA DE DOMINIO, AGENTE DE COBRO Y CESIÓN DE CUOTAS':'CON RESERVA DE DOMINIO Y AGENTE DE COBRO'}</div>
     </div>
 
-    <p style="${p}">Entre ${blank(ctx.mConcesionario,34)}, sociedad mercantil / establecimiento comercial identificado como concesionario o punto de venta, domiciliado en la República Bolivariana de Venezuela (en adelante, el "Concesionario"), quien en lo sucesivo se denominará <strong>LA VENDEDORA</strong>; y por la otra parte, el ciudadano/la ciudadana ${blank(V(cli.nombre||c.cli),34)}, de nacionalidad ${blank(V(cli.nacionalidad)||'venezolana',14)}, mayor de edad, titular de la cédula de identidad N° ${blank(V(cli.cedula),14)}, RIF N° ${blank(V(cli.rif),14)}, domiciliado(a) en ${blank(V(cli.dir||cli.ciudad),40)}, teléfono N° ${blank(V(cli.tel),14)}, correo electrónico ${blank(V(cli.email),20)}, quien en lo sucesivo se denominará <strong>EL COMPRADOR</strong>; e interviene asimismo la sociedad mercantil <strong>PAGASI 18, C.A.</strong>, domiciliada en la República Bolivariana de Venezuela, identificada con RIF <strong>J-50829589-7</strong>, quien actúa exclusivamente en calidad de agente de cobro de LA VENDEDORA para los efectos de este contrato, en lo sucesivo <strong>"PAGASI"</strong> o <strong>"EL AGENTE DE COBRO"</strong>; se ha convenido celebrar el presente Contrato de Venta de Motocicleta en Cuotas con Reserva de Dominio, sujeto a las siguientes cláusulas:</p>
+    <p style="${p}">Entre ${blank(ctx.mConcesionario,34)}, sociedad mercantil / establecimiento comercial identificado como concesionario o punto de venta, domiciliado en la República Bolivariana de Venezuela (en adelante, el "Concesionario"), quien en lo sucesivo se denominará <strong>LA VENDEDORA</strong>; y por la otra parte, el ciudadano/la ciudadana ${blank(V(cli.nombre||c.cli),34)}, de nacionalidad ${blank(V(cli.nacionalidad)||'venezolana',14)}, mayor de edad, titular de la cédula de identidad N° ${blank(V(cli.cedula),14)}, RIF N° ${blank(V(cli.rif),14)}, domiciliado(a) en ${blank(V(cli.dir||cli.ciudad),40)}, teléfono N° ${blank(V(cli.tel),14)}, correo electrónico ${blank(V(cli.email),20)}, quien en lo sucesivo se denominará <strong>EL COMPRADOR</strong>; e interviene asimismo la sociedad mercantil <strong>PAGASI 18, C.A.</strong>, domiciliada en la República Bolivariana de Venezuela, identificada con RIF <strong>J-50829589-7</strong>, quien actúa exclusivamente en calidad de agente de cobro de LA VENDEDORA para los efectos de este contrato, en lo sucesivo <strong>"PAGASI"</strong> o <strong>"EL AGENTE DE COBRO"</strong>; se ha convenido celebrar el presente Contrato de Venta de Motocicleta en Cuotas con Reserva de Dominio${unificado?', que comprende asimismo la cesión de las cuotas de LA VENDEDORA a favor de PAGASI en un solo instrumento':''}, sujeto a las siguientes cláusulas:</p>
 
-    <div style="${clausH}">Primera: Objeto</div>
+    ${CL("Objeto")}
     <p style="${p}">LA VENDEDORA da en venta a EL COMPRADOR, quien acepta comprar, una motocicleta identificada de la siguiente manera:</p>
     <table style="width:100%;border-collapse:collapse;margin:8px 0">
       <tr><td style="${lbl}">Marca:</td><td style="${val}">${blank(ctx.mMarca,14)}</td><td style="${lbl}">Modelo:</td><td style="${val}">${blank(ctx.mModelo,14)}</td></tr>
@@ -761,7 +769,7 @@ function _htmlContratoAgenteCobro(){
       <tr><td style="${lbl}">Concesionario / Punto de venta:</td><td style="${val}" colspan="3">${blank(ctx.mConcesionario,40)}</td></tr>
     </table>
 
-    <div style="${clausH}">Segunda: Precio de venta, comisión y condiciones de pago</div>
+    ${CL("Precio de venta, comisión y condiciones de pago")}
     <p style="${p}">El precio de venta de la motocicleta, el Servicio de Asistencia Administrativa prestado por PAGASI 18, C.A., y las condiciones de pago, serán los siguientes:</p>
     <table style="width:100%;border-collapse:collapse;margin:8px 0">
       <tr><td style="${lbl}">Precio de venta de contado:</td><td style="${val}">${money(F.precio)}</td><td style="${lbl}">Comisión de PAGASI por Servicio de Asistencia Administrativa:</td><td style="${val}">${money(F.comision)}</td></tr>
@@ -771,10 +779,10 @@ function _htmlContratoAgenteCobro(){
     <p style="${p}">El precio de venta de contado corresponde a la contraprestación de LA VENDEDORA por la motocicleta. El Servicio de Asistencia Administrativa corresponde a la contraprestación que paga EL COMPRADOR a PAGASI 18, C.A. por los servicios administrativos relacionados con la gestión de los pagos previstos en este contrato. El precio total a pagar es la suma del precio de venta de contado más el Servicio de Asistencia Administrativa.</p>
     <p style="${p}">Todas las obligaciones de pago se expresan y serán cumplidas en Dólares de los Estados Unidos de América (USD), salvo acuerdo expreso por escrito.</p>
 
-    <div style="${clausH}">Tercera: Saldo a pagar en cuotas</div>
+    ${CL("Saldo a pagar en cuotas")}
     <p style="${p}">Luego del pago inicial indicado en la cláusula anterior, EL COMPRADOR se obliga a pagar el saldo restante del precio total mediante las cuotas pactadas, el cual comprende la parte pendiente del precio de venta y la comisión de PAGASI por el Servicio de Asistencia Administrativa. <strong>Saldo total a pagar en cuotas: ${money(F.saldo)}</strong>.</p>
 
-    <div style="${clausH}">Cuarta: Forma de pago en cuotas</div>
+    ${CL("Forma de pago en cuotas")}
     <p style="${p}">El pago del saldo indicado en la Cláusula Tercera se efectuará mediante ${F.nCuotas} cuotas quincenales, conforme al siguiente Plan de Abonos Quincenales, que forma parte integrante de este contrato:</p>
     <div style="margin:10px 0 6px;page-break-inside:avoid">
       <div style="background:${purple};color:#fff;text-align:center;padding:8px 10px;border-radius:6px 6px 0 0">
@@ -786,7 +794,7 @@ function _htmlContratoAgenteCobro(){
     </div>
     <p style="${p}">El incumplimiento en el pago oportuno de cualquiera de las cuotas dará derecho a LA VENDEDORA, por sí o a través de PAGASI en su condición de agente de cobro, a ejercer las acciones previstas en el presente contrato y en la legislación aplicable.</p>
 
-    <div style="${clausH}">Quinta: PAGASI como agente de cobro y Servicio de Asistencia Administrativa</div>
+    ${CL("PAGASI como agente de cobro y Servicio de Asistencia Administrativa")}
     <p style="${p}">PAGASI 18, C.A. presta a EL COMPRADOR un Servicio de Asistencia Administrativa relacionado con la gestión de los pagos previstos en este contrato, por el cual percibe la remuneración indicada en la Cláusula Segunda. EL COMPRADOR reconoce y acepta expresamente que:</p>
     <ul style="margin:5px 0 5px 17px;padding:0">
       <li style="${p}">PAGASI 18, C.A. no es propietaria de la motocicleta ni parte vendedora en la presente operación; interviene única y exclusivamente como agente de cobro autorizado por LA VENDEDORA.</li>
@@ -797,49 +805,60 @@ function _htmlContratoAgenteCobro(){
       <li style="${p}">PAGASI podrá emitir los comprobantes, estados de cuenta y notificaciones de cobro relacionados con este contrato en su condición de agente de cobro, sin que ello le confiera derechos de propiedad sobre la motocicleta más allá de la reserva de dominio pactada en la Cláusula Sexta.</li>
     </ul>
 
-    <div style="${clausH}">Sexta: Reserva de dominio y registro</div>
+    ${CL("Reserva de dominio y registro")}
     <p style="${p}">Las partes convienen expresamente que la reserva de dominio y propiedad de la motocicleta descrita en la Cláusula Primera será ejercida y mantenida a favor de PAGASI 18, C.A. hasta tanto EL COMPRADOR haya pagado la totalidad del precio, incluyendo cuotas, cargos, penalidades, gastos o cualquier otra obligación pendiente derivada de este contrato. En consecuencia, la motocicleta se encuentra y permanecerá registrada y titulada a nombre de EL COMPRADOR y con una reserva de dominio a nombre de PAGASI 18, C.A. durante toda la vigencia de este contrato, sin que la tenencia o uso por parte de EL COMPRADOR implique transferencia alguna de propiedad. LA VENDEDORA autoriza y reconoce que PAGASI ejerza dicha reserva de dominio en los términos aquí establecidos, sin que ello altere la condición de PAGASI como agente de cobro para los demás efectos del contrato.</p>
     <p style="${p}">Una vez pagada la última cuota y cumplidas todas las obligaciones contractuales — lo cual será verificado por PAGASI — la propiedad plena de la motocicleta pasará a EL COMPRADOR, y PAGASI 18, C.A. se obliga a otorgar y suscribir, en un plazo razonable, los documentos necesarios para el traspaso del registro de dominio a nombre de EL COMPRADOR. Los gastos, tasas y trámites del traspaso serán por cuenta de EL COMPRADOR, salvo acuerdo distinto por escrito.</p>
 
-    <div style="${clausH}">Séptima: Entrega, riesgo y retención de llave</div>
+    ${CL("Entrega, riesgo y retención de llave")}
     <p style="${p}">LA VENDEDORA entrega la motocicleta a EL COMPRADOR en fecha <strong>${fechaContrato}</strong>. Desde el momento de la entrega material, EL COMPRADOR asume la guarda, custodia, uso, mantenimiento, riesgo de pérdida, robo, hurto, daño, accidente, multas, infracciones, sanciones y cualquier otra responsabilidad relacionada con la motocicleta.</p>
     <p style="${p}">EL COMPRADOR acepta y autoriza expresamente que PAGASI 18, C.A., en su condición de titular de la reserva de dominio conforme a la Cláusula Sexta, conserve en su poder una (1) llave de la motocicleta como medida de garantía, durante toda la vigencia de este contrato. Dicha llave será utilizada únicamente en los supuestos de incumplimiento y recuperación previstos en este contrato. Al quedar pagada la totalidad del precio y finalizado el contrato, PAGASI entregará dicha llave a EL COMPRADOR junto con los documentos de traspaso señalados en la Cláusula Sexta.</p>
     ${ctx.mGpsNum?`<p style="${p}">La unidad se entrega con dispositivo de rastreo satelital (GPS) instalado, identificado con el N° <strong>${V(ctx.mGpsNum)}</strong>. EL COMPRADOR autoriza expresamente el monitoreo continuo de la ubicación de la motocicleta durante toda la vigencia del contrato y reconoce que cualquier intento de desactivación, bloqueo o manipulación del dispositivo constituye incumplimiento grave conforme a la Cláusula Décima.</p>`:''}
 
-    <div style="${clausH}">Octava: Uso, conservación y prohibiciones</div>
+    ${CL("Uso, conservación y prohibiciones")}
     <p style="${p}">Mientras exista saldo pendiente de pago, EL COMPRADOR se obliga a: usar la motocicleta de forma diligente y conforme a la ley; mantenerla en buen estado de funcionamiento y conservación; no vender, ceder, donar, traspasar, gravar, arrendar ni entregar la motocicleta a terceros sin autorización previa y por escrito de PAGASI; no utilizarla para actividades ilícitas; informar inmediatamente a LA VENDEDORA y a PAGASI en caso de accidente, robo, hurto, retención, decomiso, daño grave o cualquier situación que afecte la motocicleta; y permitir inspecciones razonables de la motocicleta cuando PAGASI lo solicite.</p>
 
-    <div style="${clausH}">Novena: Mora</div>
+    ${CL("Mora")}
     <p style="${p}">EL COMPRADOR incurrirá en mora de pleno derecho, sin necesidad de notificación judicial o extrajudicial, por el solo vencimiento de cualquiera de las cuotas sin que haya sido pagada oportunamente. El recargo por mora comenzará a computarse a partir del quinto (5°) día calendario siguiente a la fecha de vencimiento de la cuota no pagada, y será equivalente al dos coma cinco por ciento (2,5%) mensual, calculado sobre el monto vencido y no pagado, por todo el tiempo que dure el atraso. Este recargo constituye una penalidad por el atraso en el pago. La aceptación de pagos tardíos no implicará renuncia a los derechos de LA VENDEDORA ni de PAGASI, ni modificación de las fechas de pago originalmente pactadas.</p>
 
-    <div style="${clausH}">Décima: Incumplimiento</div>
+    ${CL("Incumplimiento")}
     <p style="${p}">Se considerará incumplimiento grave: falta de pago de una o más cuotas; suministro de información falsa; venta, cesión u ocultamiento no autorizado de la motocicleta; uso para actividades ilícitas; manipulación o desactivación del dispositivo GPS; daño grave o abandono. En caso de incumplimiento, PAGASI 18, C.A., en su condición de titular de la reserva de dominio y agente de cobro, podrá exigir el pago inmediato del saldo pendiente, resolver el contrato, solicitar la restitución de la motocicleta y reclamar daños, perjuicios, gastos de cobranza y honorarios profesionales, sin perjuicio de los derechos que correspondan a LA VENDEDORA.</p>
 
-    <div style="${clausH}">Décima primera: Restitución de la motocicleta</div>
+    ${CL("Restitución de la motocicleta")}
     <p style="${p}">En caso de resolución del contrato por incumplimiento, EL COMPRADOR se obliga a restituir inmediatamente la motocicleta a PAGASI 18, C.A., en su condición de titular de la reserva de dominio, en el lugar que ésta indique. La restitución no limitará el derecho de PAGASI ni de LA VENDEDORA a reclamar cuotas vencidas, cargos por mora, daños, gastos, honorarios legales o cualquier otra cantidad adeudada.</p>
 
-    <div style="${clausH}">Décima segunda: Gastos, multas e impuestos</div>
+    ${CL("Gastos, multas e impuestos")}
     <p style="${p}">Serán por cuenta exclusiva de EL COMPRADOR, desde la fecha de entrega: gastos de mantenimiento y reparación; combustible, lubricantes y repuestos; multas, infracciones y sanciones administrativas; impuestos, tasas o aranceles relacionados con el uso o circulación de la motocicleta; y gastos de cobranza, recuperación o traslado en caso de incumplimiento.</p>
 
-    <div style="${clausH}">Décima tercera: Declaraciones de EL COMPRADOR</div>
+    ${CL("Declaraciones de EL COMPRADOR")}
     <p style="${p}">EL COMPRADOR declara que: ha inspeccionado la motocicleta y la recibe a su entera satisfacción; conoce y acepta su estado físico, mecánico y legal; tiene capacidad económica suficiente para cumplir con las cuotas pactadas; la información suministrada es verdadera, completa y verificable; acepta que los pagos se realizarán exclusivamente a PAGASI 18, C.A. como agente de cobro, conforme a la Cláusula Quinta; reconoce y acepta que la reserva de dominio de la motocicleta corresponde a PAGASI 18, C.A. conforme a la Cláusula Sexta; acepta expresamente la cesión de las cuotas prevista en el Contrato de Cesión de Cuotas suscrito entre LA VENDEDORA y PAGASI; y autoriza a LA VENDEDORA y a PAGASI a verificar sus datos personales, laborales, comerciales, referencias y capacidad de pago.</p>
 
-    <div style="${clausH}">Décima cuarta: Fianza solidaria</div>
+    ${CL("Fianza solidaria")}
     <p style="${p}">Quien suscribe, ${blank(V(cli.fiador_nom),32)}, venezolano(a), mayor de edad, titular de la cédula de identidad N° ${blank(V(cli.fiador_ci),14)}, con RIF N° ${blank(V(cli.fiador_rif),14)}, domiciliado(a) en ${blank(V(cli.fiador_dir),34)}, teléfono N° ${blank(V(cli.fiador_tel),14)} (en lo sucesivo, el <strong>"FIADOR"</strong>), declara que <strong>se constituye en fiador solidario y principal pagador</strong> de EL COMPRADOR, respecto de todas y cada una de las obligaciones de pago y demás obligaciones asumidas por EL COMPRADOR bajo el presente contrato, incluyendo la inicial, las cuotas, el Servicio de Asistencia Administrativa, los recargos por mora, las penalidades, los daños y perjuicios, los gastos de cobranza y los honorarios profesionales que se causaren.</p>
     <p style="${p}">EL FIADOR renuncia expresamente a los beneficios de excusión y de división previstos en los artículos 1.812 y siguientes del Código Civil, obligándose de manera solidaria e indivisible junto con EL COMPRADOR, de forma que el acreedor podrá exigir el cumplimiento total de las obligaciones garantizadas, indistintamente, a EL COMPRADOR o a EL FIADOR. Esta fianza se mantendrá vigente hasta la total y definitiva extinción de las obligaciones garantizadas, sin que la prórroga, refinanciamiento o modificación de las condiciones de pago extinga la fianza.</p>
     <p style="${p}">La presente fianza se constituye a favor de LA VENDEDORA y, por efecto de la cesión de las cuotas prevista en el Contrato de Cesión de Cuotas suscrito entre LA VENDEDORA y PAGASI 18, C.A., se entenderá igualmente constituida a favor de PAGASI 18, C.A. en su condición de cesionaria, sin que dicha cesión requiera nueva aceptación de EL FIADOR. EL FIADOR declara conocer y aceptar expresamente dicha cesión, presente o futura.</p>
 
-    <div style="${clausH}">Décima quinta: Notificaciones</div>
+    ${CL("Notificaciones")}
     <table style="width:100%;border-collapse:collapse;margin:8px 0">
       <tr><td style="${lbl}">Correo de EL COMPRADOR:</td><td style="${val}">${blank(V(cli.email),18)}</td><td style="${lbl}">Tel / WhatsApp EL COMPRADOR:</td><td style="${val}">${blank(V(cli.tel),14)}</td></tr>
       <tr><td style="${lbl}">Correo de PAGASI:</td><td style="${val}"><strong>info@pagasi.io</strong></td><td style="${lbl}">Tel / WhatsApp PAGASI:</td><td style="${val}"><strong>+58 424-217-7798</strong></td></tr>
     </table>
 
-    <div style="${clausH}">Décima sexta: Jurisdicción</div>
+${unificado?`
+    ${CL('Cesión de las cuotas a PAGASI')}
+    <p style="${p}">LA VENDEDORA cede, traspasa y transfiere en este acto a PAGASI 18, C.A., quien acepta, la totalidad de las cuotas presentes y futuras derivadas de la venta objeto del presente contrato, incluyendo: el derecho de cobro del precio de venta pendiente y de las cuotas pactadas con EL COMPRADOR; el derecho a exigir y recibir los cargos y recargos por mora, penalidades, gastos de cobranza y demás cantidades derivadas del incumplimiento; el derecho a ejercer, gestionar y hacer valer la reserva de dominio y demás garantías constituidas, así como a solicitar la restitución de la motocicleta en caso de incumplimiento; y cualquier otro derecho o acción relacionada con la recuperación del precio de venta y del vehículo. El precio de la presente cesión es el convenido por separado entre LA VENDEDORA y PAGASI, y no forma parte de las obligaciones de EL COMPRADOR.</p>
+
+    ${CL('Liberación de LA VENDEDORA y titularidad del cobro')}
+    <p style="${p}">Con la presente cesión, LA VENDEDORA queda formal y definitivamente liberada frente a PAGASI de cualquier reclamo, contingencia, riesgo de cobranza o responsabilidad relacionada con el precio de venta cedido, así como del resultado de la gestión de cobro y recuperación. PAGASI no podrá repetir ni reclamar a LA VENDEDORA cantidad alguna en caso de incumplimiento, insolvencia, mora o falta de pago de EL COMPRADOR, salvo que dicho incumplimiento derive de una actuación dolosa, información falsa o incumplimiento de las obligaciones propias de LA VENDEDORA bajo este contrato. En virtud de la cesión, PAGASI adquiere la titularidad plena del derecho de cobro sobre las cuotas cedidas, pudiendo gestionar, administrar y ejecutar directamente su recuperación — incluyendo el cobro judicial o extrajudicial y la recuperación de la motocicleta — sin necesidad de autorización, intervención o dependencia de LA VENDEDORA.</p>
+
+    ${CL('Declaraciones sobre la cesión y aceptación de EL COMPRADOR')}
+    <p style="${p}">LA VENDEDORA declara que las cuotas cedidas existen, son ciertas y exigibles conforme a los términos de este contrato, y que no han sido previamente cedidas, gravadas ni comprometidas a favor de un tercero distinto de PAGASI. <strong>EL COMPRADOR y EL FIADOR declaran conocer y aceptar expresamente la presente cesión</strong>, dándose por notificados de la misma a todos los efectos legales, y reconocen que en lo sucesivo PAGASI 18, C.A. es la única titular legitimada para exigir y recibir el pago de las cuotas, conforme a lo previsto en la Cláusula Quinta de este contrato.</p>
+`:''}
+
+        ${CL("Jurisdicción")}
     <p style="${p}">Para todos los efectos derivados del presente contrato, las partes eligen como domicilio especial, excluyente de cualquier otro, la ciudad de Caracas, República Bolivariana de Venezuela, a cuyos tribunales competentes declaran someterse.</p>
 
     <div style="page-break-inside:avoid">
-      <div style="${clausH}">Décima séptima: Aceptación</div>
+      ${CL("Aceptación")}
       <p style="${p}">Leído el presente contrato por las partes, y estando conformes con su contenido, lo firman en los ejemplares que sean necesarios y a un solo efecto, en la ciudad de ${blank(V(cli.ciudad)||'Caracas',16)}, en la fecha indicada al inicio de este instrumento.</p>
       <div style="display:flex;gap:16px;margin-top:30px">
         ${firma('LA VENDEDORA','(Concesionario)','Nombre: ________________','RIF: ________________','Firma autorizada')}
@@ -850,7 +869,7 @@ function _htmlContratoAgenteCobro(){
     </div>
 
     <div style="margin-top:24px;border-top:1px solid #DBEAFE;padding-top:8px;font-size:9px;color:#7a8699;text-align:center">
-      Contrato de Venta de Motocicleta en Cuotas con Reserva de Dominio · Agente de Cobro: PAGASI 18, C.A. · info@pagasi.io
+      Contrato de Venta de Motocicleta en Cuotas con Reserva de Dominio${unificado?' y Cesión de Cuotas':''} · Agente de Cobro: PAGASI 18, C.A. · info@pagasi.io
     </div>
   </div>`;
 }
@@ -944,6 +963,7 @@ function _pintarDoc(html){
 }
 function _renderContratoAgenteCobro(){ _pintarDoc(_htmlContratoAgenteCobro()); }
 function _renderCesionCuotas(){ _pintarDoc(_htmlCesionCuotas()); }
+function _renderContratoUnificado(){ _pintarDoc(_htmlContratoAgenteCobro(true)); }
 function _renderAmbosContratos(){
   var venta = _htmlContratoAgenteCobro();
   if(venta===null){ _pintarDoc(null); return; }
