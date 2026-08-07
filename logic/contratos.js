@@ -13,8 +13,10 @@ function renderContrato(){
 }
 
 // Helper: arma el contexto común (datos y estilos) para todos los documentos
-function _docCtx(){
-  var credId=($('sel-cred')&&$('sel-cred').value);
+function _docCtx(credIdOverride){
+  // credIdOverride permite armar el documento de un credito concreto sin tocar
+  // el selector: lo usa la impresion por lote de los contratos del dia.
+  var credId=credIdOverride || ($('sel-cred')&&$('sel-cred').value);
   var c=S.creds.find(function(x){return String(x.id)===String(credId);})||S.creds[0];
   if(!c){ return null; }
   var logoSrc=(typeof _PAGASI_LOGO_BLUE!=='undefined'&&_PAGASI_LOGO_BLUE)||(document.querySelector('.sb-logo img')||{}).src||'';
@@ -696,8 +698,8 @@ function _docFinanzas(c){
            saldo:saldo, total:total, comision:comision };
 }
 
-function _htmlContratoAgenteCobro(unificado){
-  var ctx = _docCtx();
+function _htmlContratoAgenteCobro(unificado, credId){
+  var ctx = _docCtx(credId);
   if(!ctx){ return null; }
   var c=ctx.c, cli=ctx.cli, logoSrc=ctx.logoSrc, fechaContrato=ctx.fechaContrato, V=ctx.V;
   var purple=ctx.purple, purpleDark=ctx.purpleDark;
@@ -969,6 +971,44 @@ function _renderAmbosContratos(){
   if(venta===null){ _pintarDoc(null); return; }
   // El salto va antes de la cesion para que cada contrato arranque en hoja nueva
   _pintarDoc(venta + '<div style="page-break-before:always;break-before:page;height:0"></div>' + _htmlCesionCuotas());
+}
+
+
+// ── Todos los contratos de una fecha, en un solo documento ─────────────────
+// Arma un unico HTML con el contrato unificado (venta + cesion) de cada credito
+// originado ese dia, separados por salto de pagina, listo para imprimir de una.
+function _creditosDeLaFecha(fecha){
+  var f = fecha || (typeof hoyLocalISO==='function' ? hoyLocalISO() : '');
+  return (S.creds||[]).filter(function(c){
+    return !c.eliminado && String(c.fecha||'') === f;
+  }).sort(function(a,b){ return String(a.id||'').localeCompare(String(b.id||'')); });
+}
+
+function _htmlContratosDelDia(fecha){
+  var lista = _creditosDeLaFecha(fecha);
+  if(!lista.length) return null;
+  var salto = '<div style="page-break-before:always;break-before:page;height:0"></div>';
+  var partes = [];
+  for(var i=0;i<lista.length;i++){
+    var h = _htmlContratoAgenteCobro(true, lista[i].id);
+    if(h) partes.push((i?salto:'') + h);
+  }
+  return partes.length ? partes.join('') : null;
+}
+
+function imprimirContratosDelDia(fecha){
+  var f = fecha || ($('ctr-fecha-lote') && $('ctr-fecha-lote').value)
+          || (typeof hoyLocalISO==='function' ? hoyLocalISO() : '');
+  var lista = _creditosDeLaFecha(f);
+  if(!lista.length){
+    if(typeof toast==='function') toast('No hay créditos con fecha '+f,'warn');
+    return;
+  }
+  var html = _htmlContratosDelDia(f);
+  if(!html){ if(typeof toast==='function') toast('No se pudo generar el lote','error'); return; }
+  if(typeof toast==='function') toast(lista.length+' contrato'+(lista.length!==1?'s':'')+' de '+f,'success');
+  if(typeof logActividad==='function') logActividad('contratos_lote_impreso','contratos',f,lista.length+' contratos');
+  _abrirVentanaImpresion('Contratos '+f+' ('+lista.length+')', html, {sinHeader:true});
 }
 
 function verContratoById(credId){

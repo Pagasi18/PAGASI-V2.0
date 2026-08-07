@@ -108,6 +108,16 @@ PG.contratos = function(){
         <button class="btn btn-g btn-sm" onclick="descargarContratoPDF()">↓ Descargar PDF</button>
       </div>
 
+      <!-- Impresión por lote: todos los contratos de una fecha en un solo documento -->
+      <div style="margin-top:11px;padding:11px 12px;background:var(--surf2);border:1px solid var(--rim);border-radius:10px">
+        <div style="font-size:11.5px;font-weight:800;color:var(--p1);margin-bottom:7px">Imprimir por lote</div>
+        <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+          <input type="date" class="fi" id="ctr-fecha-lote" value="${hoyLocalISO()}" style="flex:1;min-width:135px">
+          <button class="btn btn-p btn-sm" onclick="imprimirContratosDelDia()" style="white-space:nowrap">Contratos del día</button>
+        </div>
+        <div style="font-size:10.5px;color:var(--ink3);margin-top:6px">Genera el contrato único (venta + cesión) de todos los créditos de esa fecha, en un solo documento.</div>
+      </div>
+
       <!-- Lista de contratos activos -->
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--rim)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
