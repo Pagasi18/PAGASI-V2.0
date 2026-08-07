@@ -5,11 +5,14 @@ function renderContrato(){
   if(tipo==='carta') return _renderCartaInstrucciones();
   if(tipo==='cesion') return _renderCesionCuotas();
   if(tipo==='ambos') return _renderAmbosContratos();
-  if(tipo==='unificado') return _renderContratoUnificado();
+  // Solo la venta, sin las clausulas de cesion (17 clausulas)
+  if(tipo==='venta') return _renderContratoAgenteCobro();
   // 'arriendo' conserva el contrato de arriendo-venta anterior para los creditos
-  // ya firmados bajo esa estructura. Todo lo demas sale con el contrato nuevo.
+  // ya firmados bajo esa estructura.
   if(tipo==='arriendo') return _renderContratoArrendamiento();
-  return _renderContratoAgenteCobro();
+  // Por defecto sale el contrato completo: venta + cesion en un solo instrumento.
+  // Esto es lo que usan el boton "Ver", el PDF de cada fila y la impresion por lote.
+  return _renderContratoUnificado();
 }
 
 // Helper: arma el contexto común (datos y estilos) para todos los documentos
@@ -863,7 +866,7 @@ ${unificado?`
       ${CL("Aceptación")}
       <p style="${p}">Leído el presente contrato por las partes, y estando conformes con su contenido, lo firman en los ejemplares que sean necesarios y a un solo efecto, en la ciudad de ${blank(V(cli.ciudad)||'Caracas',16)}, en la fecha indicada al inicio de este instrumento.</p>
       <div style="display:flex;gap:16px;margin-top:30px">
-        ${firma('LA VENDEDORA','(Concesionario)','Nombre: ________________','RIF: ________________','Firma autorizada')}
+        ${firma('LA VENDEDORA','(Concesionario)','Nombre: '+(V(ctx.mConcesionario)||'________________'),'RIF: ________________','Firma autorizada')}
         ${firma('EL COMPRADOR','','Nombre: '+(V(cli.nombre||c.cli)||'________________'),'C.I.: '+(V(cli.cedula)||'________________'),'Firma del comprador')}
         ${firma('PAGASI 18, C.A.','Agente de cobro','Nombre: ________________','RIF: J-50829589-7','Firma autorizada')}
         ${firma('EL FIADOR','Garante solidario','Nombre: '+(V(cli.fiador_nom)||'________________'),'C.I.: '+(V(cli.fiador_ci)||'________________'),'Firma del fiador')}
