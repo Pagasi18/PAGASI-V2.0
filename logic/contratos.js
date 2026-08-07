@@ -4,6 +4,7 @@ function renderContrato(){
   if(tipo==='pagare') return _renderPagare();
   if(tipo==='carta') return _renderCartaInstrucciones();
   if(tipo==='cesion') return _renderCesionCuotas();
+  if(tipo==='ambos') return _renderAmbosContratos();
   // 'arriendo' conserva el contrato de arriendo-venta anterior para los creditos
   // ya firmados bajo esa estructura. Todo lo demas sale con el contrato nuevo.
   if(tipo==='arriendo') return _renderContratoArrendamiento();
@@ -694,9 +695,9 @@ function _docFinanzas(c){
            saldo:saldo, total:total, comision:comision };
 }
 
-function _renderContratoAgenteCobro(){
+function _htmlContratoAgenteCobro(){
   var ctx = _docCtx();
-  if(!ctx){ $('cz').innerHTML='<div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">No hay créditos</div><div style="font-size:11.5px">Registra un crédito primero</div></div>'; return; }
+  if(!ctx){ return null; }
   var c=ctx.c, cli=ctx.cli, logoSrc=ctx.logoSrc, fechaContrato=ctx.fechaContrato, V=ctx.V;
   var purple=ctx.purple, purpleDark=ctx.purpleDark;
   var F = _docFinanzas(c);
@@ -734,7 +735,7 @@ function _renderContratoAgenteCobro(){
       + '<div style="margin-top:auto;border-top:1px solid #333;padding-top:5px;line-height:1.75;text-align:left">'+l1+'<br>'+l2+'<br>'+l3+'</div></div>';
   };
 
-  $('cz').innerHTML = `<div class="cdoc" style="font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#222;max-width:820px;margin:0 auto;padding:20px 28px">
+  return `<div class="cdoc" style="font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#222;max-width:820px;margin:0 auto;padding:20px 28px">
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div>${logoSrc?`<img src="${logoSrc}" style="height:42px;object-fit:contain">`:''}</div>
@@ -855,9 +856,9 @@ function _renderContratoAgenteCobro(){
 }
 
 // ── Contrato de Cesión de Cuotas (concesionario → Pagasi) ───────────────────
-function _renderCesionCuotas(){
+function _htmlCesionCuotas(){
   var ctx = _docCtx();
-  if(!ctx){ $('cz').innerHTML='<div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">No hay créditos</div><div style="font-size:11.5px">Registra un crédito primero</div></div>'; return; }
+  if(!ctx){ return null; }
   var c=ctx.c, cli=ctx.cli, logoSrc=ctx.logoSrc, fechaContrato=ctx.fechaContrato, V=ctx.V;
   var purple=ctx.purple, purpleDark=ctx.purpleDark;
   var F = _docFinanzas(c);
@@ -874,7 +875,7 @@ function _renderCesionCuotas(){
       + '<div style="margin-top:auto;border-top:1px solid #333;padding-top:5px;line-height:1.75;text-align:left">'+l1+'<br>'+l2+'<br>'+l3+'</div></div>';
   };
 
-  $('cz').innerHTML = `<div class="cdoc" style="font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#222;max-width:820px;margin:0 auto;padding:20px 28px">
+  return `<div class="cdoc" style="font-family:'Segoe UI',Roboto,Arial,sans-serif;color:#222;max-width:820px;margin:0 auto;padding:20px 28px">
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div>${logoSrc?`<img src="${logoSrc}" style="height:42px;object-fit:contain">`:''}</div>
@@ -933,6 +934,21 @@ function _renderCesionCuotas(){
       Contrato de Cesión de Cuotas · Entre El Concesionario y PAGASI 18, C.A. · info@pagasi.io
     </div>
   </div>`;
+}
+
+// Envoltorios: los _html* arman el documento y estos lo pintan en #cz. Asi el
+// selector puede pedir cada contrato por separado o los dos en un solo documento.
+function _pintarDoc(html){
+  if(html===null){ $('cz').innerHTML='<div class="empty" style="margin-top:60px"><span class="e-ic">CTR</span><div class="e-tt">No hay créditos</div><div style="font-size:11.5px">Registra un crédito primero</div></div>'; return; }
+  $('cz').innerHTML = html;
+}
+function _renderContratoAgenteCobro(){ _pintarDoc(_htmlContratoAgenteCobro()); }
+function _renderCesionCuotas(){ _pintarDoc(_htmlCesionCuotas()); }
+function _renderAmbosContratos(){
+  var venta = _htmlContratoAgenteCobro();
+  if(venta===null){ _pintarDoc(null); return; }
+  // El salto va antes de la cesion para que cada contrato arranque en hoja nueva
+  _pintarDoc(venta + '<div style="page-break-before:always;break-before:page;height:0"></div>' + _htmlCesionCuotas());
 }
 
 function verContratoById(credId){
