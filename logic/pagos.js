@@ -406,6 +406,9 @@ function openAmort(id){
   // Cuota mensual (para display)
   var cuotaMensual = parseFloat(c.cuotaM||c.cuotaMensual||cuota*2);
 
+  // Concesionario de origen del cliente (puede no estar asignado en creditos viejos)
+  var _concNom = (c.concesionarioId && typeof _concGetById==='function')
+    ? ((_concGetById(c.concesionarioId)||{}).nombre||'') : '';
   setMicon('detalle');$('mtt').textContent='Detalle del Crédito';$('msb').textContent=`${c.id} — ${c.cli}`;
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML=`
@@ -419,6 +422,7 @@ function openAmort(id){
             <div style="font-size:10px;font-weight:800;opacity:.85;letter-spacing:1.2px;text-transform:uppercase">${c.id} · Crédito</div>
             <div style="font-size:19px;font-weight:900;letter-spacing:-.4px;line-height:1.1;margin-top:2px">${c.cli}</div>
             <div style="font-size:11.5px;opacity:.85;margin-top:3px">${c.modelo}${c.vin?' · VIN '+c.vin:''}</div>
+            ${_concNom?`<div style="margin-top:6px"><span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);padding:3px 10px;border-radius:20px;font-size:10.5px;font-weight:800;letter-spacing:.2px">CONCESIONARIO · ${_concNom}</span></div>`:''}
           </div>
         </div>
         <div style="text-align:right">
