@@ -1524,7 +1524,14 @@ tbody tr:hover td {
 .cf-hero{position:relative;padding:18px 20px;background:linear-gradient(135deg,#3B82F6 0%,#6366f1 100%) !important;color:#fff !important;border-radius:14px;margin-bottom:14px;overflow:hidden}
 .cf-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 70%);pointer-events:none}
 .cf-hero-row{display:flex;align-items:center;gap:16px;position:relative;z-index:1}
-.cf-avatar{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.2);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;border:2px solid rgba(255,255,255,.3);flex-shrink:0}
+.cf-avatar-wrap{position:relative;flex-shrink:0}
+.cf-avatar{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.2);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;border:2px solid rgba(255,255,255,.3);flex-shrink:0;position:relative;overflow:hidden;cursor:pointer}
+.cf-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+/* Velo con la camara: solo al pasar el mouse, para no tapar la foto */
+.cf-avatar-cam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);color:#fff;font-size:19px;opacity:0;transition:opacity .15s}
+.cf-avatar:hover .cf-avatar-cam{opacity:1}
+.cf-avatar-del{position:absolute;top:-2px;right:-2px;width:20px;height:20px;border-radius:50%;background:rgba(232,75,75,.95);color:#fff;border:2px solid rgba(255,255,255,.55);font-size:11px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.cf-avatar-del:hover{background:#e84b4b}
 .cf-hero-info{flex:1;min-width:0}
 .cf-hero-name{font-size:20px;font-weight:900;letter-spacing:-.4px;line-height:1.15;display:flex;align-items:center;gap:8px;flex-wrap:wrap;text-shadow:0 1px 8px rgba(0,0,0,.25)}
 .cf-hero-sub{font-size:12px;opacity:.85;margin-top:3px;font-weight:600}

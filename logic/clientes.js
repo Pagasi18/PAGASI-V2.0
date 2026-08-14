@@ -190,6 +190,71 @@ function renderClienteList(q=''){
   </div>${pgControls('clientes',filtered.length,50,'pgNav')}`;
 }
 
+
+// ── Foto de perfil del cliente ─────────────────────────────────────────────
+// Se guarda en Storage (clientes/{id}/perfil/) y la URL queda en el campo
+// `foto` del cliente; `fotoPath` recuerda la ruta para poder borrar la
+// anterior al reemplazarla y no dejar archivos huerfanos.
+function cliFotoPicker(id){
+  var inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.onchange = function(){ if(inp.files && inp.files[0]) _cliFotoSubir(id, inp.files[0]); };
+  inp.click();
+}
+
+function _cliFotoSubir(id, file){
+  var c = (S.clientes||[]).find(function(x){ return String(x.id)===String(id); });
+  if(!c) return;
+  if(!/^image\//.test(file.type||'')){ toast('El archivo debe ser una imagen','error'); return; }
+  if(file.size > 5*1024*1024){ toast('La imagen no puede pesar mas de 5 MB','error'); return; }
+  if(typeof storage==='undefined' || !storage || typeof storage.ref!=='function'){
+    toast('Firebase Storage no esta disponible','error'); return;
+  }
+  var ext = ((file.name||'').split('.').pop()||'').toLowerCase().replace(/[^a-z0-9]/g,'') || 'jpg';
+  var path = 'clientes/'+String(id)+'/perfil/foto_'+Date.now()+'.'+ext;
+  var anterior = c.fotoPath || '';
+  toast('Subiendo foto...','info');
+  var ref = storage.ref().child(path);
+  ref.put(file, { contentType: file.type||'image/jpeg' })
+    .then(function(){ return ref.getDownloadURL(); })
+    .then(function(url){
+      c.foto = url;
+      c.fotoPath = path;
+      return (typeof DB!=='undefined' && DB.saveCliente) ? DB.saveCliente(c) : null;
+    })
+    .then(function(){
+      if(anterior && anterior!==path){
+        try{ storage.ref().child(anterior).delete().catch(function(){}); }catch(e){}
+      }
+      if(typeof logActividad==='function') logActividad('cliente_editado','clientes',String(id),'foto de perfil actualizada');
+      toast('Foto actualizada','success');
+      if(typeof verCliente==='function') verCliente(id);
+    })
+    .catch(function(err){
+      console.warn('[foto cliente] no se pudo subir:', err);
+      toast('No se pudo subir la foto','error');
+    });
+}
+
+function cliFotoQuitar(id){
+  var c = (S.clientes||[]).find(function(x){ return String(x.id)===String(id); });
+  if(!c || !c.foto) return;
+  if(!confirm('Quitar la foto de perfil de este cliente?')) return;
+  var path = c.fotoPath || '';
+  c.foto = '';
+  c.fotoPath = '';
+  var p = (typeof DB!=='undefined' && DB.saveCliente) ? DB.saveCliente(c) : null;
+  Promise.resolve(p).then(function(){
+    if(path && typeof storage!=='undefined' && storage){
+      try{ storage.ref().child(path).delete().catch(function(){}); }catch(e){}
+    }
+    if(typeof logActividad==='function') logActividad('cliente_editado','clientes',String(id),'foto de perfil eliminada');
+    toast('Foto eliminada','success');
+    if(typeof verCliente==='function') verCliente(id);
+  });
+}
+
 function verCliente(id){
   const c = S.clientes.find(x=>String(x.id)===String(id));if(!c)return;
   // Fusionar documentos locales con los remotos (por si hubo fallback)
@@ -387,7 +452,13 @@ function verCliente(id){
   // ── HERO ──
   html += '<div class="cf-hero">'
     + '<div class="cf-hero-row">'
-    + '<div class="cf-avatar">'+esc(initials(c.nombre))+'</div>'
+    + '<div class="cf-avatar-wrap">'
+    + '<div class="cf-avatar" onclick="cliFotoPicker(\''+id+'\')" title="'+(c.foto?'Cambiar foto':'Agregar foto')+'">'
+    + (c.foto ? '<img src="'+esc(c.foto)+'" alt="">' : esc(initials(c.nombre)))
+    + '<span class="cf-avatar-cam">📷</span>'
+    + '</div>'
+    + (c.foto ? '<button class="cf-avatar-del" onclick="event.stopPropagation();cliFotoQuitar(\''+id+'\')" title="Quitar foto">✕</button>' : '')
+    + '</div>'
     + '<div class="cf-hero-info">'
     + '<div class="cf-hero-name">'+esc(c.nombre||'Sin nombre')+(esPremium?'<span style="color:#ffd27a">★</span>':'')+'</div>'
     + '<div class="cf-hero-sub">'+esc(c.cedula||'Sin CI')+(c.ciudad?' · '+esc(c.ciudad):'')+(c.tel?' · '+esc(c.tel):'')+'</div>'
