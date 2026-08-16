@@ -409,6 +409,8 @@ function openAmort(id){
   // Concesionario de origen del cliente (puede no estar asignado en creditos viejos)
   var _concNom = (c.concesionarioId && typeof _concGetById==='function')
     ? ((_concGetById(c.concesionarioId)||{}).nombre||'') : '';
+  // Misma foto de perfil que la ficha del cliente
+  var _credFoto = (typeof cliFotoUrl==='function') ? cliFotoUrl(c.clienteId || c.cli) : '';
   setMicon('detalle');$('mtt').textContent='Detalle del Crédito';$('msb').textContent=`${c.id} — ${c.cli}`;
   $('modal-box').className='modal modal-lg';
   $('mbd').innerHTML=`
@@ -417,7 +419,7 @@ function openAmort(id){
       <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.08)"></div>
       <div style="position:relative;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:12px">
-          <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;letter-spacing:-.5px">${String(c.cli||'Cliente').split(' ').map(function(w){return w.charAt(0);}).join('').substring(0,2).toUpperCase()}</div>
+          <div style="width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;letter-spacing:-.5px;overflow:hidden;flex-shrink:0">${_credFoto?`<img src="${_credFoto}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`:String(c.cli||'Cliente').split(' ').map(function(w){return w.charAt(0);}).join('').substring(0,2).toUpperCase()}</div>
           <div>
             <div style="font-size:10px;font-weight:800;opacity:.85;letter-spacing:1.2px;text-transform:uppercase">${c.id} · Crédito</div>
             <div style="font-size:19px;font-weight:900;letter-spacing:-.4px;line-height:1.1;margin-top:2px">${c.cli}</div>

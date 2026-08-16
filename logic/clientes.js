@@ -93,6 +93,10 @@ function renderClienteList(q=''){
 
   // Escapa texto que viene del cliente/lead (puede llegar del formulario público).
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+  function initialsRow(name){
+    var p=(name||'').split(/\s+/).filter(Boolean);
+    return ((p[0]||'')[0]||'?').toUpperCase()+((p[1]||'')[0]||'').toUpperCase();
+  }
   var rows=page.map(c=>{
     const credsCli=getCreditosCliente(c).filter(x=>x.estado!=='cancelado');
     const activo=credsCli.find(x=>x.estado==='activo');
@@ -141,7 +145,7 @@ function renderClienteList(q=''){
       : (esLead ? ' <span title="Lead — sin crédito activo aún" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(37,99,235,.5);margin-left:6px;vertical-align:middle"></span>' : '');
 
     return `<tr onclick="verCliente('${c.id}')" style="${rowStyle}">
-      <td class="tdm" style="white-space:nowrap">${esc(c.nombre)}${c.premium?` <span style="color:var(--amber)">★</span>`:''}${leadDot}</td>
+      <td class="tdm" style="white-space:nowrap"><div style="display:flex;align-items:center;gap:8px">${c.foto?`<img class="cl-av" src="${esc(c.foto)}" alt="">`:`<span class="cl-av is-ini">${esc(initialsRow(c.nombre))}</span>`}<span>${esc(c.nombre)}${c.premium?` <span style="color:var(--amber)">★</span>`:''}${leadDot}</span></div></td>
       <td class="tds">${esc(c.cedula)||'—'}</td>
       <td>${fechaCell}</td>
       <td><div class="tdm">${esc(c.tel)||'—'}</div><div class="tds">${esc(c.ciudad)||'—'}</div></td>
@@ -195,6 +199,16 @@ function renderClienteList(q=''){
 // Se guarda en Storage (clientes/{id}/perfil/) y la URL queda en el campo
 // `foto` del cliente; `fotoPath` recuerda la ruta para poder borrar la
 // anterior al reemplazarla y no dejar archivos huerfanos.
+// Foto de perfil de un cliente. Acepta el id o el nombre, porque los creditos
+// referencian al cliente de las dos formas segun cuando se cargaron.
+function cliFotoUrl(ref){
+  if(!ref) return '';
+  var lista = (typeof S!=='undefined' && S.clientes) ? S.clientes : [];
+  var c = lista.find(function(x){ return String(x.id)===String(ref); })
+       || lista.find(function(x){ return (x.nombre||'')===String(ref); });
+  return (c && c.foto) ? String(c.foto) : '';
+}
+
 function cliFotoPicker(id){
   var inp = document.createElement('input');
   inp.type = 'file';
