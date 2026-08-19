@@ -44,6 +44,15 @@ var _EUR_ENDPOINTS = [
   'https://ve.dolarapi.com/v1/cotizaciones'
 ];
 
+// El workflow de GitHub Actions escribe la tasa Binance (aviso mas caro del
+// P2P real) cada 15 min. Si ese valor es fresco, el cliente NO lo pisa con
+// el fallback de CriptoYa; solo consulta por su cuenta cuando quedo viejo.
+function _binanceEsFresca(d){
+  if(!d || !d.fechaBinanceTs) return false;
+  var t = Date.parse(d.fechaBinanceTs);
+  return !isNaN(t) && (Date.now() - t) < 30*60*1000;
+}
+
 // ── Función principal — llamar al inicio de la app ──
 function bcvAutoInit(){
   if(!db){
@@ -82,7 +91,7 @@ function bcvAutoInit(){
         _bcvActualizarUI();
         console.log('[BCV-Auto] Tasas de hoy ya en Firestore: BCV '+tasaGuardada+' · Binance '+binanceGuardada+' · EUR '+euroGuardada);
         // Si falta alguna, descargarla
-        _binanceFetchTasa(0); // P2P intradia: siempre refrescar (lo guardado ya se mostro arriba)
+        if(!_binanceEsFresca(d)) _binanceFetchTasa(0); // si el workflow la puso hace <30 min, esa manda
         if(!euroGuardada || euroGuardada <= 1) _eurFetchTasa(0);
         return;
       }
@@ -230,7 +239,7 @@ function _binanceFetchTasa(endpointIdx){
       _binanceEstado = 'ok';
       // Guardar en Firestore junto con la BCV
       if(db){
-        db.collection('config').doc('tasa').set({tasaBinance: tasa, fechaBinance: hoyLocalISO()}, {merge:true}).catch(function(){});
+        db.collection('config').doc('tasa').set({tasaBinance: tasa, fechaBinance: hoyLocalISO(), fechaBinanceTs: new Date().toISOString(), binanceFuente: 'criptoya-fallback'}, {merge:true}).catch(function(){});
       }
       _bcvActualizarUI();
     })
@@ -430,7 +439,21 @@ function bcvForzarActualizacion(){
   _bcvActualizarUI();
   toast('Consultando tasas BCV, Euro y Binance...', 'info');
   _bcvFetchTasa(0);
-  _binanceFetchTasa(0);
+  if(db){
+    db.collection('config').doc('tasa').get().then(function(doc){
+      var d = doc.exists ? doc.data() : null;
+      if(_binanceEsFresca(d) && parseFloat(d.tasaBinance) > 1){
+        window._tasaBinance = parseFloat(d.tasaBinance);
+        _binanceTasa = window._tasaBinance;
+        _binanceEstado = 'ok';
+        _bcvActualizarUI();
+      } else {
+        _binanceFetchTasa(0);
+      }
+    }).catch(function(){ _binanceFetchTasa(0); });
+  } else {
+    _binanceFetchTasa(0);
+  }
   _eurFetchTasa(0);
 }
 window.bcvForzarActualizacion = bcvForzarActualizacion;
