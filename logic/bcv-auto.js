@@ -23,6 +23,10 @@ var _BCV_ENDPOINTS = [
 
 // Endpoints para tasa Binance / Paralelo
 var _BINANCE_ENDPOINTS = [
+  // 1) CriptoYa: libro P2P REAL de Binance (USDT/VES), refrescado al minuto y con CORS abierto.
+  //    'bid' = precio al que se vende USDT por Bs, que es la tasa que opera la empresa.
+  'https://criptoya.com/api/binancep2p/USDT/VES/100',
+  // 2) Paralelo de referencia (EnParaleloVzla) — va atrasado frente al P2P, solo fallback
   'https://ve.dolarapi.com/v1/dolares/paralelo',
   'https://pydolarvenezuela-api.vercel.app/api/v1/dollar?monitor=binance'
 ];
@@ -78,7 +82,7 @@ function bcvAutoInit(){
         _bcvActualizarUI();
         console.log('[BCV-Auto] Tasas de hoy ya en Firestore: BCV '+tasaGuardada+' · Binance '+binanceGuardada+' · EUR '+euroGuardada);
         // Si falta alguna, descargarla
-        if(!binanceGuardada || binanceGuardada <= 1) _binanceFetchTasa(0);
+        _binanceFetchTasa(0); // P2P intradia: siempre refrescar (lo guardado ya se mostro arriba)
         if(!euroGuardada || euroGuardada <= 1) _eurFetchTasa(0);
         return;
       }
@@ -212,7 +216,10 @@ function _binanceFetchTasa(endpointIdx){
       // ve.dolarapi.com /paralelo: { promedio, venta, compra }
       // pydolarvenezuela /binance: { monitors: { binance: { price: X } } }
       var tasa = 0;
-      if(data.promedio && parseFloat(data.promedio) > 1) tasa = parseFloat(data.promedio);
+      // criptoya binancep2p: { ask, bid } — bid = venta de USDT (la tasa operativa)
+      if(data.bid && parseFloat(data.bid) > 1) tasa = parseFloat(data.bid);
+      else if(data.ask && parseFloat(data.ask) > 1) tasa = parseFloat(data.ask);
+      else if(data.promedio && parseFloat(data.promedio) > 1) tasa = parseFloat(data.promedio);
       else if(data.venta && parseFloat(data.venta) > 1) tasa = parseFloat(data.venta);
       else if(data.price && parseFloat(data.price) > 1) tasa = parseFloat(data.price);
       else if(data.monitors && data.monitors.binance && data.monitors.binance.price) tasa = parseFloat(data.monitors.binance.price);
