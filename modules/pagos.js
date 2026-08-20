@@ -613,6 +613,7 @@ function cobExportAbrir(){
     +'<select class="fs" id="cx_per" onchange="var r=document.getElementById(\'cx_rango\');if(r)r.style.display=this.value===\'rango\'?\'grid\':\'none\'">'
     +'<option value="todo">Todo</option>'
     +'<option value="hoy">Vencen hoy</option>'
+    +'<option value="semana">Esta semana (lunes a domingo)</option>'
     +'<option value="mes">Este mes</option>'
     +'<option value="rango">Rango de fechas…</option>'
     +'</select></div>'
@@ -636,6 +637,13 @@ function cobExportAbrir(){
     }
     var hoyI=hoyLocalISO();
     if(per==='hoy') items=items.filter(function(it){ return (it.venceStr||'')===hoyI; });
+    else if(per==='semana'){
+      var _hd=new Date(); var _dow=(_hd.getDay()+6)%7;   // 0 = lunes
+      var _lun=new Date(_hd); _lun.setDate(_hd.getDate()-_dow);
+      var _dom=new Date(_lun); _dom.setDate(_lun.getDate()+6);
+      var _li=fechaLocalISO(_lun), _di=fechaLocalISO(_dom);
+      items=items.filter(function(it){ var v=it.venceStr||''; return v>=_li && v<=_di; });
+    }
     else if(per==='mes'){ var mesI=hoyI.slice(0,7); items=items.filter(function(it){ return String(it.venceStr||'').slice(0,7)===mesI; }); }
     else if(per==='rango'){
       var d=(($('cx_desde')&&$('cx_desde').value)||''), h=(($('cx_hasta')&&$('cx_hasta').value)||'');
