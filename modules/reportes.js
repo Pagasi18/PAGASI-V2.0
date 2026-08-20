@@ -173,7 +173,8 @@ PG.reportes = function(){
     {k:'inventario', lbl:'Inventario de oficina', sub:'Activos · equipos · mobiliario'},
     {k:'exportar', lbl:'Exportar', sub:'Reportes · CSV · Backup'},
     {k:'libroseniat', lbl:'Libro SENIAT', sub:'Ventas · IVA · IGTF'},
-    {k:'contador', lbl:'📋 Contador', sub:'Reporte semanal · Tributario'}
+    {k:'contador', lbl:'📋 Contador', sub:'Reporte semanal · Tributario'},
+    {k:'coromoto', lbl:'Coromoto', sub:'Libro contable · estados financieros'}
   ];
 
   // ══════════ RENDIMIENTO DE COBRANZA (movido desde el módulo Cobranza) ══════════
@@ -938,6 +939,8 @@ PG.reportes = function(){
     _SCREDS, _SPAGOS, _SEGR, _SMOTOS,
     serie, mActual
   }) : ''}
+
+  ${tab==='coromoto' ? (typeof _renderCoromoto==='function' ? _renderCoromoto() : '') : ''}
 
   </div>`;
 };
