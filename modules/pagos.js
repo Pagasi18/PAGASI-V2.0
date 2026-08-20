@@ -708,7 +708,7 @@ function cobExportAbrir(){
     var alcLbl = sel.alc==='todas' ? 'Todas las pestañas' : (_COB_TAB_LBL[X2.tab]||'');
     var base='PAGASI_Cobranza_'+(sel.per==='dia'?'Del_dia':sel.per==='semana'?'Semanal':sel.per==='mes'?'Mensual':sel.per==='rango'?'Rango':'Completa')+'_'+hoyI;
     if(sel.fmt==='pdf'){
-      var okPdf=_cobExpPdf(data, alcLbl, perLbl, items.length);
+      var okPdf=_cobExpPdf(data, alcLbl, perLbl, items);
       if(!okPdf) return false;
     } else {
       // CSV real (; + coma decimal): lo abren bien Excel y Numbers, en columnas
@@ -732,40 +732,87 @@ function cobExportAbrir(){
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">⬇ Descargar</button>';
   $('ov').style.display='flex';
 }
-// PDF: hoja carta horizontal lista para imprimir/guardar como PDF
-function _cobExpPdf(data, alcLbl, perLbl, n){
+// PDF: hoja carta horizontal con la identidad PAGASI (logo, colores, resumen)
+function _cobExpPdf(data, alcLbl, perLbl, items){
   var esc=function(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte de Cobranza · PAGASI</title><style>'
-    +'@page{size:Letter landscape;margin:9mm} *{box-sizing:border-box} '
-    +'body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#111;margin:0;font-size:9.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact} '
-    +'.enc{border-bottom:2.5px solid #1E3A8A;padding-bottom:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-end} '
-    +'.emp{font-weight:900;font-size:15px;color:#1E3A8A} .tit{font-weight:800;font-size:12px;margin-top:1px} .sub{font-size:9.5px;color:#555} '
-    +'table{width:100%;border-collapse:collapse} thead{display:table-header-group} tr{page-break-inside:avoid} '
-    +'th{background:#1E3A8A;color:#fff;font-weight:800;font-size:8.5px;text-transform:uppercase;letter-spacing:.3px;padding:5px 6px;text-align:left;white-space:nowrap} '
-    +'td{padding:4px 6px;border-bottom:1px solid #dfe3ea;vertical-align:top} '
-    +'tbody tr:nth-child(even){background:#f3f5fa} '
-    +'.num{text-align:right;white-space:nowrap} .rojo{color:#c0392b;font-weight:800} '
+  var n=items.length;
+  var totVenc=items.reduce(function(a,it){ return a+(it.nVencidas>=1?it.vencido:0); },0);
+  var totSaldo=items.reduce(function(a,it){ var c=it.cred; return a+((typeof getCreditoSaldoPendiente==='function')?(getCreditoSaldoPendiente(c)||0):0); },0);
+  var dms=items.map(function(it){ var c=it.cred; return Math.max(parseInt(c.mora,10)||0, it.diff<0?-it.diff:0, it.mora||0); });
+  var enMora=dms.filter(function(d){return d>0;});
+  var promDm=enMora.length?Math.round(enMora.reduce(function(a,b){return a+b;},0)/enMora.length):0;
+  var PILL={
+    'Crítico':['#B91C1C','#FEE2E2'],
+    'Ilocalizable':['#991B1B','#FEE2E2'],
+    'Acuerdo mensual':['#7C3AED','#F3E8FF'],
+    'Mora regular':['#B45309','#FFEDD5'],
+    'Al día':['#00915D','#D1FAE5']
+  };
+  var logoUrl='';
+  try{ if(typeof location!=='undefined' && location.origin && location.origin.indexOf('http')===0) logoUrl=location.origin+'/assets/pagasi-logo.png'; }catch(e){}
+  var kpi=function(lbl,val){
+    return '<div style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:7px 14px;text-align:center">'
+      +'<div style="font-size:14px;font-weight:900;color:#fff">'+val+'</div>'
+      +'<div style="font-size:7.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:rgba(255,255,255,.85);margin-top:1px">'+lbl+'</div></div>';
+  };
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte de Cobranza · PAGASI</title>'
+    +'<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">'
+    +'<style>'
+    +'@page{size:Letter landscape;margin:8mm} *{box-sizing:border-box} '
+    +'body{font-family:Nunito,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#0B0B1E;margin:0;font-size:9.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff} '
+    +'.top{display:flex;justify-content:space-between;align-items:center;padding:2px 0 8px} '
+    +'.top img{height:34px} '
+    +'.top .t1{font-size:15px;font-weight:900;color:#0B0B1E;text-align:right} '
+    +'.top .t2{font-size:9px;font-weight:700;color:#9794BB;text-align:right} '
+    +'.banda{background:linear-gradient(135deg,#1E3A8A,#2563EB);border-radius:14px;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px} '
+    +'.banda .bt{color:#fff} .banda .bt1{font-size:12.5px;font-weight:900} .banda .bt2{font-size:8.5px;font-weight:700;opacity:.85;margin-top:1px} '
+    +'.kpis{display:flex;gap:8px} '
+    +'table{width:100%;border-collapse:separate;border-spacing:0} thead{display:table-header-group} tr{page-break-inside:avoid} '
+    +'th{background:#1E3A8A;color:#fff;font-weight:800;font-size:7.8px;text-transform:uppercase;letter-spacing:.4px;padding:6px 7px;text-align:left;white-space:nowrap} '
+    +'th:first-child{border-radius:8px 0 0 0} th:last-child{border-radius:0 8px 0 0} '
+    +'td{padding:5px 7px;border-bottom:1px solid #EEF0FA;vertical-align:middle;font-weight:600} '
+    +'tbody tr:nth-child(even){background:#F8F9FF} '
+    +'.num{text-align:right;white-space:nowrap;font-weight:800} '
+    +'.dm{font-weight:900;color:#E8335A} .dm0{color:#00915D;font-weight:800} '
+    +'.pill{display:inline-block;border-radius:20px;padding:2px 8px;font-size:8px;font-weight:800;white-space:nowrap} '
+    +'.cli{font-weight:800} .mut{color:#6B7194;font-weight:600} '
+    +'.pie{margin-top:8px;font-size:8px;color:#9794BB;font-weight:700;display:flex;justify-content:space-between} '
     +'</style></head><body>'
-    +'<div class="enc"><div><div class="emp">PAGASI 18, C.A.</div><div class="tit">Reporte de Cobranza — '+esc(alcLbl)+'</div>'
-    +'<div class="sub">'+esc(perLbl)+' · Generado el '+esc(hoyLocalISO())+' · '+n+' registro'+(n!==1?'s':'')+'</div></div>'
-    +'<div class="sub">pagasi.io</div></div>'
+    +'<div class="top">'
+    +(logoUrl?'<img src="'+logoUrl+'" alt="Pagasi">':'<div style="font-size:19px;font-weight:900;color:#2563EB">Pagasi</div>')
+    +'<div><div class="t1">Reporte de Cobranza</div><div class="t2">Generado el '+esc(hoyLocalISO())+' · www.pagasi.io</div></div>'
+    +'</div>'
+    +'<div class="banda">'
+    +'<div class="bt"><div class="bt1">'+esc(alcLbl)+'</div><div class="bt2">'+esc(perLbl)+'</div></div>'
+    +'<div class="kpis">'
+    +kpi('Registros', n)
+    +kpi('Monto vencido', fmt(totVenc))
+    +kpi('Saldo pendiente', fmt(totSaldo))
+    +kpi('Prom. días de mora', promDm+'d')
+    +'</div></div>'
     +'<table><thead><tr>'+data.head.map(function(h){return '<th>'+esc(h)+'</th>';}).join('')+'</tr></thead><tbody>'
     +data.filas.map(function(f){
       return '<tr>'+f.map(function(v,i){
-        var num=(i>=7&&i<=11);
-        var rojo=(i===7&&parseInt(v,10)>0);
-        return '<td class="'+(num?'num':'')+(rojo?' rojo':'')+'">'+esc(v)+'</td>';
+        if(i===0) return '<td class="cli">'+esc(v)+'</td>';
+        if(i===1||i===4||i===6||i===13||i===14||i===15) return '<td class="mut">'+esc(v)+'</td>';
+        if(i===7){ var d=parseInt(v,10)||0; return '<td class="num '+(d>0?'dm':'dm0')+'">'+(d>0?d+'d':'—')+'</td>'; }
+        if(i===12){ var pc=PILL[v]||['#4A4870','#EEF0FA']; return '<td><span class="pill" style="color:'+pc[0]+';background:'+pc[1]+'">'+esc(v)+'</span></td>'; }
+        if(i>=8&&i<=11) return '<td class="num">'+esc(v)+'</td>';
+        return '<td>'+esc(v)+'</td>';
       }).join('')+'</tr>';
     }).join('')
-    +'</tbody></table></body></html>';
+    +'</tbody></table>'
+    +'<div class="pie"><span>PAGASI 18, C.A. — Sistema de Gestión de Crédito</span><span>'+n+' registro'+(n!==1?'s':'')+' · Documento de uso interno</span></div>'
+    +'</body></html>';
   window._cobPdfUltimoHtml = html;   // tambien lo usan las pruebas
   var w=null;
-  try{ w=window.open('','_blank','width=1100,height=760'); }catch(e){ w=null; }
+  try{ w=window.open('','_blank','width=1150,height=780'); }catch(e){ w=null; }
   if(!w){ toast('El navegador bloqueó la ventana del PDF','error'); return false; }
   w.document.write(html); w.document.close();
-  setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){} },450);
+  setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){} },600);
   return true;
 }
+
 
 // ─── NOTAS DE COBRANZA (status del cliente en Cuotas Próximas) ───
 var NOTA_COBRANZA = [
