@@ -666,7 +666,7 @@ function cobExportAbrir(){
     +'</div>'
     +grupo('3 · Formato')
     +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
-    +btn('fmt','excel','📊 Excel','Archivo .xls para trabajar la data')
+    +btn('fmt','excel','📊 Excel / Numbers','Archivo .csv en columnas para trabajar la data')
     +btn('fmt','pdf','📄 PDF','Hoja carta lista para imprimir o enviar')
     +'</div>';
   S.saveFn=function(){
@@ -711,22 +711,22 @@ function cobExportAbrir(){
       var okPdf=_cobExpPdf(data, alcLbl, perLbl, items.length);
       if(!okPdf) return false;
     } else {
-      var esc=function(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-      var html='<html><head><meta charset="utf-8"></head><body><table border="1">'
-        +'<tr>'+data.head.map(function(h2){return '<th style="background:#1E3A8A;color:#fff;font-weight:bold;white-space:nowrap">'+esc(h2)+'</th>';}).join('')+'</tr>'
-        +data.filas.map(function(f){ return '<tr>'+f.map(function(v){return '<td>'+esc(v)+'</td>';}).join('')+'</tr>'; }).join('')
-        +'</table></body></html>';
-      window._cobXlsUltimoHtml = html;   // tambien lo usan las pruebas
+      // CSV real (; + coma decimal): lo abren bien Excel y Numbers, en columnas
+      var campo=function(v){ v=String(v==null?'':v); return /[;"\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; };
+      var csv=[data.head.map(campo).join(';')]
+        .concat(data.filas.map(function(f){ return f.map(campo).join(';'); }))
+        .join('\r\n');
+      window._cobXlsUltimoCsv = csv;   // tambien lo usan las pruebas
       try{
         if(typeof Blob!=='undefined' && typeof URL!=='undefined' && URL.createObjectURL){
-          var blob=new Blob(['\ufeff'+html],{type:'application/vnd.ms-excel'});
-          var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=base+'.xls';
+          var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+          var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=base+'.csv';
           document.body.appendChild(a); a.click(); document.body.removeChild(a);
         }
       }catch(e){ toast('No se pudo generar el archivo','error'); return false; }
     }
     if(typeof logActividad==='function') logActividad('export_cobranza','pagos',sel.alc,{registros:items.length, periodo:sel.per, formato:sel.fmt});
-    toast((sel.fmt==='pdf'?'PDF listo':'Excel descargado')+' · '+items.length+' registro'+(items.length!==1?'s':''),'success');
+    toast((sel.fmt==='pdf'?'PDF listo':'Archivo descargado')+' · '+items.length+' registro'+(items.length!==1?'s':''),'success');
     closeM(); return true;
   };
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">⬇ Descargar</button>';
