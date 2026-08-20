@@ -1525,6 +1525,7 @@ function acuerdoAcordar(credId){
     var v=($('ac_fecha')&&$('ac_fecha').value)||'';
     if(!/^\d{4}-\d{2}-\d{2}$/.test(v)){ toast('Elige la fecha de compromiso','error'); return false; }
     if(v<hoy){ toast('La fecha de compromiso no puede ser pasada','error'); return false; }
+    if(era && era < hoy) _acuerdoAnotar(c, era, 'rota');   // reprogramada ya vencida
     c.fechaCompromiso=v;
     DB.saveCred(c);
     if(typeof logActividad==='function') logActividad(era?'acuerdo_mensual_reprogramado':'acuerdo_mensual_creado','cobranza',credId,{cliente:c.cli||'', fecha:v});
@@ -1543,17 +1544,32 @@ function acuerdoQuitar(credId){
   var c=(S.creds||[]).find(function(x){return String(x.id)===String(credId);}); if(!c || !c.fechaCompromiso) return;
   if(!confirm('¿Quitar el acuerdo mensual de '+(c.cli||credId)+'? Vuelve a la mora quincenal normal.')) return;
   if(typeof closeM==='function') closeM();
+  if(c.fechaCompromiso < hoyLocalISO()) _acuerdoAnotar(c, c.fechaCompromiso, 'rota');
   delete c.fechaCompromiso;      // saveCred escribe el doc completo sin merge: el campo desaparece
   DB.saveCred(c);
   if(typeof logActividad==='function') logActividad('acuerdo_mensual_quitado','cobranza',credId,{cliente:c.cli||''});
   toast('Acuerdo quitado — vuelve a la mora quincenal','info');
   if(S.page==='pagos' && typeof nav==='function') nav('pagos');
 }
+// Historial de promesas: cada promesa que termina (pagada, reprogramada
+// tarde o retirada tarde) deja huella en credito.promesasLog. De ahi sale
+// la tasa de cumplimiento — nunca se recalcula historia, solo se anexa.
+function _acuerdoAnotar(cred, fechaPromesa, resultado){
+  if(!cred || !fechaPromesa) return;
+  if(!Array.isArray(cred.promesasLog)) cred.promesasLog = [];
+  cred.promesasLog.push({ fecha: fechaPromesa, resultado: resultado, ts: new Date().toISOString() });
+  if(cred.promesasLog.length > 60) cred.promesasLog = cred.promesasLog.slice(-60);
+}
+
 // Al registrar CUALQUIER pago del credito, la promesa se corre un mes.
 // Regla deliberadamente simple; si el pago fue parcial, el cobrador ajusta
 // la fecha con el boton correspondiente.
 function _acuerdoRodarTrasPago(cred){
   if(!cred || !cred.fechaCompromiso) return;
+  var hoy = hoyLocalISO();
+  var gracia = (typeof PLAN!=='undefined' && PLAN.diasGracia!=null) ? PLAN.diasGracia : 5;
+  var limite = fechaLocalISO(new Date(parseFechaLocal(cred.fechaCompromiso).getTime() + gracia*24*60*60*1000));
+  _acuerdoAnotar(cred, cred.fechaCompromiso, hoy <= limite ? 'cumplida' : 'rota');
   var prox = _acuerdoProximaFecha(cred.fechaCompromiso);
   cred.fechaCompromiso = prox;
   DB.saveCred(cred);

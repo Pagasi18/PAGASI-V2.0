@@ -174,8 +174,30 @@ PG.pagos = function(){
       +'<span>\ud83d\uddd3\ufe0f Acuerdos Mensuales'+(_acuRotos?' <span style="background:var(--red);color:#fff;border-radius:20px;padding:0 7px;font-size:9.5px;font-weight:900;margin-left:4px">'+_acuRotos+'</span>':'')+'</span>'
       +'<span style="font-size:10px;opacity:.75;font-weight:700">'+_acuList.length+' acuerdo'+(_acuList.length!==1?'s':'')+' \u00b7 '+fmt(_acuMonto)+' acumulado</span></button>'
     +'</div>';
+  // Tasa de cumplimiento historica: sobre TODOS los creditos (tambien los que
+  // ya salieron del acuerdo), porque la historia no se borra al quitar el campo.
+  var _prCump=0, _prRotas=0;
+  (S.creds||[]).forEach(function(c){
+    (Array.isArray(c.promesasLog)?c.promesasLog:[]).forEach(function(p){
+      if(p.resultado==='cumplida') _prCump++;
+      else if(p.resultado==='rota') _prRotas++;
+    });
+  });
+  var _prTot=_prCump+_prRotas;
+  var _acuKpis = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">'
+    +'<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px 12px;text-align:center">'
+      +'<div style="font-size:16px;font-weight:900">'+fmt(_acuMonto)+'</div>'
+      +'<div style="font-size:9.5px;color:var(--ink3);font-weight:800;text-transform:uppercase;letter-spacing:.4px">Acumulado en acuerdos</div></div>'
+    +'<div style="background:'+(_acuRotos?'rgba(232,75,75,.08)':'var(--surf2)')+';border:1px solid '+(_acuRotos?'rgba(232,75,75,.3)':'var(--rim)')+';border-radius:10px;padding:10px 12px;text-align:center">'
+      +'<div style="font-size:16px;font-weight:900;color:'+(_acuRotos?'var(--red)':'var(--ink)')+'">'+_acuRotos+'</div>'
+      +'<div style="font-size:9.5px;color:var(--ink3);font-weight:800;text-transform:uppercase;letter-spacing:.4px">Promesas incumplidas hoy</div></div>'
+    +'<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:10px;padding:10px 12px;text-align:center">'
+      +'<div style="font-size:16px;font-weight:900;color:'+(_prTot?(_prRotas/_prTot>0.3?'var(--red)':'var(--green)'):'var(--ink3)')+'">'
+        +(_prTot?Math.round(_prCump/_prTot*100)+'%':'\u2014')+'</div>'
+      +'<div style="font-size:9.5px;color:var(--ink3);font-weight:800;text-transform:uppercase;letter-spacing:.4px">Cumplimiento hist\u00f3rico ('+_prCump+'/'+_prTot+')</div></div>'
+    +'</div>';
   var _acuHtml = (function(){
-    if(!_acuList.length) return '<div style="text-align:center;padding:22px 0;color:var(--ink3);font-size:12px">Sin acuerdos mensuales activos.<br><span style="font-size:11px">Se otorgan desde el detalle del cr\u00e9dito \u2014 bot\u00f3n "Acordar mensual" (solo Admin/Gerente).</span></div>';
+    if(!_acuList.length) return _acuKpis+'<div style="text-align:center;padding:22px 0;color:var(--ink3);font-size:12px">Sin acuerdos mensuales activos.<br><span style="font-size:11px">Se otorgan desde el detalle del cr\u00e9dito \u2014 bot\u00f3n "Acordar mensual" (solo Admin/Gerente).</span></div>';
     var filas = _acuList.map(function(it){
       var c = it.cred;
       var sem = (typeof _acuerdoSemaforo==='function') ? _acuerdoSemaforo(c.fechaCompromiso, _hoyISO) : {nivel:'verde',label:c.fechaCompromiso};
@@ -190,13 +212,14 @@ PG.pagos = function(){
         +'<td style="font-weight:800;font-family:var(--fd);color:'+(sem.nivel==='rojo'?'var(--red)':'var(--ink)')+'">'+fmt(monto)+' <span class="tds" style="font-weight:600">('+nCuo+' cuota'+(nCuo!==1?'s':'')+')</span></td>'
         +'<td class="tdm" style="white-space:nowrap">'+fFmt+'</td>'
         +'<td><span class="bdg '+(sem.nivel==='rojo'?'b-r':(sem.nivel==='amarillo'?'b-a':'b-g'))+'" style="white-space:nowrap">'+sem.label+'</span></td>'
+        +'<td>'+((typeof _cuotaNotaSelect==='function')?_cuotaNotaSelect(c):'')+'</td>'
         +'<td><div style="display:flex;gap:4px;flex-wrap:wrap">'
           +'<button class="btn btn-p btn-xs" onclick="openAddPago(\''+c.id+'\')">\u2713 Pago</button>'
           +'<button class="btn btn-g btn-xs" onclick="acuerdoAcordar(\''+c.id+'\')" title="Reprogramar la fecha de compromiso">\u270e Fecha</button>'
           +'<button class="btn btn-g btn-xs" onclick="acuerdoQuitar(\''+c.id+'\')" title="Volver a mora quincenal">\u2715 Quitar</button>'
         +'</div></td></tr>';
     }).join('');
-    return '<div class="tw"><table><thead><tr><th>Cliente \u00b7 Cr\u00e9dito</th><th>Concesionario</th><th>Acumulado a pagar</th><th>Fecha promesa</th><th>Estatus</th><th>Acciones</th></tr></thead><tbody>'+filas+'</tbody></table></div>';
+    return _acuKpis+'<div class="tw"><table><thead><tr><th>Cliente \u00b7 Cr\u00e9dito</th><th>Concesionario</th><th>Acumulado a pagar</th><th>Fecha promesa</th><th>Estatus</th><th>Notas</th><th>Acciones</th></tr></thead><tbody>'+filas+'</tbody></table></div>';
   })();
 
   return`<div class="page">

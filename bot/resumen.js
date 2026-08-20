@@ -181,6 +181,18 @@ async function main() {
   L.push('');
   L.push('<b>━━ COBRANZA ━━</b>');
   L.push(`⚠️ En mora: <b>${moraCreds.length}</b> · ${money(moraMonto)} vencido`);
+  // Acuerdos de pago mensual (fechaCompromiso): promesas de hoy e incumplidas
+  const acu = creds.filter(c => c.fechaCompromiso && (c.estado === 'activo' || c.estado === 'mora'));
+  if (acu.length) {
+    const acuHoy = acu.filter(c => c.fechaCompromiso === hoy);
+    const acuRotas = acu.filter(c => c.fechaCompromiso < hoy);
+    L.push(`🗓 Acuerdos mensuales: <b>${acu.length}</b>`
+      + (acuHoy.length ? ` · prometen pagar HOY: <b>${acuHoy.length}</b>` : '')
+      + (acuRotas.length ? ` · 🔴 incumplidos: <b>${acuRotas.length}</b>` : ''));
+    acuRotas.slice(0, 3).forEach(c => {
+      L.push(`   • ${c.cli || c.id} — prometió el ${c.fechaCompromiso}`);
+    });
+  }
   moraTop.forEach(c => {
     L.push(`   • ${esc(c.cli)} — ${Number(c.mora) || 0} días · ${money(vencidoPorCred[c.id] || 0)}`);
   });
