@@ -1497,21 +1497,52 @@ function acuerdoAcordar(credId){
   if(!_cobPuedeAcordar()){ toast('Solo Administrador o Gerente pueden acordar pago mensual','error'); return; }
   var c=(S.creds||[]).find(function(x){return String(x.id)===String(credId);}); if(!c) return;
   var era = c.fechaCompromiso||'';
-  var def = era || _acuerdoProximaFecha(hoyLocalISO());
-  var v = prompt('Fecha de compromiso del pago mensual (AAAA-MM-DD):', def);
-  if(v===null) return;
-  v = String(v).trim();
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(v) || isNaN(parseFechaLocal(v).getTime())){ toast('Fecha invalida — usa el formato AAAA-MM-DD','error'); return; }
-  c.fechaCompromiso = v;
-  DB.saveCred(c);
-  if(typeof logActividad==='function') logActividad(era?'acuerdo_mensual_reprogramado':'acuerdo_mensual_creado','cobranza',credId,{cliente:c.cli||'', fecha:v});
-  toast((era?'Compromiso reprogramado':'Acuerdo mensual creado')+': '+(c.cli||credId)+' paga el '+v,'success');
-  if(S.page==='pagos' && typeof nav==='function'){ closeM(); nav('pagos'); }
+  var hoy = hoyLocalISO();
+  var def = era || _acuerdoProximaFecha(hoy);
+  // Fechas rapidas: proxima ocurrencia del dia 15 y del dia 30 (con tope de
+  // fin de mes), y hoy + 1 mes.
+  var hd=parseFechaLocal(hoy), hy=hd.getFullYear(), hm=hd.getMonth(), hdia=hd.getDate();
+  var _fechaDia=function(dd){
+    var mm = hm + (hdia>=dd ? 1 : 0);
+    var ult = new Date(hy, mm+1, 0).getDate();
+    return fechaLocalISO(new Date(hy, mm, Math.min(dd, ult)));
+  };
+  var f15=_fechaDia(15), f30=_fechaDia(30), f1m=_acuerdoProximaFecha(hoy);
+  var chip=function(f,l){
+    return '<button type="button" class="btn btn-g btn-sm" style="flex:1;line-height:1.3" '
+      + 'onclick="$(\'ac_fecha\').value=\''+f+'\'">'+l+'<br><span style="font-size:9.5px;opacity:.7;font-weight:600">'+f+'</span></button>';
+  };
+  setMicon('editar');
+  $('mtt').textContent='Acuerdo de pago mensual';
+  $('msb').textContent=c.id+' \u00b7 '+(c.cli||'');
+  $('modal-box').className='modal';
+  $('mbd').innerHTML=
+    '<p style="font-size:12px;color:var(--ink3);margin:0 0 12px;line-height:1.6">El cliente acumula sus cuotas y se compromete a pagarlas en una <b>fecha fija</b>. Mientras el acuerdo est\u00e9 activo se gestiona en la pesta\u00f1a <b>Acuerdos Mensuales</b> de Cobranza, y al registrar su pago la fecha se corre sola un mes.</p>'
+    + (era ? '<div style="font-size:11.5px;background:var(--surf2);border:1px solid var(--rim);border-radius:8px;padding:8px 10px;margin-bottom:10px">Compromiso actual: <b>'+era+'</b></div>' : '')
+    + '<div class="fg"><label>Fecha de compromiso</label><input class="fi" type="date" id="ac_fecha" value="'+def+'" min="'+hoy+'"></div>'
+    + '<div style="display:flex;gap:6px;margin-top:10px">'+chip(f15,'D\u00eda 15')+chip(f30,'D\u00eda 30')+chip(f1m,'En 1 mes')+'</div>';
+  S.saveFn=function(){
+    var v=($('ac_fecha')&&$('ac_fecha').value)||'';
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(v)){ toast('Elige la fecha de compromiso','error'); return false; }
+    if(v<hoy){ toast('La fecha de compromiso no puede ser pasada','error'); return false; }
+    c.fechaCompromiso=v;
+    DB.saveCred(c);
+    if(typeof logActividad==='function') logActividad(era?'acuerdo_mensual_reprogramado':'acuerdo_mensual_creado','cobranza',credId,{cliente:c.cli||'', fecha:v});
+    toast((era?'Compromiso reprogramado':'Acuerdo mensual creado')+': '+(c.cli||credId)+' paga el '+v,'success');
+    closeM();
+    if(S.page==='pagos' && typeof nav==='function') nav('pagos');
+    return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    + (era ? '<button class="btn btn-d" onclick="acuerdoQuitar(\''+c.id+'\')">Quitar acuerdo</button>' : '')
+    + '<button class="btn btn-p" onclick="saveM()">Guardar acuerdo</button>';
+  $('ov').style.display='flex';
 }
 function acuerdoQuitar(credId){
   if(!_cobPuedeAcordar()){ toast('Solo Administrador o Gerente pueden quitar el acuerdo','error'); return; }
   var c=(S.creds||[]).find(function(x){return String(x.id)===String(credId);}); if(!c || !c.fechaCompromiso) return;
   if(!confirm('¿Quitar el acuerdo mensual de '+(c.cli||credId)+'? Vuelve a la mora quincenal normal.')) return;
+  if(typeof closeM==='function') closeM();
   delete c.fechaCompromiso;      // saveCred escribe el doc completo sin merge: el campo desaparece
   DB.saveCred(c);
   if(typeof logActividad==='function') logActividad('acuerdo_mensual_quitado','cobranza',credId,{cliente:c.cli||''});
