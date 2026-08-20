@@ -599,21 +599,30 @@ function _cobXlsEstado(it){
   return atr ? 'Mora regular' : 'Al día';
 }
 function _cobExpEsAtr(it){ return it.diff<0 || it.nVencidas>=1 || (parseInt(it.cred.mora,10)||0)>0; }
-// Filas del reporte (las usan Excel y PDF)
+// Filas del reporte. El CSV usa las 16 columnas planas; el PDF usa los
+// objetos ricos (ricas) para un layout compacto.
 function _cobExpFilas(items){
   var head=['Cliente','Teléfono','Crédito','Concesionario','Modelo','Cuota N°','Vence','Días de mora','Cuotas vencidas','Monto cuota','Monto vencido','Saldo pendiente','Estado','Nota de cobranza','Acuerdo mensual','Cobrador'];
-  var filas=items.map(function(it){
+  var ricas=items.map(function(it){
     var c=it.cred;
     var cl=(S.clientes||[]).find(function(x){return c.clienteId && String(x.id)===String(c.clienteId);}) || (S.clientes||[]).find(function(x){return x.nombre===c.cli && c.cli;}) || {};
     var conc=((c.concesionarioId && typeof _concGetById==='function') ? ((_concGetById(c.concesionarioId)||{}).nombre||'') : '') || c.sede || '';
     var dm=Math.max(parseInt(c.mora,10)||0, it.diff<0?-it.diff:0, it.mora||0);
-    var saldo=(typeof getCreditoSaldoPendiente==='function')?getCreditoSaldoPendiente(c):'';
+    var saldo=(typeof getCreditoSaldoPendiente==='function')?(getCreditoSaldoPendiente(c)||0):null;
     var nota=_notaCobranzaOpt(c.cobranzaStatus||'').t;
-    return [c.cli||'', cl.tel||'', c.id||'', conc, c.modelo||'', (it.cuotaNum||'')+'/'+(c.totalCuotas||((parseInt(c.plazo,10)||0)*2)||''),
-      it.venceStr||'', dm, it.nVencidas||0, _cobXlsNum(it.cuotaMonto), _cobXlsNum(it.nVencidas>=1?it.vencido:0),
-      saldo===''?'':_cobXlsNum(saldo), _cobXlsEstado(it), nota==='— Sin nota'?'':nota, c.fechaCompromiso||'', c.cobrador||''];
+    return { cli:c.cli||'', tel:cl.tel||'', credId:c.id||'', conc:conc, modelo:c.modelo||'',
+      cuotaLbl:(it.cuotaNum||'')+'/'+(c.totalCuotas||((parseInt(c.plazo,10)||0)*2)||''),
+      vence:it.venceStr||'', dm:dm, nVenc:it.nVencidas||0, cuotaMonto:it.cuotaMonto||0,
+      vencido:it.nVencidas>=1?it.vencido:0, saldo:saldo,
+      estado:_cobXlsEstado(it), nota:nota==='— Sin nota'?'':nota,
+      acuerdo:c.fechaCompromiso||'', cobrador:c.cobrador||'' };
   });
-  return {head:head, filas:filas};
+  var filas=ricas.map(function(r){
+    return [r.cli, r.tel, r.credId, r.conc, r.modelo, r.cuotaLbl, r.vence, r.dm, r.nVenc,
+      _cobXlsNum(r.cuotaMonto), _cobXlsNum(r.vencido), r.saldo==null?'':_cobXlsNum(r.saldo),
+      r.estado, r.nota, r.acuerdo, r.cobrador];
+  });
+  return {head:head, filas:filas, ricas:ricas};
 }
 // Estado de seleccion del modal (botones tipo tarjeta, no selects)
 window._cobExpSel = { alc:'todas', per:'dia', fmt:'excel' };
@@ -732,15 +741,16 @@ function cobExportAbrir(){
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">⬇ Descargar</button>';
   $('ov').style.display='flex';
 }
-// PDF: hoja carta horizontal con la identidad PAGASI (logo, colores, resumen)
+// PDF: hoja carta horizontal con la identidad PAGASI — layout compacto de
+// 10 columnas con subtitulos (el detalle completo va en el CSV)
 function _cobExpPdf(data, alcLbl, perLbl, items){
   var esc=function(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
-  var n=items.length;
-  var totVenc=items.reduce(function(a,it){ return a+(it.nVencidas>=1?it.vencido:0); },0);
-  var totSaldo=items.reduce(function(a,it){ var c=it.cred; return a+((typeof getCreditoSaldoPendiente==='function')?(getCreditoSaldoPendiente(c)||0):0); },0);
-  var dms=items.map(function(it){ var c=it.cred; return Math.max(parseInt(c.mora,10)||0, it.diff<0?-it.diff:0, it.mora||0); });
-  var enMora=dms.filter(function(d){return d>0;});
-  var promDm=enMora.length?Math.round(enMora.reduce(function(a,b){return a+b;},0)/enMora.length):0;
+  var R=data.ricas||[];
+  var n=R.length;
+  var totVenc=R.reduce(function(a,r){ return a+(r.vencido||0); },0);
+  var totSaldo=R.reduce(function(a,r){ return a+(r.saldo||0); },0);
+  var enMora=R.filter(function(r){return r.dm>0;});
+  var promDm=enMora.length?Math.round(enMora.reduce(function(a,r){return a+r.dm;},0)/enMora.length):0;
   var PILL={
     'Crítico':['#B91C1C','#FEE2E2'],
     'Ilocalizable':['#991B1B','#FEE2E2'],
@@ -751,55 +761,68 @@ function _cobExpPdf(data, alcLbl, perLbl, items){
   var logoUrl='';
   try{ if(typeof location!=='undefined' && location.origin && location.origin.indexOf('http')===0) logoUrl=location.origin+'/assets/pagasi-logo.png'; }catch(e){}
   var kpi=function(lbl,val){
-    return '<div style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:7px 14px;text-align:center">'
-      +'<div style="font-size:14px;font-weight:900;color:#fff">'+val+'</div>'
+    return '<div style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:7px 16px;text-align:center">'
+      +'<div style="font-size:15px;font-weight:900;color:#fff;white-space:nowrap">'+val+'</div>'
       +'<div style="font-size:7.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:rgba(255,255,255,.85);margin-top:1px">'+lbl+'</div></div>';
   };
   var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte de Cobranza · PAGASI</title>'
     +'<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">'
     +'<style>'
     +'@page{size:Letter landscape;margin:8mm} *{box-sizing:border-box} '
-    +'body{font-family:Nunito,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#0B0B1E;margin:0;font-size:9.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff} '
+    +'body{font-family:Nunito,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#0B0B1E;margin:0;font-size:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff} '
     +'.top{display:flex;justify-content:space-between;align-items:center;padding:2px 0 8px} '
-    +'.top img{height:34px} '
-    +'.top .t1{font-size:15px;font-weight:900;color:#0B0B1E;text-align:right} '
+    +'.top img{height:36px} '
+    +'.top .t1{font-size:16px;font-weight:900;text-align:right} '
     +'.top .t2{font-size:9px;font-weight:700;color:#9794BB;text-align:right} '
     +'.banda{background:linear-gradient(135deg,#1E3A8A,#2563EB);border-radius:14px;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px} '
-    +'.banda .bt{color:#fff} .banda .bt1{font-size:12.5px;font-weight:900} .banda .bt2{font-size:8.5px;font-weight:700;opacity:.85;margin-top:1px} '
+    +'.banda .bt1{font-size:13px;font-weight:900;color:#fff} .banda .bt2{font-size:9px;font-weight:700;color:rgba(255,255,255,.85);margin-top:1px} '
     +'.kpis{display:flex;gap:8px} '
     +'table{width:100%;border-collapse:separate;border-spacing:0} thead{display:table-header-group} tr{page-break-inside:avoid} '
-    +'th{background:#1E3A8A;color:#fff;font-weight:800;font-size:7.8px;text-transform:uppercase;letter-spacing:.4px;padding:6px 7px;text-align:left;white-space:nowrap} '
+    +'th{background:#1E3A8A;color:#fff;font-weight:800;font-size:8.2px;text-transform:uppercase;letter-spacing:.4px;padding:7px 8px;text-align:left;white-space:nowrap} '
+    +'th.num{text-align:right} '
     +'th:first-child{border-radius:8px 0 0 0} th:last-child{border-radius:0 8px 0 0} '
-    +'td{padding:5px 7px;border-bottom:1px solid #EEF0FA;vertical-align:middle;font-weight:600} '
+    +'td{padding:6px 8px;border-bottom:1px solid #EEF0FA;vertical-align:middle} '
     +'tbody tr:nth-child(even){background:#F8F9FF} '
-    +'.num{text-align:right;white-space:nowrap;font-weight:800} '
-    +'.dm{font-weight:900;color:#E8335A} .dm0{color:#00915D;font-weight:800} '
-    +'.pill{display:inline-block;border-radius:20px;padding:2px 8px;font-size:8px;font-weight:800;white-space:nowrap} '
-    +'.cli{font-weight:800} .mut{color:#6B7194;font-weight:600} '
+    +'.b{font-weight:800} .mut{color:#6B7194;font-weight:600} '
+    +'.sub{font-size:7.8px;color:#9794BB;font-weight:700;margin-top:1px;white-space:nowrap} '
+    +'.num{text-align:right;white-space:nowrap} '
+    +'.dm{font-weight:900;color:#E8335A;font-size:11px;white-space:nowrap} .dm0{color:#00915D;font-weight:800} '
+    +'.pill{display:inline-block;border-radius:20px;padding:2px 9px;font-size:8px;font-weight:800;white-space:nowrap} '
     +'.pie{margin-top:8px;font-size:8px;color:#9794BB;font-weight:700;display:flex;justify-content:space-between} '
     +'</style></head><body>'
     +'<div class="top">'
-    +(logoUrl?'<img src="'+logoUrl+'" alt="Pagasi">':'<div style="font-size:19px;font-weight:900;color:#2563EB">Pagasi</div>')
+    +(logoUrl?'<img src="'+logoUrl+'" alt="Pagasi">':'<div style="font-size:20px;font-weight:900;color:#2563EB">Pagasi</div>')
     +'<div><div class="t1">Reporte de Cobranza</div><div class="t2">Generado el '+esc(hoyLocalISO())+' · www.pagasi.io</div></div>'
     +'</div>'
     +'<div class="banda">'
-    +'<div class="bt"><div class="bt1">'+esc(alcLbl)+'</div><div class="bt2">'+esc(perLbl)+'</div></div>'
+    +'<div><div class="bt1">'+esc(alcLbl)+'</div><div class="bt2">'+esc(perLbl)+'</div></div>'
     +'<div class="kpis">'
     +kpi('Registros', n)
     +kpi('Monto vencido', fmt(totVenc))
     +kpi('Saldo pendiente', fmt(totSaldo))
     +kpi('Prom. días de mora', promDm+'d')
     +'</div></div>'
-    +'<table><thead><tr>'+data.head.map(function(h){return '<th>'+esc(h)+'</th>';}).join('')+'</tr></thead><tbody>'
-    +data.filas.map(function(f){
-      return '<tr>'+f.map(function(v,i){
-        if(i===0) return '<td class="cli">'+esc(v)+'</td>';
-        if(i===1||i===4||i===6||i===13||i===14||i===15) return '<td class="mut">'+esc(v)+'</td>';
-        if(i===7){ var d=parseInt(v,10)||0; return '<td class="num '+(d>0?'dm':'dm0')+'">'+(d>0?d+'d':'—')+'</td>'; }
-        if(i===12){ var pc=PILL[v]||['#4A4870','#EEF0FA']; return '<td><span class="pill" style="color:'+pc[0]+';background:'+pc[1]+'">'+esc(v)+'</span></td>'; }
-        if(i>=8&&i<=11) return '<td class="num">'+esc(v)+'</td>';
-        return '<td>'+esc(v)+'</td>';
-      }).join('')+'</tr>';
+    +'<table><thead><tr>'
+    +'<th style="width:16%">Cliente</th><th>Crédito</th><th style="width:12%">Concesionario</th><th style="width:11%">Modelo</th>'
+    +'<th>Vence</th><th class="num">Días de mora</th><th class="num">Monto vencido</th><th class="num">Saldo pendiente</th>'
+    +'<th style="width:15%">Estado</th><th>Cobrador</th>'
+    +'</tr></thead><tbody>'
+    +R.map(function(r){
+      var pc=PILL[r.estado]||['#4A4870','#EEF0FA'];
+      return '<tr>'
+        +'<td><div class="b">'+esc(r.cli)+'</div>'+(r.tel?'<div class="sub">'+esc(r.tel)+'</div>':'')+'</td>'
+        +'<td><div class="b" style="white-space:nowrap">'+esc(r.credId)+'</div><div class="sub">cuota '+esc(r.cuotaLbl)+'</div></td>'
+        +'<td class="mut">'+esc(r.conc)+'</td>'
+        +'<td class="mut">'+esc(r.modelo)+'</td>'
+        +'<td class="mut" style="white-space:nowrap">'+esc(r.vence)+'</td>'
+        +'<td class="num"><span class="'+(r.dm>0?'dm':'dm0')+'">'+(r.dm>0?r.dm+'d':'—')+'</span></td>'
+        +'<td class="num">'+(r.nVenc>=1?'<div class="b" style="color:#E8335A">'+fmt(r.vencido)+'</div><div class="sub">'+r.nVenc+' cuota'+(r.nVenc!==1?'s':'')+' × '+fmt(r.cuotaMonto)+'</div>':'<div class="mut">—</div><div class="sub">próx. '+fmt(r.cuotaMonto)+'</div>')+'</td>'
+        +'<td class="num b">'+(r.saldo==null?'—':fmt(r.saldo))+'</td>'
+        +'<td><span class="pill" style="color:'+pc[0]+';background:'+pc[1]+'">'+esc(r.estado)+'</span>'
+          +(r.nota?'<div class="sub">'+esc(r.nota)+'</div>':'')
+          +(r.acuerdo?'<div class="sub">🗓️ '+esc(r.acuerdo)+'</div>':'')+'</td>'
+        +'<td class="mut">'+esc(r.cobrador)+'</td>'
+        +'</tr>';
     }).join('')
     +'</tbody></table>'
     +'<div class="pie"><span>PAGASI 18, C.A. — Sistema de Gestión de Crédito</span><span>'+n+' registro'+(n!==1?'s':'')+' · Documento de uso interno</span></div>'
