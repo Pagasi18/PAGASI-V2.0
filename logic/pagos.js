@@ -88,6 +88,7 @@ function openAddPago(preCredId){
     };
     S.pagos.push(newPago);
     DB.savePago(newPago);
+    if(cred.fechaCompromiso) _acuerdoRodarTrasPago(cred);
     if(typeof logActividad==='function') logActividad('pago_registrado','pagos',newPago.id,{cliente:cred.cli, credito:credId, monto:monto, metodo:newPago.metodo});
     // Crear movimiento en Cuentas — usar nombre exacto de la cuenta seleccionada
     var pagoMetodo=($('p_forma')&&$('p_forma').value)||'';
@@ -546,7 +547,7 @@ function openAmort(id){
   var _cliIdAmort = c.clienteId || c.cliId || '';
   var _cliAmort = S.clientes.find(function(x){return (c.clienteId&&String(x.id)===String(c.clienteId))||(c.cliId&&String(x.id)===String(c.cliId))||x.nombre===c.cli;});
   if(_cliAmort) _cliIdAmort = _cliAmort.id;
-  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cerrar</button>'+(_cliIdAmort?'<button class="btn btn-g" onclick="closeM();verCliente(\''+_cliIdAmort+'\')" >Ver perfil</button>':'')+(estadoCred==='activo'?'<button class="btn btn-g" onclick="closeM();openPagoRapido(\''+c.id+'\')" >Registrar pago</button>':'')+'<button class="btn btn-g" onclick="descargarEstadoPDF()">↓ Descargar estado</button><button class="btn btn-p" onclick="descargarAmortPDF()">↓ Descargar PDF</button>';
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cerrar</button>'+(_cliIdAmort?'<button class="btn btn-g" onclick="closeM();verCliente(\''+_cliIdAmort+'\')" >Ver perfil</button>':'')+(estadoCred==='activo'?'<button class="btn btn-g" onclick="closeM();openPagoRapido(\''+c.id+'\')" >Registrar pago</button>':'')+(((estadoCred==='activo'||estadoCred==='mora')&&typeof _cobPuedeAcordar==='function'&&_cobPuedeAcordar())?'<button class="btn btn-g" onclick="acuerdoAcordar(\''+c.id+'\')" title="Acordar pago mensual con fecha de compromiso">\ud83d\uddd3\ufe0f '+(c.fechaCompromiso?('Acuerdo: '+c.fechaCompromiso):'Acordar mensual')+'</button>':'')+'<button class="btn btn-g" onclick="descargarEstadoPDF()">↓ Descargar estado</button><button class="btn btn-p" onclick="descargarAmortPDF()">↓ Descargar PDF</button>';
   $('ov').style.display='flex';
 }
 
@@ -1466,6 +1467,69 @@ function liveSearchCuotas(q){
 
 // ── Buscador del "Registro de pagos" ──────────────────────────
 // Debounce + re-render + restaurar foco (nav() reconstruye el DOM).
+// ── Acuerdos de pago mensual (cobranza) ──────────────────────────────────
+// Version minima: UN campo en el credito (fechaCompromiso, AAAA-MM-DD).
+// Si existe, el credito se gestiona en la pestana "Acuerdos Mensuales" de
+// Cobranza; el semaforo se calcula al pintar, nunca se guarda. La mora
+// contable (ledger) no cambia: esto es solo flujo de trabajo.
+function _cobPuedeAcordar(){
+  var r = (S.currentUser && S.currentUser.rol) || '';
+  return r==='Administrador' || r==='admin' || r==='Gerente';
+}
+function _acuerdoSemaforo(fecha, hoyISO){
+  hoyISO = hoyISO || hoyLocalISO();
+  if(!fecha) return null;
+  if(fecha < hoyISO){
+    var dias = Math.round((parseFechaLocal(hoyISO) - parseFechaLocal(fecha))/(24*60*60*1000));
+    return {nivel:'rojo', dias:dias, label:'\ud83d\udd34 Incumplida +'+dias+'d'};
+  }
+  if(fecha === hoyISO) return {nivel:'amarillo', dias:0, label:'\ud83d\udfe1 Vence hoy'};
+  return {nivel:'verde', dias:0, label:'\ud83d\udfe2 En fecha'};
+}
+// +1 mes con tope de fin de mes (31-ene -> 28/29-feb)
+function _acuerdoProximaFecha(fecha){
+  var d = parseFechaLocal(fecha);
+  var y=d.getFullYear(), m=d.getMonth()+1, dia=d.getDate();
+  var ult = new Date(y, m+1, 0).getDate();
+  return fechaLocalISO(new Date(y, m, Math.min(dia, ult)));
+}
+function acuerdoAcordar(credId){
+  if(!_cobPuedeAcordar()){ toast('Solo Administrador o Gerente pueden acordar pago mensual','error'); return; }
+  var c=(S.creds||[]).find(function(x){return String(x.id)===String(credId);}); if(!c) return;
+  var era = c.fechaCompromiso||'';
+  var def = era || _acuerdoProximaFecha(hoyLocalISO());
+  var v = prompt('Fecha de compromiso del pago mensual (AAAA-MM-DD):', def);
+  if(v===null) return;
+  v = String(v).trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(v) || isNaN(parseFechaLocal(v).getTime())){ toast('Fecha invalida — usa el formato AAAA-MM-DD','error'); return; }
+  c.fechaCompromiso = v;
+  DB.saveCred(c);
+  if(typeof logActividad==='function') logActividad(era?'acuerdo_mensual_reprogramado':'acuerdo_mensual_creado','cobranza',credId,{cliente:c.cli||'', fecha:v});
+  toast((era?'Compromiso reprogramado':'Acuerdo mensual creado')+': '+(c.cli||credId)+' paga el '+v,'success');
+  if(S.page==='pagos' && typeof nav==='function'){ closeM(); nav('pagos'); }
+}
+function acuerdoQuitar(credId){
+  if(!_cobPuedeAcordar()){ toast('Solo Administrador o Gerente pueden quitar el acuerdo','error'); return; }
+  var c=(S.creds||[]).find(function(x){return String(x.id)===String(credId);}); if(!c || !c.fechaCompromiso) return;
+  if(!confirm('¿Quitar el acuerdo mensual de '+(c.cli||credId)+'? Vuelve a la mora quincenal normal.')) return;
+  delete c.fechaCompromiso;      // saveCred escribe el doc completo sin merge: el campo desaparece
+  DB.saveCred(c);
+  if(typeof logActividad==='function') logActividad('acuerdo_mensual_quitado','cobranza',credId,{cliente:c.cli||''});
+  toast('Acuerdo quitado — vuelve a la mora quincenal','info');
+  if(S.page==='pagos' && typeof nav==='function') nav('pagos');
+}
+// Al registrar CUALQUIER pago del credito, la promesa se corre un mes.
+// Regla deliberadamente simple; si el pago fue parcial, el cobrador ajusta
+// la fecha con el boton correspondiente.
+function _acuerdoRodarTrasPago(cred){
+  if(!cred || !cred.fechaCompromiso) return;
+  var prox = _acuerdoProximaFecha(cred.fechaCompromiso);
+  cred.fechaCompromiso = prox;
+  DB.saveCred(cred);
+  if(typeof logActividad==='function') logActividad('acuerdo_mensual_rodado','cobranza',cred.id,{proxima:prox});
+  toast('Proximo compromiso mensual: '+prox,'info');
+}
+
 // Orden preferido del selector "Recibido en" al registrar/editar un pago.
 // Ordena y reetiqueta SOLO la vista: el value sigue siendo el nombre de la cuenta
 // tal como esta guardado, porque los saldos de Cuentas se calculan cruzando por

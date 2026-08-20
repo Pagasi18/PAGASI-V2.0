@@ -125,6 +125,9 @@ PG.pagos = function(){
     }
     return { cred:c, cuotaNum:cuotaNum, diff:diff, venceStr:venceStr, mora:mora, vencido:vencidoTotal, nVencidas:nVencidas, cuotaMonto:cuotaMonto, gam:gam };
   }).filter(function(it){ return it.diff<=30 || it.mora>0; });
+  // ── Acuerdos de pago mensual: su propia pestana, no se mezclan con la mora ──
+  var _acuList = proximasCuotas.filter(function(it){ return !!it.cred.fechaCompromiso; });
+  proximasCuotas = proximasCuotas.filter(function(it){ return !it.cred.fechaCompromiso; });
   // Filtro por fecha de vencimiento
   if(_cuDesde) proximasCuotas = proximasCuotas.filter(function(it){ return it.venceStr >= _cuDesde; });
   if(_cuHasta) proximasCuotas = proximasCuotas.filter(function(it){ return it.venceStr <= _cuHasta; });
@@ -155,6 +158,46 @@ PG.pagos = function(){
     if(col==='monto'){var _ma=a.nVencidas>=1?a.vencido:a.cuotaMonto,_mb=b.nVencidas>=1?b.vencido:b.cuotaMonto;return dir*(_ma-_mb);}
     return dir*((a.diff||0)-(b.diff||0)); // 'vence'
   });
+
+  // ── Pestanas de cobranza: Mora Regular vs Acuerdos Mensuales ──
+  var _cobTab = S.cobTab==='acuerdos' ? 'acuerdos' : 'quincenal';
+  _acuList = _acuList.slice().sort(function(a,b){ return String(a.cred.fechaCompromiso).localeCompare(String(b.cred.fechaCompromiso)); });
+  var _acuRotos = _acuList.filter(function(it){ return it.cred.fechaCompromiso < _hoyISO; }).length;
+  var _acuMonto = _acuList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.cuotaMonto); },0);
+  var _morCasos = proximasCuotas.filter(function(it){ return it.diff<0; }).length;
+  var _morMonto = proximasCuotas.reduce(function(sm,it){ return sm + (it.diff<0?(it.nVencidas>=1?it.vencido:it.cuotaMonto):0); },0);
+  var _cobTabs = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'
+    +'<button class="btn btn-sm '+(_cobTab==='quincenal'?'btn-p':'btn-g')+'" onclick="S.cobTab=\'quincenal\';nav(\'pagos\')" style="display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 14px;line-height:1.3">'
+      +'<span>\ud83d\udccb Mora Regular (Quincenal)</span>'
+      +'<span style="font-size:10px;opacity:.75;font-weight:700">'+_morCasos+' en atraso \u00b7 '+fmt(_morMonto)+' vencido</span></button>'
+    +'<button class="btn btn-sm '+(_cobTab==='acuerdos'?'btn-p':'btn-g')+'" onclick="S.cobTab=\'acuerdos\';nav(\'pagos\')" style="display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 14px;line-height:1.3">'
+      +'<span>\ud83d\uddd3\ufe0f Acuerdos Mensuales'+(_acuRotos?' <span style="background:var(--red);color:#fff;border-radius:20px;padding:0 7px;font-size:9.5px;font-weight:900;margin-left:4px">'+_acuRotos+'</span>':'')+'</span>'
+      +'<span style="font-size:10px;opacity:.75;font-weight:700">'+_acuList.length+' acuerdo'+(_acuList.length!==1?'s':'')+' \u00b7 '+fmt(_acuMonto)+' acumulado</span></button>'
+    +'</div>';
+  var _acuHtml = (function(){
+    if(!_acuList.length) return '<div style="text-align:center;padding:22px 0;color:var(--ink3);font-size:12px">Sin acuerdos mensuales activos.<br><span style="font-size:11px">Se otorgan desde el detalle del cr\u00e9dito \u2014 bot\u00f3n "Acordar mensual" (solo Admin/Gerente).</span></div>';
+    var filas = _acuList.map(function(it){
+      var c = it.cred;
+      var sem = (typeof _acuerdoSemaforo==='function') ? _acuerdoSemaforo(c.fechaCompromiso, _hoyISO) : {nivel:'verde',label:c.fechaCompromiso};
+      var monto = it.nVencidas>=1 ? it.vencido : it.cuotaMonto;
+      var nCuo = it.nVencidas>=1 ? it.nVencidas : 1;
+      var conc = ((c.concesionarioId && typeof _concGetById==='function') ? ((_concGetById(c.concesionarioId)||{}).nombre||'') : '') || c.sede || '\u2014';
+      var fp = parseFechaLocal(c.fechaCompromiso);
+      var fFmt = isNaN(fp.getTime()) ? c.fechaCompromiso : fp.toLocaleDateString('es-VE',{day:'2-digit',month:'short'});
+      return '<tr'+(sem.nivel==='rojo'?' style="background:rgba(232,75,75,.07)"':'')+'>'
+        +'<td><div class="tdm">'+(c.cli||'\u2014')+'</div><div class="tds" style="font-family:var(--fd)">'+c.id+'</div></td>'
+        +'<td class="tds" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+conc+'">'+conc+'</td>'
+        +'<td style="font-weight:800;font-family:var(--fd);color:'+(sem.nivel==='rojo'?'var(--red)':'var(--ink)')+'">'+fmt(monto)+' <span class="tds" style="font-weight:600">('+nCuo+' cuota'+(nCuo!==1?'s':'')+')</span></td>'
+        +'<td class="tdm" style="white-space:nowrap">'+fFmt+'</td>'
+        +'<td><span class="bdg '+(sem.nivel==='rojo'?'b-r':(sem.nivel==='amarillo'?'b-a':'b-g'))+'" style="white-space:nowrap">'+sem.label+'</span></td>'
+        +'<td><div style="display:flex;gap:4px;flex-wrap:wrap">'
+          +'<button class="btn btn-p btn-xs" onclick="openAddPago(\''+c.id+'\')">\u2713 Pago</button>'
+          +'<button class="btn btn-g btn-xs" onclick="acuerdoAcordar(\''+c.id+'\')" title="Reprogramar la fecha de compromiso">\u270e Fecha</button>'
+          +'<button class="btn btn-g btn-xs" onclick="acuerdoQuitar(\''+c.id+'\')" title="Volver a mora quincenal">\u2715 Quitar</button>'
+        +'</div></td></tr>';
+    }).join('');
+    return '<div class="tw"><table><thead><tr><th>Cliente \u00b7 Cr\u00e9dito</th><th>Concesionario</th><th>Acumulado a pagar</th><th>Fecha promesa</th><th>Estatus</th><th>Acciones</th></tr></thead><tbody>'+filas+'</tbody></table></div>';
+  })();
 
   return`<div class="page">
 
@@ -208,9 +251,10 @@ PG.pagos = function(){
   <div class="card" style="margin-bottom:12px">
     <div class="ch" style="margin-bottom:10px">
       <div><div class="ct">Cuotas Próximas</div><div class="cs">Próximos 30 días + todos los atrasados · más urgentes primero</div></div>
-      <span class="bdg ${proximasCuotas.length>0?'b-a':'b-g'}">${proximasCuotas.length}</span>
+      <span class="bdg ${(_cobTab==='acuerdos'?_acuList.length:proximasCuotas.length)>0?'b-a':'b-g'}">${_cobTab==='acuerdos'?_acuList.length:proximasCuotas.length}</span>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+    ${_cobTabs}
+    ${_cobTab==='acuerdos' ? _acuHtml : `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
       <input type="text" id="cuotasQ" value="${String(S.cuotasQ||'').replace(/</g,'&lt;').replace(/"/g,'&quot;')}" placeholder="Buscar cliente, crédito o modelo..." oninput="liveSearchCuotas(this.value)" style="flex:1;min-width:190px;border:1px solid var(--rim);border-radius:8px;padding:6px 10px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
       <label style="font-size:11px;color:var(--ink3);font-weight:700">Vence desde:</label>
       <input type="date" value="${S.cuotasDesde||''}" onchange="S.cuotasDesde=this.value;pgSet('cuotas',1);nav('pagos')" style="border:1px solid var(--rim);border-radius:8px;padding:5px 8px;font-size:12px;font-family:var(--f);background:var(--surf);color:var(--ink)">
@@ -270,7 +314,7 @@ PG.pagos = function(){
       </tbody>
       </table></div>
       ${pgControls('cuotas',proximasCuotas.length,50,'pgNav')}`
-    }
+    }`}
   </div>
 
   <!-- Filtro por fecha + buscador -->
