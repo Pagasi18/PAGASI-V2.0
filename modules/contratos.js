@@ -57,21 +57,23 @@ PG.contratos = function(){
         <div class="ct">Listado de contratos</div>
         <div class="cs">${totalContratos} contrato${totalContratos!==1?'s':''} · click en una fila para ver el detalle</div>
       </div>
-      <div class="srch" style="width:260px"><span class="srch-i">◆</span><input type="text" id="ctrQ" placeholder="Buscar por ID, cliente, modelo..." oninput="var q=this.value.toLowerCase();var rs=document.querySelectorAll('#ctr-tbody tr');for(var i=0;i&lt;rs.length;i++){rs[i].style.display=(rs[i].getAttribute('data-s')||'').indexOf(q)>=0?'':'none';}" style="width:100%"></div>
+      <div class="srch" style="width:260px"><span class="srch-i">◆</span><input type="text" id="ctrQ" placeholder="Buscar por ID, cliente, modelo, concesionario..." oninput="var q=this.value.toLowerCase();var rs=document.querySelectorAll('#ctr-tbody tr');for(var i=0;i&lt;rs.length;i++){rs[i].style.display=(rs[i].getAttribute('data-s')||'').indexOf(q)>=0?'':'none';}" style="width:100%"></div>
     </div>
     <div class="tw tw-compact"><table>
       <thead><tr>
-        <th>ID</th><th>Cliente</th><th>Modelo</th><th>Fecha</th><th style="white-space:nowrap">Total</th><th>Estado</th><th style="text-align:right">Acciones</th>
+        <th>ID</th><th>Cliente</th><th>Modelo</th><th>Concesionario</th><th>Fecha</th><th style="white-space:nowrap">Total</th><th>Estado</th><th style="text-align:right">Acciones</th>
       </tr></thead>
       <tbody id="ctr-tbody">${credsActivos.concat(credsArchivados).sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');}).map(function(c){
         var estColor = c.mora>0 ? 'var(--red)' : (c.estado==='completado' ? 'var(--green)' : ((c.estado==='cancelado'||c.estado==='recuperado'||c.estado==='recuperada') ? '#6b7280' : 'var(--p1)'));
         var estLabel = c.mora>0 ? ('En mora '+c.mora+'d') : (c.estado==='completado' ? 'Completado' : (c.estado==='cancelado' ? 'Cancelado' : ((c.estado==='recuperado'||c.estado==='recuperada') ? 'Recuperado' : 'Activo')));
         var fechaFmt = c.fecha ? parseFechaLocal(c.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
-        var s = (c.id+' '+(c.cli||'')+' '+(c.modelo||'')+' '+estLabel).toLowerCase().replace(/"/g,'');
+        var concNom = (c.concesionarioId && typeof _concGetById==='function') ? ((_concGetById(c.concesionarioId)||{}).nombre||'') : '';
+        var s = (c.id+' '+(c.cli||'')+' '+(c.modelo||'')+' '+concNom+' '+estLabel).toLowerCase().replace(/"/g,'');
         return '<tr data-s="'+s+'" style="cursor:pointer" onclick="openAmort(\''+c.id+'\')">'
           +'<td class="tdm" style="font-family:var(--fd)">'+c.id+'</td>'
           +'<td style="max-width:180px"><div class="tdm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(c.cli||'')+'">'+(c.cli||'—')+'</div></td>'
           +'<td class="tds">'+(c.modelo||'—')+'</td>'
+          +'<td class="tds" style="max-width:150px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+concNom+'">'+(concNom||'—')+'</div></td>'
           +'<td class="tds" style="font-family:var(--fd);font-size:11px;color:var(--ink3);white-space:nowrap">'+fechaFmt+'</td>'
           +'<td style="font-family:var(--fd);font-weight:700;white-space:nowrap">'+fmt(c.total||0)+'</td>'
           +'<td><span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:9.5px;font-weight:800;color:#fff;background:'+estColor+';white-space:nowrap">'+estLabel+'</span></td>'
