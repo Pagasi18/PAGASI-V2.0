@@ -161,6 +161,9 @@ PG.pagos = function(){
   // ── Acuerdos de pago mensual: su propia pestana, no se mezclan con la mora ──
   var _acuList = proximasCuotas.filter(function(it){ return !!it.cred.fechaCompromiso; });
   proximasCuotas = proximasCuotas.filter(function(it){ return !it.cred.fechaCompromiso; });
+  // ── Criticos (+30 dias de mora): tampoco van en Mora Regular — cada credito
+  // se gestiona en UNA sola pestana ──
+  proximasCuotas = proximasCuotas.filter(function(it){ return _diasMora(it)<=30; });
   // Filtro por fecha de vencimiento
   if(_cuDesde) proximasCuotas = proximasCuotas.filter(function(it){ return it.venceStr >= _cuDesde; });
   if(_cuHasta) proximasCuotas = proximasCuotas.filter(function(it){ return it.venceStr <= _cuHasta; });
@@ -216,9 +219,9 @@ PG.pagos = function(){
   var _morMonto = _cuBase.reduce(function(sm,it){ return sm + (_esAtrasado(it)?(it.nVencidas>=1?it.vencido:it.cuotaMonto):0); },0);
   var _moraDash = _concFiltrar(S.creds||[]).filter(function(c){ return c && !c.eliminado && (parseInt(c.mora,10)||0)>0; }).length;
   var _acuAtras = _acuList.filter(_esAtrasado).length;
-  var _moraOtros = Math.max(0, _moraDash - _cuAtras - _acuAtras);
+  var _moraOtros = Math.max(0, _moraDash - _cuAtras - _acuAtras - _critList.length);
   var _concilia = _moraDash>0
-    ? '<div style="font-size:10.5px;color:var(--ink3);margin:-4px 0 10px;font-weight:600">En mora total: <b>'+_moraDash+'</b> \u00b7 en esta lista: <b>'+_cuAtras+'</b> \u00b7 en Acuerdos Mensuales: <b>'+_acuAtras+'</b>'
+    ? '<div style="font-size:10.5px;color:var(--ink3);margin:-4px 0 10px;font-weight:600">En mora total: <b>'+_moraDash+'</b> \u00b7 en Mora Regular: <b>'+_cuAtras+'</b> \u00b7 en Acuerdos Mensuales: <b>'+_acuAtras+'</b> \u00b7 en Cr\u00edticos: <b>'+_critList.length+'</b>'
       +(_moraOtros>0?' \u00b7 <span style="color:var(--amber)">fuera por filtros de fecha/b\u00fasqueda: <b>'+_moraOtros+'</b></span>':'')+'</div>'
     : '';
   var _cobBtn = function(k, linea1, linea2){
