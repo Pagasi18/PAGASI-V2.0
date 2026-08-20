@@ -178,7 +178,9 @@ PG.pagos = function(){
   // Salen de la lista completa (incluye los que tienen acuerdo mensual) y NO les
   // afectan los filtros de fecha ni el filtro rapido; el buscador si aplica.
   var _morTotalList = _allCob.filter(_esAtrasado).filter(_cuMatchQ);
-  var _critList = _morTotalList.filter(function(it){ return _diasMora(it)>30; });
+  // Criticos: sin los de acuerdo mensual — esos se gestionan en su propia
+  // pestana; en Mora Total si aparecen (es la foto completa).
+  var _critList = _morTotalList.filter(function(it){ return _diasMora(it)>30 && !it.cred.fechaCompromiso; });
   var _morTotMonto = _morTotalList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.cuotaMonto); },0);
   var _critMonto = _critList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.cuotaMonto); },0);
   // Filtro rápido Todos / Atrasados / Al día — con contadores del contexto actual
