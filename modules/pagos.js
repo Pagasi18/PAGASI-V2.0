@@ -140,13 +140,20 @@ PG.pagos = function(){
         || String(c.modelo||'').toLowerCase().indexOf(_cuQ)>-1;
   });
   // Filtro rápido Todos / Atrasados / Al día — con contadores del contexto actual
-  var _cuAtras = proximasCuotas.filter(function(it){ return it.diff<0; }).length;
-  var _cuAlDia = proximasCuotas.length - _cuAtras;
+  // "Atrasado" = vencido bajo CUALQUIERA de las definiciones del sistema:
+  // proxima cuota ya vencida (diff<0, ledger vivo), saldo vencido real
+  // (nVencidas>=1, incluye la cuota que vence hoy), o el campo guardado
+  // c.mora>0 (formula simple, la misma que cuenta el Dashboard). Antes solo
+  // se usaba diff<0 y los otros dos casos caian callados en "Al dia".
+  var _esAtrasado = function(it){ return it.diff<0 || it.nVencidas>=1 || (parseInt(it.cred.mora,10)||0)>0; };
+  var _cuBase = proximasCuotas.slice();   // snapshot ANTES del filtro rapido
+  var _cuAtras = _cuBase.filter(_esAtrasado).length;
+  var _cuAlDia = _cuBase.length - _cuAtras;
   // (Los gráficos de "Cobros" y "Próximas cuotas a cobrar" se movieron al módulo
   //  Finanzas para que los empleados/cobradores no vean los montos agregados.)
   var _cuF = S.cuotasFilter||'todos';
-  if(_cuF==='atrasados') proximasCuotas = proximasCuotas.filter(function(it){ return it.diff<0; });
-  else if(_cuF==='aldia') proximasCuotas = proximasCuotas.filter(function(it){ return it.diff>=0; });
+  if(_cuF==='atrasados') proximasCuotas = proximasCuotas.filter(_esAtrasado);
+  else if(_cuF==='aldia') proximasCuotas = proximasCuotas.filter(function(it){ return !_esAtrasado(it); });
   // Ordenamiento configurable (por defecto: más urgentes/atrasados primero)
   var _cu = S.cuotasSort||{col:'vence',dir:'asc'};
   proximasCuotas = proximasCuotas.slice().sort(function(a,b){
@@ -164,8 +171,15 @@ PG.pagos = function(){
   _acuList = _acuList.slice().sort(function(a,b){ return String(a.cred.fechaCompromiso).localeCompare(String(b.cred.fechaCompromiso)); });
   var _acuRotos = _acuList.filter(function(it){ return it.cred.fechaCompromiso < _hoyISO; }).length;
   var _acuMonto = _acuList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.cuotaMonto); },0);
-  var _morCasos = proximasCuotas.filter(function(it){ return it.diff<0; }).length;
-  var _morMonto = proximasCuotas.reduce(function(sm,it){ return sm + (it.diff<0?(it.nVencidas>=1?it.vencido:it.cuotaMonto):0); },0);
+  var _morCasos = _cuBase.filter(_esAtrasado).length;
+  var _morMonto = _cuBase.reduce(function(sm,it){ return sm + (_esAtrasado(it)?(it.nVencidas>=1?it.vencido:it.cuotaMonto):0); },0);
+  var _moraDash = _concFiltrar(S.creds||[]).filter(function(c){ return c && !c.eliminado && (parseInt(c.mora,10)||0)>0; }).length;
+  var _acuAtras = _acuList.filter(_esAtrasado).length;
+  var _moraOtros = Math.max(0, _moraDash - _cuAtras - _acuAtras);
+  var _concilia = _moraDash>0
+    ? '<div style="font-size:10.5px;color:var(--ink3);margin:-4px 0 10px;font-weight:600">En mora total: <b>'+_moraDash+'</b> \u00b7 en esta lista: <b>'+_cuAtras+'</b> \u00b7 en Acuerdos Mensuales: <b>'+_acuAtras+'</b>'
+      +(_moraOtros>0?' \u00b7 <span style="color:var(--amber)">fuera por filtros de fecha/b\u00fasqueda: <b>'+_moraOtros+'</b></span>':'')+'</div>'
+    : '';
   var _cobTabs = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'
     +'<button class="btn btn-sm '+(_cobTab==='quincenal'?'btn-p':'btn-g')+'" onclick="S.cobTab=\'quincenal\';nav(\'pagos\')" style="display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 14px;line-height:1.3">'
       +'<span>\ud83d\udccb Mora Regular (Quincenal)</span>'
@@ -173,7 +187,7 @@ PG.pagos = function(){
     +'<button class="btn btn-sm '+(_cobTab==='acuerdos'?'btn-p':'btn-g')+'" onclick="S.cobTab=\'acuerdos\';nav(\'pagos\')" style="display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 14px;line-height:1.3">'
       +'<span>\ud83d\uddd3\ufe0f Acuerdos Mensuales'+(_acuRotos?' <span style="background:var(--red);color:#fff;border-radius:20px;padding:0 7px;font-size:9.5px;font-weight:900;margin-left:4px">'+_acuRotos+'</span>':'')+'</span>'
       +'<span style="font-size:10px;opacity:.75;font-weight:700">'+_acuList.length+' acuerdo'+(_acuList.length!==1?'s':'')+' \u00b7 '+fmt(_acuMonto)+' acumulado</span></button>'
-    +'</div>';
+    +'</div>'+_concilia;
   // Tasa de cumplimiento historica: sobre TODOS los creditos (tambien los que
   // ya salieron del acuerdo), porque la historia no se borra al quitar el campo.
   var _prCump=0, _prRotas=0;
