@@ -307,6 +307,7 @@ PG.pagos = function(){
             <button class="btn btn-p btn-xs" onclick="openAddPago('${c.id}')">Cobrar</button>
             <button class="btn btn-g btn-xs" onclick="avisarCuotaProxima('${c.id}')" title="Enviar recordatorio al cliente por WhatsApp">Avisar</button>
             <button class="btn btn-g btn-xs" onclick="llamarCliente('${c.id}')" title="Llamar al cliente">📞</button>
+            ${(typeof _cobPuedeAcordar==='function'&&_cobPuedeAcordar())?`<button class="btn btn-g btn-xs" onclick="acuerdoAcordar('${c.id}')" title="Pasar a acuerdo de pago mensual con fecha de compromiso">🗓️</button>`:''}
             ${diff<0?`<button class="btn btn-g btn-xs" onclick="confirmarRecuperacion('${c.id}')" title="Recuperar moto (cliente en mora)" style="color:var(--red);border-color:rgba(232,51,90,.28)">↩ Moto</button>`:''}
           </div></td>
         </tr>`;
