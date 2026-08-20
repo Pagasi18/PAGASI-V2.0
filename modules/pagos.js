@@ -245,7 +245,7 @@ PG.pagos = function(){
     +_cobBtn('criticos','\ud83d\udea8 Cr\u00edticos'+(_critList.length?' <span style="background:var(--red);color:#fff;border-radius:20px;padding:0 7px;font-size:9.5px;font-weight:900;margin-left:4px">'+_critList.length+'</span>':''), 'm\u00e1s de 30 d\u00edas de mora \u00b7 '+fmt(_critMonto)+' vencido')
     +_cobBtn('iloc','\ud83d\udcf5 Ilocalizables', _ilocList.length+' marcado'+(_ilocList.length!==1?'s':'')+' \u00b7 '+fmt(_ilocMonto)+' vencido')
     +_cobBtn('total','\ud83d\udcd5 Mora Total', _morTotalList.length+' en mora \u00b7 '+fmt(_morTotMonto)+' vencido')
-    +'<button class="btn btn-sm btn-g" onclick="cobExportAbrir()" title="Descargar esta data en Excel" style="margin-left:auto;align-self:center;display:flex;align-items:center;gap:6px;padding:9px 16px;color:var(--green);border-color:rgba(0,184,118,.4);font-weight:800">\u2b07 Excel</button>'
+    +'<button class="btn btn-sm btn-g" onclick="cobExportAbrir()" title="Descargar reporte en Excel o PDF" style="margin-left:auto;align-self:center;display:flex;align-items:center;gap:6px;padding:9px 16px;color:var(--green);border-color:rgba(0,184,118,.4);font-weight:800">\u2b07 Descargar</button>'
     +'</div>'+_concilia;
   // Tasa de cumplimiento historica: sobre TODOS los creditos (tambien los que
   // ya salieron del acuerdo), porque la historia no se borra al quitar el campo.
