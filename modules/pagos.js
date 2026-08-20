@@ -161,6 +161,10 @@ PG.pagos = function(){
   // ── Acuerdos de pago mensual: su propia pestana, no se mezclan con la mora ──
   var _acuList = proximasCuotas.filter(function(it){ return !!it.cred.fechaCompromiso; });
   proximasCuotas = proximasCuotas.filter(function(it){ return !it.cred.fechaCompromiso; });
+  // ── Ilocalizables: nota de cobranza 'Ilocalizable' → su propia pestana ──
+  var _esIloc = function(it){ return String(it.cred.cobranzaStatus||'')==='ilocalizable'; };
+  var _ilocAll = proximasCuotas.filter(_esIloc);
+  proximasCuotas = proximasCuotas.filter(function(it){ return !_esIloc(it); });
   // ── Criticos (+30 dias de mora): tampoco van en Mora Regular — cada credito
   // se gestiona en UNA sola pestana ──
   proximasCuotas = proximasCuotas.filter(function(it){ return _diasMora(it)<=30; });
@@ -181,11 +185,13 @@ PG.pagos = function(){
   // Salen de la lista completa (incluye los que tienen acuerdo mensual) y NO les
   // afectan los filtros de fecha ni el filtro rapido; el buscador si aplica.
   var _morTotalList = _allCob.filter(_esAtrasado).filter(_cuMatchQ);
-  // Criticos: sin los de acuerdo mensual — esos se gestionan en su propia
-  // pestana; en Mora Total si aparecen (es la foto completa).
-  var _critList = _morTotalList.filter(function(it){ return _diasMora(it)>30 && !it.cred.fechaCompromiso; });
+  // Criticos: sin los de acuerdo mensual ni los ilocalizables — esos se
+  // gestionan en su propia pestana; en Mora Total si aparecen (foto completa).
+  var _critList = _morTotalList.filter(function(it){ return _diasMora(it)>30 && !it.cred.fechaCompromiso && !_esIloc(it); });
+  var _ilocList = _ilocAll.filter(_cuMatchQ);
   var _morTotMonto = _morTotalList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.cuotaMonto); },0);
   var _critMonto = _critList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.cuotaMonto); },0);
+  var _ilocMonto = _ilocList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.cuotaMonto); },0);
   // Filtro rápido Todos / Atrasados / Al día — con contadores del contexto actual
   var _cuBase = proximasCuotas.slice();   // snapshot ANTES del filtro rapido
   var _cuAtras = _cuBase.filter(_esAtrasado).length;
@@ -196,8 +202,9 @@ PG.pagos = function(){
   if(_cuF==='atrasados') proximasCuotas = proximasCuotas.filter(_esAtrasado);
   else if(_cuF==='aldia') proximasCuotas = proximasCuotas.filter(function(it){ return !_esAtrasado(it); });
   // ── Pestana activa de cobranza: sustituye la lista antes del ordenamiento ──
-  var _cobTab = ['acuerdos','criticos','total'].indexOf(S.cobTab)>-1 ? S.cobTab : 'quincenal';
+  var _cobTab = ['acuerdos','criticos','iloc','total'].indexOf(S.cobTab)>-1 ? S.cobTab : 'quincenal';
   if(_cobTab==='criticos') proximasCuotas = _critList.slice();
+  else if(_cobTab==='iloc') proximasCuotas = _ilocList.slice();
   else if(_cobTab==='total') proximasCuotas = _morTotalList.slice();
   // Ordenamiento configurable (por defecto: más urgentes/atrasados primero)
   var _cu = S.cuotasSort||{col:'vence',dir:'asc'};
@@ -219,9 +226,10 @@ PG.pagos = function(){
   var _morMonto = _cuBase.reduce(function(sm,it){ return sm + (_esAtrasado(it)?(it.nVencidas>=1?it.vencido:it.cuotaMonto):0); },0);
   var _moraDash = _concFiltrar(S.creds||[]).filter(function(c){ return c && !c.eliminado && (parseInt(c.mora,10)||0)>0; }).length;
   var _acuAtras = _acuList.filter(_esAtrasado).length;
-  var _moraOtros = Math.max(0, _moraDash - _cuAtras - _acuAtras - _critList.length);
+  var _ilocAtras = _ilocList.filter(_esAtrasado).length;
+  var _moraOtros = Math.max(0, _moraDash - _cuAtras - _acuAtras - _critList.length - _ilocAtras);
   var _concilia = _moraDash>0
-    ? '<div style="font-size:10.5px;color:var(--ink3);margin:-4px 0 10px;font-weight:600">En mora total: <b>'+_moraDash+'</b> \u00b7 en Mora Regular: <b>'+_cuAtras+'</b> \u00b7 en Acuerdos Mensuales: <b>'+_acuAtras+'</b> \u00b7 en Cr\u00edticos: <b>'+_critList.length+'</b>'
+    ? '<div style="font-size:10.5px;color:var(--ink3);margin:-4px 0 10px;font-weight:600">En mora total: <b>'+_moraDash+'</b> \u00b7 en Mora Regular: <b>'+_cuAtras+'</b> \u00b7 en Acuerdos Mensuales: <b>'+_acuAtras+'</b> \u00b7 en Cr\u00edticos: <b>'+_critList.length+'</b> \u00b7 en Ilocalizables: <b>'+_ilocAtras+'</b>'
       +(_moraOtros>0?' \u00b7 <span style="color:var(--amber)">fuera por filtros de fecha/b\u00fasqueda: <b>'+_moraOtros+'</b></span>':'')+'</div>'
     : '';
   var _cobBtn = function(k, linea1, linea2){
@@ -233,6 +241,7 @@ PG.pagos = function(){
     +_cobBtn('quincenal','\ud83d\udccb Mora Regular (Quincenal)', _morCasos+' en atraso \u00b7 '+fmt(_morMonto)+' vencido')
     +_cobBtn('acuerdos','\ud83d\uddd3\ufe0f Acuerdos Mensuales'+(_acuRotos?' <span style="background:var(--red);color:#fff;border-radius:20px;padding:0 7px;font-size:9.5px;font-weight:900;margin-left:4px">'+_acuRotos+'</span>':''), _acuList.length+' acuerdo'+(_acuList.length!==1?'s':'')+' \u00b7 '+fmt(_acuMonto)+' acumulado')
     +_cobBtn('criticos','\ud83d\udea8 Cr\u00edticos'+(_critList.length?' <span style="background:var(--red);color:#fff;border-radius:20px;padding:0 7px;font-size:9.5px;font-weight:900;margin-left:4px">'+_critList.length+'</span>':''), 'm\u00e1s de 30 d\u00edas de mora \u00b7 '+fmt(_critMonto)+' vencido')
+    +_cobBtn('iloc','\ud83d\udcf5 Ilocalizables', _ilocList.length+' marcado'+(_ilocList.length!==1?'s':'')+' \u00b7 '+fmt(_ilocMonto)+' vencido')
     +_cobBtn('total','\ud83d\udcd5 Mora Total', _morTotalList.length+' en mora \u00b7 '+fmt(_morTotMonto)+' vencido')
     +'</div>'+_concilia;
   // Tasa de cumplimiento historica: sobre TODOS los creditos (tambien los que
@@ -334,7 +343,7 @@ PG.pagos = function(){
   <!-- Cuotas Próximas / Críticos / Mora Total -->
   <div class="card" style="margin-bottom:12px">
     <div class="ch" style="margin-bottom:10px">
-      <div><div class="ct">${_cobTab==='criticos'?'Críticos':_cobTab==='total'?'Mora Total':'Cuotas Próximas'}</div><div class="cs">${_cobTab==='criticos'?'Créditos con más de 30 días de atraso · peor primero':_cobTab==='total'?'Todos los créditos con al menos 1 día de atraso · incluye acuerdos mensuales':'Próximos 30 días + todos los atrasados · más urgentes primero'}</div></div>
+      <div><div class="ct">${_cobTab==='criticos'?'Críticos':_cobTab==='iloc'?'Ilocalizables':_cobTab==='total'?'Mora Total':'Cuotas Próximas'}</div><div class="cs">${_cobTab==='criticos'?'Créditos con más de 30 días de atraso · peor primero':_cobTab==='iloc'?'Clientes marcados con la nota "Ilocalizable" · se agregan desde la columna Notas':_cobTab==='total'?'Todos los créditos con al menos 1 día de atraso · incluye acuerdos, críticos e ilocalizables':'Próximos 30 días + todos los atrasados · más urgentes primero'}</div></div>
       <span class="bdg ${(_cobTab==='acuerdos'?_acuList.length:proximasCuotas.length)>0?'b-a':'b-g'}">${_cobTab==='acuerdos'?_acuList.length:proximasCuotas.length}</span>
     </div>
     ${_cobTabs}
@@ -351,7 +360,7 @@ PG.pagos = function(){
       <button class="btn btn-sm ${_cuF==='atrasados'?'btn-p':'btn-g'}" onclick="setCuotasFilter('atrasados')">🔴 Atrasados <span style="opacity:.7;font-weight:800">${_cuAtras}</span></button>
       <button class="btn btn-sm ${_cuF==='aldia'?'btn-p':'btn-g'}" onclick="setCuotasFilter('aldia')">🟢 Al día / próximas <span style="opacity:.7;font-weight:800">${_cuAlDia}</span></button>
     </div>` : ''}
-    ${proximasCuotas.length===0 ? `<div style="text-align:center;padding:20px 0;color:var(--ink3);font-size:12px">${_cobTab==='criticos'?'Sin créditos con más de 30 días de mora 🎉':_cobTab==='total'?'Sin créditos en mora 🎉':'Sin cuotas próximas ni atrasadas'}</div>` :
+    ${proximasCuotas.length===0 ? `<div style="text-align:center;padding:20px 0;color:var(--ink3);font-size:12px">${_cobTab==='criticos'?'Sin créditos con más de 30 días de mora 🎉':_cobTab==='iloc'?'Sin clientes ilocalizables.<br><span style="font-size:11px">Para agregar uno, ponle la nota "Ilocalizable" en la columna Notas de cualquier pestaña y aparecerá aquí.</span>':_cobTab==='total'?'Sin créditos en mora 🎉':'Sin cuotas próximas ni atrasadas'}</div>` :
       `<div class="tw"><table>
       <thead><tr>
         ${_thSort(_cu,'setCuotasSort','cli','Cliente')}
@@ -611,13 +620,20 @@ window.setCuotaNota = function(credId, selEl){
   selEl.style.color = opt.c;
   selEl.style.borderColor = opt.c + '40';
   // Actualizar en memoria
+  var _prevNota = '';
   if(S && S.creds){
-    for(var i=0;i<S.creds.length;i++){ if(S.creds[i].id===credId){ S.creds[i].cobranzaStatus = val; break; } }
+    for(var i=0;i<S.creds.length;i++){ if(S.creds[i].id===credId){ _prevNota = S.creds[i].cobranzaStatus||''; S.creds[i].cobranzaStatus = val; break; } }
   }
   // Persistir en Firestore
   if(typeof DB!=='undefined' && DB.updateCred){ DB.updateCred(credId, {cobranzaStatus: val}); }
   if(typeof logActividad==='function'){ logActividad('Nota de cobranza', 'pagos', credId, opt.t); }
   if(typeof toast==='function'){ toast('Nota: '+opt.t, 'success'); }
+  // Entrar o salir de "Ilocalizable" cambia de pestana → re-render para que la
+  // fila se mueva de una vez
+  if((val==='ilocalizable' || _prevNota==='ilocalizable') && val!==_prevNota && S.page==='pagos'){
+    if(val==='ilocalizable' && typeof toast==='function') toast('Movido a la pestaña 📵 Ilocalizables','info');
+    if(typeof nav==='function') setTimeout(function(){ nav('pagos'); }, 350);
+  }
 };
 
 // ─── GESTIÓN DE COBRO: resumen compacto por crédito (gestiones en el crédito) ───
