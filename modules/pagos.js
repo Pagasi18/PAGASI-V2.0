@@ -203,6 +203,8 @@ PG.pagos = function(){
   else if(_cuF==='aldia') proximasCuotas = proximasCuotas.filter(function(it){ return !_esAtrasado(it); });
   // ── Pestana activa de cobranza: sustituye la lista antes del ordenamiento ──
   var _cobTab = ['acuerdos','criticos','iloc','total'].indexOf(S.cobTab)>-1 ? S.cobTab : 'quincenal';
+  // Datos frescos para el exportador a Excel (cobExportAbrir los usa)
+  window._cobXls = { quincenal:proximasCuotas.slice(), acuerdos:_acuList.slice(), criticos:_critList.slice(), iloc:_ilocList.slice(), total:_morTotalList.slice(), tab:_cobTab };
   if(_cobTab==='criticos') proximasCuotas = _critList.slice();
   else if(_cobTab==='iloc') proximasCuotas = _ilocList.slice();
   else if(_cobTab==='total') proximasCuotas = _morTotalList.slice();
@@ -243,6 +245,7 @@ PG.pagos = function(){
     +_cobBtn('criticos','\ud83d\udea8 Cr\u00edticos'+(_critList.length?' <span style="background:var(--red);color:#fff;border-radius:20px;padding:0 7px;font-size:9.5px;font-weight:900;margin-left:4px">'+_critList.length+'</span>':''), 'm\u00e1s de 30 d\u00edas de mora \u00b7 '+fmt(_critMonto)+' vencido')
     +_cobBtn('iloc','\ud83d\udcf5 Ilocalizables', _ilocList.length+' marcado'+(_ilocList.length!==1?'s':'')+' \u00b7 '+fmt(_ilocMonto)+' vencido')
     +_cobBtn('total','\ud83d\udcd5 Mora Total', _morTotalList.length+' en mora \u00b7 '+fmt(_morTotMonto)+' vencido')
+    +'<button class="btn btn-sm btn-g" onclick="cobExportAbrir()" title="Descargar esta data en Excel" style="margin-left:auto;align-self:center;display:flex;align-items:center;gap:6px;padding:9px 16px;color:var(--green);border-color:rgba(0,184,118,.4);font-weight:800">\u2b07 Excel</button>'
     +'</div>'+_concilia;
   // Tasa de cumplimiento historica: sobre TODOS los creditos (tambien los que
   // ya salieron del acuerdo), porque la historia no se borra al quitar el campo.
@@ -580,6 +583,100 @@ function _pgSerie(items, mode, dir){
     return out;
   }
   return out;
+}
+
+// ─── EXPORTAR COBRANZA A EXCEL ───
+// Usa las listas ya calculadas por la vista (window._cobXls). Genera un .xls
+// (tabla HTML que Excel abre nativo) con toda la data de cada credito.
+var _COB_TAB_LBL = { quincenal:'Mora Regular', acuerdos:'Acuerdos Mensuales', criticos:'Criticos', iloc:'Ilocalizables', total:'Mora Total' };
+function _cobXlsNum(n){ return String((Math.round((parseFloat(n)||0)*100)/100).toFixed(2)).replace('.',','); }
+function _cobXlsEstado(it){
+  var c=it.cred;
+  if(String(c.cobranzaStatus||'')==='ilocalizable') return 'Ilocalizable';
+  if(c.fechaCompromiso) return 'Acuerdo mensual';
+  var dm=Math.max(parseInt(c.mora,10)||0, it.diff<0?-it.diff:0, it.mora||0);
+  if(dm>30) return 'Crítico';
+  var atr = it.diff<0 || it.nVencidas>=1 || (parseInt(c.mora,10)||0)>0;
+  return atr ? 'Mora regular' : 'Al día';
+}
+function cobExportAbrir(){
+  var X=window._cobXls||{};
+  var tabLbl=_COB_TAB_LBL[X.tab]||'Mora Regular';
+  setMicon('exportar');$('mtt').textContent='Descargar Excel de cobranza';$('msb').textContent='Elige qué bajar y el período';
+  $('modal-box').className='modal';
+  $('mbd').innerHTML='<div class="fg"><label>Qué exportar</label>'
+    +'<select class="fs" id="cx_alcance">'
+    +'<option value="actual">Pestaña actual · '+tabLbl+'</option>'
+    +'<option value="todas">Todo (las 5 pestañas, sin repetir)</option>'
+    +'</select></div>'
+    +'<div class="fg" style="margin-top:10px"><label>Período (por fecha de vencimiento)</label>'
+    +'<select class="fs" id="cx_per" onchange="var r=document.getElementById(\'cx_rango\');if(r)r.style.display=this.value===\'rango\'?\'grid\':\'none\'">'
+    +'<option value="todo">Todo</option>'
+    +'<option value="hoy">Vencen hoy</option>'
+    +'<option value="mes">Este mes</option>'
+    +'<option value="rango">Rango de fechas…</option>'
+    +'</select></div>'
+    +'<div id="cx_rango" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'
+    +'<div class="fg"><label>Desde</label><input class="fi" id="cx_desde" type="date"></div>'
+    +'<div class="fg"><label>Hasta</label><input class="fi" id="cx_hasta" type="date"></div>'
+    +'</div>'
+    +'<div style="font-size:11.5px;color:var(--ink3);margin-top:12px">Columnas: cliente, teléfono, crédito, concesionario, modelo, cuota, vencimiento, días de mora, cuotas vencidas, montos, saldo pendiente, estado, nota, acuerdo y cobrador.</div>';
+  S.saveFn=function(){
+    var X2=window._cobXls||{};
+    var alcance=(($('cx_alcance')&&$('cx_alcance').value)||'actual');
+    var per=(($('cx_per')&&$('cx_per').value)||'todo');
+    var items;
+    if(alcance==='todas'){
+      var vis={}; items=[];
+      ['total','acuerdos','iloc','criticos','quincenal'].forEach(function(k){
+        (X2[k]||[]).forEach(function(it){ var id=it.cred&&it.cred.id; if(id&&!vis[id]){vis[id]=1;items.push(it);} });
+      });
+    } else {
+      items=(X2[X2.tab]||[]).slice();
+    }
+    var hoyI=hoyLocalISO();
+    if(per==='hoy') items=items.filter(function(it){ return (it.venceStr||'')===hoyI; });
+    else if(per==='mes'){ var mesI=hoyI.slice(0,7); items=items.filter(function(it){ return String(it.venceStr||'').slice(0,7)===mesI; }); }
+    else if(per==='rango'){
+      var d=(($('cx_desde')&&$('cx_desde').value)||''), h=(($('cx_hasta')&&$('cx_hasta').value)||'');
+      if(d) items=items.filter(function(it){ return (it.venceStr||'')>=d; });
+      if(h) items=items.filter(function(it){ return (it.venceStr||'')<=h; });
+    }
+    if(!items.length){ toast('No hay registros con ese filtro','error'); return false; }
+    // peor primero
+    items=items.slice().sort(function(a,b){ return (a.diff||0)-(b.diff||0); });
+    var head=['Cliente','Teléfono','Crédito','Concesionario','Modelo','Cuota N°','Vence','Días de mora','Cuotas vencidas','Monto cuota','Monto vencido','Saldo pendiente','Estado','Nota de cobranza','Acuerdo mensual','Cobrador'];
+    var filas=items.map(function(it){
+      var c=it.cred;
+      var cl=(S.clientes||[]).find(function(x){return c.clienteId && String(x.id)===String(c.clienteId);}) || (S.clientes||[]).find(function(x){return x.nombre===c.cli && c.cli;}) || {};
+      var conc=((c.concesionarioId && typeof _concGetById==='function') ? ((_concGetById(c.concesionarioId)||{}).nombre||'') : '') || c.sede || '';
+      var dm=Math.max(parseInt(c.mora,10)||0, it.diff<0?-it.diff:0, it.mora||0);
+      var saldo=(typeof getCreditoSaldoPendiente==='function')?getCreditoSaldoPendiente(c):'';
+      var nota=_notaCobranzaOpt(c.cobranzaStatus||'').t;
+      return [c.cli||'', cl.tel||'', c.id||'', conc, c.modelo||'', (it.cuotaNum||'')+'/'+(c.totalCuotas||((parseInt(c.plazo,10)||0)*2)||''),
+        it.venceStr||'', dm, it.nVencidas||0, _cobXlsNum(it.cuotaMonto), _cobXlsNum(it.nVencidas>=1?it.vencido:0),
+        saldo===''?'':_cobXlsNum(saldo), _cobXlsEstado(it), nota==='— Sin nota'?'':nota, c.fechaCompromiso||'', c.cobrador||''];
+    });
+    var esc=function(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+    var html='<html><head><meta charset="utf-8"></head><body><table border="1">'
+      +'<tr>'+head.map(function(h2){return '<th style="background:#1E3A8A;color:#fff;font-weight:bold;white-space:nowrap">'+esc(h2)+'</th>';}).join('')+'</tr>'
+      +filas.map(function(f){ return '<tr>'+f.map(function(v){return '<td>'+esc(v)+'</td>';}).join('')+'</tr>'; }).join('')
+      +'</table></body></html>';
+    window._cobXlsUltimoHtml = html;   // tambien lo usan las pruebas
+    var nombre='PAGASI_Cobranza_'+(alcance==='todas'?'Completa':(_COB_TAB_LBL[X2.tab]||'').replace(/ /g,''))+'_'+hoyI+'.xls';
+    try{
+      if(typeof Blob!=='undefined' && typeof URL!=='undefined' && URL.createObjectURL){
+        var blob=new Blob(['\ufeff'+html],{type:'application/vnd.ms-excel'});
+        var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=nombre;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      }
+    }catch(e){ toast('No se pudo generar el archivo','error'); return false; }
+    if(typeof logActividad==='function') logActividad('export_cobranza','pagos',alcance,{registros:items.length, periodo:per});
+    toast('Excel descargado · '+items.length+' registro'+(items.length!==1?'s':''),'success');
+    closeM(); return true;
+  };
+  $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">⬇ Descargar</button>';
+  $('ov').style.display='flex';
 }
 
 // ─── NOTAS DE COBRANZA (status del cliente en Cuotas Próximas) ───
