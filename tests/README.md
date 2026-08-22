@@ -13,5 +13,6 @@ node tests/t_cobranza.js   # una sola
 - `t_cobranza.js`  — pestañas Mora Regular / Críticos / Ilocalizables / Mora Total, "vence hoy ≠ mora",
                      tipo de pago en el registro, exportador CSV/PDF (usa el CreditoLedger real)
 - `t_coromoto.js`  — libro contable Coromoto (diario cuadrado, ESF/ER/Flujo, períodos, mapeo, impresión)
+- `t_auditoria.js` — Auditoría de Datos (nombres normalizados, acción segura "usar el nombre del crédito")
 
 Una prueba que falla imprime `FALLA ...` y el corredor termina con código 1.

@@ -900,7 +900,7 @@ function auditarCompleto(){
       issues.push({ cat:'Pagos', tipo:'Crédito inexistente', sev:'error',
         desc: p.id + ' · ' + (p.cli||'?') + ' · ' + fmt(p.monto) + ' apunta a ' + p.cred + ' (no existe)',
         id: p.id, col:'pagos' });
-    } else if(p.cli && cred.cli && p.cli !== cred.cli){
+    } else if(p.cli && cred.cli && _auditNombreNorm(p.cli) !== _auditNombreNorm(cred.cli)){
       issues.push({ cat:'Pagos', tipo:'Cliente no coincide con crédito', sev:'error',
         desc: p.id + ' · pago de "' + p.cli + '" apunta a ' + p.cred + ' que es de "' + cred.cli + '"',
         id: p.id, col:'pagos' });
@@ -1079,6 +1079,28 @@ function auditExportarTxt(){
 // ══════════════════════════════════════════════════════
 // AUDITORÍA: pagos huérfanos
 // ══════════════════════════════════════════════════════
+// Compara nombres ignorando mayusculas, acentos y espacios de mas: si a un
+// cliente le corrigieron el nombre, sus pagos viejos NO son huerfanos.
+function _auditNombreNorm(s){
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+}
+// Accion segura para "cliente distinto": el pago apunta al credito correcto,
+// solo quedo con el nombre viejo → se copia el nombre del credito al pago.
+function auditSincronizarNombre(pagoId, idx){
+  var h = (window._auditHuerfanos||[])[idx];
+  if(!h || !h.cred) return;
+  var p = h.pago;
+  if(!confirm('¿Cambiar el nombre del pago ' + p.id + ' de "' + (p.cli||'?') + '" a "' + h.cred.cli + '" (el nombre del crédito ' + h.cred.id + ')?\n\nNo se borra ni se mueve dinero: solo se corrige el nombre.')) return;
+  var pi = (S.pagos||[]).findIndex(function(x){ return x.id === pagoId; });
+  if(pi >= 0){
+    var antes = S.pagos[pi].cli;
+    S.pagos[pi].cli = h.cred.cli;
+    DB.savePago(S.pagos[pi]);
+    if(typeof logActividad==='function') logActividad('auditoria_sync_nombre','pagos',pagoId,{antes:antes, despues:h.cred.cli, cred:h.cred.id});
+  }
+  toast('Nombre sincronizado con el crédito', 'success');
+  auditarPagosHuerfanos();
+}
 function auditarPagosHuerfanos(){
   var div = $('audit-resultado');
   if(!div) return;
@@ -1101,8 +1123,8 @@ function auditarPagosHuerfanos(){
     if(!cred){
       // Cred doesn't exist at all
       huerfanos.push({ pago: p, tipo: 'cred_inexistente', cred: null });
-    } else if(p.cli && cred.cli && p.cli !== cred.cli){
-      // Cred exists but belongs to a different client
+    } else if(p.cli && cred.cli && _auditNombreNorm(p.cli) !== _auditNombreNorm(cred.cli)){
+      // Cred exists but belongs to a different client (nombres realmente distintos)
       huerfanos.push({ pago: p, tipo: 'cliente_distinto', cred: cred });
     }
   });
@@ -1139,13 +1161,14 @@ function auditarPagosHuerfanos(){
       + '<div style="font-size:10px;color:var(--ink3);margin-top:3px">Referencia al crédito: <strong>' + p.cred + '</strong> · ' + credInfo + '</div>'
       + '</div>'
       + '<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">'
+      + (h.tipo === 'cliente_distinto' ? '<button class="btn btn-p btn-sm" style="font-size:10px" title="El pago apunta al crédito correcto; solo se actualiza el nombre" onclick="auditSincronizarNombre(\'' + p.id + '\',' + idx + ')">✓ Usar el nombre del crédito</button>' : '')
       + '<button class="btn btn-d btn-sm" style="font-size:10px" onclick="auditEliminarPago(\'' + p.id + '\',' + idx + ')">Eliminar pago</button>'
       + '</div>'
       + '</div>'
       + '</div>';
   });
   html += '</div>';
-  html += '<div style="margin-top:10px;font-size:10.5px;color:var(--ink3)">Revisá cada caso antes de eliminar. Si el cobro fue real, primero registrá el pago correctamente en el crédito correspondiente.</div>';
+  html += '<div style="margin-top:10px;font-size:10.5px;color:var(--ink3)">Revisá cada caso. <b>Cliente distinto</b>: si el crédito es el correcto y solo cambió el nombre, usá "Usar el nombre del crédito" (no borra nada). Eliminá un pago solo si confirmás que el cobro es incorrecto o ya fue registrado en otro crédito.</div>';
 
   div.innerHTML = html;
   // Store for reference
