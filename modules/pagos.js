@@ -39,15 +39,6 @@ PG.pagos = function(){
   const metodosList = Object.values(porMetodo).sort((a,b)=>b.total-a.total);
   const topMetodo = metodosList[0]||{nombre:'—',total:0};
 
-  // Últimos 14 días para el mini chart
-  const dias = [];
-  for(let i=13;i>=0;i--){
-    const d = new Date(hoy); d.setDate(d.getDate()-i); d.setHours(0,0,0,0);
-    const k = fechaLocalISO(d);
-    const tot = confs.filter(p=>p.fecha===k).reduce((a,p)=>a+p.monto,0);
-    dias.push({k,d,tot,lbl:d.getDate()});
-  }
-  const maxDia = Math.max(1,...dias.map(d=>d.tot));
 
   // Filtro por tab
   const tab = S.pagosTab||'todos';
