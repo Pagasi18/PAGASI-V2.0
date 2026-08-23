@@ -900,10 +900,17 @@ function auditarCompleto(){
       issues.push({ cat:'Pagos', tipo:'Crédito inexistente', sev:'error',
         desc: p.id + ' · ' + (p.cli||'?') + ' · ' + fmt(p.monto) + ' apunta a ' + p.cred + ' (no existe)',
         id: p.id, col:'pagos' });
-    } else if(p.cli && cred.cli && _auditNombreNorm(p.cli) !== _auditNombreNorm(cred.cli)){
-      issues.push({ cat:'Pagos', tipo:'Cliente no coincide con crédito', sev:'error',
-        desc: p.id + ' · pago de "' + p.cli + '" apunta a ' + p.cred + ' que es de "' + cred.cli + '"',
-        id: p.id, col:'pagos' });
+    } else if(p.cli && cred.cli){
+      var relN = _auditNombresRel(p.cli, cred.cli);
+      if(relN==='tipeo'){
+        issues.push({ cat:'Pagos', tipo:'Nombre con posible error de tipeo', sev:'warn',
+          desc: p.id + ' · pago de "' + p.cli + '" en ' + p.cred + ' de "' + cred.cli + '" · mismo cliente, se corrige desde Pagos huérfanos',
+          id: p.id, col:'pagos', verPago:p.id });
+      } else if(relN==='distinto'){
+        issues.push({ cat:'Pagos', tipo:'Cliente no coincide con crédito', sev:'error',
+          desc: p.id + ' · pago de "' + p.cli + '" apunta a ' + p.cred + ' que es de "' + cred.cli + '"',
+          id: p.id, col:'pagos', verPago:p.id });
+      }
     }
   });
 
@@ -917,9 +924,16 @@ function auditarCompleto(){
     });
   Object.values(pagoKey).forEach(function(grupo){
     if(grupo.length > 1){
-      issues.push({ cat:'Pagos', tipo:'Posible pago duplicado', sev:'warn',
-        desc: grupo.map(function(p){ return p.id; }).join(', ') + ' · ' + fmt(grupo[0].monto) + ' · ' + (grupo[0].fecha||'?') + ' · ' + (grupo[0].cred||'?'),
-        id: grupo[0].id, col:'pagos' });
+      grupo.sort(function(a,b){ return String(a.id).localeCompare(String(b.id)); });
+      var seg = _auditSegundosEntre(grupo[0].id, grupo[1].id);
+      var refs = grupo.map(function(p){ return String(p.referencia||'').trim(); });
+      var mismaRef = !!refs[0] && refs.every(function(r){ return r===refs[0]; });
+      var muyProbable = (seg!=null && seg<=180) || mismaRef;
+      issues.push({ cat:'Pagos', tipo: muyProbable ? 'Pago duplicado (muy probable)' : 'Posible pago duplicado', sev: muyProbable ? 'error' : 'warn',
+        desc: grupo.map(function(p){ return p.id; }).join(', ') + ' · ' + fmt(grupo[0].monto) + ' · ' + (grupo[0].fecha||'?') + ' · ' + (grupo[0].cred||'?') + ' · ' + (grupo[0].cli||'')
+          + (seg!=null ? ' · registrados con ' + _auditFmtDelta(seg) + ' de diferencia' : '')
+          + (mismaRef ? ' · MISMA referencia ' + refs[0] : (refs.some(Boolean) ? ' · ref: ' + refs.map(function(r){return r||'—';}).join(' / ') : ' · sin referencia')),
+        id: grupo[0].id, col:'pagos', verPago: grupo[0].id });
     }
   });
 
@@ -956,8 +970,9 @@ function auditarCompleto(){
   Object.entries(cedulaMap).forEach(function(kv){
     var norm = kv[0], grupo = kv[1];
     if(grupo.length > 1){
+      var nCred = function(c){ return creds.filter(function(cr){ return String(cr.clienteId)===String(c.id); }).length; };
       issues.push({ cat:'Clientes', tipo:'Cédula duplicada', sev:'error',
-        desc: grupo.map(function(c){ return (c.nombre||'?') + ' (CLI-'+c.id+')'; }).join(' / ') + ' · CI: ' + norm,
+        desc: grupo.map(function(c){ var k=nCred(c); return (c.nombre||'?') + ' (CLI-'+c.id+', ' + (k? k+' crédito'+(k!==1?'s':'') : 'sin créditos → se puede eliminar') + ')'; }).join(' / ') + ' · CI: ' + norm,
         id: grupo[0].id, col:'clientes' });
     }
   });
@@ -965,7 +980,7 @@ function auditarCompleto(){
   // ── 7. Motos financiadas sin crédito activo ──
   motos.filter(function(m){ return m.estado === 'financiada'; }).forEach(function(m){
     var credActivo = creds.find(function(c){
-      return (String(c.motoId) === String(m.id)) && (c.estado === 'activo' || c.estado === 'pendiente_revision');
+      return (String(c.motoId) === String(m.id)) && (c.estado === 'activo' || c.estado === 'mora' || c.estado === 'pendiente_revision');
     });
     if(!credActivo){
       issues.push({ cat:'Motos', tipo:'Financiada sin crédito activo', sev:'warn',
@@ -1043,14 +1058,16 @@ function auditarCompleto(){
         + '<span style="background:' + sevBg[issue.sev] + ';color:' + sevColor[issue.sev] + ';font-size:8px;font-weight:800;padding:2px 6px;border-radius:10px;flex-shrink:0">' + sevLabel[issue.sev] + '</span>'
         + '<span style="font-size:11.5px;font-weight:700;color:var(--ink)">' + issue.tipo + '</span>'
         + '</div>'
-        + '<div style="font-size:10.5px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + issue.desc + '</div>'
+        + '<div style="font-size:10.5px;color:var(--ink3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + String(issue.desc).replace(/"/g,'&quot;') + '">' + issue.desc + '</div>'
         + '</div>'
+        + (issue.verPago ? '<button class="btn btn-g btn-sm" style="font-size:10px;flex-shrink:0" title="Abrir en Cobranza → Registro de pagos" onclick="S.pagosQ=\'' + issue.verPago + '\';S.pagosTab=\'todos\';S.pagosTipoF=\'todos\';nav(\'pagos\')">Ver en cobranza</button>' : '')
         + '</div>';
     });
 
     html += '</div></div>';
   });
 
+  html += '<div style="margin:6px 0 8px;font-size:10.5px;color:var(--ink3)">Los <b>duplicados</b> se eliminan desde Cobranza → Registro de pagos (botón Eliminar), que revierte bien la amortización. Los <b>tipeos</b> se corrigen desde 🔍 Pagos huérfanos con "Usar el nombre del crédito".</div>';
   html += '<button class="btn btn-g btn-sm" style="margin-top:4px" onclick="auditExportarTxt()">↓ Exportar lista</button>';
   div.innerHTML = html;
   window._auditIssues = issues;
@@ -1086,6 +1103,43 @@ function _auditNombreNorm(s){
 }
 // Accion segura para "cliente distinto": el pago apunta al credito correcto,
 // solo quedo con el nombre viejo → se copia el nombre del credito al pago.
+// Relacion entre dos nombres: 'igual' | 'parcial' (uno es version corta del
+// otro: "Jesus Morgado" vs "Jesus Eduardo Morgado") | 'tipeo' (difieren en
+// 1-2 letras) | 'distinto' (personas distintas).
+function _auditLev(a,b){
+  var m=a.length,n=b.length,prev=[],cur=[],i,j;
+  for(j=0;j<=n;j++) prev[j]=j;
+  for(i=1;i<=m;i++){ cur=[i]; for(j=1;j<=n;j++){ cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); } prev=cur; }
+  return prev[n];
+}
+function _auditNombresRel(a, b){
+  var na=_auditNombreNorm(a), nb=_auditNombreNorm(b);
+  if(!na || !nb) return 'distinto';
+  if(na===nb) return 'igual';
+  var ta=na.split(' ').filter(Boolean), tb=nb.split(' ').filter(Boolean);
+  var corto=ta.length<=tb.length?ta:tb, largo=ta.length<=tb.length?tb:ta;
+  if(corto.every(function(w){ return largo.indexOf(w)>-1; })) return 'parcial';
+  var dist=_auditLev(na,nb);
+  if(dist<=2 || dist<=Math.max(na.length,nb.length)*0.15) return 'tipeo';
+  // tipeo dentro de una version corta: cada palabra del corto casi-igual a una del largo
+  var okTok=corto.every(function(w){ return largo.some(function(v){ return v===w || (w.length>=4 && _auditLev(v,w)<=1); }); });
+  if(okTok) return 'tipeo';
+  return 'distinto';
+}
+// Segundos entre dos ids de pago (PAG-<ms>...). null si no se puede saber.
+function _auditSegundosEntre(idA, idB){
+  var ta=parseInt(String(idA||'').replace(/^PAG-/,'').split('-')[0],10);
+  var tb=parseInt(String(idB||'').replace(/^PAG-/,'').split('-')[0],10);
+  if(!ta||!tb) return null;
+  return Math.round(Math.abs(ta-tb)/1000);
+}
+function _auditFmtDelta(seg){
+  if(seg==null) return '';
+  if(seg<60) return seg+' seg';
+  if(seg<3600) return Math.round(seg/60)+' min';
+  if(seg<86400) return (Math.round(seg/360)/10)+' h';
+  return (Math.round(seg/8640)/10)+' días';
+}
 function auditSincronizarNombre(pagoId, idx){
   var h = (window._auditHuerfanos||[])[idx];
   if(!h || !h.cred) return;
@@ -1123,9 +1177,11 @@ function auditarPagosHuerfanos(){
     if(!cred){
       // Cred doesn't exist at all
       huerfanos.push({ pago: p, tipo: 'cred_inexistente', cred: null });
-    } else if(p.cli && cred.cli && _auditNombreNorm(p.cli) !== _auditNombreNorm(cred.cli)){
-      // Cred exists but belongs to a different client (nombres realmente distintos)
-      huerfanos.push({ pago: p, tipo: 'cliente_distinto', cred: cred });
+    } else if(p.cli && cred.cli){
+      var rel = _auditNombresRel(p.cli, cred.cli);
+      if(rel==='tipeo') huerfanos.push({ pago: p, tipo: 'tipeo', cred: cred });          // mismo cliente, 1-2 letras
+      else if(rel==='distinto') huerfanos.push({ pago: p, tipo: 'cliente_distinto', cred: cred });
+      // 'igual' y 'parcial' (nombre corto del mismo cliente) NO son huerfanos
     }
   });
 
@@ -1145,6 +1201,8 @@ function auditarPagosHuerfanos(){
       : ('Crédito <strong>' + p.cred + '</strong> no existe');
     var tipoLabel = h.tipo === 'cred_inexistente'
       ? '<span style="background:var(--reds);color:var(--red);font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px">CRÉDITO ELIMINADO</span>'
+      : h.tipo === 'tipeo'
+      ? '<span style="background:var(--gs);color:var(--p1);font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px">MISMO CLIENTE · POSIBLE TIPEO</span>'
       : '<span style="background:var(--ambers);color:var(--amber);font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px">CLIENTE DISTINTO</span>';
 
     html += '<div style="background:var(--surf2);border:1px solid var(--rim);border-radius:9px;padding:10px 13px">'
@@ -1161,7 +1219,7 @@ function auditarPagosHuerfanos(){
       + '<div style="font-size:10px;color:var(--ink3);margin-top:3px">Referencia al crédito: <strong>' + p.cred + '</strong> · ' + credInfo + '</div>'
       + '</div>'
       + '<div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">'
-      + (h.tipo === 'cliente_distinto' ? '<button class="btn btn-p btn-sm" style="font-size:10px" title="El pago apunta al crédito correcto; solo se actualiza el nombre" onclick="auditSincronizarNombre(\'' + p.id + '\',' + idx + ')">✓ Usar el nombre del crédito</button>' : '')
+      + ((h.tipo === 'cliente_distinto' || h.tipo === 'tipeo') ? '<button class="btn btn-p btn-sm" style="font-size:10px" title="El pago apunta al crédito correcto; solo se actualiza el nombre" onclick="auditSincronizarNombre(\'' + p.id + '\',' + idx + ')">✓ Usar el nombre del crédito</button>' : '')
       + '<button class="btn btn-d btn-sm" style="font-size:10px" onclick="auditEliminarPago(\'' + p.id + '\',' + idx + ')">Eliminar pago</button>'
       + '</div>'
       + '</div>'
