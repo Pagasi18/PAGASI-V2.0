@@ -2,7 +2,7 @@ name: Tasa Binance P2P
 
 on:
   schedule:
-    - cron: '*/15 * * * *'   # cada 15 min (GitHub puede demorarlo unos minutos)
+    - cron: '0 13 * * *'   # 9:00 Venezuela (UTC-4). GitHub puede demorarlo unos minutos
   workflow_dispatch: {}
 
 permissions:

@@ -47,10 +47,16 @@ var _EUR_ENDPOINTS = [
 // El workflow de GitHub Actions escribe la tasa Binance (aviso mas caro del
 // P2P real) cada 15 min. Si ese valor es fresco, el cliente NO lo pisa con
 // el fallback de CriptoYa; solo consulta por su cuenta cuando quedo viejo.
+// El bot de GitHub Actions escribe la tasa una vez al dia (9:00 Venezuela) con
+// el aviso P2P mas caro, que el navegador NO puede consultar por si mismo (el
+// endpoint de Binance no permite CORS). Por eso la damos por vigente hasta la
+// corrida siguiente: 25 h deja margen si el cron de GitHub se atrasa. Si pasa
+// mas tiempo (el bot fallo), el navegador vuelve a CriptoYa como respaldo.
+var _BINANCE_VIGENCIA_MS = 25*60*60*1000;
 function _binanceEsFresca(d){
   if(!d || !d.fechaBinanceTs) return false;
   var t = Date.parse(d.fechaBinanceTs);
-  return !isNaN(t) && (Date.now() - t) < 30*60*1000;
+  return !isNaN(t) && (Date.now() - t) < _BINANCE_VIGENCIA_MS;
 }
 
 // ── Función principal — llamar al inicio de la app ──
