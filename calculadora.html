@@ -806,6 +806,33 @@ input[type=number] { -moz-appearance: textfield; }
   letter-spacing: -1.5px;
 }
 .card.is-featured .card-pct { color: #fff; }
+
+/* Porcentaje editable (solo tarjeta personalizada) */
+.card-pct-edit { display: inline-flex; align-items: baseline; }
+.card-pct-input {
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 60px;
+  letter-spacing: -3.5px;
+  line-height: 1;
+  color: var(--ink);
+  font-feature-settings: "tnum";
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed rgba(0,0,0,.18);
+  outline: none;
+  width: 92px;
+  padding: 0 2px 3px;
+  text-align: right;
+  border-radius: 4px 4px 0 0;
+  transition: border-color .15s ease, background .15s ease;
+  -moz-appearance: textfield;
+}
+.card-pct-input::-webkit-outer-spin-button,
+.card-pct-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.card-pct-input:hover { border-bottom-color: var(--p); background: rgba(37,99,235,.04); }
+.card-pct-input:focus { border-bottom: 2px solid var(--p); background: rgba(37,99,235,.06); }
+.card.is-featured .card-pct-input { color: #fff; border-bottom-color: rgba(255,255,255,.35); }
 .card.is-featured .card-pct .sym { color: rgba(255,255,255,.5); }
 
 .card-label {
@@ -1519,7 +1546,19 @@ function renderCards(planParams, opts){
     el.innerHTML = `
       <div class="card-badge">Recomendado</div>
       <div class="card-head">
-        <div class="card-pct">${pctDisplay}<span class="sym">%</span></div>
+        ${ c.isCustom ? `
+          <div class="card-pct card-pct-edit">
+            <input type="text" class="card-pct-input" id="pctInput"
+                   value="${pctDisplay}"
+                   inputmode="numeric"
+                   title="Escribe el % de inicial (ej: 40)"
+                   oninput="onPctInputChange(this.value)"
+                   onblur="onPctInputBlur()"
+                   onfocus="this.select()"><span class="sym">%</span>
+          </div>
+        ` : `
+          <div class="card-pct">${pctDisplay}<span class="sym">%</span></div>
+        ` }
       </div>
       <div class="card-label">${c.label}</div>
       <div class="card-divider"></div>
@@ -1591,6 +1630,20 @@ function onIniInputChange(rawVal){
   updateCustomCard(p);
 }
 
+function onPctInputChange(rawVal){
+  const n = parseFloat(String(rawVal).replace(/[^0-9.]/g, ''));
+  if(!isFinite(n) || n <= 0) return;      // campo vacio o a medio escribir: no recalcular
+  CUSTOM_PCT = n / 100;
+  updateCustomCard(getPlanParams());
+}
+
+function onPctInputBlur(){
+  if(!isFinite(CUSTOM_PCT) || CUSTOM_PCT < 0.05) CUSTOM_PCT = 0.05;
+  if(CUSTOM_PCT > 0.95) CUSTOM_PCT = 0.95;
+  USER_INI_RAW = null;
+  renderCards(getPlanParams(), { keepInputFocus: false });
+}
+
 function onIniInputBlur(){
   if(CUSTOM_PCT < 0.05) CUSTOM_PCT = 0.05;
   if(CUSTOM_PCT > 0.95) CUSTOM_PCT = 0.95;
@@ -1609,8 +1662,18 @@ function updateCustomCard(planParams){
   const customCardEl = allCards[3];
   if(!customCardEl) return;
 
-  const pctEl = customCardEl.querySelector('.card-pct');
-  if(pctEl) pctEl.innerHTML = pctDisplay + '<span class="sym">%</span>';
+  // El % y la inicial son dos vistas del mismo dato: al mover uno se refresca el
+  // otro, pero nunca se pisa el campo que el usuario tiene activo escribiendo.
+  const pctInput = document.getElementById('pctInput');
+  if(pctInput){
+    if(document.activeElement !== pctInput) pctInput.value = pctDisplay;
+  } else {
+    const pctEl = customCardEl.querySelector('.card-pct');
+    if(pctEl) pctEl.innerHTML = pctDisplay + '<span class="sym">%</span>';
+  }
+
+  const iniInput = document.getElementById('iniInput');
+  if(iniInput && document.activeElement !== iniInput) iniInput.value = fmtNum(customCard.data.ini);
 
   const rowValues = customCardEl.querySelectorAll('.card-row-value');
   if(rowValues[0]) rowValues[0].textContent = fmtQ(customCard.data.cuotaQ);
