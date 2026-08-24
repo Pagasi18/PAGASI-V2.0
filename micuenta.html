@@ -423,7 +423,7 @@ details summary::-webkit-details-marker{display:none}
     </div>
 
     <div style="text-align:center;margin-top:16px">
-      <a class="lnk" id="lgWa" href="https://wa.me/584242177798?text=Hola%2C%20necesito%20ayuda%20para%20entrar%20a%20Mi%20Cuenta%20Pagasi" target="_blank" rel="noopener">¿Problemas para entrar? Escríbenos</a>
+      <a class="lnk" id="lgWa" href="https://wa.me/584222285526?text=Hola%2C%20necesito%20ayuda%20para%20entrar%20a%20Mi%20Cuenta%20Pagasi" target="_blank" rel="noopener">¿Problemas para entrar? Escríbenos</a>
       <div style="margin-top:12px">
         <button class="lnk" id="lgStaff" onclick="toggleStaff()" style="color:var(--ink-4);text-decoration:none">Pagasi</button>
       </div>
@@ -557,7 +557,12 @@ var FIREBASE_CONFIG = {
   appId: '1:951911859002:web:1eb8f0af7bcbd508474603'
 };
 var DIAS_GRACIA = 5;          // igual que PLAN.diasGracia del admin
-var WA_PAGASI = '584242177798';
+// WhatsApp de COBRANZA (0422-2285526, linea preventiva) — este portal es de
+// clientes que YA tienen credito, por eso no va al numero de ventas.
+// La otra linea de cobranza es la critica: 0424-2285526 -> '584242285526'.
+// El sitio publico (index, catalogo, simulador, solicitar, nosotros) sigue
+// con ventas 0424-2177798, que es lo correcto para prospectos.
+var WA_PAGASI = '584222285526';
 var LOGO = 'assets/pagasi-logo.png';
 
 var app=null, auth=null, db=null, storage=null;
