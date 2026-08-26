@@ -1751,6 +1751,66 @@ function _wzRenderResultado(){
       })();
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// AVISO DE CAMBIOS SENSIBLES AL EDITAR UN CREDITO
+// El guardado de edicion recalcula el plan financiero (getWzPlanConfig +
+// _wzCredPlanFields) y deriva el modelo de la moto vinculada. Eso puede
+// mover montos que el operario nunca toco.
+// Estas funciones NO alteran ese comportamiento: solo comparan lo que ya
+// se iba a escribir contra lo guardado y lo muestran antes de aplicarlo.
+// Si no hay diferencias, no interrumpen nada.
+// ══════════════════════════════════════════════════════════════════════
+var _WZ_CAMPOS_SENSIBLES = [
+  {k:'modelo',      et:'Modelo de la moto',  num:false},
+  {k:'precio',      et:'Precio',             num:true},
+  {k:'ini',         et:'Inicial',            num:true},
+  {k:'fin',         et:'Monto financiado',   num:true},
+  {k:'total',       et:'Total a pagar',      num:true},
+  {k:'cuotaQ',      et:'Cuota quincenal',    num:true},
+  {k:'cuotaM',      et:'Cuota mensual',      num:true},
+  {k:'plazo',       et:'Plazo (meses)',      num:true},
+  {k:'totalCuotas', et:'Total de cuotas',    num:true},
+  {k:'planModo',    et:'Tipo de plan',       num:false}
+];
+
+function _wzDiffSensible(actual, upd){
+  var out = [];
+  if(!actual || !upd) return out;
+  _WZ_CAMPOS_SENSIBLES.forEach(function(c){
+    if(!Object.prototype.hasOwnProperty.call(upd, c.k)) return;
+    var a = actual[c.k], b = upd[c.k], iguales;
+    if(c.num){
+      var na = parseFloat(a), nb = parseFloat(b);
+      na = isFinite(na) ? na : 0;
+      nb = isFinite(nb) ? nb : 0;
+      iguales = Math.abs(na - nb) < 0.01;
+      a = na; b = nb;
+    } else {
+      a = (a==null?'':String(a)).trim();
+      b = (b==null?'':String(b)).trim();
+      iguales = (a === b);
+    }
+    if(!iguales) out.push({etiqueta:c.et, antes:a, ahora:b, num:c.num});
+  });
+  return out;
+}
+
+function _wzConfirmarCambios(difs, credId){
+  var v = function(x){ return (x===''||x===null||x===undefined) ? '(vacio)' : String(x); };
+  var L = ['CREDITO ' + credId, '', 'Al guardar se van a modificar estos datos:', ''];
+  difs.forEach(function(d){
+    L.push('  ' + d.etiqueta);
+    L.push('      antes:  ' + v(d.antes));
+    L.push('      ahora:  ' + v(d.ahora));
+    L.push('');
+  });
+  L.push('Si no cambiaste estos campos a proposito, cancela y avisa.');
+  L.push('');
+  L.push('Aceptar  = guardar con estos cambios');
+  L.push('Cancelar = no guardar nada y volver al formulario');
+  return window.confirm(L.join('\n'));
+}
+
 // ── Guardar solicitud ──
 function _wzGuardar(){
   _wzCollectVisibleValues();
@@ -2002,6 +2062,14 @@ function _wzGuardar(){
         wizardDraft: _wizardDraft,
         wizardData: _wizardDraft
       };
+      // ── Aviso antes de escribir: muestra que va a cambiar y deja cancelar ──
+      // No modifica _upd ni ningun calculo. Solo compara y pregunta.
+      var _difsSens = _wzDiffSensible(S.creds[_ei], _upd);
+      if(_difsSens.length && !_wzConfirmarCambios(_difsSens, _editId)){
+        window._wzEditando = _editId;
+        if(btn){ btn.textContent=' Guardar Solicitud'; btn.disabled=false; }
+        return;
+      }
       // Actualizar cliente si hay datos nuevos
       if(existing && WZ.nom){
         var _cliUpd = {};
