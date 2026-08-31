@@ -96,7 +96,7 @@ PG.contratos = function(){
         </div>
       </div>
       <div class="fgr c1" style="gap:9px;margin-top:12px">
-        <div class="fg"><label> Cliente / Crédito</label><select class="fs" id="sel-cred">${credsActivos.map(c=>`<option value="${c.id}">${c.id} — ${c.cli} · ${c.modelo}</option>`).join('')||'<option value="">— Sin créditos activos —</option>'}</select></div>
+        <div class="fg"><label> Cliente / Crédito</label><select class="fs" id="sel-cred" onchange="onCredContratoChange()">${credsActivos.map(c=>`<option value="${c.id}">${c.id} — ${c.cli} · ${c.modelo}</option>`).join('')||'<option value="">— Sin créditos activos —</option>'}</select></div>
         <div class="fg"><label> Tipo de documento</label><select class="fs" id="sel-tipo-doc" onchange="renderContrato()"><option value="dra">Compraventa con Reserva de Dominio + Cesión (predeterminado)</option><option value="contrato">Contrato completo · Venta + Cesión (estructura anterior)</option><option value="venta">Solo el Contrato de Venta · Agente de Cobro</option><option value="cesion">Solo el Contrato de Cesión de Cuotas</option><option value="ambos">Venta y Cesión como dos documentos separados</option><option value="pagare">Pagaré</option><option value="carta">Carta de Instrucciones</option><option value="arriendo">Contrato de Arrendamiento con Opción a Compra (anterior)</option></select></div>
       </div>
       <div style="margin-top:12px;padding:12px 14px;background:linear-gradient(135deg,rgba(37,99,235,.06),rgba(124,109,255,.03));border:1px solid rgba(37,99,235,.15);border-radius:10px;font-size:11.5px;color:var(--ink2);line-height:1.5">
@@ -106,7 +106,7 @@ PG.contratos = function(){
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px">
-        <button class="btn btn-p btn-sm" onclick="renderContrato()">️ Vista Previa</button>
+        <button class="btn btn-p btn-sm" onclick="onCredContratoChange()">️ Vista Previa</button>
         <button class="btn btn-g btn-sm" onclick="descargarContratoPDF()">↓ Descargar PDF</button>
       </div>
 

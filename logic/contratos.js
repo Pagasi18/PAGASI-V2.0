@@ -1,4 +1,36 @@
 // Logica de contratos y documentos legales. Extraido mecanicamente de assets/pagasi-app.js.
+
+// ══════════════════════════════════════════════════════════════════
+// QUE VERSION DE CONTRATO LE TOCA A CADA CREDITO
+// ══════════════════════════════════════════════════════════════════
+// Los contratos no se guardan armados: se generan cada vez desde los datos
+// del credito. Sin esto, reimprimir un credito viejo lo sacaria con el
+// formato nuevo, que no es el que ese cliente firmo. La version se deduce
+// de cuando se firmo, para que una reimpresion siempre calce con el papel.
+var _CONTRATO_DRA_DESDE = '2026-08-30';
+
+function _contratoVersionDe(c){
+  if(!c) return 'dra';
+  // 1. Si el credito trae la version grabada, esa manda (para el futuro)
+  var v = String(c.contratoVersion||'').trim();
+  if(v) return v;
+  // 2. Todavia sin firmar → le toca el contrato vigente hoy
+  if(!c.contratoFirmado) return 'dra';
+  // 3. Ya firmado → el que estaba vigente el dia que firmo
+  var f = String(c.fechaContratoFirmado || c.fecha || '').slice(0,10);
+  if(!f) return 'contrato';
+  return (f >= _CONTRATO_DRA_DESDE) ? 'dra' : 'contrato';
+}
+
+// Ajusta el selector de tipo al contrato que le toca al credito elegido.
+function onCredContratoChange(){
+  var sc = $('sel-cred'), td = $('sel-tipo-doc');
+  if(sc && td){
+    var c = (S.creds||[]).find(function(x){ return x.id===sc.value; });
+    if(c) td.value = _contratoVersionDe(c);
+  }
+  if(typeof renderContrato==='function') renderContrato();
+}
 function renderContrato(){
   // Predeterminado: los contratos aprobados por el asesor legal (compraventa con
   // reserva de dominio + cesion). Salen siempre en pareja: la cesion no tiene
@@ -997,7 +1029,8 @@ function _htmlContratosDelDia(fecha){
   var salto = '<div style="page-break-before:always;break-before:page;height:0"></div>';
   var partes = [];
   for(var i=0;i<lista.length;i++){
-    var h = (typeof _htmlContratosDRA==='function') ? _htmlContratosDRA(lista[i].id)
+    var _v = _contratoVersionDe(lista[i]);
+    var h = (_v==='dra' && typeof _htmlContratosDRA==='function') ? _htmlContratosDRA(lista[i].id)
             : _htmlContratoAgenteCobro(true, lista[i].id);
     if(h) partes.push((i?salto:'') + h);
   }
@@ -1034,7 +1067,7 @@ function verContratoById(credId){
       sel.value = credId;
     }
     var td = document.getElementById('sel-tipo-doc');
-    if(td) td.value = 'dra';
+    if(td) td.value = _contratoVersionDe(c);
     if(typeof renderContrato==='function') renderContrato();
     var cz = document.getElementById('cz');
     var html = cz ? cz.innerHTML : '<div style="padding:40px;text-align:center;color:#888">No se pudo generar el contrato</div>';
