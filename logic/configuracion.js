@@ -98,7 +98,9 @@ function guardarEmpresa(){
   var repCI = (($('cfg_rep_ci')&&$('cfg_rep_ci').value)||'').trim();
   if(!nombre){ toast('Escribe el nombre de la empresa','error'); return; }
   // Actualizar la variable global también (para que contratos/reportes la lean aun sin estar en Config)
-  _empresa = { nombre:nombre, rif:rif, ciudad:ciudad, tel:tel, email:email, direccion:direccion, representante:representante, repCI:repCI };
+  _empresa = { nombre:nombre, rif:rif, ciudad:ciudad, tel:tel, email:email, direccion:direccion,
+               representante:representante, repCI:repCI, repCargo:repCargo, repDoc:repDoc,
+               rm:rm, rmEstado:rmEstado, rmFecha:rmFecha, rmNum:rmNum, rmTomo:rmTomo };
   var data = {nombre, rif, ciudad, tel, email, direccion, representante, repCI, updated: new Date().toISOString()};
   if(db){
     db.collection('config').doc('empresa').set(data)

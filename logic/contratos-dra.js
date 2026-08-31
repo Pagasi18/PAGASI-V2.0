@@ -10,7 +10,7 @@
 
 var _DRA_CUERPO = [
   function(D){ return `CONTRATO DE COMPRAVENTA DE VEHÍCULO AUTOMOTOR CON RESERVA DE DOMINIO`; },
-  function(D){ return `El presente CONTRATO DE COMPRAVENTA DE VEHÍCULO AUTOMOTOR CON RESERVA DE DOMINIO (en lo sucesivo aludido como el “Contrato”) se celebra en la fecha de su otorgamiento (la “Fecha de Celebración”), entre (i) ${D.concNom}, sociedad inscrita ante el Registro Mercantil ${D.b(18)} de la Circunscripción Judicial del Estado ${D.b(12)} en fecha ${D.b(10)}, bajo el No. ${D.b(6)}, Tomo ${D.b(6)}, e inscrita en el Registro de Información Fiscal (“RIF”) bajo el N° J-${D.b(8)}-${D.b(3)} (en adelante el “Concesionario”), representada en este acto por ${D.b(20)}, venezolano, con cédula de identidad venezolana número V-${D.b(12)} y con RIF número V-${D.b(10)}-${D.b(3)}, actuando en su carácter de ${D.b(14)} del Concesionario, según se desprende de ${D.b(18)}; (ii) ${D.empNom}, sociedad inscrita ante el Registro Mercantil ${D.b(18)} de la Circunscripción Judicial del Estado ${D.b(12)} en fecha ${D.b(10)}, bajo el No. ${D.b(6)}, Tomo ${D.b(6)}, e inscrita en el RIF bajo el N° J-${D.empRif1}-${D.empRif2} (en adelante “Pagasi”), representada en este acto por ${D.empRep}, venezolano, con cédula de identidad venezolana número V-${D.empRepCi} y con RIF número V-${D.b(10)}-${D.b(3)}, actuando en su carácter de ${D.b(14)} de Pagasi, según se desprende de ${D.b(18)}; y (iii) ${D.cliNom}, venezolano, con cédula de identidad venezolana número V-${D.cliCi} y con RIF número V-${D.cliRif1}-${D.cliRif2} (el “Comprador” y junto con el Concesionario y Pagasi, las “Partes” y cada una, una “Parte”); de conformidad con lo previsto en los artículos 1.264, 1.266, 1.268, 1.474 y siguientes, y 1.583 y siguientes del Código Civil, el artículo 71 de la Ley de Transporte Terrestre, y la Ley sobre Ventas con Reserva de Dominio, en base en los términos y condiciones siguientes:`; },
+  function(D){ return `El presente CONTRATO DE COMPRAVENTA DE VEHÍCULO AUTOMOTOR CON RESERVA DE DOMINIO (en lo sucesivo aludido como el “Contrato”) se celebra en la fecha de su otorgamiento (la “Fecha de Celebración”), entre (i) ${D.concNom}, sociedad inscrita ante el Registro Mercantil ${D.b(18)} de la Circunscripción Judicial del Estado ${D.b(12)} en fecha ${D.b(10)}, bajo el No. ${D.b(6)}, Tomo ${D.b(6)}, e inscrita en el Registro de Información Fiscal (“RIF”) bajo el N° J-${D.b(8)}-${D.b(3)} (en adelante el “Concesionario”), representada en este acto por ${D.b(20)}, venezolano, con cédula de identidad venezolana número V-${D.b(12)} y con RIF número V-${D.b(10)}-${D.b(3)}, actuando en su carácter de ${D.b(14)} del Concesionario, según se desprende de ${D.b(18)}; (ii) ${D.empNom}, sociedad inscrita ante el Registro Mercantil ${D.empRm} de la Circunscripción Judicial del Estado ${D.empRmEstado} en fecha ${D.empRmFecha}, bajo el No. ${D.empRmNum}, Tomo ${D.empRmTomo}, e inscrita en el RIF bajo el N° J-${D.empRif1}-${D.empRif2} (en adelante “Pagasi”), representada en este acto por ${D.empRep}, venezolano, con cédula de identidad venezolana número V-${D.empRepCi} y con RIF número V-${D.b(10)}-${D.b(3)}, actuando en su carácter de ${D.empRepCargo} de Pagasi, según se desprende de ${D.empRepDoc}; y (iii) ${D.cliNom}, venezolano, con cédula de identidad venezolana número V-${D.cliCi} y con RIF número V-${D.cliRif1}-${D.cliRif2} (el “Comprador” y junto con el Concesionario y Pagasi, las “Partes” y cada una, una “Parte”); de conformidad con lo previsto en los artículos 1.264, 1.266, 1.268, 1.474 y siguientes, y 1.583 y siguientes del Código Civil, el artículo 71 de la Ley de Transporte Terrestre, y la Ley sobre Ventas con Reserva de Dominio, en base en los términos y condiciones siguientes:`; },
   function(D){ return `Asimismo, interviene en el presente Contrato (iv) ${D.fiaNom}, venezolano, mayor de edad, titular de la cédula de identidad venezolana número V-${D.fiaCi} y con RIF número V-${D.fiaRif1}-${D.fiaRif2}, domiciliado en ${D.fiaDir}, quien actúa en su carácter de fiador solidario y principal pagador del Comprador (el “Fiador”), quedando comprendido dentro de la definición de “Partes” para todos los efectos de este Contrato.`; },
   function(D){ return `CONSIDERANDO QUE el Concesionario es una agencia distribuidora de motocicletas, en los términos previstos en el artículo 18(1) del Reglamento Parcial de la Ley de Transporte Terrestre sobre el Uso y Circulación de Motocicletas en la Red Vial Nacional y el Transporte Público de Personas en la Modalidad Individual Moto Taxis, contenido en el Decreto Presidencial No. 8.495, publicado en Gaceta Oficial No. 39.772 del 5 de octubre de 2011 (el “Reglamento LTT—Motos”).`; },
   function(D){ return `CONSIDERANDO QUE el Concesionario es propietario de un vehículo a motor o automotor, cuyas características se identifican a continuación: marca: ${D.marca}, modelo: ${D.modelo}, año: ${D.anio}, clase: MOTO, tipo: ${D.tipo}, color: ${D.color}, placa: ${D.placa}, serial de carrocería o chasis número: ${D.chasis}, serial de motor número: ${D.motor}, uso: ${D.uso} (el “Vehículo”), y el Comprador, conociendo el estado, situación y condición general del Vehículo, desea adquirir el mismo del Concesionario con el financiamiento de Pagasi.`; },
@@ -128,7 +128,7 @@ var _DRA_CUERPO = [
 
 var _DRA_CESION = [
   function(D){ return `CONTRATO DE CESIÓN DE CRÉDITOS`; },
-  function(D){ return `El presente CONTRATO DE CESIÓN DE CRÉDITOS (el “Contrato”) se celebra en fecha ${D.diaNum} de ${D.mesAnio} (la “Fecha Efectiva”), por y entre: (i) ${D.concNom}, sociedad inscrita ante el Registro Mercantil ${D.b(18)} de la Circunscripción Judicial del Estado ${D.b(12)} en fecha ${D.b(10)}, bajo el No. ${D.b(6)}, Tomo ${D.b(6)}, e inscrita en el Registro de Información Fiscal (“RIF”) bajo el N° J-${D.b(8)}-${D.b(3)} (en adelante el “Cedente”), representada en este acto por ${D.b(20)}, venezolano, con cédula de identidad venezolana número V-${D.b(12)} y con RIF número V-${D.b(10)}-${D.b(3)}, actuando en su carácter de ${D.b(14)} del Cedente, según se desprende de ${D.b(18)}; (ii) Pagasi, sociedad inscrita ante el Registro Mercantil ${D.b(18)} de la Circunscripción Judicial del Estado ${D.b(12)} en fecha ${D.b(10)}, bajo el No. ${D.b(6)}, Tomo ${D.b(6)}, e inscrita en el RIF bajo el N° J-${D.empRif1}-${D.empRif2} (en adelante el “Cesionario” y, junto con el Cedente, las “Partes” y cada una, una “Parte”), representada en este acto por ${D.empRep}, venezolano, con cédula de identidad venezolana número V-${D.empRepCi} y con RIF número V-${D.b(10)}-${D.b(3)}, actuando en su carácter de ${D.b(14)} del Cesionario, según se desprende de ${D.b(18)}; en base a los términos y condiciones siguientes:`; },
+  function(D){ return `El presente CONTRATO DE CESIÓN DE CRÉDITOS (el “Contrato”) se celebra en fecha ${D.diaNum} de ${D.mesAnio} (la “Fecha Efectiva”), por y entre: (i) ${D.concNom}, sociedad inscrita ante el Registro Mercantil ${D.b(18)} de la Circunscripción Judicial del Estado ${D.b(12)} en fecha ${D.b(10)}, bajo el No. ${D.b(6)}, Tomo ${D.b(6)}, e inscrita en el Registro de Información Fiscal (“RIF”) bajo el N° J-${D.b(8)}-${D.b(3)} (en adelante el “Cedente”), representada en este acto por ${D.b(20)}, venezolano, con cédula de identidad venezolana número V-${D.b(12)} y con RIF número V-${D.b(10)}-${D.b(3)}, actuando en su carácter de ${D.b(14)} del Cedente, según se desprende de ${D.b(18)}; (ii) Pagasi, sociedad inscrita ante el Registro Mercantil ${D.empRm} de la Circunscripción Judicial del Estado ${D.empRmEstado} en fecha ${D.empRmFecha}, bajo el No. ${D.empRmNum}, Tomo ${D.empRmTomo}, e inscrita en el RIF bajo el N° J-${D.empRif1}-${D.empRif2} (en adelante el “Cesionario” y, junto con el Cedente, las “Partes” y cada una, una “Parte”), representada en este acto por ${D.empRep}, venezolano, con cédula de identidad venezolana número V-${D.empRepCi} y con RIF número V-${D.b(10)}-${D.b(3)}, actuando en su carácter de ${D.empRepCargo} del Cesionario, según se desprende de ${D.empRepDoc}; en base a los términos y condiciones siguientes:`; },
   function(D){ return `POR CUANTO, el Cedente celebró en esta misma fecha un contrato de compraventa con reserva de dominio cuyo objeto es la motocicleta allí indicada (el “Contrato de Compraventa”) con el comprador identificado en dicho Contrato de Compraventa  (el “Comprador”), por un precio de venta financiado en cuotas periódicas, generándose así una serie de cuentas por cobrar representadas por las cuotas pendientes de pago por el Comprador, las cuales se detallan en el Anexo “A” del presente Contrato (las “Cuentas por Cobrar”);`; },
   function(D){ return `POR CUANTO, el Cedente tiene la intención de vender, ceder y transferir al Cesionario, y que el Cesionario tiene la intención de adquirir del Cedente, la totalidad de las Cuentas por Cobrar derivadas de los Contratos de Compraventa.`; },
   function(D){ return `Las Partes convienen en celebrar el presente Contrato, en base a los términos y condiciones siguientes:`; },
@@ -208,7 +208,12 @@ function _draDatos(credId){
     concNom: V(conc.nombre, 26),
     empNom:  V(emp.nombre || 'PAGASI 18, C.A.', 22),
     empRif1: rifPart(emp.rif, 0), empRif2: rifPart(emp.rif, 1),
-    empRep:  V(emp.representante, 22), empRepCi: V(emp.repCI, 12),
+    // Por decision de la empresa, el contrato NO lleva el nombre ni la cedula del
+    // representante legal: van como linea en blanco, se completan al firmar.
+    empRep:  b(22), empRepCi: b(12),
+    empRm:   V(emp.rm, 14), empRmEstado: V(emp.rmEstado, 12), empRmFecha: V(emp.rmFecha, 10),
+    empRmNum: V(emp.rmNum, 6), empRmTomo: V(emp.rmTomo, 6),
+    empRepCargo: V(emp.repCargo, 14), empRepDoc: V(emp.repDoc, 18),
     cliNom:  V(cli.nombre || c.cli, 26),
     cliCi:   V(cli.cedula || cli.ci, 12),
     cliRif1: rifPart(cli.rif || cli.cedula || cli.ci, 0), cliRif2: rifPart(cli.rif, 1),
@@ -267,12 +272,12 @@ function _draEstilos(){
   var az='#2563EB', azD='#1D4ED8';
   return {
     az:az, azD:azD,
-    doc:"font-family:'Nunito Sans','Segoe UI',Arial,sans-serif;color:#1f2937;max-width:820px;margin:0 auto;padding:22px 30px;background:#fff",
-    h1:'background:'+az+';color:#fff;text-align:center;padding:12px 16px;border-radius:5px;margin:0 0 14px;border-bottom:4px solid '+azD+';font-size:14px;font-weight:900;letter-spacing:.4px;line-height:1.4',
-    cl:'color:'+az+';font-weight:900;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;margin:16px 0 7px;padding-bottom:4px;border-bottom:2px solid '+az+';page-break-after:avoid',
-    p:'font-size:11.2px;line-height:1.6;color:#222;margin:6px 0;text-align:justify',
-    sub:'font-size:11.2px;line-height:1.6;color:#222;margin:6px 0 6px 14px;text-align:justify',
-    def:'font-size:11.2px;line-height:1.55;color:#222;margin:3px 0 3px 20px;text-align:justify'
+    doc:"font-family:'Nunito Sans','Segoe UI',Arial,sans-serif;color:#1f2937;max-width:820px;margin:0 auto;padding:16px 30px;background:#fff",
+    h1:'background:'+az+';color:#fff;text-align:center;padding:9px 16px;border-radius:5px;margin:0 0 10px;border-bottom:4px solid '+azD+';font-size:14px;font-weight:900;letter-spacing:.4px;line-height:1.4',
+    cl:'color:'+az+';font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:.3px;margin:11px 0 5px;padding-bottom:3px;border-bottom:2px solid '+az+';page-break-after:avoid',
+    p:'font-size:11px;line-height:1.45;color:#222;margin:4px 0;text-align:justify',
+    sub:'font-size:11px;line-height:1.45;color:#222;margin:4px 0 4px 14px;text-align:justify',
+    def:'font-size:9.2px;line-height:1.3;color:#333;margin:0 0 1px;text-align:left;break-inside:avoid'
   };
 }
 
@@ -293,9 +298,16 @@ function _draParrafo(txt, S_){
 // ninguna se parta entre dos hojas carta. Los encabezados de clausula quedan
 // pegados a lo que sigue (nunca solos al pie de una pagina).
 function _draCuerpo(lista, D, S_){
-  var out = '', buf = '';
+  var out = '', buf = '', enDef = false;
   var cerrar = function(){
+    if(enDef){ cerrarDef(); return; }
     if(buf){ out += '<div style="page-break-inside:avoid">' + buf + '</div>'; buf = ''; }
+  };
+  // El listado de definiciones (11.6) se imprime a dos columnas para que ocupe
+  // lo menos posible: son 35 lineas cortas que si no se comen una hoja entera.
+  var cerrarDef = function(){
+    if(buf){ out += '<div style="column-count:2;column-gap:18px;margin:2px 0 6px 14px">' + buf + '</div>'; buf = ''; }
+    enDef = false;
   };
   lista.forEach(function(fn){
     var txt = fn(D);
@@ -305,7 +317,13 @@ function _draCuerpo(lista, D, S_){
       out += '<div style="'+S_.cl+';page-break-after:avoid">'+txt+'</div>';
       return;
     }
-    if(/^[“"]/.test(txt)){ cerrar(); out += _draParrafo(txt, S_); return; }  // definiciones: fluyen
+    if(/^[“"]/.test(txt)){                      // definiciones: dos columnas, letra chica
+      if(!enDef) cerrar();                      // el titulillo 11.6 va a todo lo ancho
+      buf += _draParrafo(txt, S_);
+      enDef = true;
+      return;
+    }
+    if(enDef){ cerrarDef(); }
     if(/^\d{1,2}\.\d{1,2}\t?/.test(txt)) cerrar();     // arranca subclausula nueva
     buf += _draParrafo(txt, S_);
   });
@@ -400,7 +418,7 @@ function _htmlCompraventaDRA(credId){
     +   _draFirma('Por el Fiador', D.fiaNom, 'V-'+String(D.cli.fiador_ci||'________'))
     + '</div>'
     + '<div style="display:flex;gap:26px;margin-top:22px;flex-wrap:wrap;page-break-inside:avoid">'
-    +   _draFirma('Por Pagasi', D.empNom, 'V-'+String(D.emp.repCI||'________'))
+    +   _draFirma('Por Pagasi', D.empNom, 'RIF ' + String(D.emp.rif || '________'))
     +   _draFirma('Por el Concesionario', D.concNom, 'V-________')
     + '</div>'
     // ── Anexo A ──
@@ -431,9 +449,9 @@ function _htmlCesionDRA(credId){
     + cuerpo
     + '<div style="display:flex;gap:26px;margin-top:24px;page-break-inside:avoid">'
     +   _draFirma('Por el Cedente<br>(Concesionario)', D.concNom, 'V-________')
-    +   _draFirma('Por el Cesionario<br>(Pagasi)', D.empNom, 'V-'+String(D.emp.repCI||'________'))
+    +   _draFirma('Por el Cesionario<br>(Pagasi)', D.empNom, 'RIF ' + String(D.emp.rif || '________'))
     + '</div>'
-    + '<div style="page-break-before:always;padding-top:10px">'
+    + '<div style="page-break-inside:avoid;padding-top:14px">'
     +   '<div style="'+S_.h1+'">ANEXO “A” — CUENTAS POR COBRAR CEDIDAS</div>'
     +   '<p style="'+S_.p+'">Las Cuentas por Cobrar cedidas corresponden a la totalidad de las Cuotas Quincenales pendientes de pago por el Comprador bajo el Contrato de Compraventa de la misma fecha, según el siguiente detalle:</p>'
     +   _draCronograma(D, S_)

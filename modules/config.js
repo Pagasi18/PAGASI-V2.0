@@ -13,6 +13,13 @@ PG.config = function(){
       if($('cfg_direccion')) $('cfg_direccion').value=d.direccion||'';
       if($('cfg_representante'))$('cfg_representante').value=d.representante||'';
       if($('cfg_rep_ci')) $('cfg_rep_ci').value=d.repCI||'';
+      if($('cfg_rep_cargo')) $('cfg_rep_cargo').value=d.repCargo||'';
+      if($('cfg_rep_doc')) $('cfg_rep_doc').value=d.repDoc||'';
+      if($('cfg_rm')) $('cfg_rm').value=d.rm||'';
+      if($('cfg_rm_estado')) $('cfg_rm_estado').value=d.rmEstado||'';
+      if($('cfg_rm_fecha')) $('cfg_rm_fecha').value=d.rmFecha||'';
+      if($('cfg_rm_num')) $('cfg_rm_num').value=d.rmNum||'';
+      if($('cfg_rm_tomo')) $('cfg_rm_tomo').value=d.rmTomo||'';
     });
     db.collection('config').doc('plan').get().then(function(doc){
       if(!doc.exists) return;
@@ -100,6 +107,18 @@ PG.config = function(){
             <div class="fg"><label>Email</label><input class="fi" id="cfg_email2" type="email" placeholder="info@pagasi.com"></div>
           </div>
           <div class="fg"><label>Domicilio fiscal</label><input class="fi" id="cfg_direccion" placeholder="Av. Principal, Edif. X, Piso Y, Caracas"></div>
+          <div style="margin-top:4px;padding-top:9px;border-top:1px dashed var(--rim2)">
+            <div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:7px">Datos registrales · salen en los contratos</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div class="fg"><label>Registro Mercantil</label><input class="fi" id="cfg_rm" placeholder="Segundo"></div>
+              <div class="fg"><label>Circunscripción del Estado</label><input class="fi" id="cfg_rm_estado" placeholder="Miranda"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:8px;margin-top:8px">
+              <div class="fg"><label>Fecha de inscripción</label><input class="fi" id="cfg_rm_fecha" placeholder="12/03/2024"></div>
+              <div class="fg"><label>N°</label><input class="fi" id="cfg_rm_num" placeholder="18"></div>
+              <div class="fg"><label>Tomo</label><input class="fi" id="cfg_rm_tomo" placeholder="145-A"></div>
+            </div>
+          </div>
           <div style="padding-top:8px;border-top:1px solid var(--rim2)">
             <button class="btn btn-p btn-sm" onclick="guardarEmpresa()">Guardar empresa</button>
           </div>
@@ -110,7 +129,11 @@ PG.config = function(){
         <div class="ch"><div><div class="ct">Representante Legal</div><div class="cs">Firma los contratos y documentos legales</div></div></div>
         <div style="display:flex;flex-direction:column;gap:9px;margin-top:6px">
           <div class="fg"><label>Nombre completo *</label><input class="fi" id="cfg_representante" placeholder="Juan Pérez García"></div>
-          <div class="fg"><label>Cédula de Identidad</label><input class="fi" id="cfg_rep_ci" placeholder="V-00.000.000"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="fg"><label>Cédula de Identidad</label><input class="fi" id="cfg_rep_ci" placeholder="00.000.000"></div>
+            <div class="fg"><label>Cargo</label><input class="fi" id="cfg_rep_cargo" placeholder="Director"></div>
+          </div>
+          <div class="fg"><label>Facultad según consta en</label><input class="fi" id="cfg_rep_doc" placeholder="Acta de Asamblea del 12/03/2024"></div>
           <div style="background:var(--gs);border-radius:9px;padding:11px 13px;font-size:11.5px;color:var(--ink2);line-height:1.55">
             <b style="color:var(--p1)">Tip:</b> Estos datos se insertan automáticamente en los contratos de venta en cuotas y documentos notariales.
           </div>

@@ -2845,7 +2845,14 @@ function getEmpresa(){
   var direccion = ($('cfg_direccion') &&$('cfg_direccion').value) || _empresa.direccion || '';
   var representante= ($('cfg_representante')&&$('cfg_representante').value)|| _empresa.representante|| '';
   var repCI = ($('cfg_rep_ci') &&$('cfg_rep_ci').value) || _empresa.repCI || '';
-  return { nombre:nombre.trim(), rif:rif.trim(), ciudad:ciudad.trim(), tel:tel.trim(), email:email.trim(), direccion:direccion.trim(), representante:representante.trim(), repCI:repCI.trim() };
+  // Datos registrales (registro mercantil, cargo del representante): los usan
+  // los contratos. Si no estan en el formulario, salen de _empresa (Firebase).
+  var E = function(id, k){ return ((($(id)||{}).value) || _empresa[k] || '').trim(); };
+  return { nombre:nombre.trim(), rif:rif.trim(), ciudad:ciudad.trim(), tel:tel.trim(), email:email.trim(),
+           direccion:direccion.trim(), representante:representante.trim(), repCI:repCI.trim(),
+           repCargo:E('cfg_rep_cargo','repCargo'), repDoc:E('cfg_rep_doc','repDoc'),
+           rm:E('cfg_rm','rm'), rmEstado:E('cfg_rm_estado','rmEstado'), rmFecha:E('cfg_rm_fecha','rmFecha'),
+           rmNum:E('cfg_rm_num','rmNum'), rmTomo:E('cfg_rm_tomo','rmTomo') };
 }
 
 // Cargar datos de empresa desde Firebase al iniciar
