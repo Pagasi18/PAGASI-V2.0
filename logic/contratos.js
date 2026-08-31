@@ -1,6 +1,9 @@
 // Logica de contratos y documentos legales. Extraido mecanicamente de assets/pagasi-app.js.
 function renderContrato(){
   var tipo = ($('sel-tipo-doc')&&$('sel-tipo-doc').value) || 'contrato';
+  // Contratos del asesor legal (compraventa con reserva de dominio + cesion).
+  // Salen siempre en pareja: la cesion no tiene sentido sin la venta que la origina.
+  if(tipo==='dra' && typeof _renderContratosDRA==='function') return _renderContratosDRA();
   if(tipo==='pagare') return _renderPagare();
   if(tipo==='carta') return _renderCartaInstrucciones();
   if(tipo==='cesion') return _renderCesionCuotas();
