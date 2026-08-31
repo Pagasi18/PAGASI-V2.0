@@ -391,6 +391,9 @@ function _draLogo(){
       || 'assets/pagasi-logo.png';
 }
 
+var _DRA_CIERRE    = 'Las Partes firman el presente Contrato en señal de conformidad y aceptación, en la Fecha de Celebración.-';
+var _DRA_CIERRE_CE = 'Las Partes firman el presente Contrato en señal de conformidad y aceptación, en la Fecha Efectiva.-';
+
 // ── Estilos y armado del documento ──
 function _draEstilos(){
   var az='#2563EB', azD='#1D4ED8';
@@ -401,7 +404,7 @@ function _draEstilos(){
     cl:'color:'+az+';font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:.3px;margin:11px 0 5px;padding-bottom:3px;border-bottom:2px solid '+az+';page-break-after:avoid',
     p:'font-size:11px;line-height:1.45;color:#222;margin:4px 0;text-align:justify',
     sub:'font-size:11px;line-height:1.45;color:#222;margin:4px 0 4px 14px;text-align:justify',
-    def:'font-size:9.2px;line-height:1.3;color:#333;margin:0 0 1px;text-align:left;break-inside:avoid'
+    def:'font-size:8px;line-height:1.25;color:#333;margin:0 0 1px;text-align:left;break-inside:avoid'
   };
 }
 
@@ -430,7 +433,7 @@ function _draCuerpo(lista, D, S_){
   // El listado de definiciones (11.6) se imprime a dos columnas para que ocupe
   // lo menos posible: son 35 lineas cortas que si no se comen una hoja entera.
   var cerrarDef = function(){
-    if(buf){ out += '<div style="column-count:2;column-gap:18px;margin:2px 0 6px 14px">' + buf + '</div>'; buf = ''; }
+    if(buf){ out += '<div style="column-count:3;column-gap:14px;margin:2px 0 6px 10px">' + buf + '</div>'; buf = ''; }
     enDef = false;
   };
   lista.forEach(function(fn){
@@ -516,11 +519,20 @@ function _draCronograma(D, S_){
   return h+'</div></div></div>';
 }
 
-function _draFirma(rol, nombre, ci){
-  return '<div style="flex:1;text-align:center;font-size:10.4px;display:flex;flex-direction:column;min-width:180px">'
-    + '<div style="font-weight:900;color:#1D4ED8;font-size:10.6px;margin-bottom:46px">'+rol+'</div>'
-    + '<div style="margin-top:auto;border-top:1px solid #333;padding-top:5px;line-height:1.8;text-align:left">'
-    + nombre+'<br>'+ci+'<br>Fecha: ____________</div></div>';
+// n = cuantas firmas van en la fila (2, 3 o 4). El bloque se mantiene bajo para
+// que quepa al pie de la ultima pagina de clausulas y no salte solo a otra hoja.
+function _draFirma(rol, nombre, ci, n){
+  n = n || 2;
+  var ancho = 'calc(' + (100/n).toFixed(4) + '% - ' + (24 - 24/n).toFixed(1) + 'px)';
+  // Alturas fijas: asi todas las rayas de firma quedan exactamente a la misma
+  // altura aunque un nombre ocupe dos lineas y otro una.
+  return '<div style="flex:0 0 '+ancho+';font-size:9.8px">'
+    + '<div style="height:24px;text-align:center;font-weight:900;color:#1D4ED8;font-size:10px;line-height:1.2">'+rol+'</div>'
+    + '<div style="height:34px"></div>'
+    + '<div style="border-top:1px solid #333;padding-top:4px;line-height:1.5;text-align:left">'
+    + '<div style="font-weight:800">'+nombre+'</div>'
+    + (ci ? '<div>'+ci+'</div>' : '')
+    + '<div>Fecha: __________</div></div></div>';
 }
 
 // ══════════ 1) CONTRATO DE COMPRAVENTA ══════════
@@ -530,7 +542,7 @@ function _htmlCompraventaDRA(credId){
   var logo = _draLogo();
   var fecha = c.fecha ? new Date(c.fecha+'T12:00:00').toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'}) : '';
 
-  var cuerpo = _draCuerpo(_DRA_CUERPO, D, S_);
+  var cuerpo = _draCuerpo(_DRA_CUERPO.slice(0, -1), D, S_);   // sin la linea de cierre
 
   return '<div class="cdoc" style="'+S_.doc+'">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
@@ -538,13 +550,19 @@ function _htmlCompraventaDRA(credId){
     +   '<div style="font-size:10.5px;color:#555;text-align:right;line-height:1.7">'
     +     '<strong>N° de Contrato:</strong> '+c.id+'<br><strong>Fecha:</strong> <strong>'+fecha+'</strong></div></div>'
     + cuerpo
-    + '<div style="display:flex;gap:26px;margin-top:24px;flex-wrap:wrap;page-break-inside:avoid">'
-    +   _draFirma('Por el Comprador', D.cliNom, 'V-'+String(D.cli.cedula||D.cli.ci||'________'))
-    +   _draFirma('Por el Fiador', D.fiaNom, 'V-'+String(D.cli.fiador_ci||'________'))
-    + '</div>'
-    + '<div style="display:flex;gap:26px;margin-top:22px;flex-wrap:wrap;page-break-inside:avoid">'
-    +   _draFirma('Por Pagasi', D.empNom, 'RIF ' + String(D.emp.rif || '________'))
-    +   _draFirma('Por el Concesionario', D.concNom, 'V-________')
+    // Las cuatro firmas viajan juntas: nunca puede quedar una suelta en otra hoja
+    + '<div style="page-break-inside:avoid;margin-top:16px">'
+    +   _draParrafo(_DRA_CIERRE, S_)
+    +   (function(){
+          var f = [], hayFiador = !!_draTxt(D.cli.fiador_nom);
+          var n = hayFiador ? 4 : 3;
+          f.push(['Por el Comprador', D.cliNom, 'V-'+String(D.cli.cedula||D.cli.ci||'________')]);
+          if(hayFiador) f.push(['Por el Fiador', D.fiaNom, 'V-'+String(D.cli.fiador_ci||'________')]);
+          f.push(['Por Pagasi', D.empNom, 'RIF ' + String(D.emp.rif || '________')]);
+          f.push(['Por el Concesionario', D.concNom, '']);
+          return '<div style="display:flex;gap:24px;margin-top:12px;align-items:flex-start">'
+               + f.map(function(x){ return _draFirma(x[0], x[1], x[2], n); }).join('') + '</div>';
+        })()
     + '</div>'
     // ── Anexo A ──
     + '<div style="page-break-before:always;padding-top:10px">'
@@ -552,9 +570,9 @@ function _htmlCompraventaDRA(credId){
     +   '<p style="'+S_.p+'">El presente Anexo forma parte integrante del Contrato y refleja el calendario de vencimiento de las Cuotas Quincenales a cargo del Comprador.</p>'
     +   _draCronograma(D, S_)
     +   '<p style="'+S_.p+';margin-top:12px">El Comprador y el Fiador declaran conocer y aceptar el presente cronograma de pagos.</p>'
-    +   '<div style="display:flex;gap:26px;margin-top:22px;page-break-inside:avoid">'
-    +     _draFirma('Por el Comprador', D.cliNom, 'V-'+String(D.cli.cedula||D.cli.ci||'________'))
-    +     _draFirma('Por el Fiador', D.fiaNom, 'V-'+String(D.cli.fiador_ci||'________'))
+    +   '<div style="display:flex;gap:24px;align-items:flex-start;margin-top:18px;page-break-inside:avoid">'
+    +     _draFirma('Por el Comprador', D.cliNom, 'V-'+String(D.cli.cedula||D.cli.ci||'________'), 2)
+    +     (_draTxt(D.cli.fiador_nom) ? _draFirma('Por el Fiador', D.fiaNom, 'V-'+String(D.cli.fiador_ci||'________'), 2) : '')
     +   '</div>'
     + '</div></div>';
 }
@@ -563,7 +581,7 @@ function _htmlCompraventaDRA(credId){
 function _htmlCesionDRA(credId){
   var D = _draDatos(credId); if(!D) return null;
   var S_ = _draEstilos(), c = D.c;
-  var cuerpo = _draCuerpo(_DRA_CESION, D, S_);
+  var cuerpo = _draCuerpo(_DRA_CESION.slice(0, -1), D, S_);   // sin la linea de cierre
   var logo = _draLogo();
   var fecha = c.fecha ? new Date(c.fecha+'T12:00:00').toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'}) : '';
   return '<div class="cdoc" style="'+S_.doc+'">'
@@ -572,9 +590,12 @@ function _htmlCesionDRA(credId){
     +   '<div style="font-size:10.5px;color:#555;text-align:right;line-height:1.7">'
     +     '<strong>Crédito:</strong> '+c.id+'<br><strong>Fecha:</strong> <strong>'+fecha+'</strong></div></div>'
     + cuerpo
-    + '<div style="display:flex;gap:26px;margin-top:24px;page-break-inside:avoid">'
-    +   _draFirma('Por el Cedente<br>(Concesionario)', D.concNom, 'V-________')
-    +   _draFirma('Por el Cesionario<br>(Pagasi)', D.empNom, 'RIF ' + String(D.emp.rif || '________'))
+    + '<div style="page-break-inside:avoid;margin-top:16px">'
+    +   _draParrafo(_DRA_CIERRE_CE, S_)
+    +   '<div style="display:flex;gap:24px;align-items:flex-start;margin-top:14px">'
+    +     _draFirma('Por el Cedente (Concesionario)', D.concNom, '', 2)
+    +     _draFirma('Por el Cesionario (Pagasi)', D.empNom, 'RIF ' + String(D.emp.rif || '________'), 2)
+    +   '</div>'
     + '</div>'
     + '<div style="page-break-inside:avoid;padding-top:14px">'
     +   '<div style="'+S_.h1+'">ANEXO “A” — CUENTAS POR COBRAR CEDIDAS</div>'
