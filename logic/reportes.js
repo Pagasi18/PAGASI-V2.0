@@ -146,7 +146,7 @@ function _abrirVentanaImpresion(titulo, htmlContenido, opts){
   if(!w){ if(typeof toast==='function') toast('Habilita las ventanas emergentes para ver el reporte','error'); return; }
   if(opts.sinHeader){
     // Contenido con membrete propio (contratos, finiquito): shell simple Nunito
-    var cssS = '*{box-sizing:border-box}body{font-family:\'Nunito\',\'Nunito Sans\',system-ui,Arial,sans-serif;padding:32px;color:#1f2937;font-size:12px;line-height:1.7;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{body{padding:12px}button{display:none!important}}';
+    var cssS = '*{box-sizing:border-box}@page{size:Letter;margin:12mm}body{font-family:\'Nunito\',\'Nunito Sans\',system-ui,Arial,sans-serif;padding:32px;color:#1f2937;font-size:12px;line-height:1.7;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{body{padding:0}button{display:none!important}}';
     w.document.write('<html><head><title>'+titulo+'</title>'+fonts+'<style>'+cssS+'</style></head><body>'+htmlContenido
       +'<br><button onclick="window.print()" style="background:#2563EB;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px;margin-top:16px;font-family:inherit;font-weight:700">Imprimir / Guardar PDF</button>'
       +'<script>setTimeout(function(){window.print();},600);<\/script></body></html>');

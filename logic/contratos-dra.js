@@ -31,7 +31,7 @@ var _DRA_CUERPO = [
   function(D){ return `2. PRECIO Y CUOTAS`; },
   function(D){ return `2.1	Precio; Inicial y Cuotas Quincenales.`; },
   function(D){ return `(a) Precio. El precio total de la compraventa del Vehículo es la cantidad de ${D.precioLetras} DÓLARES DE LOS ESTADOS UNIDOS DE AMÉRICA (US$ ${D.precio}) (el “Precio”), que, para dar cumplimiento con lo establecido en el artículo 130 de la Ley del Banco Central de Venezuela, equivale a ${D.precioBs} Bolívares (Bs. ${D.precioBs2}), calculados al tipo de cambio de referencia publicado por el Banco Central de Venezuela vigente para la fecha de redacción y visado de este documento.`; },
-  function(D){ return `(b) Inicial. El Comprador paga a Pagasi, en este acto y en la Fecha de Celebración, la cantidad de ${D.inicial} Dólares (US$ ${D.inicial2}), equivalente al ${D.iniPct}% del Precio, por concepto de cuota inicial (la “Inicial”). Pagasi declara recibir dicho monto a su entera y cabal satisfacción, sirviendo el presente Contrato como suficiente recibo y finiquito de la Inicial.`; },
+  function(D){ return `(b) Inicial. El Comprador paga a Pagasi, en este acto y en la Fecha de Celebración, la cantidad de ${D.inicial} Dólares (US$ ${D.inicial2}), por concepto de cuota inicial (la “Inicial”). Pagasi declara recibir dicho monto a su entera y cabal satisfacción, sirviendo el presente Contrato como suficiente recibo y finiquito de la Inicial.`; },
   function(D){ return `(c) Saldo Financiado; Cuotas Quincenales. El saldo del Precio, esto es, la cantidad de ${D.saldo} Dólares (US$ ${D.saldo2}) (el “Saldo Financiado”), será pagado por el Comprador a Pagasi mediante ${D.nCuotas} (${D.nCuotasLetras}) cuotas quincenales consecutivas, cada una por el monto de ${D.cuota} Dólares (US$ ${D.cuota2}) (cada una, una “Cuota Quincenal”), conforme al cronograma de pagos contenido en el Anexo “A” del presente Contrato.`; },
   function(D){ return `2.2	Vencimiento y Pago de las Cuotas Quincenales.`; },
   function(D){ return `(a) Vencimiento. La primera Cuota Quincenal vencerá a los quince (15) días continuos contados a partir de la Fecha de Celebración, y las sucesivas vencerán cada quince (15) días continuos siguientes, conforme al cronograma del Anexo “A”. Cada Cuota Quincenal podrá ser pagada en cualquier momento dentro del período quincenal que le corresponda, mediante uno o varios pagos parciales o abonos.`; },
@@ -255,6 +255,71 @@ function _draEnLetras(n){
   return String(n);
 }
 
+// Logo: primero el del sidebar (ya cargado), y si no, el archivo del repo
+function _draLogo(){
+  return (typeof _PAGASI_LOGO_BLUE!=='undefined' && _PAGASI_LOGO_BLUE)
+      || ((document.querySelector('.sb-logo img')||{}).src||'')
+      || 'assets/pagasi-logo.png';
+}
+
+// ── Estilos y armado del documento ──
+function _draEstilos(){
+  var az='#2563EB', azD='#1D4ED8';
+  return {
+    az:az, azD:azD,
+    doc:"font-family:'Nunito Sans','Segoe UI',Arial,sans-serif;color:#1f2937;max-width:820px;margin:0 auto;padding:22px 30px;background:#fff",
+    h1:'background:'+az+';color:#fff;text-align:center;padding:12px 16px;border-radius:5px;margin:0 0 14px;border-bottom:4px solid '+azD+';font-size:14px;font-weight:900;letter-spacing:.4px;line-height:1.4',
+    cl:'color:'+az+';font-weight:900;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;margin:16px 0 7px;padding-bottom:4px;border-bottom:2px solid '+az+';page-break-after:avoid',
+    p:'font-size:11.2px;line-height:1.6;color:#222;margin:6px 0;text-align:justify',
+    sub:'font-size:11.2px;line-height:1.6;color:#222;margin:6px 0 6px 14px;text-align:justify',
+    def:'font-size:10.6px;line-height:1.5;color:#333;margin:2px 0 2px 20px;text-align:justify'
+  };
+}
+
+function _draParrafo(txt, S_){
+  // El titulo del documento (primera linea, todo en mayusculas) va como cabecera
+  if(/^CONTRATO DE [A-ZÁÉÍÓÚÑ ]+$/.test(txt)) return '<div style="'+S_.h1+'">'+txt+'</div>';
+  var esDef = /^[“"]/.test(txt);
+  if(esDef) return '<p style="'+S_.def+'">'+txt+'</p>';
+  var esSub = /^\d{1,2}\.\d{1,2}\t?/.test(txt);
+  var esLit = /^\([a-z]\)/.test(txt);
+  var estilo = (esSub||esLit) ? S_.sub : S_.p;
+  var t = txt.replace(/^(\d{1,2}\.\d{1,2})\t?\s*([^.]{3,85}\.)/,
+            '<strong style="color:'+S_.azD+'">$1 $2</strong>');
+  return '<p style="'+estilo+'">'+t+'</p>';
+}
+
+// Arma el cuerpo agrupando cada subclausula con sus literales, de modo que
+// ninguna se parta entre dos hojas carta. Los encabezados de clausula quedan
+// pegados a lo que sigue (nunca solos al pie de una pagina).
+function _draCuerpo(lista, D, S_){
+  var out = '', buf = '';
+  var cerrar = function(){
+    if(buf){ out += '<div style="page-break-inside:avoid">' + buf + '</div>'; buf = ''; }
+  };
+  lista.forEach(function(fn){
+    var txt = fn(D);
+    if(/^CONTRATO DE [A-ZÁÉÍÓÚÑ ]+$/.test(txt)){ cerrar(); out += _draParrafo(txt, S_); return; }
+    if(/^\d{1,2}\.\s+[A-ZÁÉÍÓÚÑ]/.test(txt)){          // 1. OBJETO DEL CONTRATO
+      cerrar();
+      out += '<div style="'+S_.cl+';page-break-after:avoid">'+txt+'</div>';
+      return;
+    }
+    if(/^[“"]/.test(txt)){ cerrar(); out += _draParrafo(txt, S_); return; }  // definiciones: fluyen
+    if(/^\d{1,2}\.\d{1,2}\t?/.test(txt)) cerrar();     // arranca subclausula nueva
+    buf += _draParrafo(txt, S_);
+  });
+  cerrar();
+  return out;
+}
+
+// Logo: primero el del sidebar (ya cargado), y si no, el archivo del repo
+function _draLogo(){
+  return (typeof _PAGASI_LOGO_BLUE!=='undefined' && _PAGASI_LOGO_BLUE)
+      || ((document.querySelector('.sb-logo img')||{}).src||'')
+      || 'assets/pagasi-logo.png';
+}
+
 // ── Estilos y armado del documento ──
 function _draEstilos(){
   var az='#2563EB', azD='#1D4ED8';
@@ -289,26 +354,23 @@ function _draParrafo(txt, S_){
 function _draCronograma(D, S_){
   var F = D.F, c = D.c;
   var ini = c.fecha ? new Date(c.fecha+'T12:00:00') : new Date();
-  var M = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-  var th = 'background:'+S_.az+';color:#fff;font-size:9.5px;font-weight:800;padding:6px 8px;text-align:center;text-transform:uppercase;letter-spacing:.3px';
-  var td = 'padding:4px 8px;font-size:10px;text-align:center;border-bottom:1px solid #DBEAFE';
-  var h = '<table style="width:100%;border-collapse:collapse;margin-top:8px;border:1px solid #BFDBFE">'
-        + '<thead><tr><th style="'+th+'">Cuota N°</th><th style="'+th+'">Fecha de vencimiento</th>'
-        + '<th style="'+th+'">Monto de la Cuota (US$)</th><th style="'+th+'">Saldo restante (US$)</th></tr></thead><tbody>';
-  var saldo = F.saldo;
+  var M = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var celda = 'display:flex;align-items:center;gap:6px;padding:6px 8px;background:#fff;border:1px solid #BFDBFE;border-radius:5px';
+  var badge = 'display:inline-flex;align-items:center;justify-content:center;min-width:21px;height:21px;background:'+S_.az+';color:#fff;font-size:9.5px;font-weight:800;border-radius:50%;flex-shrink:0';
+  var h = '<div style="margin:10px 0 6px;page-break-inside:avoid">'
+    + '<div style="background:'+S_.az+';color:#fff;text-align:center;padding:8px 10px;border-radius:6px 6px 0 0">'
+    +   '<div style="font-size:11px;font-weight:800;letter-spacing:.3px;text-transform:uppercase">Plan de Abonos Quincenales</div>'
+    +   '<div style="font-size:9.5px;opacity:.9;margin-top:2px;font-weight:600">'+F.nCuotas+' cuotas quincenales de US$ '+D.num(F.cuota)+' cada una · Total US$ '+D.num(F.saldo)+'</div>'
+    + '</div>'
+    + '<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:0 0 6px 6px;border-top:0;padding:10px">'
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">';
   for(var i=0;i<F.nCuotas;i++){
     var f = new Date(ini.getTime()+((i+1)*15*24*60*60*1000));
-    saldo = Math.round((saldo-F.cuota)*100)/100;
-    if(saldo<0.005) saldo = 0;
-    h += '<tr'+(i%2?' style="background:#F8FAFF"':'')+'>'
-       + '<td style="'+td+';font-weight:800;color:'+S_.azD+'">'+(i+1)+'</td>'
-       + '<td style="'+td+'">'+f.getDate()+' '+M[f.getMonth()]+' '+f.getFullYear()+'</td>'
-       + '<td style="'+td+';font-weight:700">'+D.num(F.cuota)+'</td>'
-       + '<td style="'+td+'">'+D.num(saldo)+'</td></tr>';
+    h += '<div style="'+celda+'"><span style="'+badge+'">'+(i+1)+'</span>'
+       + '<span style="font-size:10px;color:#444;font-weight:600;flex:1;line-height:1.2">'+f.getDate()+' '+M[f.getMonth()]+' '+String(f.getFullYear()).slice(-2)+'</span>'
+       + '<span style="font-size:10px;font-weight:800;color:'+S_.azD+';white-space:nowrap">$'+D.num(F.cuota)+'</span></div>';
   }
-  h += '<tr style="background:#EFF6FF"><td style="'+td+';font-weight:900;color:'+S_.azD+'" colspan="2">TOTAL</td>'
-     + '<td style="'+td+';font-weight:900;color:'+S_.azD+'">'+D.num(F.saldo)+'</td><td style="'+td+'">—</td></tr>';
-  return h+'</tbody></table>';
+  return h+'</div></div></div>';
 }
 
 function _draFirma(rol, nombre, ci){
@@ -322,10 +384,10 @@ function _draFirma(rol, nombre, ci){
 function _htmlCompraventaDRA(credId){
   var D = _draDatos(credId); if(!D) return null;
   var S_ = _draEstilos(), c = D.c;
-  var logo = (typeof _PAGASI_LOGO_BLUE!=='undefined' && _PAGASI_LOGO_BLUE) || ((document.querySelector('.sb-logo img')||{}).src||'');
+  var logo = _draLogo();
   var fecha = c.fecha ? new Date(c.fecha+'T12:00:00').toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'}) : '';
 
-  var cuerpo = _DRA_CUERPO.map(function(fn){ return _draParrafo(fn(D), S_); }).join('');
+  var cuerpo = _draCuerpo(_DRA_CUERPO, D, S_);
 
   return '<div class="cdoc" style="'+S_.doc+'">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
@@ -358,8 +420,8 @@ function _htmlCompraventaDRA(credId){
 function _htmlCesionDRA(credId){
   var D = _draDatos(credId); if(!D) return null;
   var S_ = _draEstilos(), c = D.c;
-  var cuerpo = _DRA_CESION.map(function(fn){ return _draParrafo(fn(D), S_); }).join('');
-  var logo = (typeof _PAGASI_LOGO_BLUE!=='undefined' && _PAGASI_LOGO_BLUE) || ((document.querySelector('.sb-logo img')||{}).src||'');
+  var cuerpo = _draCuerpo(_DRA_CESION, D, S_);
+  var logo = _draLogo();
   var fecha = c.fecha ? new Date(c.fecha+'T12:00:00').toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'}) : '';
   return '<div class="cdoc" style="'+S_.doc+'">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'

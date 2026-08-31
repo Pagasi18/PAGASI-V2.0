@@ -1,8 +1,9 @@
 // Logica de contratos y documentos legales. Extraido mecanicamente de assets/pagasi-app.js.
 function renderContrato(){
-  var tipo = ($('sel-tipo-doc')&&$('sel-tipo-doc').value) || 'contrato';
-  // Contratos del asesor legal (compraventa con reserva de dominio + cesion).
-  // Salen siempre en pareja: la cesion no tiene sentido sin la venta que la origina.
+  // Predeterminado: los contratos aprobados por el asesor legal (compraventa con
+  // reserva de dominio + cesion). Salen siempre en pareja: la cesion no tiene
+  // sentido sin la venta que la origina.
+  var tipo = ($('sel-tipo-doc')&&$('sel-tipo-doc').value) || 'dra';
   if(tipo==='dra' && typeof _renderContratosDRA==='function') return _renderContratosDRA();
   if(tipo==='pagare') return _renderPagare();
   if(tipo==='carta') return _renderCartaInstrucciones();
@@ -996,7 +997,8 @@ function _htmlContratosDelDia(fecha){
   var salto = '<div style="page-break-before:always;break-before:page;height:0"></div>';
   var partes = [];
   for(var i=0;i<lista.length;i++){
-    var h = _htmlContratoAgenteCobro(true, lista[i].id);
+    var h = (typeof _htmlContratosDRA==='function') ? _htmlContratosDRA(lista[i].id)
+            : _htmlContratoAgenteCobro(true, lista[i].id);
     if(h) partes.push((i?salto:'') + h);
   }
   return partes.length ? partes.join('') : null;
@@ -1032,7 +1034,7 @@ function verContratoById(credId){
       sel.value = credId;
     }
     var td = document.getElementById('sel-tipo-doc');
-    if(td) td.value = 'contrato';
+    if(td) td.value = 'dra';
     if(typeof renderContrato==='function') renderContrato();
     var cz = document.getElementById('cz');
     var html = cz ? cz.innerHTML : '<div style="padding:40px;text-align:center;color:#888">No se pudo generar el contrato</div>';
