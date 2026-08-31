@@ -29,7 +29,11 @@ var S={
     {id:'CRED-2',cli:'Beto',fecha:dLoc(-10),estado:'activo',total:1500,fin:1000,eliminado:false},
     {id:'CRED-3',cli:'Caro',fecha:dLoc(-5),estado:'pendiente_revision',total:9999,fin:9000,eliminado:false},
     {id:'CRED-4',cli:'Dario',fecha:dLoc(-5),estado:'activo',total:0,fin:0,eliminado:false},
-    {id:'CRED-5',cli:'Elsa',fecha:dLoc(-3),estado:'activo',total:777,fin:600,eliminado:true}
+    {id:'CRED-5',cli:'Elsa',fecha:dLoc(-3),estado:'activo',total:777,fin:600,eliminado:true},
+    // Anulado por duplicado, con plazo mal tipeado (122026 en vez de 12) que dispara
+    // el total a millones. eliminado:false porque se anulo en modo 'mantener'.
+    {id:'CRED-6',cli:'Fabio',fecha:dLoc(-8),estado:'cancelado',plazo:122026,
+     total:23917096,fin:1146,precio:2080,eliminado:false}
   ],
   pagos:[
     {id:'P-1',cred:'CRED-1',cli:'Ana',fecha:dLoc(-20),monto:100,metodo:'Binance',estado:'confirmado',eliminado:false},
@@ -134,6 +138,23 @@ ok(mapa['Banco de Venezuela']==='1113001','Banco de Venezuela → 1113001');
 var MBs=function(n){ return 'Bs. '+API._coroF((parseFloat(n)||0)*160); };
 ok(MBs(10)==='Bs. '+(1600).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}),'Conversion a Bs multiplica por la tasa');
 ok(API._coroHtmlESF(ctx3,MBs).indexOf('Bs. ')>-1,'ESF imprimible en Bs');
+
+
+// ── Un credito anulado no puede entrar al libro (caso CRED-335 real: se anulo por
+// duplicado pero traia plazo 122026, y su total de $23,9M deformaba todo el ER) ──
+(function(){
+  var ctx2 = API._coroCtx();
+  var lin = ctx2.lineas || [];
+  var tocado = lin.some(function(l){ return String(l.concepto||'').indexOf('CRED-6')>-1; });
+  ok(!tocado, 'el credito anulado no genera asientos');
+
+  var mayor = lin.reduce(function(a,l){ return a + (l.debe||0) + (l.haber||0); }, 0);
+  ok(mayor < 1000000, 'ningun asiento arrastra el total disparatado del anulado ('+Math.round(mayor)+')');
+
+  var ingresos = lin.filter(function(l){ return /ingreso/i.test(String(l.cuenta||'')+String(l.nombre||'')); })
+                    .reduce(function(a,l){ return a + (l.haber||0); }, 0);
+  ok(ingresos < 100000, 'los ingresos quedan en rango real ('+Math.round(ingresos)+')');
+})();
 
 console.log(pass+' pruebas OK, '+fail+' fallas');
 process.exit(fail?1:0);

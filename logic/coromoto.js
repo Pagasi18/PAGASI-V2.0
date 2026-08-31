@@ -148,7 +148,10 @@ function _coroAsientos(){
   (S.creds||[]).forEach(function(c){
     if(!c||c.eliminado) return;
     var est=String(c.estado||'');
-    if(est==='pendiente_revision'||est==='rechazado'||est==='rechazada') return;
+    // Los cancelados son ventas que se anularon (duplicados, errores de carga): nunca
+    // ocurrieron comercialmente, asi que no van al libro. El resto del app ya los
+    // excluye; sin esto un solo credito anulado con datos malos deforma todo el ER.
+    if(est==='pendiente_revision'||est==='rechazado'||est==='rechazada'||est==='cancelado') return;
     var total=r2(c.total), fin=r2(c.fin);
     if(!(total>0)){ avisos.credsSinPlan++; return; }
     if(!(fin>0)) fin=total;
