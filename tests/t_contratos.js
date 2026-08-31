@@ -18,21 +18,21 @@ const L=fs.readFileSync(path.join(ROOT,'logic/contratos.js'),'utf8');
 const API=eval('with(auto){'+L+'\n; ({_contratoVersionDe:_contratoVersionDe, _CONTRATO_DRA_DESDE:_CONTRATO_DRA_DESDE}) }');
 const V=API._contratoVersionDe, CORTE=API._CONTRATO_DRA_DESDE;
 
-ok('la fecha de corte es hoy (30-ago-2026)', CORTE==='2026-08-30');
+ok('la fecha de corte es hoy (31-ago-2026)', CORTE==='2026-08-31');
 
 // ── Creditos ya firmados: manda el dia en que se firmo ──
-ok('firmado antes del corte  -> contrato anterior', V({contratoFirmado:true, fechaContratoFirmado:'2026-08-29'})==='contrato');
-ok('firmado el dia del corte -> contrato nuevo',    V({contratoFirmado:true, fechaContratoFirmado:'2026-08-30'})==='dra');
+ok('firmado antes del corte  -> contrato anterior', V({contratoFirmado:true, fechaContratoFirmado:'2026-08-30'})==='contrato');
+ok('firmado el dia del corte -> contrato nuevo',    V({contratoFirmado:true, fechaContratoFirmado:'2026-09-01'})==='dra');
 ok('firmado despues          -> contrato nuevo',    V({contratoFirmado:true, fechaContratoFirmado:'2026-09-15'})==='dra');
 ok('firmado hace un ano      -> contrato anterior', V({contratoFirmado:true, fechaContratoFirmado:'2025-11-02'})==='contrato');
 
 // ── Sin fechaContratoFirmado cae a la fecha del credito (asi quedo la migracion) ──
 ok('sin fechaFirmado usa fecha del credito', V({contratoFirmado:true, fecha:'2026-03-10'})==='contrato');
-ok('fechaFirmado gana sobre fecha del credito', V({contratoFirmado:true, fecha:'2026-03-10', fechaContratoFirmado:'2026-08-31'})==='dra');
+ok('fechaFirmado gana sobre fecha del credito', V({contratoFirmado:true, fecha:'2026-03-10', fechaContratoFirmado:'2026-09-01'})==='dra');
 
 // ── Todavia sin firmar: no firmo nada, le toca el vigente ──
-ok('sin firmar creado ayer -> contrato nuevo', V({contratoFirmado:false, fecha:'2026-08-29'})==='dra');
-ok('sin firmar creado hoy  -> contrato nuevo', V({contratoFirmado:false, fecha:'2026-08-30'})==='dra');
+ok('sin firmar creado ayer -> contrato nuevo', V({contratoFirmado:false, fecha:'2026-08-30'})==='dra');
+ok('sin firmar creado hoy  -> contrato nuevo', V({contratoFirmado:false, fecha:'2026-08-31'})==='dra');
 
 // ── La version grabada manda sobre todo lo demas (para el futuro) ──
 ok('version grabada manda', V({contratoVersion:'contrato', contratoFirmado:true, fechaContratoFirmado:'2026-12-01'})==='contrato');
@@ -41,5 +41,5 @@ ok('version grabada manda (al reves)', V({contratoVersion:'dra', contratoFirmado
 // ── Bordes: nada raro debe reventar ──
 ok('credito nulo no revienta', V(null)==='dra');
 ok('firmado sin ninguna fecha -> anterior (conservador)', V({contratoFirmado:true})==='contrato');
-ok('fecha con hora se recorta bien', V({contratoFirmado:true, fechaContratoFirmado:'2026-08-29T23:59:00'})==='contrato');
+ok('fecha con hora se recorta bien', V({contratoFirmado:true, fechaContratoFirmado:'2026-08-30T23:59:00'})==='contrato');
 ok('objeto vacio no revienta', V({})==='dra');

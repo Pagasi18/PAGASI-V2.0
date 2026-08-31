@@ -7,7 +7,7 @@
 // del credito. Sin esto, reimprimir un credito viejo lo sacaria con el
 // formato nuevo, que no es el que ese cliente firmo. La version se deduce
 // de cuando se firmo, para que una reimpresion siempre calce con el papel.
-var _CONTRATO_DRA_DESDE = '2026-08-30';
+var _CONTRATO_DRA_DESDE = '2026-08-31';
 
 function _contratoVersionDe(c){
   if(!c) return 'dra';
