@@ -272,7 +272,7 @@ function _draEstilos(){
     cl:'color:'+az+';font-weight:900;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;margin:16px 0 7px;padding-bottom:4px;border-bottom:2px solid '+az+';page-break-after:avoid',
     p:'font-size:11.2px;line-height:1.6;color:#222;margin:6px 0;text-align:justify',
     sub:'font-size:11.2px;line-height:1.6;color:#222;margin:6px 0 6px 14px;text-align:justify',
-    def:'font-size:10.6px;line-height:1.5;color:#333;margin:2px 0 2px 20px;text-align:justify'
+    def:'font-size:11.2px;line-height:1.55;color:#222;margin:3px 0 3px 20px;text-align:justify'
   };
 }
 
