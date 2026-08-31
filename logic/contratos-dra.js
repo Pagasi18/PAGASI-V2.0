@@ -10,10 +10,10 @@
 
 var _DRA_CUERPO = [
   function(D){ return `CONTRATO DE COMPRAVENTA DE VEHÍCULO AUTOMOTOR CON RESERVA DE DOMINIO`; },
-  function(D){ return `El presente CONTRATO DE COMPRAVENTA DE VEHÍCULO AUTOMOTOR CON RESERVA DE DOMINIO (en lo sucesivo aludido como el “Contrato”) se celebra en la fecha de su otorgamiento (la “Fecha de Celebración”), entre (i) ${D.concNom}, sociedad inscrita ante el Registro Mercantil ${D.b(18)} de la Circunscripción Judicial del Estado ${D.b(12)} en fecha ${D.b(10)}, bajo el No. ${D.b(6)}, Tomo ${D.b(6)}, e inscrita en el Registro de Información Fiscal (“RIF”) bajo el N° J-${D.b(8)}-${D.b(3)} (en adelante el “Concesionario”), representada en este acto por ${D.b(20)}, venezolano, con cédula de identidad venezolana número V-${D.b(12)} y con RIF número V-${D.b(10)}-${D.b(3)}, actuando en su carácter de ${D.b(14)} del Concesionario, según se desprende de ${D.b(18)}; (ii) ${D.empNom}, sociedad inscrita ante el Registro Mercantil ${D.empRm} de la Circunscripción Judicial del Estado ${D.empRmEstado} en fecha ${D.empRmFecha}, bajo el No. ${D.empRmNum}, Tomo ${D.empRmTomo}, e inscrita en el RIF bajo el N° J-${D.empRif1}-${D.empRif2} (en adelante “Pagasi”), representada en este acto por ${D.empRep}, venezolano, con cédula de identidad venezolana número V-${D.empRepCi} y con RIF número V-${D.b(10)}-${D.b(3)}, actuando en su carácter de ${D.empRepCargo} de Pagasi, según se desprende de ${D.empRepDoc}; y (iii) ${D.cliNom}, venezolano, con cédula de identidad venezolana número V-${D.cliCi} y con RIF número V-${D.cliRif1}-${D.cliRif2} (el “Comprador” y junto con el Concesionario y Pagasi, las “Partes” y cada una, una “Parte”); de conformidad con lo previsto en los artículos 1.264, 1.266, 1.268, 1.474 y siguientes, y 1.583 y siguientes del Código Civil, el artículo 71 de la Ley de Transporte Terrestre, y la Ley sobre Ventas con Reserva de Dominio, en base en los términos y condiciones siguientes:`; },
-  function(D){ return `Asimismo, interviene en el presente Contrato (iv) ${D.fiaNom}, venezolano, mayor de edad, titular de la cédula de identidad venezolana número V-${D.fiaCi} y con RIF número V-${D.fiaRif1}-${D.fiaRif2}, domiciliado en ${D.fiaDir}, quien actúa en su carácter de fiador solidario y principal pagador del Comprador (el “Fiador”), quedando comprendido dentro de la definición de “Partes” para todos los efectos de este Contrato.`; },
+  function(D){ return _draPreambuloCV(D); },
+  function(D){ return _draPreambuloFiador(D); },
   function(D){ return `CONSIDERANDO QUE el Concesionario es una agencia distribuidora de motocicletas, en los términos previstos en el artículo 18(1) del Reglamento Parcial de la Ley de Transporte Terrestre sobre el Uso y Circulación de Motocicletas en la Red Vial Nacional y el Transporte Público de Personas en la Modalidad Individual Moto Taxis, contenido en el Decreto Presidencial No. 8.495, publicado en Gaceta Oficial No. 39.772 del 5 de octubre de 2011 (el “Reglamento LTT—Motos”).`; },
-  function(D){ return `CONSIDERANDO QUE el Concesionario es propietario de un vehículo a motor o automotor, cuyas características se identifican a continuación: marca: ${D.marca}, modelo: ${D.modelo}, año: ${D.anio}, clase: MOTO, tipo: ${D.tipo}, color: ${D.color}, placa: ${D.placa}, serial de carrocería o chasis número: ${D.chasis}, serial de motor número: ${D.motor}, uso: ${D.uso} (el “Vehículo”), y el Comprador, conociendo el estado, situación y condición general del Vehículo, desea adquirir el mismo del Concesionario con el financiamiento de Pagasi.`; },
+  function(D){ return _draVehiculo(D); },
   function(D){ return `CONSIDERANDO QUE Pagasi actúa como agente de cobro del Concesionario conforme a un contrato de mandato celebrado entre el Concesionario y Pagasi (el “Contrato de Mandato”), y como cesionario de las acreencias del precio conforme a un contrato de cesión de créditos celebrado entre el Concesionario y Pagasi en esta misma fecha (el “Contrato de Cesión de Créditos”), cuya existencia el Comprador declara expresamente en este acto estar en pleno conocimiento y, en consecuencia, estar debidamente notificado para todos los efectos legales derivados de la cesión de créditos, la cual es aceptada en este acto por el Comprador.`; },
   function(D){ return `CONSIDERANDO QUE las Partes han convenido en constituir una reserva de dominio sobre el Vehículo a favor de Pagasi (la “Reserva de Dominio”), como mecanismo de garantía del pago íntegro del Precio, de conformidad con lo previsto en los artículos 1.583 y siguientes del Código Civil y la Ley sobre Ventas con Reserva de Dominio.`; },
   function(D){ return `Las Partes, por medio del presente Contrato, expresamente establecen lo siguiente:`; },
@@ -69,9 +69,9 @@ var _DRA_CUERPO = [
   function(D){ return `(a) 	a las direcciones de correo electrónico (“E-Mail”) abajo indicadas en la Sección 10.2; en el entendido de que, en este caso, las mismas se entenderán perfeccionadas, válidas y efectivamente realizadas al día hábil siguiente (a partir de las 00:00 am (hora de Venezuela), de ese día); o`; },
   function(D){ return `(b)  	a las direcciones físicas de oficina abajo indicadas en la Sección 10.2; en el entendido de que, en este caso, las mismas se entenderán perfeccionadas, válidas y efectivamente realizadas única y exclusivamente si la Parte a quien se dirige la comunicación continúa laborando o prestando servicios en la oficina a la cual se dirige la comunicación. En este caso la notificación se entenderá recibida al día hábil siguiente de la fecha de recepción (a partir de las 00:00 am (hora de Venezuela), de ese día).`; },
   function(D){ return `10.2	Direcciones y Destino de las Notificaciones. Las Partes escogen como destino válido para practicar las notificaciones, comunicaciones, citaciones y/o entregas bajo este Contrato, las siguientes direcciones físicas y de E-Mail:`; },
-  function(D){ return `(a)	Al Comprador: (i) E-Mail: ${D.cliEmail}; (ii) Dirección: ${D.cliDir}; (iii) Teléfono: +58 ${D.cliTel}.`; },
-  function(D){ return `(b)	A Pagasi: (i) E-Mail: ${D.empEmail}; (ii) Dirección: ${D.empDir}; (iii) Teléfono: +58 ${D.empTel}.`; },
-  function(D){ return `(c)	Al Concesionario: (i) E-Mail: ${D.concEmail}; (ii) Dirección: ${D.concDir}; (iii) Teléfono: +58 ${D.concTel}.`; },
+  function(D){ return _draContacto('(a) Al Comprador:', D.cli.email, D.cli.direccion, D.cli.tel); },
+  function(D){ return _draContacto('(b) A Pagasi:', D.emp.email, D.emp.direccion, D.emp.tel); },
+  function(D){ return _draContacto('(c) Al Concesionario:', D.conc.email, D.conc.direccion, D.conc.telefono); },
   function(D){ return `Cualquier modificación de estas direcciones físicas, de E-Mail y de datos de contacto telefónicos, será comunicada entre las Partes de inmediato.`; },
   function(D){ return `11. DISPOSICIONES GENERALES Y MISCELÁNEAS`; },
   function(D){ return `11.1	Ley Aplicable; Jurisdicción.`; },
@@ -122,13 +122,13 @@ var _DRA_CUERPO = [
   function(D){ return `12.1	Constitución de la Fianza. El Fiador se constituye en este acto en fiador solidario y principal pagador del Comprador frente a Pagasi, por todas y cada una de las obligaciones asumidas por el Comprador bajo el presente Contrato, incluyendo sin limitación el pago íntegro del Precio, la Inicial, las Cuotas Quincenales, los intereses moratorios y cualesquiera otros montos, gastos, costos y costas derivados del mismo.`; },
   function(D){ return `12.2	Renuncia a Beneficios. El Fiador renuncia expresamente a los beneficios de excusión y de división previstos en el Código Civil, así como a cualquier otro beneficio que pudiera corresponderle, de manera que Pagasi podrá exigirle el cumplimiento íntegro de las obligaciones garantizadas sin necesidad de requerir previamente al Comprador ni de ejecutar la Reserva de Dominio.`; },
   function(D){ return `12.3	Vigencia de la Fianza. La fianza permanecerá vigente hasta la extinción total de las obligaciones garantizadas, y no se verá afectada ni extinguida por las prórrogas, modificaciones, refinanciamientos, planes o facilidades de pago que Pagasi pudiera conceder al Comprador, las cuales el Fiador acepta y autoriza desde ahora.`; },
-  function(D){ return `12.4	Notificaciones al Fiador. (i) E-Mail: ${D.fiaEmail}; (ii) Dirección: ${D.fiaDir2}; (iii) Teléfono: +58 ${D.fiaTel}.`; },
+  function(D){ var t=_draContacto('', D.cli.fiador_email, D.cli.fiador_dir, D.cli.fiador_tel); return t ? '12.4\tNotificaciones al Fiador. '+t : ''; },
   function(D){ return `Las Partes firman el presente Contrato en señal de conformidad y aceptación, en la Fecha de Celebración.-`; }
 ];
 
 var _DRA_CESION = [
   function(D){ return `CONTRATO DE CESIÓN DE CRÉDITOS`; },
-  function(D){ return `El presente CONTRATO DE CESIÓN DE CRÉDITOS (el “Contrato”) se celebra en fecha ${D.diaNum} de ${D.mesAnio} (la “Fecha Efectiva”), por y entre: (i) ${D.concNom}, sociedad inscrita ante el Registro Mercantil ${D.b(18)} de la Circunscripción Judicial del Estado ${D.b(12)} en fecha ${D.b(10)}, bajo el No. ${D.b(6)}, Tomo ${D.b(6)}, e inscrita en el Registro de Información Fiscal (“RIF”) bajo el N° J-${D.b(8)}-${D.b(3)} (en adelante el “Cedente”), representada en este acto por ${D.b(20)}, venezolano, con cédula de identidad venezolana número V-${D.b(12)} y con RIF número V-${D.b(10)}-${D.b(3)}, actuando en su carácter de ${D.b(14)} del Cedente, según se desprende de ${D.b(18)}; (ii) Pagasi, sociedad inscrita ante el Registro Mercantil ${D.empRm} de la Circunscripción Judicial del Estado ${D.empRmEstado} en fecha ${D.empRmFecha}, bajo el No. ${D.empRmNum}, Tomo ${D.empRmTomo}, e inscrita en el RIF bajo el N° J-${D.empRif1}-${D.empRif2} (en adelante el “Cesionario” y, junto con el Cedente, las “Partes” y cada una, una “Parte”), representada en este acto por ${D.empRep}, venezolano, con cédula de identidad venezolana número V-${D.empRepCi} y con RIF número V-${D.b(10)}-${D.b(3)}, actuando en su carácter de ${D.empRepCargo} del Cesionario, según se desprende de ${D.empRepDoc}; en base a los términos y condiciones siguientes:`; },
+  function(D){ return _draPreambuloCE(D); },
   function(D){ return `POR CUANTO, el Cedente celebró en esta misma fecha un contrato de compraventa con reserva de dominio cuyo objeto es la motocicleta allí indicada (el “Contrato de Compraventa”) con el comprador identificado en dicho Contrato de Compraventa  (el “Comprador”), por un precio de venta financiado en cuotas periódicas, generándose así una serie de cuentas por cobrar representadas por las cuotas pendientes de pago por el Comprador, las cuales se detallan en el Anexo “A” del presente Contrato (las “Cuentas por Cobrar”);`; },
   function(D){ return `POR CUANTO, el Cedente tiene la intención de vender, ceder y transferir al Cesionario, y que el Cesionario tiene la intención de adquirir del Cedente, la totalidad de las Cuentas por Cobrar derivadas de los Contratos de Compraventa.`; },
   function(D){ return `Las Partes convienen en celebrar el presente Contrato, en base a los términos y condiciones siguientes:`; },
@@ -158,8 +158,8 @@ var _DRA_CESION = [
   function(D){ return `4. DISPOSICIONES GENERALES`; },
   function(D){ return `4.1 	Confidencialidad. Las Partes se obligan a mantener estricta confidencialidad sobre la existencia, términos, condiciones y disposiciones de este Contrato, y no podrán revelarlos públicamente ni comunicarlos a terceros sin el consentimiento previo y por escrito de la otra Parte, salvo cuando la divulgación sea requerida por ley, reglamento, autoridad competente, tribunal, panel arbitral, asesor legal, contable o financiero, aseguradora, entidad bancaria, proveedor necesario para la ejecución del Contrato, o cuando sea razonablemente necesaria para ejercer derechos, cumplir obligaciones o defender intereses derivados de este Contrato. La Parte que realice una divulgación permitida deberá procurar que el receptor mantenga la información con carácter confidencial, en la medida que ello sea razonablemente posible.`; },
   function(D){ return `4.2 	Notificaciones. Las notificaciones y comunicaciones entre las Partes, a efectos de este Contrato, se tendrán como válidas y perfeccionadas cuando se realicen por escrito, y sean remitidas: (a) a las direcciones de correo electrónico (“E-Mail”) abajo indicadas; en el entendido de que, en este caso, las mismas se entenderán perfeccionadas, válidas y efectivamente realizadas al día hábil siguiente (a partir de las 00:00 am (hora de Venezuela), de ese día); o (b)  a las direcciones físicas de oficina abajo indicadas; en el entendido de que, en este caso, las mismas se entenderán perfeccionadas, válidas y efectivamente realizadas única y exclusivamente si la Parte a quien se dirige la comunicación continúa laborando o prestando servicios en la oficina a la cual se dirige la comunicación. En este caso la notificación se entenderá recibida al día hábil siguiente de la fecha de recepción (a partir de las 00:00 am (hora de Venezuela), de ese día). Las Partes escogen como destino válido para practicar las notificaciones, comunicaciones, citaciones y/o entregas bajo este Contrato, las siguientes direcciones físicas y de E-Mail:`; },
-  function(D){ return `(a)	Al Cedente: (i) E-Mail: ${D.concEmail}; (ii) Dirección: ${D.concDir}; (iii) Teléfono: +58 ${D.concTel}.`; },
-  function(D){ return `(b)	Al Cesionario: (i) E-Mail: ${D.empEmail}; (ii) Dirección: ${D.empDir}; (iii) Teléfono: +58 ${D.empTel}.`; },
+  function(D){ return _draContacto('(a) Al Cedente:', D.conc.email, D.conc.direccion, D.conc.telefono); },
+  function(D){ return _draContacto('(b) Al Cesionario:', D.emp.email, D.emp.direccion, D.emp.tel); },
   function(D){ return `Cualquier modificación de estas direcciones físicas, de E-Mail y de datos de contacto telefónicos, será comunicada entre las Partes de inmediato.`; },
   function(D){ return `4.3 	Ley Aplicable. El presente Contrato se regirá e interpretará de conformidad con las leyes de la República Bolivariana de Venezuela.`; },
   function(D){ return `4.4 	Disputas. Cualquier disputa, reclamo, controversia y/o diferencia relacionada con este Contrato, o que se derive de la interpretación, incumplimiento, terminación o invalidez del mismo, incluyendo cualquier pretensión de daños y perjuicios, será resuelta en forma definitiva mediante arbitraje administrado por el Centro Empresarial de Conciliación y Arbitraje (“CEDCA”), de conformidad con el respectivo Reglamento del CEDCA, vigente para la fecha de inicio de una disputa (el “Reglamento CEDCA”). El arbitraje será tramitado a través del “Procedimiento Expedito” conforme al Reglamento CEDCA y el arbitraje será “de derecho”. El Tribunal arbitral estará compuesto por un (1) solo árbitro designado en la forma prevista en el Reglamento CEDCA. El procedimiento arbitral se llevará a cabo en la ciudad de Caracas, Venezuela, en idioma castellano.`; },
@@ -169,6 +169,130 @@ var _DRA_CESION = [
   function(D){ return `4.8 	Ejemplares. Este Contrato se extiende y suscribe en dos (2) ejemplares que se reputarán como originales del mismo; quedando cada ejemplar en poder de cada Parte.`; },
   function(D){ return `Las Partes firman el presente Contrato en señal de conformidad y aceptación, en la Fecha Efectiva.-`; }
 ];
+
+
+// ── Redaccion adaptativa: lo que no tiene dato NO se escribe ──────────────
+// En vez de dejar rayas en blanco, cada frase solo aparece si hay con que
+// llenarla. Asi el contrato sale limpio aunque falten datos registrales.
+function _draTxt(v){ var t = (v==null?'':String(v)).trim(); return t; }
+
+// Describe a una sociedad: nombre + registro mercantil + RIF + representante,
+// omitiendo cada tramo que no tenga informacion.
+function _draSociedad(d){
+  var out = '<strong>' + _draTxt(d.nombre) + '</strong>';
+  var reg = [];
+  if(_draTxt(d.rm))       reg.push('ante el Registro Mercantil <strong>'+_draTxt(d.rm)+'</strong>');
+  if(_draTxt(d.rmEstado)) reg.push('de la Circunscripción Judicial del Estado <strong>'+_draTxt(d.rmEstado)+'</strong>');
+  if(_draTxt(d.rmFecha))  reg.push('en fecha <strong>'+_draTxt(d.rmFecha)+'</strong>');
+  var libro = [];
+  if(_draTxt(d.rmNum))  libro.push('bajo el No. <strong>'+_draTxt(d.rmNum)+'</strong>');
+  if(_draTxt(d.rmTomo)) libro.push('Tomo <strong>'+_draTxt(d.rmTomo)+'</strong>');
+  if(reg.length || libro.length){
+    out += ', sociedad mercantil inscrita ' + reg.join(' ');
+    if(libro.length) out += (reg.length?', ':'') + libro.join(', ');
+  } else {
+    out += ', sociedad mercantil';
+  }
+  if(_draTxt(d.rif)) out += ', inscrita en el Registro de Información Fiscal (“RIF”) bajo el N° <strong>'+_draTxt(d.rif)+'</strong>';
+  return out;
+}
+
+// Representante de una sociedad: se omite entero si no hay nombre.
+function _draRepresentante(d){
+  if(!_draTxt(d.rep)) return '';
+  var t = ', representada en este acto por <strong>'+_draTxt(d.rep)+'</strong>';
+  if(_draTxt(d.repCi)) t += ', titular de la cédula de identidad venezolana número <strong>V-'+_draTxt(d.repCi)+'</strong>';
+  if(_draTxt(d.repCargo)) t += ', actuando en su carácter de <strong>'+_draTxt(d.repCargo)+'</strong>';
+  if(_draTxt(d.repDoc)) t += ', según se desprende de <strong>'+_draTxt(d.repDoc)+'</strong>';
+  return t;
+}
+
+// Persona natural: nombre + cedula + RIF (el RIF solo si esta cargado).
+function _draPersona(nombre, ci, rif){
+  var t = '<strong>'+_draTxt(nombre)+'</strong>, venezolano, mayor de edad';
+  if(_draTxt(ci))  t += ', titular de la cédula de identidad venezolana número <strong>V-'+_draTxt(ci)+'</strong>';
+  if(_draTxt(rif)) t += ' y con RIF número <strong>'+_draTxt(rif)+'</strong>';
+  return t;
+}
+
+function _draDatosPartes(D){
+  var emp = D.emp || {}, conc = D.conc || {}, cli = D.cli || {}, c = D.c || {};
+  return {
+    conc: { nombre: conc.nombre || '', rif: conc.rif || '', rm: conc.rm || '', rmEstado: conc.rmEstado || '',
+            rmFecha: conc.rmFecha || '', rmNum: conc.rmNum || '', rmTomo: conc.rmTomo || '',
+            rep: conc.representante || '', repCi: conc.repCI || '', repCargo: conc.repCargo || '', repDoc: conc.repDoc || '' },
+    // Por decision de la empresa el representante de Pagasi no se identifica en
+    // el contrato: firma la compañia, identificada por su RIF.
+    emp:  { nombre: emp.nombre || 'PAGASI 18, C.A.', rif: emp.rif || '', rm: emp.rm || '', rmEstado: emp.rmEstado || '',
+            rmFecha: emp.rmFecha || '', rmNum: emp.rmNum || '', rmTomo: emp.rmTomo || '', rep: '' },
+    cli:  { nombre: cli.nombre || c.cli || '', ci: cli.cedula || cli.ci || '', rif: cli.rif || '' },
+    fia:  { nombre: cli.fiador_nom || '', ci: cli.fiador_ci || '', rif: cli.fiador_rif || '', dir: cli.fiador_dir || '' }
+  };
+}
+
+// Preambulo del contrato de compraventa
+function _draPreambuloCV(D){
+  var P = _draDatosPartes(D);
+  return 'El presente CONTRATO DE COMPRAVENTA DE VEHÍCULO AUTOMOTOR CON RESERVA DE DOMINIO (en lo sucesivo aludido '
+   + 'como el “Contrato”) se celebra en la fecha de su otorgamiento (la “Fecha de Celebración”), entre '
+   + '(i) ' + _draSociedad(P.conc) + _draRepresentante(P.conc) + ' (en adelante el “Concesionario”); '
+   + '(ii) ' + _draSociedad(P.emp) + _draRepresentante(P.emp) + ' (en adelante “Pagasi”); '
+   + 'y (iii) ' + _draPersona(P.cli.nombre, P.cli.ci, P.cli.rif)
+   + ' (el “Comprador” y junto con el Concesionario y Pagasi, las “Partes” y cada una, una “Parte”); '
+   + 'de conformidad con lo previsto en los artículos 1.264, 1.266, 1.268, 1.474 y siguientes, y 1.583 y siguientes '
+   + 'del Código Civil, el artículo 71 de la Ley de Transporte Terrestre, y la Ley sobre Ventas con Reserva de '
+   + 'Dominio, en base en los términos y condiciones siguientes:';
+}
+
+// Intervencion del fiador (se omite completa si el credito no tiene fiador)
+function _draPreambuloFiador(D){
+  var P = _draDatosPartes(D);
+  if(!_draTxt(P.fia.nombre)) return '';
+  var t = 'Asimismo, interviene en el presente Contrato (iv) ' + _draPersona(P.fia.nombre, P.fia.ci, P.fia.rif);
+  if(_draTxt(P.fia.dir)) t += ', domiciliado en <strong>'+_draTxt(P.fia.dir)+'</strong>';
+  return t + ', quien actúa en su carácter de fiador solidario y principal pagador del Comprador (el “Fiador”), '
+   + 'quedando comprendido dentro de la definición de “Partes” para todos los efectos de este Contrato.';
+}
+
+// Caracteristicas del vehiculo: solo las que tienen dato
+function _draVehiculo(D){
+  var c = D.c || {}, m = D.moto || {};
+  var val = function(a, b){ return _draTxt(a) || _draTxt(b); };
+  var campos = [
+    ['marca', val(c.marca, m.marca)], ['modelo', val(c.modelo, m.modelo)], ['año', val(c.anio, m.anio)],
+    ['clase', 'MOTO'], ['tipo', val(m.tipo, '')],
+    ['color', val(c.color==='—'?'':c.color, m.color)], ['placa', val(c.placa==='—'?'':c.placa, m.placa)],
+    ['serial de carrocería o chasis', val(c.serialChasis || c.vin, m.serialChasis || m.vin)],
+    ['serial de motor', val(c.serialMotor, m.serialMotor)],
+    ['uso', String(c.uso_moto||'PARTICULAR').toUpperCase()]
+  ].filter(function(x){ return x[1]; })
+   .map(function(x){ return x[0] + ': <strong>' + x[1] + '</strong>'; });
+  return 'CONSIDERANDO QUE el Concesionario es propietario de un vehículo a motor o automotor, cuyas características '
+   + 'se identifican a continuación: ' + campos.join(', ') + ' (el “Vehículo”), y el Comprador, conociendo el estado, '
+   + 'situación y condición general del Vehículo, desea adquirir el mismo del Concesionario con el financiamiento de Pagasi.';
+}
+
+// Preambulo de la cesion
+function _draPreambuloCE(D){
+  var P = _draDatosPartes(D);
+  return 'El presente CONTRATO DE CESIÓN DE CRÉDITOS (el “Contrato”) se celebra en fecha ' + D.diaNum + ' de '
+   + D.mesAnio + ' (la “Fecha Efectiva”), por y entre: '
+   + '(i) ' + _draSociedad(P.conc) + _draRepresentante(P.conc) + ' (en adelante el “Cedente”); '
+   + 'y (ii) ' + _draSociedad(P.emp) + _draRepresentante(P.emp)
+   + ' (en adelante el “Cesionario” y, junto con el Cedente, las “Partes” y cada una, una “Parte”); '
+   + 'en base a los términos y condiciones siguientes:';
+}
+
+// Datos de contacto: solo los que existen
+function _draContacto(rotulo, email, dir, tel){
+  var partes = [];
+  if(_draTxt(email)) partes.push('E-Mail: <strong>'+_draTxt(email)+'</strong>');
+  if(_draTxt(dir))   partes.push('Dirección: <strong>'+_draTxt(dir)+'</strong>');
+  if(_draTxt(tel))   partes.push('Teléfono: <strong>'+_draTxt(tel)+'</strong>');
+  if(!partes.length) return '';
+  var rom = ['(i) ','(ii) ','(iii) '];
+  return rotulo + ' ' + partes.map(function(t,i){ return rom[i]+t; }).join('; ') + '.';
+}
 
 // ── Datos del credito volcados en el formato que pide el contrato ──
 function _draDatos(credId){
@@ -311,6 +435,7 @@ function _draCuerpo(lista, D, S_){
   };
   lista.forEach(function(fn){
     var txt = fn(D);
+    if(!txt || !String(txt).trim()) return;   // parrafo sin datos: no se imprime
     if(/^CONTRATO DE [A-ZÁÉÍÓÚÑ ]+$/.test(txt)){ cerrar(); out += _draParrafo(txt, S_); return; }
     if(/^\d{1,2}\.\s+[A-ZÁÉÍÓÚÑ]/.test(txt)){          // 1. OBJETO DEL CONTRATO
       cerrar();
