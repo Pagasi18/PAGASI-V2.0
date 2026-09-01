@@ -17,7 +17,7 @@ global.ok=(l,v)=>{ if(v){pass++;console.log('OK   '+l);} else {fail++;console.lo
 
 const auto=new Proxy({},{has:()=>true,get:(t,k)=>{if(k===Symbol.unscopables)return undefined;if(k in t)return t[k];if(k in global)return global[k];return function(){return 0;};},set:(t,k,v)=>{t[k]=v;return true;}});
 const SRC=fs.readFileSync(path.join(ROOT,'logic/gps.js'),'utf8');
-const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha}) }');
+const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar}) }');
 
 // ── Escenario: 5 creditos, 3 con equipo ──
 S.creds = [
@@ -256,6 +256,93 @@ ok('solo fecha: mediodia local, no UTC',
    API._gpsParseFecha('2026-09-01').getHours() === 12);
 ok('vacio devuelve null', API._gpsParseFecha('') === null);
 ok('basura devuelve null', API._gpsParseFecha('no es fecha') === null);
+
+// ══════════════════════════════════════════════════════════════════
+// BUSCADOR — con 500 equipos es la unica forma de llegar a uno
+// ══════════════════════════════════════════════════════════════════
+S.creds = [
+  {id:'CRED-467', cli:'WILMER CARRANZA', modelo:'CF MT 450', placa:'AM2D29J', estado:'activo', mora:0,  eliminado:false},
+  {id:'CRED-477', cli:'ABEL RAMIREZ',    modelo:'NEW OUTLOOK 175', placa:'AM6C46J', estado:'mora', mora:9, eliminado:false},
+];
+const eq = {id:'X', estado:'instalado', creditoId:'CRED-467', idGps:'19210075478',
+            imei:'866557086115211', linea:'143557051', iccid:'895804420015136641',
+            tecnico:'FRANCISCO', eliminado:false};
+
+ok('sin texto, todo pasa', API._gpsCoincide(eq, ''));
+ok('busca por serial', API._gpsCoincide(eq, '19210075478'));
+ok('busca por serial parcial', API._gpsCoincide(eq, '75478'));
+ok('busca por IMEI', API._gpsCoincide(eq, '866557086115211'));
+ok('busca por linea', API._gpsCoincide(eq, '143557051'));
+ok('busca por ICCID', API._gpsCoincide(eq, '136641'));
+ok('busca por credito', API._gpsCoincide(eq, 'CRED-467'));
+ok('busca por cliente', API._gpsCoincide(eq, 'wilmer'));
+ok('busca por placa', API._gpsCoincide(eq, 'am2d29j'));
+ok('busca por moto', API._gpsCoincide(eq, 'CF MT'));
+ok('busca por tecnico', API._gpsCoincide(eq, 'francisco'));
+ok('no distingue mayusculas', API._gpsCoincide(eq, 'WiLmEr'));
+ok('varias palabras: todas deben estar', API._gpsCoincide(eq, 'wilmer 75478'));
+ok('si una palabra no esta, no coincide', !API._gpsCoincide(eq, 'wilmer zzz'));
+ok('lo que no existe no coincide', !API._gpsCoincide(eq, 'pedro'));
+
+// El filtro combina texto y estado
+S.gps = [
+  eq,
+  {id:'Y', estado:'stock', idGps:'19210076000', eliminado:false},
+  {id:'Z', estado:'stock', idGps:'19210077111', eliminado:false},
+  {id:'W', estado:'falla', idGps:'19210078222', eliminado:false},
+];
+API._gpsSetFiltro('q','');  API._gpsSetFiltro('estado','');
+ok('sin filtro salen los 4', (API._gpsFilasEquipos().match(/<tr>/g)||[]).length >= 4);
+API._gpsSetFiltro('estado','stock');
+const soloStock = API._gpsFilasEquipos();
+ok('filtrando stock no sale el instalado', soloStock.indexOf('19210075478') === -1);
+ok('filtrando stock si salen los de stock', soloStock.indexOf('19210076000') > -1);
+API._gpsSetFiltro('estado','');
+API._gpsSetFiltro('q','76000');
+const uno = API._gpsFilasEquipos();
+ok('buscando un serial sale solo ese', uno.indexOf('19210076000') > -1 && uno.indexOf('19210077111') === -1);
+API._gpsSetFiltro('q','no-existe-nada');
+ok('sin coincidencias avisa', API._gpsFilasEquipos().indexOf('Ningun equipo coincide') > -1);
+API._gpsSetFiltro('q','');
+
+// ── Tope de filas: 500 en pantalla es inmanejable ──
+S.gps = Array.from({length:200}, (_,i) => ({id:'B'+i, estado:'stock', idGps:'1921008'+String(1000+i), eliminado:false}));
+const muchas = API._gpsFilasEquipos();
+ok('no pinta las 200 de golpe', (muchas.match(/<tr>/g)||[]).length <= 61);
+ok('y avisa cuantas hay en total', muchas.indexOf('de <b>200</b>') > -1);
+
+// ══════════════════════════════════════════════════════════════════
+// ASIGNAR — el equipo pasa a instalado y toma su credito
+// ══════════════════════════════════════════════════════════════════
+S.gps = [
+  {id:'LIBRE', estado:'stock', idGps:'19210076000', linea:'0414', eliminado:false},
+  {id:'PUESTO', estado:'instalado', creditoId:'CRED-467', idGps:'19210075478', eliminado:false},
+];
+guardados.length = 0;
+API._gpsAsignar('LIBRE');
+$('gpsa_cred').value = 'CRED-477';
+$('gpsa_fecha').value = '2026-09-02';
+$('gpsa_tecnico').value = 'FRANCISCO';
+ok('la asignacion se guarda', S.saveFn() === true);
+const asignado = S.gps.find(g => g.id === 'LIBRE');
+ok('quedo instalado', asignado.estado === 'instalado');
+ok('tomo el credito', asignado.creditoId === 'CRED-477');
+ok('guardo la fecha', asignado.fechaInstalacion === '2026-09-02');
+ok('guardo el tecnico', asignado.tecnico === 'FRANCISCO');
+ok('se escribio en la base', guardados.length === 1 && guardados[0].id === 'LIBRE');
+ok('NO copia el cliente: sale del credito', asignado.cliente === undefined);
+
+// Sin credito no deja guardar
+S.gps.push({id:'OTRO', estado:'stock', idGps:'19210079999', eliminado:false});
+API._gpsAsignar('OTRO');
+$('gpsa_cred').value = '';
+ok('sin credito no guarda', S.saveFn() === false);
+
+// Un credito no puede llevar dos equipos
+API._gpsAsignar('OTRO');
+$('gpsa_cred').value = 'CRED-467';   // ya lo tiene PUESTO
+ok('rechaza un credito que ya tiene equipo', S.saveFn() === false);
+ok('y el equipo quedo intacto en stock', S.gps.find(g=>g.id==='OTRO').estado === 'stock');
 
 console.log('');
 console.log(pass+' pruebas OK, '+fail+' fallas');
