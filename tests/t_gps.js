@@ -17,7 +17,7 @@ global.ok=(l,v)=>{ if(v){pass++;console.log('OK   '+l);} else {fail++;console.lo
 
 const auto=new Proxy({},{has:()=>true,get:(t,k)=>{if(k===Symbol.unscopables)return undefined;if(k in t)return t[k];if(k in global)return global[k];return function(){return 0;};},set:(t,k,v)=>{t[k]=v;return true;}});
 const SRC=fs.readFileSync(path.join(ROOT,'logic/gps.js'),'utf8');
-const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION}) }');
+const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId}) }');
 
 // ── Escenario: 5 creditos, 3 con equipo ──
 S.creds = [
@@ -186,6 +186,27 @@ ok('caido en credito al dia no entra en la alerta',
 });
 S.gps = [{id:'V', estado:'instalado', creditoId:'CRED-002', estadoMicodus:'ONLINE / OK', eliminado:false}];
 ok('ONLINE no se confunde con caido', API._gpsCaidosEnMora().length===0);
+
+// ══════════════════════════════════════════════════════════════════
+// IDS UNICOS — importar 500 de golpe colisionaba con Date.now()+random
+// (cumpleanos: ~12 colisiones esperadas en 500 con 4 digitos aleatorios).
+// Cuatro equipos reales se perdieron al cargar el lote de MiCODUS.
+// ══════════════════════════════════════════════════════════════════
+const lote = Array.from({length: 2000}, () => API._gpsNuevoId());
+ok('2000 ids seguidos, todos distintos', new Set(lote).size === 2000);
+ok('todos empiezan con GPS-', lote.every(i => i.indexOf('GPS-') === 0));
+
+// El caso real: importar 500 filas de una sola vez
+S.gps = []; guardados.length = 0;
+const filas500 = Array.from({length: 500}, (_, i) =>
+  ['SIM DISPONIBLE','','', '1921007' + String(7000+i), '', '', '','','','','','','','','','MV710G'].join('\t'));
+importar(filas500);
+const ids500 = S.gps.map(g => g.id);
+ok('las 500 filas entraron', S.gps.length === 500);
+ok('500 ids, cero colisiones', new Set(ids500).size === 500);
+ok('500 seriales distintos', new Set(S.gps.map(g => g.idGps)).size === 500);
+ok('500 escrituras a la BD', guardados.length === 500);
+ok('cada escritura lleva su propio id', new Set(guardados.map(g => g.id)).size === 500);
 
 console.log('');
 console.log(pass+' pruebas OK, '+fail+' fallas');

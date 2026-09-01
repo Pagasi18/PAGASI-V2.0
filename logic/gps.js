@@ -22,6 +22,15 @@ function _gpsEstadoDef(v){
   return e || GPS_ESTADOS[0];
 }
 
+// Ids unicos aun creando 500 de golpe. Con Date.now()+aleatorio, importar el
+// lote entero producia colisiones y unos equipos pisaban a otros al guardar.
+var _gpsSeq = 0;
+function _gpsNuevoId(){
+  _gpsSeq++;
+  return 'GPS-' + Date.now() + '-' + _gpsSeq.toString(36) + '-' +
+         Math.floor(Math.random()*1296).toString(36);
+}
+
 function _gpsLista(){
   return (S.gps || []).filter(function(g){ return g && !g.eliminado; });
 }
@@ -613,7 +622,7 @@ function _gpsOpenEdit(id, credPre){
         return false;
       }
     }
-    var o = ex ? Object.assign({}, ex) : { id: 'GPS-' + Date.now() };
+    var o = ex ? Object.assign({}, ex) : { id: _gpsNuevoId() };
     o.estado = estado;
     o.idGps = idGps; o.imei = imei; o.linea = linea;
     o.iccid = v('gps_iccid');
@@ -749,7 +758,7 @@ function _gpsImportarProcesar(){
     } else if(/^\d{4}-\d{2}-\d{2}/.test(f)) fecha = f.slice(0,10);
 
     nuevos.push({
-      id: 'GPS-' + Date.now() + '-' + Math.floor(Math.random()*10000),
+      id: _gpsNuevoId(),
       estado: estado,
       iccid: get(1), linea: linea, idGps: idGps, passwordGps: get(4), imei: imei,
       creditoId: credId,
