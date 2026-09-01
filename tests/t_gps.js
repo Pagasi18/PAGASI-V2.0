@@ -17,7 +17,7 @@ global.ok=(l,v)=>{ if(v){pass++;console.log('OK   '+l);} else {fail++;console.lo
 
 const auto=new Proxy({},{has:()=>true,get:(t,k)=>{if(k===Symbol.unscopables)return undefined;if(k in t)return t[k];if(k in global)return global[k];return function(){return 0;};},set:(t,k,v)=>{t[k]=v;return true;}});
 const SRC=fs.readFileSync(path.join(ROOT,'logic/gps.js'),'utf8');
-const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar}) }');
+const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar,_gpsNumCred}) }');
 
 // ── Escenario: 5 creditos, 3 con equipo ──
 S.creds = [
@@ -343,6 +343,32 @@ API._gpsAsignar('OTRO');
 $('gpsa_cred').value = 'CRED-467';   // ya lo tiene PUESTO
 ok('rechaza un credito que ya tiene equipo', S.saveFn() === false);
 ok('y el equipo quedo intacto en stock', S.gps.find(g=>g.id==='OTRO').estado === 'stock');
+
+// ══════════════════════════════════════════════════════════════════
+// ORDEN AL ASIGNAR — el GPS se monta en la venta del dia, no se
+// retrofitea a las motos ya entregadas. Los creditos nuevos arriba.
+// ══════════════════════════════════════════════════════════════════
+ok('CRED-467 → 467', API._gpsNumCred('CRED-467') === 467);
+ok('CRED-1200 → 1200', API._gpsNumCred('CRED-1200') === 1200);
+ok('id raro → 0', API._gpsNumCred('sin-numero') === 0);
+ok('vacio → 0', API._gpsNumCred('') === 0);
+
+S.creds = [
+  {id:'CRED-100', cli:'Viejo con mora', fecha:'2026-05-10', estado:'mora',   mora:90, eliminado:false},
+  {id:'CRED-480', cli:'Nuevo de hoy',   fecha:'2026-09-02', estado:'activo', mora:0,  eliminado:false},
+  {id:'CRED-300', cli:'Del medio',      fecha:'2026-07-01', estado:'activo', mora:5,  eliminado:false},
+  {id:'CRED-481', cli:'Otro de hoy',    fecha:'2026-09-02', estado:'activo', mora:0,  eliminado:false},
+];
+S.gps = [{id:'L', estado:'stock', idGps:'19210076000', eliminado:false}];
+API._gpsAsignar('L');
+const opts = [...$('mbd').innerHTML.matchAll(/value="(CRED-\d+)"/g)].map(m => m[1]);
+ok('el primero es el mas nuevo', opts[0] === 'CRED-481');
+ok('desempata por numero de credito', opts[1] === 'CRED-480');
+ok('despues el del medio', opts[2] === 'CRED-300');
+ok('el viejo con 90 dias de mora queda de ultimo', opts[3] === 'CRED-100');
+ok('la mora ya NO manda el orden', opts[0] !== 'CRED-100');
+ok('se ve la fecha en cada opcion', $('mbd').innerHTML.indexOf('2026-09-02') > -1);
+ok('la mora se sigue mostrando como aviso', $('mbd').innerHTML.indexOf('90 d de mora') > -1);
 
 console.log('');
 console.log(pass+' pruebas OK, '+fail+' fallas');

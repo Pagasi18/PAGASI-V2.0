@@ -425,6 +425,12 @@ function _gpsFilasEquipos(){
   return h;
 }
 
+// CRED-467 → 467, para desempatar dos creditos del mismo dia.
+function _gpsNumCred(id){
+  var m = String(id||'').match(/(\d+)\s*$/);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
 // ── Asignar un equipo a un credito, sin salir de la tabla ────────
 function _gpsAsignar(id){
   var g = _gpsById(id);
@@ -436,8 +442,14 @@ function _gpsAsignar(id){
     if(x.creditoId && String(x.estado||'')==='instalado' && x.id !== id) tomados[x.creditoId] = 1;
   });
   var libres = _gpsCredsVivos().filter(function(c){ return !tomados[c.id]; });
-  // Los de mas mora primero: son los que urge poder ubicar.
-  libres.sort(function(a,b){ return (parseInt(b.mora,10)||0) - (parseInt(a.mora,10)||0); });
+  // Los creditos mas nuevos primero. El GPS se monta en la venta del dia; a las
+  // motos ya entregadas no se les esta retrofiteando, asi que ordenar por mora
+  // solo dejaba arriba creditos viejos que nadie va a tocar.
+  libres.sort(function(a,b){
+    var fa = String(a.fecha||''), fb = String(b.fecha||'');
+    if(fa !== fb) return fb.localeCompare(fa);
+    return (_gpsNumCred(b.id) - _gpsNumCred(a.id));
+  });
 
   setMicon('moto');
   $('mtt').textContent = 'Asignar equipo';
@@ -456,13 +468,14 @@ function _gpsAsignar(id){
     + '<select class="fs" id="gpsa_cred"><option value="">— elegir —</option>'
     + libres.map(function(c){
         var d = parseInt(c.mora,10)||0;
-        return '<option value="' + c.id + '">' + c.id + ' — ' + (c.cli||'')
+        return '<option value="' + c.id + '">' + (c.fecha ? c.fecha + '  ·  ' : '')
+             + c.id + ' — ' + (c.cli||'')
              + ' · ' + (c.modelo||c.marca||'') + (c.placa ? ' · ' + c.placa : '')
              + (d ? '  [' + d + ' d de mora]' : '') + '</option>';
       }).join('')
     + '</select>'
     + '<div style="font-size:10.5px;color:var(--ink3);margin-top:3px">'
-    + libres.length + ' creditos vigentes sin equipo, los de mas mora primero. '
+    + libres.length + ' creditos vigentes sin equipo, <b>los mas nuevos primero</b>. '
     + 'El cliente, la moto y la placa salen del credito.</div></div>'
     + '<div class="fgr" style="gap:10px">'
     + '<div class="fg"><label>Dia de instalacion</label><input type="date" class="fi" id="gpsa_fecha" value="' + hoy + '"></div>'
