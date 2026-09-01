@@ -1883,6 +1883,7 @@ var DB = {
       db.collection('facturas').get(),
       db.collection('concesionarios').get(),
       db.collection('config').doc('inventarioOficina').get(),
+      db.collection('gps').get(),
     ]).then(function(snaps){
       function read(snap, withId){return snap.docs.map(function(d){return withId ? Object.assign({id:d.id}, d.data()) : d.data();});}
       var m=read(snaps[0], true),cl=read(snaps[1], true),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]),pnd=read(snaps[7]);
@@ -1994,6 +1995,7 @@ var DB = {
       S.cuentasPendientes = pnd;
       S.facturas = fac;
       S.concesionarios = conc;
+      S.gps = snaps[14] ? read(snaps[14], true) : [];
       try {
         var _invDoc = snaps[13];
         S.inventarioOficina = (_invDoc && _invDoc.exists && Array.isArray((_invDoc.data()||{}).items))
@@ -2100,6 +2102,8 @@ var DB = {
   delEgreso: function(id){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('egresos').doc(String(id)).delete(); }); },
   saveFactura: function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('facturas').doc(String(o.id)).set(clean(o)); }); },
   saveConcesionario: function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('concesionarios').doc(String(o.id)).set(clean(o)); }); },
+  saveGps: function(o){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('gps').doc(String(o.id)).set(clean(o)); }); },
+  delGps: function(id){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('gps').doc(String(id)).delete(); }); },
   delConcesionario: function(id){ if(!db)return Promise.resolve(false); return _dbSilent(function(){ return db.collection('concesionarios').doc(String(id)).delete(); }); },
 };
 
@@ -2192,6 +2196,7 @@ var MODULOS = [
   {id:'reportes', label:'Finanzas', grupo:'Análisis'},
   {id:'cuentas', label:'Cuentas', grupo:'Análisis'},
   {id:'comisiones', label:'Comisiones', grupo:'Análisis'},
+  {id:'gps', label:'GPS', grupo:'Operaciones'},
   {id:'concesionarios', label:'Concesionarios', grupo:'Sistema'},
   {id:'aprobaciones', label:'Aprobaciones', grupo:'Operaciones'},
   {id:'plan', label:'Plan & Precios', grupo:'Sistema'},
@@ -2341,7 +2346,7 @@ const S = {
   movimientos:[],
   cuentasPendientes:[],
   facturas: [],
-  concesionarios: [],
+  concesionarios: [], gps:[],
   concesionarioActivo: null, // null = "Todos" / id = trabajando en un concesionario
   page:'dash', mTab:'todas', credTab:'todos', pagosTab:'todos', saveFn:null, clienteFiltro:'',
   credSort:{col:'id',dir:'asc'}, cliSort:{col:'nombre',dir:'asc'}, pagosSort:{col:'fecha',dir:'desc'}, motosSort:{col:'modelo',dir:'asc'}, credFiltro:'',
@@ -2592,6 +2597,7 @@ function _attachCurrentUserListener(uid){
 
 // ── Sidebar dinámico: solo muestra módulos con acceso ──
 var PG_NAVICONS = {
+  gps:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.4 7-11a7 7 0 1 0-14 0c0 5.6 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>',
   dash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>',
   centro:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>',
   clientes:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="3"/><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/><path d="M16 3.5a3 3 0 0 1 0 6"/><path d="M21 20v-1a5 5 0 0 0-3-4.5"/></svg>',
@@ -2687,7 +2693,7 @@ function renderSidebar(){
   var grupos = [
     {label:'Principal', keys:['dash','centro','recursos']},
     {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
-    {label:'Operaciones',keys:['contratos','notif','calculadora','aprobaciones']},
+    {label:'Operaciones',keys:['contratos','gps','notif','calculadora','aprobaciones']},
     {label:'Análisis', keys:['reportes','cuentas','comisiones']},
     {label:'Sistema', keys:['plan','config','concesionarios','scores','users']},
   ];
