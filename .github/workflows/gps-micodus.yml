@@ -1,0 +1,31 @@
+name: Posiciones GPS (MiCODUS)
+
+on:
+  schedule:
+    - cron: '*/20 * * * *'   # cada 20 min; GitHub puede demorarlo unos minutos
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  posiciones:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: pagasi-v2
+          workload_identity_provider: projects/951911859002/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: firebase-adminsdk-fbsvc@pagasi-v2.iam.gserviceaccount.com
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - working-directory: bot
+        run: npm install --omit=dev
+      - working-directory: bot
+        env:
+          MICODUS_USER: ${{ secrets.MICODUS_USER }}
+          MICODUS_PASS: ${{ secrets.MICODUS_PASS }}
+        run: node gps-micodus.js
