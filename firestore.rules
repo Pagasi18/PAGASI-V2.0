@@ -198,6 +198,12 @@ service cloud.firestore {
     match /recursos/{id}          { allow read, create, update, delete: if esStaff(); }
     match /notas_cobranza/{id}    { allow read, create: if esStaff(); allow update, delete: if esAdmin(); }
 
+    // Equipos de rastreo (modulo GPS). Mismo trato que motos y concesionarios.
+    // Ojo: el doc guarda la password del equipo y, cuando se conecte MiCODUS,
+    // su ubicacion. Quien pueda leer aqui puede ver donde esta cada moto, asi
+    // que el acceso al modulo se controla ademas por permiso en la app.
+    match /gps/{id}               { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
+
     // Contadores de numeracion (creditos, motos, clientes). El numero se reserva
     // dentro de una transaccion para que dos vendedores nunca reciban el mismo.
     // Solo pueden SUBIR: un contador que retrocede vuelve a entregar numeros ya
