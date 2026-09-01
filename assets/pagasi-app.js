@@ -2436,7 +2436,7 @@ function fmtFecha(iso){
 }
 const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a',completado:'b-g',propia:'b-g',cancelado:'b-r'}[s]||'b-x');
-const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Cobranza',cobranza:'Cobranza',contratos:'Contratos',notif:'Notificaciones',calculadora:'Calculadora',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios',aprobaciones:'Aprobaciones',recursos:'Files'};
+const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Cobranza',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS',notif:'Notificaciones',calculadora:'Calculadora',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios',aprobaciones:'Aprobaciones',recursos:'Files'};
 
 const EXTRA_PERMS={perm_delete:'Permiso para eliminar'};
 function getCurrentPerms(){ return (S.currentUser&&Array.isArray(S.currentUser.permisos)) ? S.currentUser.permisos : []; }
