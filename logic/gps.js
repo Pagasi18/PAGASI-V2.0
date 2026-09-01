@@ -61,6 +61,41 @@ function _gpsCredsVivos(){
   });
 }
 
+// ── Revision manual: mientras no haya API, alguien entra a MiCODUS y
+// confirma que el equipo responde. Estos son los mismos campos que la
+// API va a llenar sola despues, asi que nada de esto se tira.
+var GPS_DIAS_REVISION = 15;
+
+function _gpsDiasSinRevisar(g){
+  var f = g && (g.ultimaRevision || g.fechaInstalacion);
+  if(!f) return null;
+  var d = new Date(String(f).slice(0,10) + 'T12:00:00');
+  if(isNaN(d)) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+// Equipos instalados que llevan demasiado sin que nadie confirme que responden.
+function _gpsSinRevisar(){
+  return _gpsLista().filter(function(g){
+    if(String(g.estado||'') !== 'instalado') return false;
+    var d = _gpsDiasSinRevisar(g);
+    return d === null || d > GPS_DIAS_REVISION;
+  });
+}
+
+// Un equipo caido en un credito con mora es la peor combinacion: hay saldo
+// vencido y la moto dejo de reportar.
+function _gpsCaidosEnMora(){
+  return _gpsLista().filter(function(g){
+    if(String(g.estado||'') !== 'instalado') return false;
+    var est = String(g.estadoMicodus||'').toUpperCase();
+    var caido = est.indexOf('OFF') > -1 || est.indexOf('SIN SE') > -1 || est.indexOf('DESCON') > -1;
+    if(!caido) return false;
+    var info = _gpsCredInfo(g.creditoId);
+    return info && info.enMora;
+  });
+}
+
 // ══════════════════════════════════════════════════════════════════
 // COBERTURA — que creditos vivos NO tienen equipo
 // ══════════════════════════════════════════════════════════════════
@@ -107,6 +142,8 @@ function _gpsRender(){
   var instalados = lista.filter(function(g){ return String(g.estado||'') === 'instalado'; });
   var stock = lista.filter(function(g){ return String(g.estado||'') === 'stock'; });
   var fallas = lista.filter(function(g){ return String(g.estado||'') === 'falla'; });
+  var sinRev = _gpsSinRevisar();
+  var caidos = _gpsCaidosEnMora();
 
   var html = '<div class="page">'
     + (typeof pageBanner === 'function'
@@ -127,9 +164,27 @@ function _gpsRender(){
     + '<div style="font-size:10px;color:var(--ink3);margin-top:3px">' + cob.cubiertos + ' de ' + cob.vivos + ' creditos</div></div>'
     + '<div class="stat"><div class="st-v" style="font-size:22px;color:' + (cob.sinYMora.length ? 'var(--red)' : 'var(--ink)') + '">' + cob.sinYMora.length + '</div>'
     + '<div class="st-l">En mora sin GPS</div></div>'
+    + '<div class="stat"><div class="st-v" style="font-size:22px;color:' + (sinRev.length ? 'var(--amber)' : 'var(--ink)') + '">' + sinRev.length + '</div>'
+    + '<div class="st-l">Sin revisar</div>'
+    + '<div style="font-size:10px;color:var(--ink3);margin-top:3px">+' + GPS_DIAS_REVISION + ' dias</div></div>'
     + '<div class="stat"><div class="st-v" style="font-size:22px;color:' + (fallas.length ? 'var(--amber)' : 'var(--ink)') + '">' + fallas.length + '</div>'
     + '<div class="st-l">Con falla</div></div>'
     + '</div>';
+
+  // ── Lo mas urgente primero: equipo caido justo donde hay mora ──
+  if(caidos.length){
+    html += '<div style="background:rgba(240,75,106,0.1);border:1px solid rgba(240,75,106,0.35);border-radius:10px;padding:13px 16px;margin-bottom:14px">'
+      + '<div style="font-weight:800;color:var(--red);font-size:13px;margin-bottom:5px">'
+      + caidos.length + ' equipo' + (caidos.length===1?'':'s') + ' sin señal en creditos con mora</div>'
+      + '<div style="font-size:11.5px;color:var(--ink2);line-height:1.6;margin-bottom:7px">'
+      + 'Hay saldo vencido y la moto dejo de reportar. Puede ser bateria, la SIM sin saldo, o que le quitaron el equipo.</div>';
+    caidos.forEach(function(g){
+      var i = _gpsCredInfo(g.creditoId);
+      html += '<div style="font-size:11.5px;padding:2px 0"><b>' + (g.idGps||g.id) + '</b> · ' + g.creditoId
+        + ' · ' + (i ? i.cliente + ' · ' + i.diasMora + ' dias de mora' : '') + '</div>';
+    });
+    html += '</div>';
+  }
 
   // ── Aviso: la API todavia no esta conectada ──
   html += '<div style="background:rgba(29,78,216,0.07);border:1px solid rgba(29,78,216,0.25);border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:11.5px;color:var(--ink2);line-height:1.6">'
@@ -184,7 +239,7 @@ function _gpsHtmlEquipos(lista){
   });
   var h = '<div style="overflow-x:auto"><table class="tbl"><thead><tr>'
     + '<th>Estado</th><th>ID GPS</th><th>IMEI</th><th>Linea Movistar</th>'
-    + '<th>Credito</th><th>Cliente</th><th>Moto</th><th>Instalado</th><th></th>'
+    + '<th>Credito</th><th>Cliente</th><th>Moto</th><th>Revisado</th><th></th>'
     + '</tr></thead><tbody>';
   ord.forEach(function(g){
     var def = _gpsEstadoDef(g.estado);
@@ -200,9 +255,12 @@ function _gpsHtmlEquipos(lista){
       + '<td>' + (info ? info.cliente : '<span style="color:var(--ink3)">—</span>')
       + (info && info.enMora ? ' <span style="color:var(--red);font-size:10px;font-weight:800">' + info.diasMora + 'd mora</span>' : '') + '</td>'
       + '<td style="font-size:11.5px">' + (info ? (info.modelo + (info.placa ? ' · ' + info.placa : '')) : '—') + '</td>'
-      + '<td style="font-size:11.5px;color:var(--ink3)">' + (g.fechaInstalacion || '—')
-      + (g.tecnico ? '<br><span style="font-size:10px">' + g.tecnico + '</span>' : '') + '</td>'
-      + '<td><button class="btn btn-p btn-xs" onclick="_gpsOpenEdit(\'' + g.id + '\')">Ver</button></td>'
+      + '<td style="font-size:11.5px">' + _gpsHtmlRevision(g) + '</td>'
+      + '<td style="white-space:nowrap">'
+      + (String(g.estado||'')==='instalado'
+          ? '<button class="btn btn-g btn-xs" onclick="_gpsRevisar(\'' + g.id + '\')" title="Marcar revisado hoy">Revisar</button> '
+          : '')
+      + '<button class="btn btn-p btn-xs" onclick="_gpsOpenEdit(\'' + g.id + '\')">Ver</button></td>'
       + '</tr>';
     if(alerta){
       h += '<tr><td colspan="9" style="padding:4px 10px 8px;font-size:11px;color:var(--red)">'
@@ -212,6 +270,78 @@ function _gpsHtmlEquipos(lista){
   });
   h += '</tbody></table></div>';
   return h;
+}
+
+// Cuanto lleva sin que nadie confirme que el equipo responde.
+function _gpsHtmlRevision(g){
+  if(String(g.estado||'') !== 'instalado'){
+    return '<span style="color:var(--ink3)">—</span>';
+  }
+  var d = _gpsDiasSinRevisar(g);
+  if(d === null) return '<span style="color:var(--amber);font-weight:800">nunca</span>';
+  var col = d > GPS_DIAS_REVISION ? 'var(--amber)' : 'var(--ink3)';
+  var txt = d === 0 ? 'hoy' : 'hace ' + d + ' d';
+  return '<span style="color:' + col + (d > GPS_DIAS_REVISION ? ';font-weight:800' : '') + '">' + txt + '</span>'
+    + (g.estadoMicodus ? '<br><span style="font-size:10px;color:var(--ink3)">' + g.estadoMicodus + '</span>' : '');
+}
+
+// Un clic: quien reviso, cuando, y como respondio el equipo. Es lo mismo que
+// hoy se anota en las columnas ESTADO MiCODUS y VERIFICADO POR del Excel.
+function _gpsRevisar(id){
+  var g = _gpsById(id);
+  if(!g) return;
+  setMicon('check');
+  $('mtt').textContent = 'Revisar equipo';
+  $('msb').textContent = (g.idGps || g.id) + (g.creditoId ? ' · ' + g.creditoId : '');
+  $('modal-box').className = 'modal';
+  var info = _gpsCredInfo(g.creditoId);
+  $('mbd').innerHTML = ''
+    + (info ? '<div style="font-size:12.5px;color:var(--ink2);margin-bottom:12px">'
+        + '<b>' + info.cliente + '</b> · ' + info.modelo + (info.placa ? ' · ' + info.placa : '')
+        + (info.enMora ? ' · <span style="color:var(--red);font-weight:800">' + info.diasMora + ' dias de mora</span>' : '')
+        + '</div>' : '')
+    + '<div class="fgr c1" style="gap:10px">'
+    + '<div class="fg"><label>¿Como respondio en MiCODUS?</label><select class="fs" id="gpsr_estado">'
+    + '<option value="ONLINE / OK">ONLINE — responde bien</option>'
+    + '<option value="OFFLINE">OFFLINE — no reporta</option>'
+    + '<option value="SIN SEÑAL RECIENTE">Sin señal reciente</option>'
+    + '<option value="BATERIA BAJA">Bateria baja</option>'
+    + '<option value="FALLA">Con falla</option>'
+    + '</select></div>'
+    + '<div class="fgr" style="gap:10px">'
+    + '<div class="fg"><label>Latitud</label><input class="fi" id="gpsr_lat" value="' + (typeof g.lat==='number'?g.lat:'') + '" placeholder="10.4806"></div>'
+    + '<div class="fg"><label>Longitud</label><input class="fi" id="gpsr_lng" value="' + (typeof g.lng==='number'?g.lng:'') + '" placeholder="-66.9036"></div>'
+    + '</div>'
+    + '<div style="font-size:10.5px;color:var(--ink3);margin-top:-4px">Opcional. Copialas de MiCODUS y la moto aparece en el mapa. Cuando la API este conectada esto se llena solo.</div>'
+    + '<div class="fg"><label>Nota</label><input class="fi" id="gpsr_nota" placeholder="Opcional"></div>'
+    + '</div>';
+  S.saveFn = function(){
+    var est = ($('gpsr_estado')||{}).value || '';
+    var lat = parseFloat(($('gpsr_lat')||{}).value);
+    var lng = parseFloat(($('gpsr_lng')||{}).value);
+    var o = Object.assign({}, g);
+    o.estadoMicodus = est;
+    o.ultimaRevision = (typeof hoyLocalISO === 'function') ? hoyLocalISO() : new Date().toISOString().slice(0,10);
+    o.verificadoPor = (S.currentUser && S.currentUser.nombre) || 'Admin';
+    // Solo se guardan coordenadas si las dos son numeros validos y estan en rango.
+    if(!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180){
+      o.lat = lat; o.lng = lng; o.ultimaSenal = o.ultimaRevision;
+    }
+    var nota = (($('gpsr_nota')||{}).value || '').trim();
+    if(nota) o.observaciones = nota;
+    if(est.indexOf('FALLA') > -1) o.estado = 'falla';
+    var i = S.gps.findIndex(function(x){ return x.id === g.id; });
+    if(i >= 0) S.gps[i] = o;
+    if(DB && DB.saveGps) DB.saveGps(o);
+    if(typeof logActividad === 'function') logActividad('gps_revisar','gps',g.id,{estado:est});
+    closeM();
+    toast('Equipo revisado', 'success');
+    nav('gps');
+    return true;
+  };
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    + '<button class="btn btn-p" onclick="saveM()">Guardar revision</button>';
+  $('ov').style.display = 'flex';
 }
 
 // ── Pestaña: cobertura ───────────────────────────────────────────
@@ -236,6 +366,22 @@ function _gpsHtmlCobertura(cob, porRec){
       h += '<div style="font-size:11.5px;padding:3px 0"><b>' + (g.idGps||g.id) + '</b> · ' + g.creditoId
         + ' · ' + (i ? i.cliente + ' (' + i.estado + ')' : '') + '</div>';
     });
+    h += '</div>';
+  }
+  var sinRev = _gpsSinRevisar();
+  if(sinRev.length){
+    h += '<div style="background:rgba(255,165,0,0.07);border:1px solid rgba(255,165,0,0.28);border-radius:10px;padding:13px 16px;margin-bottom:14px">'
+      + '<div style="font-weight:800;color:var(--amber);font-size:13px;margin-bottom:6px">'
+      + sinRev.length + ' equipo' + (sinRev.length===1?'':'s') + ' sin revisar en mas de ' + GPS_DIAS_REVISION + ' dias</div>'
+      + '<div style="font-size:11.5px;color:var(--ink2);line-height:1.6;margin-bottom:8px">'
+      + 'Nadie ha confirmado que respondan. Un equipo que dejo de reportar no avisa: hay que ir a verlo.</div>';
+    sinRev.slice(0, 20).forEach(function(g){
+      var i = _gpsCredInfo(g.creditoId);
+      var d = _gpsDiasSinRevisar(g);
+      h += '<div style="font-size:11.5px;padding:2px 0"><b>' + (g.idGps||g.id) + '</b> · ' + (g.creditoId||'sin credito')
+        + (i ? ' · ' + i.cliente : '') + ' · ' + (d===null ? 'nunca revisado' : 'hace ' + d + ' dias') + '</div>';
+    });
+    if(sinRev.length > 20) h += '<div style="font-size:11px;color:var(--ink3);margin-top:5px">y ' + (sinRev.length-20) + ' mas.</div>';
     h += '</div>';
   }
   if(!cob.sin.length){

@@ -17,7 +17,7 @@ global.ok=(l,v)=>{ if(v){pass++;console.log('OK   '+l);} else {fail++;console.lo
 
 const auto=new Proxy({},{has:()=>true,get:(t,k)=>{if(k===Symbol.unscopables)return undefined;if(k in t)return t[k];if(k in global)return global[k];return function(){return 0;};},set:(t,k,v)=>{t[k]=v;return true;}});
 const SRC=fs.readFileSync(path.join(ROOT,'logic/gps.js'),'utf8');
-const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById}) }');
+const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION}) }');
 
 // ── Escenario: 5 creditos, 3 con equipo ──
 S.creds = [
@@ -137,6 +137,55 @@ ok('CRED-004 tambien quedo cubierto: su fila decia CRED004 y se normalizo',
    !cob2.sin.some(c=>c.id==='CRED-004'));
 ok('sin creditos descubiertos, la cobertura llega a 100%', cob2.pct===100);
 ok('y ya no hay ninguno en mora sin GPS', cob2.sinYMora.length===0);
+
+// ══════════════════════════════════════════════════════════════════
+// REVISION MANUAL — mientras no hay API, alguien confirma que responden
+// ══════════════════════════════════════════════════════════════════
+const hoy = new Date();
+const dLoc = n => { const d=new Date(hoy.getTime()+n*86400000);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+
+ok('el umbral de revision son 15 dias', API.GPS_DIAS_REVISION===15);
+ok('revisado hoy = 0 dias', API._gpsDiasSinRevisar({ultimaRevision:dLoc(0)})===0);
+ok('revisado hace 20 dias', API._gpsDiasSinRevisar({ultimaRevision:dLoc(-20)})===20);
+ok('sin fecha alguna devuelve null', API._gpsDiasSinRevisar({})===null);
+ok('cae a la fecha de instalacion si nunca se reviso',
+   API._gpsDiasSinRevisar({fechaInstalacion:dLoc(-7)})===7);
+ok('la revision manda sobre la instalacion',
+   API._gpsDiasSinRevisar({fechaInstalacion:dLoc(-90), ultimaRevision:dLoc(-2)})===2);
+ok('una fecha basura no revienta', API._gpsDiasSinRevisar({ultimaRevision:'xxx'})===null);
+
+S.gps = [
+  {id:'R1', estado:'instalado', creditoId:'CRED-001', ultimaRevision:dLoc(-2),  estadoMicodus:'ONLINE / OK', eliminado:false},
+  {id:'R2', estado:'instalado', creditoId:'CRED-002', ultimaRevision:dLoc(-40), estadoMicodus:'OFFLINE',     eliminado:false},
+  {id:'R3', estado:'instalado', creditoId:'CRED-004', eliminado:false},
+  {id:'R4', estado:'stock',     creditoId:'',         eliminado:false},
+  {id:'R5', estado:'instalado', creditoId:'CRED-001', ultimaRevision:dLoc(-30), eliminado:true},
+];
+const sr = API._gpsSinRevisar();
+ok('sin revisar = 2 (R2 vencido y R3 que nunca)', sr.length===2);
+ok('el recien revisado no aparece', !sr.some(g=>g.id==='R1'));
+ok('el de stock no aplica: no hay nada que revisar', !sr.some(g=>g.id==='R4'));
+ok('un eliminado no cuenta', !sr.some(g=>g.id==='R5'));
+
+// R2 esta OFFLINE y CRED-002 tiene 12 dias de mora: la peor combinacion
+const caidos = API._gpsCaidosEnMora();
+ok('1 equipo caido en credito con mora', caidos.length===1);
+ok('es el R2', caidos[0] && caidos[0].id==='R2');
+ok('R1 esta ONLINE, no cuenta como caido', !caidos.some(g=>g.id==='R1'));
+
+// Un equipo caido pero en un credito al dia no es urgente
+S.gps.push({id:'R6', estado:'instalado', creditoId:'CRED-001', estadoMicodus:'OFFLINE', eliminado:false});
+ok('caido en credito al dia no entra en la alerta',
+   !API._gpsCaidosEnMora().some(g=>g.id==='R6'));
+
+// Variantes de como se escribe "no reporta"
+['OFFLINE','SIN SEÑAL RECIENTE','DESCONECTADO'].forEach(txt => {
+  S.gps = [{id:'V', estado:'instalado', creditoId:'CRED-002', estadoMicodus:txt, eliminado:false}];
+  ok('reconoce "'+txt+'" como caido', API._gpsCaidosEnMora().length===1);
+});
+S.gps = [{id:'V', estado:'instalado', creditoId:'CRED-002', estadoMicodus:'ONLINE / OK', eliminado:false}];
+ok('ONLINE no se confunde con caido', API._gpsCaidosEnMora().length===0);
 
 console.log('');
 console.log(pass+' pruebas OK, '+fail+' fallas');
