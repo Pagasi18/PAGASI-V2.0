@@ -17,7 +17,7 @@ global.ok=(l,v)=>{ if(v){pass++;console.log('OK   '+l);} else {fail++;console.lo
 
 const auto=new Proxy({},{has:()=>true,get:(t,k)=>{if(k===Symbol.unscopables)return undefined;if(k in t)return t[k];if(k in global)return global[k];return function(){return 0;};},set:(t,k,v)=>{t[k]=v;return true;}});
 const SRC=fs.readFileSync(path.join(ROOT,'logic/gps.js'),'utf8');
-const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId}) }');
+const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha}) }');
 
 // ── Escenario: 5 creditos, 3 con equipo ──
 S.creds = [
@@ -207,6 +207,55 @@ ok('500 ids, cero colisiones', new Set(ids500).size === 500);
 ok('500 seriales distintos', new Set(S.gps.map(g => g.idGps)).size === 500);
 ok('500 escrituras a la BD', guardados.length === 500);
 ok('cada escritura lleva su propio id', new Set(guardados.map(g => g.id)).size === 500);
+
+// ══════════════════════════════════════════════════════════════════
+// MAPA — es la portada del modulo, tiene que ser exacto
+// ══════════════════════════════════════════════════════════════════
+ok('el mapa es la pestaña de entrada', API._gpsTab()==='mapa');
+
+ok('posicion valida', API._gpsTienePos({lat:10.46842, lng:-66.54793})===true);
+ok('sin coordenadas, no', API._gpsTienePos({})===false);
+ok('0,0 no es posicion (es el defecto de un equipo mudo)',
+   API._gpsTienePos({lat:0, lng:0})===false);
+ok('lat fuera de rango, no', API._gpsTienePos({lat:200, lng:10})===false);
+ok('lng fuera de rango, no', API._gpsTienePos({lat:10, lng:900})===false);
+ok('coordenadas como texto, no', API._gpsTienePos({lat:'10.4', lng:'-66.5'})===false);
+
+ok('dataType 1 es GPS fino', API._gpsFuente({dataType:1}).fino===true);
+ok('dataType 2 es antena, NO fino', API._gpsFuente({dataType:2}).fino===false);
+ok('dataType 3 es wifi, NO fino', API._gpsFuente({dataType:3}).fino===false);
+ok('sin dataType se asume GPS', API._gpsFuente({}).fino===true);
+
+// Formato exacto de MiCODUS: UTC sin marca de zona
+const hAtras = n => { const d=new Date(Date.now()-n*3600000);
+  return d.toISOString().slice(0,19).replace('T',' '); };
+ok('reporto hace 3h', API._gpsHorasSinReportar({ultimaSenal:hAtras(3)})===3);
+ok('reporto hace 72h', API._gpsHorasSinReportar({ultimaSenal:hAtras(72)})===72);
+ok('sin fecha devuelve null', API._gpsHorasSinReportar({})===null);
+ok('fecha basura devuelve null', API._gpsHorasSinReportar({ultimaSenal:'xx'})===null);
+ok('nunca da negativo', API._gpsHorasSinReportar({ultimaSenal:hAtras(-5)})===0);
+
+// Colores: mora manda sobre antiguedad
+S.creds = [{id:'C-MORA', cli:'X', estado:'mora', mora:9, eliminado:false},
+           {id:'C-OK',   cli:'Y', estado:'activo', mora:0, eliminado:false}];
+ok('en mora pinta rojo',  API._gpsColor({creditoId:'C-MORA', ultimaSenal:hAtras(1)})==='#F04B6A');
+ok('mora manda aunque reporte bien', API._gpsColor({creditoId:'C-MORA', ultimaSenal:hAtras(200)})==='#F04B6A');
+ok('al dia sin reportar +48h pinta ambar', API._gpsColor({creditoId:'C-OK', ultimaSenal:hAtras(72)})==='#F59E0B');
+ok('al dia y reportando pinta verde', API._gpsColor({creditoId:'C-OK', ultimaSenal:hAtras(2)})==='#00B876');
+
+// La marca de MiCODUS es UTC aunque no lo diga. Leerla como hora local
+// adelantaba el reloj 4 horas en Venezuela y la alerta de +48h saltaba tarde.
+const utc = (a,m,d,h,mi,se) => Date.UTC(a,m-1,d,h,mi,se||0);
+ok('"2026-09-01 22:42:07" se lee como UTC',
+   API._gpsParseFecha('2026-09-01 22:42:07').getTime() === utc(2026,9,1,22,42,7));
+ok('con Z explicita da lo mismo',
+   API._gpsParseFecha('2026-09-01T22:42:07Z').getTime() === utc(2026,9,1,22,42,7));
+ok('con desfase explicito se respeta',
+   API._gpsParseFecha('2026-09-01T18:42:07-04:00').getTime() === utc(2026,9,1,22,42,7));
+ok('solo fecha: mediodia local, no UTC',
+   API._gpsParseFecha('2026-09-01').getHours() === 12);
+ok('vacio devuelve null', API._gpsParseFecha('') === null);
+ok('basura devuelve null', API._gpsParseFecha('no es fecha') === null);
 
 console.log('');
 console.log(pass+' pruebas OK, '+fail+' fallas');

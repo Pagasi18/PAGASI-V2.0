@@ -70,6 +70,59 @@ function _gpsCredsVivos(){
   });
 }
 
+// Horas desde el ultimo reporte del equipo.
+//
+// MiCODUS manda "2026-09-01 22:42:07" en campos llamados deviceUtcDate y
+// serverUtcDate: son UTC. JavaScript, sin zona explicita, los lee como hora
+// LOCAL — y en Venezuela (UTC-4) eso adelanta la marca cuatro horas: una moto
+// muda desde hace cuatro horas aparecia como recien reportada, y la alerta de
+// +48h saltaba tarde. Por eso una marca completa sin zona se toma como UTC.
+function _gpsParseFecha(f){
+  var t = String(f || '').trim();
+  if(!t) return null;
+  var d;
+  if(t.length <= 10){
+    // Solo fecha (carga manual): mediodia local, para que no baile con la zona.
+    d = new Date(t + 'T12:00:00');
+  } else if(/[Zz]$|[+-]\d{2}:?\d{2}$/.test(t)){
+    d = new Date(t);                          // ya trae su zona
+  } else {
+    d = new Date(t.replace(' ', 'T') + 'Z');  // sin zona → UTC, como manda MiCODUS
+  }
+  return isNaN(d) ? null : d;
+}
+
+// ── Posicion ────────────────────────────────────────────────────
+function _gpsTienePos(g){
+  return g && typeof g.lat === 'number' && typeof g.lng === 'number'
+      && Math.abs(g.lat) <= 90 && Math.abs(g.lng) <= 180
+      && !(g.lat === 0 && g.lng === 0);
+}
+
+// El equipo dice de donde saco la posicion: 1 GPS, 2 antena (LBS), 3 wifi.
+// Con antena el error es de cientos de metros — no sirve para senalar una casa.
+function _gpsFuente(g){
+  var t = parseInt(g && g.dataType, 10);
+  if(t === 2) return {k:'lbs',  l:'por antena', fino:false};
+  if(t === 3) return {k:'wifi', l:'por WiFi',   fino:false};
+  return {k:'gps', l:'GPS', fino:true};
+}
+
+function _gpsHorasSinReportar(g){
+  var d = _gpsParseFecha(g && (g.ultimaSenal || g.ultimaRevision));
+  if(!d) return null;
+  return Math.max(0, Math.round((Date.now() - d.getTime()) / 3600000));
+}
+
+// Color del punto en el mapa: rojo mora, ambar sin reportar hace rato, verde al dia.
+function _gpsColor(g){
+  var info = _gpsCredInfo(g.creditoId);
+  if(info && info.enMora) return '#F04B6A';
+  var h = _gpsHorasSinReportar(g);
+  if(h !== null && h > 48) return '#F59E0B';
+  return '#00B876';
+}
+
 // ── Revision manual: mientras no haya API, alguien entra a MiCODUS y
 // confirma que el equipo responde. Estos son los mismos campos que la
 // API va a llenar sola despues, asi que nada de esto se tira.
@@ -78,8 +131,8 @@ var GPS_DIAS_REVISION = 15;
 function _gpsDiasSinRevisar(g){
   var f = g && (g.ultimaRevision || g.fechaInstalacion);
   if(!f) return null;
-  var d = new Date(String(f).slice(0,10) + 'T12:00:00');
-  if(isNaN(d)) return null;
+  var d = _gpsParseFecha(String(f).slice(0,10));
+  if(!d) return null;
   return Math.floor((Date.now() - d.getTime()) / 86400000);
 }
 
@@ -141,7 +194,7 @@ function _gpsPorRecuperar(){
 // RENDER
 // ══════════════════════════════════════════════════════════════════
 
-function _gpsTab(){ return window._gpsTabActual || 'equipos'; }
+function _gpsTab(){ return window._gpsTabActual || 'mapa'; }
 function _gpsSetTab(t){ window._gpsTabActual = t; nav('gps'); }
 
 function _gpsRender(){
@@ -204,11 +257,12 @@ function _gpsRender(){
     + '</div>';
 
   // ── Pestañas ──
+  var conPos = lista.filter(_gpsTienePos).length;
   var tabs = [
+    {k:'mapa',      l:'Mapa',      n:conPos},
     {k:'equipos',   l:'Equipos',   n:lista.length},
     {k:'cobertura', l:'Cobertura', n:cob.sin.length},
-    {k:'sims',      l:'Lineas SIM', n:lista.filter(function(g){return !!g.iccid;}).length},
-    {k:'mapa',      l:'Mapa',      n:0}
+    {k:'sims',      l:'Lineas SIM', n:lista.filter(function(g){return !!g.iccid;}).length}
   ];
   var act = _gpsTab();
   html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;border-bottom:1px solid var(--rim);padding-bottom:0">';
@@ -469,26 +523,65 @@ function _gpsHtmlSims(lista){
 
 // ── Pestaña: mapa ────────────────────────────────────────────────
 function _gpsHtmlMapa(instalados){
-  var conPos = instalados.filter(function(g){
-    return typeof g.lat === 'number' && typeof g.lng === 'number';
-  });
+  var conPos = instalados.filter(_gpsTienePos);
+  var sinPos = instalados.length - conPos.length;
+
   if(!conPos.length){
-    return '<div class="empty" style="padding:60px 20px;text-align:center">'
+    return '<div class="empty" style="padding:56px 20px;text-align:center">'
       + '<div style="font-size:40px;margin-bottom:12px;opacity:.35">🗺️</div>'
-      + '<div style="font-size:16px;font-weight:800;margin-bottom:6px">El mapa esta listo, faltan las posiciones</div>'
-      + '<div style="font-size:12.5px;color:var(--ink3);max-width:440px;margin:0 auto;line-height:1.6">'
-      + 'Las coordenadas las trae la API de MiCODUS. Apenas se conecte, cada equipo instalado '
-      + 'aparece aqui con su cliente, su credito y su estado de mora.<br><br>'
-      + 'Hay <b>' + instalados.length + '</b> equipo' + (instalados.length===1?'':'s') + ' instalado'
-      + (instalados.length===1?'':'s') + ' esperando posicion.</div></div>';
+      + '<div style="font-size:16px;font-weight:800;margin-bottom:8px">El mapa esta listo, faltan las posiciones</div>'
+      + '<div style="font-size:12.5px;color:var(--ink3);max-width:470px;margin:0 auto 4px;line-height:1.65">'
+      + (instalados.length
+          ? 'Hay <b>' + instalados.length + '</b> equipo' + (instalados.length===1?'':'s') + ' instalado'
+            + (instalados.length===1?'':'s') + ' esperando su primera posicion.'
+          : 'Todavia no hay equipos instalados. Un equipo en stock no reporta nada.')
+      + '<br><br>Las coordenadas llegan de MiCODUS. Mientras se conecta, se pueden cargar a mano '
+      + 'desde el boton <b>Revisar</b> de cada equipo.</div></div>';
   }
+
+  // Resumen que se lee de un golpe, antes del mapa
+  // Cada equipo cae en un solo grupo, en este orden: mora manda sobre
+  // 'sin reportar', porque es lo que hay que atender primero.
+  var enMora = [], viejas = [], alDia = [];
+  conPos.forEach(function(g){
+    var i = _gpsCredInfo(g.creditoId);
+    var h = _gpsHorasSinReportar(g);
+    if(i && i.enMora) enMora.push(g);
+    else if(h !== null && h > 48) viejas.push(g);
+    else alDia.push(g);
+  });
+  var gruesas = conPos.filter(function(g){ return !_gpsFuente(g).fino; });
+
+  var chip = function(color, texto){
+    return '<span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink2)">'
+      + '<span style="width:9px;height:9px;border-radius:50%;background:' + color + ';flex:0 0 9px"></span>'
+      + texto + '</span>';
+  };
+
+  var h = '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'
+    + chip('#00B876', alDia.length + ' al dia')
+    + chip('#F04B6A', enMora.length + ' en mora')
+    + chip('#F59E0B', viejas.length + ' sin reportar +48h')
+    + '</div>';
+
+  if(gruesas.length){
+    h += '<div style="background:rgba(255,165,0,0.07);border:1px solid rgba(255,165,0,0.25);border-radius:8px;'
+      + 'padding:8px 12px;margin-bottom:10px;font-size:11.5px;color:var(--ink2);line-height:1.55">'
+      + '<b style="color:var(--amber)">' + gruesas.length + ' posicion' + (gruesas.length===1?'':'es')
+      + ' sin GPS fino.</b> Vienen de antenas de telefonia y pueden errar cientos de metros. '
+      + 'Sirven para saber la zona, no para senalar una direccion.</div>';
+  }
+
   setTimeout(_gpsPintarMapa, 60);
-  return '<div id="gps-mapa" style="height:520px;border-radius:12px;border:1px solid var(--rim);overflow:hidden"></div>'
-    + '<div style="font-size:11px;color:var(--ink3);margin-top:8px">'
-    + conPos.length + ' equipo' + (conPos.length===1?'':'s') + ' con posicion conocida.</div>';
+  h += '<div id="gps-mapa" style="height:540px;border-radius:12px;border:1px solid var(--rim);overflow:hidden;background:var(--surf2)"></div>';
+  h += '<div style="font-size:11px;color:var(--ink3);margin-top:8px">'
+    + conPos.length + ' de ' + instalados.length + ' equipos instalados con posicion conocida'
+    + (sinPos ? ' · <b>' + sinPos + '</b> sin reportar todavia' : '')
+    + '</div>';
+  return h;
 }
 
-// Carga Leaflet bajo demanda: no tiene sentido pagarlo en cada carga del app.
+// Leaflet se carga bajo demanda: no tiene sentido pagarlo en cada carga del app.
 function _gpsPintarMapa(){
   var cont = document.getElementById('gps-mapa');
   if(!cont) return;
@@ -510,34 +603,64 @@ function _gpsPintarMapa(){
     document.head.appendChild(js);
     return;
   }
+
   var puntos = _gpsLista().filter(function(g){
-    return String(g.estado||'')==='instalado' && typeof g.lat==='number' && typeof g.lng==='number';
+    return String(g.estado||'') === 'instalado' && _gpsTienePos(g);
   });
   if(!puntos.length) return;
-  if(window._gpsMapaObj){ try{ window._gpsMapaObj.remove(); }catch(e){} }
-  var mapa = L.map(cont).setView([puntos[0].lat, puntos[0].lng], 12);
+
+  if(window._gpsMapaObj){ try{ window._gpsMapaObj.remove(); }catch(e){} window._gpsMapaObj = null; }
+  var mapa = L.map(cont, {scrollWheelZoom:true}).setView([puntos[0].lat, puntos[0].lng], 12);
   window._gpsMapaObj = mapa;
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19, attribution: '© OpenStreetMap'
   }).addTo(mapa);
+
   var bounds = [];
   puntos.forEach(function(g){
-    var info = _gpsCredInfo(g.creditoId);
-    var color = info && info.enMora ? '#F04B6A' : '#00B876';
+    var info  = _gpsCredInfo(g.creditoId);
+    var color = _gpsColor(g);
+    var fuente = _gpsFuente(g);
+    var horas = _gpsHorasSinReportar(g);
+
+    // Con posicion gruesa se dibuja el circulo de incertidumbre, para que
+    // nadie lea el punto como una direccion exacta.
+    if(!fuente.fino){
+      L.circle([g.lat, g.lng], {radius:400, color:color, weight:1, opacity:.5,
+        fillColor:color, fillOpacity:.08, dashArray:'4,4'}).addTo(mapa);
+    }
     var m = L.circleMarker([g.lat, g.lng], {
-      radius: 8, color: '#fff', weight: 2, fillColor: color, fillOpacity: 0.95
+      radius: 8, color:'#fff', weight:2, fillColor:color, fillOpacity:.95
     }).addTo(mapa);
-    var txt = '<div style="font-family:system-ui,sans-serif;font-size:12px;line-height:1.5">'
-      + '<b>' + (info ? info.cliente : (g.idGps || g.id)) + '</b>'
-      + (g.creditoId ? '<br>' + g.creditoId : '')
-      + (info && info.modelo ? '<br>' + info.modelo + (info.placa ? ' · ' + info.placa : '') : '')
-      + (info && info.enMora ? '<br><span style="color:#F04B6A;font-weight:700">' + info.diasMora + ' dias de mora</span>' : '')
-      + (g.ultimaSenal ? '<br><span style="color:#888">Ultima señal: ' + g.ultimaSenal + '</span>' : '')
-      + '</div>';
-    m.bindPopup(txt);
+
+    var pop = '<div style="font-family:system-ui,-apple-system,sans-serif;font-size:12px;line-height:1.55;min-width:190px">'
+      + '<div style="font-weight:800;font-size:13px;margin-bottom:2px">'
+      + (info ? info.cliente : (g.idGps || g.id)) + '</div>';
+    if(g.creditoId) pop += '<div style="color:#555">' + g.creditoId + '</div>';
+    if(info && info.modelo) pop += '<div style="color:#555">' + info.modelo + (info.placa ? ' · ' + info.placa : '') + '</div>';
+    if(info && info.enMora){
+      pop += '<div style="color:#F04B6A;font-weight:700;margin-top:4px">' + info.diasMora + ' dias de mora</div>';
+    }
+    pop += '<div style="border-top:1px solid #e5e5e5;margin-top:6px;padding-top:5px;color:#666;font-size:11px">';
+    pop += '<div>Posicion ' + fuente.l + (fuente.fino ? '' : ' · aproximada') + '</div>';
+    if(horas !== null){
+      pop += '<div>' + (horas === 0 ? 'Reporto hace menos de 1 h'
+                      : horas < 48 ? 'Reporto hace ' + horas + ' h'
+                      : '<b style="color:#B45309">Sin reportar hace ' + Math.floor(horas/24) + ' dias</b>') + '</div>';
+    }
+    if(typeof g.bateria === 'number') pop += '<div>Bateria ' + g.bateria + '%</div>';
+    if(g.acc === 1 || g.acc === '1') pop += '<div style="color:#00B876;font-weight:700">Contacto encendido</div>';
+    pop += '<div style="margin-top:4px;font-family:ui-monospace,monospace;font-size:10px">' + g.idGps + '</div>';
+    pop += '</div></div>';
+
+    m.bindPopup(pop);
     bounds.push([g.lat, g.lng]);
   });
-  if(bounds.length > 1) mapa.fitBounds(bounds, {padding:[30,30]});
+
+  if(bounds.length > 1) mapa.fitBounds(bounds, {padding:[40,40], maxZoom:15});
+  // El contenedor nace con alto 0 dentro de la pestana: sin esto Leaflet
+  // dibuja los tiles del tamano equivocado.
+  setTimeout(function(){ try{ mapa.invalidateSize(); }catch(e){} }, 120);
 }
 
 // ══════════════════════════════════════════════════════════════════
