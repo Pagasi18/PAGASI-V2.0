@@ -283,13 +283,19 @@ function _gpsRender(){
       + 'Un GPS que dejo de reportar no avisa solo.</div>';
   }
 
-  // ── Aviso: la API todavia no esta conectada ──
-  html += '<div style="background:rgba(29,78,216,0.07);border:1px solid rgba(29,78,216,0.25);border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:11.5px;color:var(--ink2);line-height:1.6">'
-    + '<strong style="color:var(--p1)">Sin conexion con MiCODUS todavia.</strong> '
-    + 'Este modulo lleva el inventario y las instalaciones, que es lo que hoy vive en el Excel. '
-    + 'La posicion en vivo, el estado online y el corte de motor requieren la API del distribuidor: '
-    + 'cuando llegue la documentacion se conectan sobre esto mismo.'
-    + '</div>';
+  // ── Estado de la sincronizacion + boton de actualizar ──
+  setTimeout(_gpsCargarCfg, 40);
+  html += '<div id="gps-sync" style="background:var(--surf2);border:1px solid var(--rim);border-radius:10px;'
+    + 'padding:9px 14px;margin-bottom:12px">' + _gpsHtmlSync() + '</div>';
+
+  // ── Aviso: solo mientras no haya ningun equipo reportando ──
+  if(!lista.some(_gpsTienePos)){
+    html += '<div style="background:rgba(29,78,216,0.07);border:1px solid rgba(29,78,216,0.25);border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:11.5px;color:var(--ink2);line-height:1.6">'
+      + '<strong style="color:var(--p1)">Todavia sin posiciones.</strong> '
+      + 'El bot consulta MiCODUS una vez al dia y cuando alguien le da a Actualizar. '
+      + 'Si nunca ha traido nada, revisa que los equipos esten en la subcuenta de lectura.'
+      + '</div>';
+  }
 
   // ── Pestañas ──
   var conPos = lista.filter(_gpsTienePos).length;
@@ -722,6 +728,77 @@ function _gpsHtmlSims(lista){
     });
   h += '</tbody></table></div>';
   return h;
+}
+
+// ── Sincronizacion con MiCODUS ───────────────────────────────────
+// El navegador no puede llamar a MiCODUS (CORS) ni disparar el bot (haria
+// falta un token de GitHub en el JS, que es publico). Asi que el boton solo
+// deja una señal en Firebase; el bot la revisa cada 5 minutos y trabaja.
+
+function _gpsCfg(){ return window._gpsConfig || {}; }
+
+function _gpsCargarCfg(){
+  if(typeof db === 'undefined' || !db) return;
+  db.collection('config').doc('gps').get().then(function(d){
+    window._gpsConfig = (d && d.exists) ? d.data() : {};
+    var el = document.getElementById('gps-sync');
+    if(el) el.innerHTML = _gpsHtmlSync();
+  }).catch(function(){});
+}
+
+function _gpsHtmlSync(){
+  var c = _gpsCfg();
+  var pedido = !!c.refrescoPedido;
+  var d = _gpsParseFecha(c.ultimaSync);
+  var min = d ? Math.round((Date.now() - d.getTime()) / 60000) : null;
+  var cuando = min === null ? 'nunca'
+    : min < 1   ? 'hace un momento'
+    : min < 60  ? 'hace ' + min + ' min'
+    : min < 1440? 'hace ' + Math.floor(min/60) + ' h'
+    : 'hace ' + Math.floor(min/1440) + ' d';
+
+  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+    + '<span style="font-size:11.5px;color:var(--ink3)">'
+    + 'Posiciones actualizadas <b style="color:' + (min !== null && min > 1500 ? 'var(--amber)' : 'var(--ink2)') + '">'
+    + cuando + '</b>'
+    + (typeof c.ultimaSyncEquipos === 'number' ? ' · ' + c.ultimaSyncEquipos + ' equipos' : '')
+    + '</span>'
+    + (pedido
+        ? '<span style="font-size:11.5px;color:var(--p1);font-weight:700">Refresco pedido — llega en unos minutos</span>'
+        : '<button class="btn btn-p btn-xs" onclick="_gpsPedirRefresco()">↻ Actualizar ahora</button>')
+    + '</div>';
+}
+
+function _gpsPedirRefresco(){
+  if(typeof db === 'undefined' || !db){ toast('Sin conexion con la base', 'error'); return; }
+  db.collection('config').doc('gps').set({
+    refrescoPedido: true,
+    refrescoPedidoPor: (S.currentUser && S.currentUser.nombre) || 'Admin',
+    refrescoPedidoEn: new Date().toISOString()
+  }, {merge:true}).then(function(){
+    window._gpsConfig = Object.assign({}, _gpsCfg(), {refrescoPedido:true});
+    var el = document.getElementById('gps-sync');
+    if(el) el.innerHTML = _gpsHtmlSync();
+    toast('Pedido enviado. Las posiciones llegan en unos minutos.', 'success');
+    if(typeof logActividad === 'function') logActividad('gps_refresco','gps','',{});
+    // Se vuelve a mirar solo, para que el usuario vea llegar la respuesta.
+    var n = 0;
+    var reloj = setInterval(function(){
+      n++;
+      if(n > 40 || S.page !== 'gps'){ clearInterval(reloj); return; }
+      db.collection('config').doc('gps').get().then(function(d){
+        var c = (d && d.exists) ? d.data() : {};
+        if(!c.refrescoPedido){
+          clearInterval(reloj);
+          window._gpsConfig = c;
+          toast('Posiciones actualizadas', 'success');
+          nav('gps');
+        }
+      }).catch(function(){});
+    }, 20000);
+  }).catch(function(e){
+    toast('No se pudo pedir el refresco: ' + (e.message||''), 'error');
+  });
 }
 
 // ── Pestaña: mapa ────────────────────────────────────────────────

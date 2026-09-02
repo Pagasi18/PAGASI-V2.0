@@ -21,6 +21,10 @@ const PASS = process.env.MICODUS_PASS || '';
 // Cuantas horas sin reportar antes de considerarlo caido
 const HORAS_CAIDO = 48;
 
+// Hora de Venezuela del barrido diario. Temprano, para que cobranza arranque
+// el dia con las posiciones frescas.
+const HORA_BARRIDO = 6;
+
 // ── Sesion ────────────────────────────────────────────────────────
 // Su login es un GET con las credenciales en la URL. Guardamos las cookies
 // a mano porque fetch de Node no las persiste entre llamadas.
@@ -190,6 +194,33 @@ if (require.main !== module) return;
   if (!DRY) {
     const { Firestore } = require('@google-cloud/firestore');
     db = new Firestore({ projectId: 'pagasi-v2' });
+
+    // El job corre seguido pero casi siempre no hace nada: solo lee un
+    // documento para ver si toca. Trabaja cuando alguien pidio refresco desde
+    // el app, o una vez al dia a la hora del barrido.
+    const cfgRef = db.collection('config').doc('gps');
+    const cfg = (await cfgRef.get()).data() || {};
+    const hora = Number(new Date().toLocaleString('en-US',
+      { timeZone: 'America/Caracas', hour: '2-digit', hour12: false }));
+    const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+
+    const pidieron = !!cfg.refrescoPedido;
+    const tocaBarrido = hora === HORA_BARRIDO && cfg.ultimoBarrido !== hoy;
+
+    if (!pidieron && !tocaBarrido) {
+      console.log('Nada que hacer (sin refresco pedido, y el barrido de hoy ya se hizo)');
+      return;
+    }
+    console.log(pidieron ? 'Refresco pedido desde el app' : 'Barrido diario');
+
+    // Se limpia la bandera de una: si el job falla mas adelante, el proximo
+    // barrido igual lo cubre, y asi un boton mal apretado no deja el job
+    // trabajando en cada corrida para siempre.
+    await cfgRef.set({
+      refrescoPedido: false,
+      ultimoIntento: new Date().toISOString(),
+      ...(tocaBarrido ? { ultimoBarrido: hoy } : {}),
+    }, { merge: true });
     // Se piden SOLO los instalados. Leer la coleccion entera costaba 500
     // lecturas por corrida —36.000 al dia— para vigilar dos motos.
     const snap = await db.collection('gps').where('estado', '==', 'instalado').get();
@@ -280,6 +311,11 @@ if (require.main !== module) return;
   }
 
   if (ok) await lote.commit();
+  await db.collection('config').doc('gps').set({
+    ultimaSync: new Date().toISOString(),
+    ultimaSyncEquipos: ok,
+    ultimaSyncSinCambio: sinCambio,
+  }, { merge: true });
   console.log('Actualizados ' + ok + ' equipos'
     + (sinCambio ? ' · ' + sinCambio + ' sin moverse (no se reescriben)' : '')
     + (sinPos   ? ' · ' + sinPos   + ' sin posicion' : '')

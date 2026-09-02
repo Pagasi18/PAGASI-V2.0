@@ -17,7 +17,7 @@ global.ok=(l,v)=>{ if(v){pass++;console.log('OK   '+l);} else {fail++;console.lo
 
 const auto=new Proxy({},{has:()=>true,get:(t,k)=>{if(k===Symbol.unscopables)return undefined;if(k in t)return t[k];if(k in global)return global[k];return function(){return 0;};},set:(t,k,v)=>{t[k]=v;return true;}});
 const SRC=fs.readFileSync(path.join(ROOT,'logic/gps.js'),'utf8');
-const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar,_gpsNumCred,_gpsListaMapa,_gpsSetTab,_gpsHtmlSims,_gpsBuscarCred,_gpsElegirCred,_gpsHtmlRevision,_gpsGrupo,_gpsHtmlDetalle,_gpsSeleccionar,_gpsSel,_gpsSetFiltroMapa,_gpsFiltroMapa,_gpsClaveDir,_gpsHtmlPanel}) }');
+const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar,_gpsNumCred,_gpsListaMapa,_gpsSetTab,_gpsHtmlSims,_gpsBuscarCred,_gpsElegirCred,_gpsHtmlRevision,_gpsGrupo,_gpsHtmlDetalle,_gpsSeleccionar,_gpsSel,_gpsSetFiltroMapa,_gpsFiltroMapa,_gpsClaveDir,_gpsHtmlPanel,_gpsHtmlSync,_gpsCfg}) }');
 
 // ── Escenario: 5 creditos, 3 con equipo ──
 S.creds = [
@@ -579,6 +579,37 @@ API._gpsAsignar('OTRO');
 // conserva lo que quedo del caso anterior.
 ok('precarga la linea que ya tenia',
    $('mbd').innerHTML.indexOf('id="gpsa_linea" value="143557051"') > -1);
+
+// ══════════════════════════════════════════════════════════════════
+// BOTON DE ACTUALIZAR — el navegador no puede llamar a MiCODUS ni
+// disparar el bot, asi que deja una señal que el bot recoge.
+// ══════════════════════════════════════════════════════════════════
+const minAtras = n => new Date(Date.now()-n*60000).toISOString();
+
+window._gpsConfig = {};
+ok('sin sincronizar dice "nunca"', API._gpsHtmlSync().indexOf('nunca') > -1);
+ok('y ofrece el boton', API._gpsHtmlSync().indexOf('_gpsPedirRefresco') > -1);
+
+window._gpsConfig = {ultimaSync: minAtras(0), ultimaSyncEquipos: 2};
+ok('recien sincronizado', API._gpsHtmlSync().indexOf('hace un momento') > -1);
+ok('dice cuantos equipos', API._gpsHtmlSync().indexOf('2 equipos') > -1);
+
+window._gpsConfig = {ultimaSync: minAtras(25)};
+ok('hace 25 minutos', API._gpsHtmlSync().indexOf('hace 25 min') > -1);
+window._gpsConfig = {ultimaSync: minAtras(150)};
+ok('hace 2 horas', API._gpsHtmlSync().indexOf('hace 2 h') > -1);
+window._gpsConfig = {ultimaSync: minAtras(60*50)};
+ok('hace 2 dias', API._gpsHtmlSync().indexOf('hace 2 d') > -1);
+ok('y avisa en ambar cuando lleva mucho', API._gpsHtmlSync().indexOf('var(--amber)') > -1);
+window._gpsConfig = {ultimaSync: minAtras(30)};
+ok('media hora todavia no alarma', API._gpsHtmlSync().indexOf('var(--amber)') === -1);
+
+window._gpsConfig = {ultimaSync: minAtras(5), refrescoPedido: true};
+ok('con refresco pedido avisa que viene en camino',
+   API._gpsHtmlSync().indexOf('llega en unos minutos') > -1);
+ok('y esconde el boton para no pedirlo dos veces',
+   API._gpsHtmlSync().indexOf('_gpsPedirRefresco') === -1);
+window._gpsConfig = {};
 
 console.log('');
 console.log(pass+' pruebas OK, '+fail+' fallas');
