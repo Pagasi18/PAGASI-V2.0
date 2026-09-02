@@ -778,13 +778,17 @@ function _gpsHtmlMapa(instalados){
   setTimeout(_gpsPintarMapa, 60);
   // Mapa y lista lado a lado: el mapa dice donde, la lista dice quien.
   var angosto = (typeof window !== 'undefined' && window.innerWidth && window.innerWidth < 900);
+  // La lista va a la izquierda: se lee antes que el mapa, de arriba abajo.
   h += '<div style="display:grid;gap:12px;align-items:start;'
-    + (angosto ? 'grid-template-columns:1fr' : 'grid-template-columns:minmax(0,1fr) 320px') + '">'
-    + '<div id="gps-mapa" style="height:540px;border-radius:12px;border:1px solid var(--rim);overflow:hidden;background:var(--surf2)"></div>'
+    + (angosto ? 'grid-template-columns:1fr' : 'grid-template-columns:320px minmax(0,1fr)') + '">'
     + '<div style="' + (angosto ? 'max-height:320px' : 'height:540px')
-    + ';overflow-y:auto;border:1px solid var(--rim);border-radius:12px;background:var(--surf)">'
+    + ';overflow-y:auto;border:1px solid var(--rim);border-radius:12px;background:var(--surf)'
+    + (angosto ? ';order:2' : '') + '">'
     + _gpsListaMapa(conPos)
-    + '</div></div>';
+    + '</div>'
+    + '<div id="gps-mapa" style="height:540px;border-radius:12px;border:1px solid var(--rim);overflow:hidden;background:var(--surf2)'
+    + (angosto ? ';order:1' : '') + '"></div>'
+    + '</div>';
   h += '<div style="font-size:11px;color:var(--ink3);margin-top:8px">'
     + conPos.length + ' de ' + instalados.length + ' equipos instalados con posicion conocida'
     + (sinPos ? ' · <b>' + sinPos + '</b> sin reportar todavia' : '')
