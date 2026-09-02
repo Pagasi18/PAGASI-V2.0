@@ -2,10 +2,10 @@ name: Posiciones GPS (MiCODUS)
 
 on:
   schedule:
-    # Cada 5 min. La mayoria de las corridas leen UN documento, ven que el
-    # barrido es reciente y salen. El barrido completo es cada hora, o cuando
-    # alguien le da a Actualizar en el app.
-    - cron: '*/5 * * * *'
+    # Respaldo cada 6 horas. El disparo bueno viene del Worker de Cloudflare,
+    # que si respeta la hora: el cron de GitHub en repos publicos se retrasa
+    # horas enteras (pedimos cada 5 min y corria cada 4 h).
+    - cron: '0 */6 * * *'
   workflow_dispatch: {}
 
 permissions:

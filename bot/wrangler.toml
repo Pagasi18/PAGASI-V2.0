@@ -1,0 +1,17 @@
+# Worker de Cloudflare: atiende el bot de Telegram y dispara los jobs de
+# GitHub Actions. Guarda el token de GitHub para que nunca este en el
+# navegador.
+#
+# Para publicarlo:   cd bot && npx wrangler deploy
+# Secrets (una vez): npx wrangler secret put TELEGRAM_TOKEN
+#                    npx wrangler secret put GITHUB_PAT
+#                    npx wrangler secret put CHAT_ID
+
+name = "pagasi-bot"
+main = "telegram-worker.js"
+compatibility_date = "2026-01-01"
+
+# El barrido de posiciones de GPS. Cloudflare si respeta la hora; el cron de
+# GitHub Actions en repos publicos se retrasa horas enteras.
+[triggers]
+crons = ["0 * * * *"]

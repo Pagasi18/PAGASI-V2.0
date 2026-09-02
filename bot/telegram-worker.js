@@ -47,6 +47,25 @@ const MODOS = {
 const ORIGENES = ['https://pagasi.io', 'https://www.pagasi.io'];
 
 export default {
+  // Cloudflare si corre esto a la hora. GitHub retrasa sus workflows
+  // programados horas enteras, asi que el barrido de GPS se dispara desde
+  // aqui en vez de confiar en el cron de GitHub.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(fetch(
+      `https://api.github.com/repos/${REPO}/actions/workflows/gps-micodus.yml/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.GITHUB_PAT}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'User-Agent': 'pagasi-gps-cron',
+        },
+        body: JSON.stringify({ ref: 'main' }),
+      }
+    ));
+  },
+
   async fetch(request, env) {
     const url = new URL(request.url);
 
