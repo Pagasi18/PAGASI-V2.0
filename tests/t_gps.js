@@ -17,7 +17,7 @@ global.ok=(l,v)=>{ if(v){pass++;console.log('OK   '+l);} else {fail++;console.lo
 
 const auto=new Proxy({},{has:()=>true,get:(t,k)=>{if(k===Symbol.unscopables)return undefined;if(k in t)return t[k];if(k in global)return global[k];return function(){return 0;};},set:(t,k,v)=>{t[k]=v;return true;}});
 const SRC=fs.readFileSync(path.join(ROOT,'logic/gps.js'),'utf8');
-const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar,_gpsNumCred}) }');
+const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar,_gpsNumCred,_gpsListaMapa}) }');
 
 // ── Escenario: 5 creditos, 3 con equipo ──
 S.creds = [
@@ -154,6 +154,12 @@ ok('cae a la fecha de instalacion si nunca se reviso',
 ok('la revision manda sobre la instalacion',
    API._gpsDiasSinRevisar({fechaInstalacion:dLoc(-90), ultimaRevision:dLoc(-2)})===2);
 ok('una fecha basura no revienta', API._gpsDiasSinRevisar({ultimaRevision:'xxx'})===null);
+// Una fecha suelta se ancla al mediodia: antes de las 12 del dia, "hoy"
+// quedaba en el futuro y devolvia -1. En la pantalla se leia "hace -1 d".
+ok('nunca devuelve negativo, ni de madrugada',
+   API._gpsDiasSinRevisar({ultimaRevision:dLoc(0)}) >= 0);
+ok('una fecha futura tampoco da negativo',
+   API._gpsDiasSinRevisar({ultimaRevision:dLoc(3)}) === 0);
 
 S.gps = [
   {id:'R1', estado:'instalado', creditoId:'CRED-001', ultimaRevision:dLoc(-2),  estadoMicodus:'ONLINE / OK', eliminado:false},
@@ -369,6 +375,44 @@ ok('el viejo con 90 dias de mora queda de ultimo', opts[3] === 'CRED-100');
 ok('la mora ya NO manda el orden', opts[0] !== 'CRED-100');
 ok('se ve la fecha en cada opcion', $('mbd').innerHTML.indexOf('2026-09-02') > -1);
 ok('la mora se sigue mostrando como aviso', $('mbd').innerHTML.indexOf('90 d de mora') > -1);
+
+// ══════════════════════════════════════════════════════════════════
+// LISTA JUNTO AL MAPA — el mapa dice donde, la lista dice quien
+// ══════════════════════════════════════════════════════════════════
+const uh = n => new Date(Date.now()-n*3600000).toISOString().slice(0,19).replace('T',' ');
+S.creds = [
+  {id:'C-MORA',  cli:'Moroso Grande', modelo:'Bera',   placa:'AA1', estado:'mora',   mora:40, eliminado:false},
+  {id:'C-MORA2', cli:'Moroso Chico',  modelo:'Empire', placa:'BB2', estado:'mora',   mora:5,  eliminado:false},
+  {id:'C-MUDO',  cli:'Sin Reportar',  modelo:'Toro',   placa:'CC3', estado:'activo', mora:0,  eliminado:false},
+  {id:'C-OK',    cli:'Al Dia',        modelo:'Bera',   placa:'DD4', estado:'activo', mora:0,  eliminado:false},
+];
+const pts = [
+  {id:'g1', creditoId:'C-OK',    idGps:'111', lat:10.4, lng:-66.9, ultimaSenal:uh(1),  dataType:1, velocidad:0},
+  {id:'g2', creditoId:'C-MORA',  idGps:'222', lat:10.5, lng:-66.8, ultimaSenal:uh(2),  dataType:1, velocidad:48},
+  {id:'g3', creditoId:'C-MUDO',  idGps:'333', lat:10.6, lng:-66.7, ultimaSenal:uh(96), dataType:1, velocidad:0},
+  {id:'g4', creditoId:'C-MORA2', idGps:'444', lat:10.7, lng:-66.6, ultimaSenal:uh(3),  dataType:2, velocidad:0, bateria:15},
+];
+const lm = API._gpsListaMapa(pts);
+const orden = [...lm.matchAll(/_gpsIrA\('(\w+)'\)/g)].map(m=>m[1]);
+
+ok('los 4 salen en la lista', orden.length === 4);
+ok('primero la mora mas alta', orden[0] === 'g2');
+ok('despues la mora menor', orden[1] === 'g4');
+ok('luego el que dejo de reportar', orden[2] === 'g3');
+ok('de ultimo el que esta al dia', orden[3] === 'g1');
+
+ok('muestra el cliente', lm.indexOf('Moroso Grande') > -1);
+ok('muestra el credito', lm.indexOf('C-MORA') > -1);
+ok('muestra la placa', lm.indexOf('AA1') > -1);
+ok('muestra la moto', lm.indexOf('Empire') > -1);
+ok('marca los dias de mora', lm.indexOf('40 d de mora') > -1);
+ok('marca los dias sin reportar', lm.indexOf('4 d sin reportar') > -1);
+ok('avisa cuando va en movimiento', lm.indexOf('48 km/h') > -1);
+ok('no marca velocidad si esta detenida', (lm.match(/km\/h/g)||[]).length === 1);
+ok('avisa posicion por antena', lm.indexOf('por antena') > -1);
+ok('avisa bateria baja', lm.indexOf('bateria 15%') > -1);
+ok('cada fila es clicable', (lm.match(/_gpsIrA/g)||[]).length === 4);
+ok('lista vacia no revienta', API._gpsListaMapa([]) === '');
 
 console.log('');
 console.log(pass+' pruebas OK, '+fail+' fallas');

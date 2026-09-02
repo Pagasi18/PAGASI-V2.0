@@ -133,7 +133,13 @@ function _gpsDiasSinRevisar(g){
   if(!f) return null;
   var d = _gpsParseFecha(String(f).slice(0,10));
   if(!d) return null;
-  return Math.floor((Date.now() - d.getTime()) / 86400000);
+  // Dias de CALENDARIO, no horas. Restando marcas de tiempo, a las 00:30 una
+  // revision de hace 20 dias daba 19: faltaban 12 horas para completar el
+  // vigesimo. "Hace 20 dias" no puede depender de la hora en que se mire.
+  var hoy = new Date();
+  var a = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  var b = Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  return Math.max(0, Math.round((b - a) / 86400000));
 }
 
 // Equipos instalados que llevan demasiado sin que nadie confirme que responden.
@@ -613,12 +619,89 @@ function _gpsHtmlMapa(instalados){
   }
 
   setTimeout(_gpsPintarMapa, 60);
-  h += '<div id="gps-mapa" style="height:540px;border-radius:12px;border:1px solid var(--rim);overflow:hidden;background:var(--surf2)"></div>';
+  // Mapa y lista lado a lado: el mapa dice donde, la lista dice quien.
+  var angosto = (typeof window !== 'undefined' && window.innerWidth && window.innerWidth < 900);
+  h += '<div style="display:grid;gap:12px;align-items:start;'
+    + (angosto ? 'grid-template-columns:1fr' : 'grid-template-columns:minmax(0,1fr) 320px') + '">'
+    + '<div id="gps-mapa" style="height:540px;border-radius:12px;border:1px solid var(--rim);overflow:hidden;background:var(--surf2)"></div>'
+    + '<div style="' + (angosto ? 'max-height:320px' : 'height:540px')
+    + ';overflow-y:auto;border:1px solid var(--rim);border-radius:12px;background:var(--surf)">'
+    + _gpsListaMapa(conPos)
+    + '</div></div>';
   h += '<div style="font-size:11px;color:var(--ink3);margin-top:8px">'
     + conPos.length + ' de ' + instalados.length + ' equipos instalados con posicion conocida'
     + (sinPos ? ' · <b>' + sinPos + '</b> sin reportar todavia' : '')
     + '</div>';
   return h;
+}
+
+// Lista al lado del mapa. Ordenada por lo que hay que atender primero:
+// mora, despues los que dejaron de reportar, despues el resto.
+function _gpsListaMapa(conPos){
+  var orden = conPos.slice().sort(function(a,b){
+    var ia = _gpsCredInfo(a.creditoId), ib = _gpsCredInfo(b.creditoId);
+    var pa = (ia && ia.enMora) ? 0 : ((_gpsHorasSinReportar(a)||0) > 48 ? 1 : 2);
+    var pb = (ib && ib.enMora) ? 0 : ((_gpsHorasSinReportar(b)||0) > 48 ? 1 : 2);
+    if(pa !== pb) return pa - pb;
+    if(pa === 0) return ((ib&&ib.diasMora)||0) - ((ia&&ia.diasMora)||0);
+    return (_gpsHorasSinReportar(b)||0) - (_gpsHorasSinReportar(a)||0);
+  });
+
+  var h = '';
+  orden.forEach(function(g, i){
+    var info  = _gpsCredInfo(g.creditoId);
+    var color = _gpsColor(g);
+    var horas = _gpsHorasSinReportar(g);
+    var fuente = _gpsFuente(g);
+    var moviendo = (typeof g.velocidad === 'number' && g.velocidad > 3);
+
+    h += '<div onclick="_gpsIrA(\'' + g.id + '\')" title="Centrar en el mapa" '
+      + 'style="padding:11px 13px;cursor:pointer;border-bottom:1px solid var(--rim)'
+      + (i === 0 ? ';border-top:none' : '') + '" '
+      + 'onmouseover="this.style.background=\'var(--surf2)\'" '
+      + 'onmouseout="this.style.background=\'\'">'
+      + '<div style="display:flex;align-items:center;gap:8px">'
+      + '<span style="width:9px;height:9px;border-radius:50%;background:' + color + ';flex:0 0 9px"></span>'
+      + '<span style="font-weight:700;font-size:12.5px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+      + (info ? info.cliente : (g.idGps || g.id)) + '</span>'
+      + (moviendo ? '<span style="margin-left:auto;font-size:10px;font-weight:800;color:var(--green);white-space:nowrap">'
+                    + Math.round(g.velocidad) + ' km/h</span>' : '')
+      + '</div>';
+
+    var linea2 = [];
+    if(g.creditoId) linea2.push(g.creditoId);
+    if(info && info.placa) linea2.push(info.placa);
+    if(linea2.length){
+      h += '<div style="font-size:11px;color:var(--ink3);margin:2px 0 0 17px">' + linea2.join(' · ') + '</div>';
+    }
+    if(info && info.modelo){
+      h += '<div style="font-size:11px;color:var(--ink3);margin-left:17px">' + info.modelo + '</div>';
+    }
+
+    var marcas = [];
+    if(info && info.enMora) marcas.push('<span style="color:var(--red);font-weight:800">' + info.diasMora + ' d de mora</span>');
+    if(horas !== null){
+      marcas.push(horas === 0 ? 'hace menos de 1 h'
+                : horas < 48 ? 'hace ' + horas + ' h'
+                : '<span style="color:var(--amber);font-weight:700">' + Math.floor(horas/24) + ' d sin reportar</span>');
+    }
+    if(!fuente.fino) marcas.push('<span style="color:var(--amber)">' + fuente.l + '</span>');
+    if(typeof g.bateria === 'number' && g.bateria < 30) marcas.push('<span style="color:var(--red)">bateria ' + g.bateria + '%</span>');
+    if(marcas.length){
+      h += '<div style="font-size:10.5px;margin:3px 0 0 17px;line-height:1.5">' + marcas.join(' · ') + '</div>';
+    }
+    h += '</div>';
+  });
+  return h;
+}
+
+// Centrar el mapa en un equipo y abrir su globo.
+function _gpsIrA(id){
+  var m = window._gpsMarcadores && window._gpsMarcadores[id];
+  var mapa = window._gpsMapaObj;
+  if(!m || !mapa) return;
+  mapa.setView(m.getLatLng(), Math.max(mapa.getZoom(), 15), {animate:true});
+  m.openPopup();
 }
 
 // Leaflet se carga bajo demanda: no tiene sentido pagarlo en cada carga del app.
@@ -657,6 +740,7 @@ function _gpsPintarMapa(){
   }).addTo(mapa);
 
   var bounds = [];
+  window._gpsMarcadores = {};
   puntos.forEach(function(g){
     var info  = _gpsCredInfo(g.creditoId);
     var color = _gpsColor(g);
@@ -672,6 +756,7 @@ function _gpsPintarMapa(){
     var m = L.circleMarker([g.lat, g.lng], {
       radius: 8, color:'#fff', weight:2, fillColor:color, fillOpacity:.95
     }).addTo(mapa);
+    window._gpsMarcadores[g.id] = m;
 
     var pop = '<div style="font-family:system-ui,-apple-system,sans-serif;font-size:12px;line-height:1.55;min-width:190px">'
       + '<div style="font-weight:800;font-size:13px;margin-bottom:2px">'
