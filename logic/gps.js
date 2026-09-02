@@ -437,10 +437,134 @@ function _gpsFilasEquipos(){
   return h;
 }
 
+// Buscador del selector de credito. Un <select> con 470 opciones es
+// inusable: no se puede escribir para filtrar y hay que bajar a rueda.
+function _gpsBuscarCred(q){
+  var cont = document.getElementById('gpsa_lista');
+  if(!cont) return;
+  var libres = window._gpsCredsLibres || [];
+  var t = String(q||'').trim().toLowerCase();
+
+  var hits = !t ? libres : libres.filter(function(c){
+    var heno = [c.id, c.cli, c.ci, c.cedula, c.modelo, c.marca, c.placa, c.tel]
+      .join(' ').toLowerCase();
+    return t.split(/\s+/).every(function(w){ return heno.indexOf(w) > -1; });
+  });
+
+  if(!hits.length){
+    cont.innerHTML = '<div style="padding:18px 14px;text-align:center;color:var(--ink3);font-size:12px">'
+      + 'Ningun credito coincide con "' + String(q).replace(/</g,'&lt;') + '"</div>';
+    return;
+  }
+
+  var elegido = (document.getElementById('gpsa_cred')||{}).value || '';
+  cont.innerHTML = hits.slice(0, 40).map(function(c){
+    var d = parseInt(c.mora,10)||0;
+    var on = c.id === elegido;
+    return '<div onclick="_gpsElegirCred(\'' + c.id + '\')" '
+      + 'style="padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--rim);'
+      + (on ? 'background:var(--p1);color:#fff' : '') + '" '
+      + (on ? '' : 'onmouseover="this.style.background=\'var(--surf2)\'" onmouseout="this.style.background=\'\'"')
+      + '>'
+      + '<div style="font-weight:700;font-size:12.5px">' + (c.cli||'(sin nombre)') + '</div>'
+      + '<div style="font-size:11px;' + (on ? 'opacity:.85' : 'color:var(--ink3)') + '">'
+      + c.id + (c.fecha ? ' · ' + c.fecha : '')
+      + ((c.modelo||c.marca) ? ' · ' + (c.modelo||c.marca) : '')
+      + (c.placa ? ' · ' + c.placa : '')
+      + (d ? '  ·  ' + d + ' d de mora' : '')
+      + '</div></div>';
+  }).join('')
+  + (hits.length > 40
+      ? '<div style="padding:8px 12px;font-size:11px;color:var(--ink3);text-align:center">'
+        + 'y ' + (hits.length-40) + ' mas — sigue escribiendo</div>'
+      : '');
+}
+
+function _gpsElegirCred(id){
+  var h = document.getElementById('gpsa_cred');
+  if(h) h.value = id;
+  var c = (window._gpsCredsLibres||[]).find(function(x){ return x.id === id; });
+  var b = document.getElementById('gpsa_buscar');
+  if(b && c) b.value = (c.cli||'') + '  ·  ' + c.id;
+  _gpsBuscarCred('');
+}
+
 // CRED-467 → 467, para desempatar dos creditos del mismo dia.
 function _gpsNumCred(id){
   var m = String(id||'').match(/(\d+)\s*$/);
   return m ? parseInt(m[1], 10) : 0;
+}
+
+// Cuanto lleva sin que nadie confirme que el equipo responde.
+function _gpsHtmlRevision(g){
+  if(String(g.estado||'') !== 'instalado'){
+    return '<span style="color:var(--ink3)">—</span>';
+  }
+  var d = _gpsDiasSinRevisar(g);
+  if(d === null) return '<span style="color:var(--amber);font-weight:800">nunca</span>';
+  var col = d > GPS_DIAS_REVISION ? 'var(--amber)' : 'var(--ink3)';
+  var txt = d === 0 ? 'hoy' : 'hace ' + d + ' d';
+  return '<span style="color:' + col + (d > GPS_DIAS_REVISION ? ';font-weight:800' : '') + '">' + txt + '</span>'
+    + (g.estadoMicodus ? '<br><span style="font-size:10px;color:var(--ink3)">' + g.estadoMicodus + '</span>' : '');
+}
+
+// Un clic: quien reviso, cuando, y como respondio el equipo. Es lo mismo que
+// hoy se anota en las columnas ESTADO MiCODUS y VERIFICADO POR del Excel.
+function _gpsRevisar(id){
+  var g = _gpsById(id);
+  if(!g) return;
+  setMicon('check');
+  $('mtt').textContent = 'Revisar equipo';
+  $('msb').textContent = (g.idGps || g.id) + (g.creditoId ? ' · ' + g.creditoId : '');
+  $('modal-box').className = 'modal';
+  var info = _gpsCredInfo(g.creditoId);
+  $('mbd').innerHTML = ''
+    + (info ? '<div style="font-size:12.5px;color:var(--ink2);margin-bottom:12px">'
+        + '<b>' + info.cliente + '</b> · ' + info.modelo + (info.placa ? ' · ' + info.placa : '')
+        + (info.enMora ? ' · <span style="color:var(--red);font-weight:800">' + info.diasMora + ' dias de mora</span>' : '')
+        + '</div>' : '')
+    + '<div class="fgr c1" style="gap:10px">'
+    + '<div class="fg"><label>¿Como respondio en MiCODUS?</label><select class="fs" id="gpsr_estado">'
+    + '<option value="ONLINE / OK">ONLINE — responde bien</option>'
+    + '<option value="OFFLINE">OFFLINE — no reporta</option>'
+    + '<option value="SIN SEÑAL RECIENTE">Sin señal reciente</option>'
+    + '<option value="BATERIA BAJA">Bateria baja</option>'
+    + '<option value="FALLA">Con falla</option>'
+    + '</select></div>'
+    + '<div class="fgr" style="gap:10px">'
+    + '<div class="fg"><label>Latitud</label><input class="fi" id="gpsr_lat" value="' + (typeof g.lat==='number'?g.lat:'') + '" placeholder="10.4806"></div>'
+    + '<div class="fg"><label>Longitud</label><input class="fi" id="gpsr_lng" value="' + (typeof g.lng==='number'?g.lng:'') + '" placeholder="-66.9036"></div>'
+    + '</div>'
+    + '<div style="font-size:10.5px;color:var(--ink3);margin-top:-4px">Opcional. Copialas de MiCODUS y la moto aparece en el mapa. Cuando la API este conectada esto se llena solo.</div>'
+    + '<div class="fg"><label>Nota</label><input class="fi" id="gpsr_nota" placeholder="Opcional"></div>'
+    + '</div>';
+  S.saveFn = function(){
+    var est = ($('gpsr_estado')||{}).value || '';
+    var lat = parseFloat(($('gpsr_lat')||{}).value);
+    var lng = parseFloat(($('gpsr_lng')||{}).value);
+    var o = Object.assign({}, g);
+    o.estadoMicodus = est;
+    o.ultimaRevision = (typeof hoyLocalISO === 'function') ? hoyLocalISO() : new Date().toISOString().slice(0,10);
+    o.verificadoPor = (S.currentUser && S.currentUser.nombre) || 'Admin';
+    // Solo se guardan coordenadas si las dos son numeros validos y estan en rango.
+    if(!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180){
+      o.lat = lat; o.lng = lng; o.ultimaSenal = o.ultimaRevision;
+    }
+    var nota = (($('gpsr_nota')||{}).value || '').trim();
+    if(nota) o.observaciones = nota;
+    if(est.indexOf('FALLA') > -1) o.estado = 'falla';
+    var i = S.gps.findIndex(function(x){ return x.id === g.id; });
+    if(i >= 0) S.gps[i] = o;
+    if(DB && DB.saveGps) DB.saveGps(o);
+    if(typeof logActividad === 'function') logActividad('gps_revisar','gps',g.id,{estado:est});
+    closeM();
+    toast('Equipo revisado', 'success');
+    nav('gps');
+    return true;
+  };
+  $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button>'
+    + '<button class="btn btn-p" onclick="saveM()">Guardar revision</button>';
+  $('ov').style.display = 'flex';
 }
 
 // ── Asignar un equipo a un credito, sin salir de la tabla ────────
@@ -468,6 +592,7 @@ function _gpsAsignar(id){
   $('msb').textContent = g.idGps || g.id;
   $('modal-box').className = 'modal';
 
+  window._gpsCredsLibres = libres;
   var hoy = (typeof hoyLocalISO === 'function') ? hoyLocalISO() : new Date().toISOString().slice(0,10);
   $('mbd').innerHTML = ''
     + '<div style="font-size:12.5px;color:var(--ink2);line-height:1.6;margin-bottom:12px">'
@@ -476,17 +601,13 @@ function _gpsAsignar(id){
     + (g.iccid ? '' : ' <span style="color:var(--amber)">· sin SIM cargada</span>')
     + '</div>'
     + '<div class="fgr c1" style="gap:10px">'
-    + '<div class="fg"><label>Credito <span style="color:var(--red)">*</span></label>'
-    + '<select class="fs" id="gpsa_cred"><option value="">— elegir —</option>'
-    + libres.map(function(c){
-        var d = parseInt(c.mora,10)||0;
-        return '<option value="' + c.id + '">' + (c.fecha ? c.fecha + '  ·  ' : '')
-             + c.id + ' — ' + (c.cli||'')
-             + ' · ' + (c.modelo||c.marca||'') + (c.placa ? ' · ' + c.placa : '')
-             + (d ? '  [' + d + ' d de mora]' : '') + '</option>';
-      }).join('')
-    + '</select>'
-    + '<div style="font-size:10.5px;color:var(--ink3);margin-top:3px">'
+    + '<div class="fg"><label>Cliente o credito <span style="color:var(--red)">*</span></label>'
+    + '<input class="fi" id="gpsa_buscar" placeholder="Escribe el nombre, la cedula, el N° de credito o la placa..." '
+    + 'oninput="_gpsBuscarCred(this.value)" autocomplete="off">'
+    + '<input type="hidden" id="gpsa_cred" value="">'
+    + '<div id="gpsa_lista" style="max-height:230px;overflow-y:auto;border:1px solid var(--rim);'
+    + 'border-radius:8px;margin-top:6px;background:var(--surf)"></div>'
+    + '<div style="font-size:10.5px;color:var(--ink3);margin-top:5px">'
     + libres.length + ' creditos vigentes sin equipo, <b>los mas nuevos primero</b>. '
     + 'El cliente, la moto y la placa salen del credito.</div></div>'
     + '<div class="fgr" style="gap:10px">'
@@ -494,6 +615,8 @@ function _gpsAsignar(id){
     + '<div class="fg"><label>Tecnico</label><input class="fi" id="gpsa_tecnico" value="' + String(g.tecnico||'').replace(/"/g,'&quot;') + '" placeholder="Quien la instalo"></div>'
     + '</div>'
     + '</div>';
+
+  setTimeout(function(){ _gpsBuscarCred(''); }, 30);
 
   S.saveFn = function(){
     var cred = (($('gpsa_cred')||{}).value || '').trim();

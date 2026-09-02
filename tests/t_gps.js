@@ -17,7 +17,7 @@ global.ok=(l,v)=>{ if(v){pass++;console.log('OK   '+l);} else {fail++;console.lo
 
 const auto=new Proxy({},{has:()=>true,get:(t,k)=>{if(k===Symbol.unscopables)return undefined;if(k in t)return t[k];if(k in global)return global[k];return function(){return 0;};},set:(t,k,v)=>{t[k]=v;return true;}});
 const SRC=fs.readFileSync(path.join(ROOT,'logic/gps.js'),'utf8');
-const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar,_gpsNumCred,_gpsListaMapa,_gpsSetTab,_gpsHtmlSims}) }');
+const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar,_gpsNumCred,_gpsListaMapa,_gpsSetTab,_gpsHtmlSims,_gpsBuscarCred,_gpsElegirCred,_gpsHtmlRevision}) }');
 
 // ── Escenario: 5 creditos, 3 con equipo ──
 S.creds = [
@@ -367,14 +367,16 @@ S.creds = [
 ];
 S.gps = [{id:'L', estado:'stock', idGps:'19210076000', eliminado:false}];
 API._gpsAsignar('L');
-const opts = [...$('mbd').innerHTML.matchAll(/value="(CRED-\d+)"/g)].map(m => m[1]);
+API._gpsBuscarCred('');
+const lista = $('gpsa_lista').innerHTML;
+const opts = [...lista.matchAll(/_gpsElegirCred\('(CRED-\d+)'\)/g)].map(m => m[1]);
 ok('el primero es el mas nuevo', opts[0] === 'CRED-481');
 ok('desempata por numero de credito', opts[1] === 'CRED-480');
 ok('despues el del medio', opts[2] === 'CRED-300');
 ok('el viejo con 90 dias de mora queda de ultimo', opts[3] === 'CRED-100');
 ok('la mora ya NO manda el orden', opts[0] !== 'CRED-100');
-ok('se ve la fecha en cada opcion', $('mbd').innerHTML.indexOf('2026-09-02') > -1);
-ok('la mora se sigue mostrando como aviso', $('mbd').innerHTML.indexOf('90 d de mora') > -1);
+ok('se ve la fecha de cada credito', lista.indexOf('2026-09-02') > -1);
+ok('la mora se sigue mostrando como aviso', lista.indexOf('90 d de mora') > -1);
 
 // ══════════════════════════════════════════════════════════════════
 // LISTA JUNTO AL MAPA — el mapa dice donde, la lista dice quien
@@ -436,6 +438,60 @@ ok('la SIM libre trae boton de asignar', sims.indexOf("_gpsAsignar('S1')") > -1)
 ok('la SIM ya instalada no lo trae', sims.indexOf("_gpsAsignar('S2')") === -1);
 ok('la instalada muestra a quien', sims.indexOf('Nuevo') > -1);
 ok('la libre dice libre', sims.indexOf('libre') > -1);
+
+// ══════════════════════════════════════════════════════════════════
+// BUSCADOR DE CREDITOS — un <select> con 470 opciones es inusable
+// ══════════════════════════════════════════════════════════════════
+S.creds = [
+  {id:'CRED-480', cli:'MARIA GONZALEZ',  ci:'V-18456789', modelo:'Bera',   placa:'AB1C2D', fecha:'2026-09-02', estado:'activo', mora:0,  eliminado:false},
+  {id:'CRED-479', cli:'JOSE RODRIGUEZ',  ci:'V-20111222', modelo:'Empire', placa:'XY9Z8W', fecha:'2026-09-01', estado:'activo', mora:0,  eliminado:false},
+  {id:'CRED-100', cli:'PEDRO MARTINEZ',  ci:'V-14000111', modelo:'Toro',   placa:'QQ1R2S', fecha:'2026-05-10', estado:'mora',   mora:60, eliminado:false},
+];
+S.gps = [{id:'LIB', estado:'stock', idGps:'19210076000', eliminado:false}];
+API._gpsAsignar('LIB');
+
+ok('ya no hay un select gigante', $('mbd').innerHTML.indexOf('<select class="fs" id="gpsa_cred"') === -1);
+ok('hay un campo para escribir', $('mbd').innerHTML.indexOf('gpsa_buscar') > -1);
+
+API._gpsBuscarCred('');
+const todo = $('gpsa_lista').innerHTML;
+ok('sin escribir muestra los 3', (todo.match(/_gpsElegirCred/g)||[]).length === 3);
+ok('el mas nuevo primero', todo.indexOf('MARIA GONZALEZ') < todo.indexOf('PEDRO MARTINEZ'));
+
+API._gpsBuscarCred('maria');
+ok('busca por nombre', $('gpsa_lista').innerHTML.indexOf('MARIA GONZALEZ') > -1);
+ok('y descarta el resto', $('gpsa_lista').innerHTML.indexOf('JOSE RODRIGUEZ') === -1);
+
+API._gpsBuscarCred('20111222');
+ok('busca por cedula', $('gpsa_lista').innerHTML.indexOf('JOSE RODRIGUEZ') > -1);
+API._gpsBuscarCred('CRED-100');
+ok('busca por numero de credito', $('gpsa_lista').innerHTML.indexOf('PEDRO MARTINEZ') > -1);
+API._gpsBuscarCred('xy9z8w');
+ok('busca por placa, sin importar mayusculas', $('gpsa_lista').innerHTML.indexOf('JOSE RODRIGUEZ') > -1);
+API._gpsBuscarCred('empire');
+ok('busca por modelo de moto', $('gpsa_lista').innerHTML.indexOf('JOSE RODRIGUEZ') > -1);
+API._gpsBuscarCred('maria bera');
+ok('varias palabras: todas deben estar', $('gpsa_lista').innerHTML.indexOf('MARIA GONZALEZ') > -1);
+API._gpsBuscarCred('maria empire');
+ok('si una palabra no calza, no sale', $('gpsa_lista').innerHTML.indexOf('MARIA') === -1);
+API._gpsBuscarCred('zzzz');
+ok('sin coincidencias avisa', $('gpsa_lista').innerHTML.indexOf('Ningun credito coincide') > -1);
+
+// Elegir uno y guardar
+API._gpsBuscarCred('');
+API._gpsElegirCred('CRED-479');
+ok('al elegir queda guardado el id', $('gpsa_cred').value === 'CRED-479');
+ok('y el campo muestra a quien elegiste', $('gpsa_buscar').value.indexOf('JOSE RODRIGUEZ') > -1);
+$('gpsa_fecha').value = '2026-09-02';
+$('gpsa_tecnico').value = 'FRANCISCO';
+ok('guarda con el credito elegido', S.saveFn() === true);
+ok('el equipo quedo con ese credito', S.gps.find(g=>g.id==='LIB').creditoId === 'CRED-479');
+
+// La columna Revisado, que era la que faltaba y rompia la pestaña
+ok('_gpsHtmlRevision existe y devuelve texto',
+   typeof API._gpsHtmlRevision({estado:'instalado', ultimaRevision:'2026-09-02'}) === 'string');
+ok('un equipo en stock no muestra revision',
+   API._gpsHtmlRevision({estado:'stock'}).indexOf('—') > -1);
 
 console.log('');
 console.log(pass+' pruebas OK, '+fail+' fallas');
