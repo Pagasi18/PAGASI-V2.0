@@ -168,6 +168,43 @@ for (const t of ['mapa', 'equipos', 'sims']) {
 if (rotasGps.length) rotasGps.forEach(r => console.log('     ✗ ' + r));
 ok('las tres pestañas de GPS se pintan', rotasGps.length === 0);
 
+// ══════════════════════════════════════════════════════════════════
+// Un modulo que se puede otorgar como permiso tiene que aparecer en
+// ALGUN sidebar, o marcarlo no sirve de nada.
+//
+// Paso de verdad: al crear el modulo GPS se agrego al sidebar de
+// administradores y se olvido el de empleados, que es otra lista aparte y
+// esta escrita a mano. A Miguel le marcaron el permiso y aun asi no le
+// aparecia: la casilla estaba puesta pero no habia boton que tocar.
+// ══════════════════════════════════════════════════════════════════
+const fuente = fs.readFileSync(path.join(ROOT, 'assets/pagasi-app.js'), 'utf8');
+
+// Los modulos que el admin puede otorgar (los que salen en Editar Permisos)
+const otorgables = [...fuente.matchAll(/\{\s*id:\s*'(\w+)'\s*,\s*label:/g)].map(m => m[1]);
+ok('MODULOS tiene entradas (' + otorgables.length + ')', otorgables.length > 10);
+
+// Las claves de los dos sidebars: el de empleados y el general
+const clavesSidebar = new Set();
+for (const m of fuente.matchAll(/keys:\s*\[([^\]]*)\]/g)) {
+  for (const k of m[1].matchAll(/'(\w+)'/g)) clavesSidebar.add(k[1]);
+}
+ok('los sidebars declaran modulos (' + clavesSidebar.size + ')', clavesSidebar.size > 10);
+
+// Estos viven fuera del sidebar a proposito
+const APARTE = new Set(['concesionarios', 'aprobaciones']);
+const huerfanos = otorgables.filter(k => !clavesSidebar.has(k) && !APARTE.has(k));
+if (huerfanos.length) {
+  console.log('');
+  huerfanos.forEach(k => console.log('     ✗ "' + k + '" se puede otorgar pero no esta en ningun sidebar'));
+  console.log('');
+}
+ok('todo modulo otorgable aparece en algun sidebar', huerfanos.length === 0);
+
+// Y el caso concreto: GPS en los DOS, porque cobranza lo necesita
+const bloquesOps = [...fuente.matchAll(/label:'Operaciones',\s*keys:\s*\[([^\]]*)\]/g)].map(m => m[1]);
+ok('hay dos sidebars con grupo Operaciones', bloquesOps.length === 2);
+ok('GPS esta en los dos', bloquesOps.every(b => b.indexOf("'gps'") > -1));
+
 console.log('');
 console.log(pass + ' pruebas OK, ' + fail + ' fallas');
 process.exit(fail ? 1 : 0);

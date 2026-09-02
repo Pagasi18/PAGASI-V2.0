@@ -2633,7 +2633,7 @@ function renderSidebar(){
     var grposEmp = [
       {label:'Mi Trabajo', keys:['dash','centro','recursos']},
       {label:'Gestión', keys:['clientes','motos','creditos','pagos']},
-      {label:'Operaciones',keys:['contratos','notif','calculadora']},
+      {label:'Operaciones',keys:['contratos','gps','notif','calculadora']},
       {label:'Análisis', keys:['reportes','cuentas','comisiones']},
       {label:'Sistema', keys:['plan','config','scores','users']},
     ];
