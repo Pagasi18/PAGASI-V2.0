@@ -21,9 +21,10 @@ const PASS = process.env.MICODUS_PASS || '';
 // Cuantas horas sin reportar antes de considerarlo caido
 const HORAS_CAIDO = 48;
 
-// Hora de Venezuela del barrido diario. Temprano, para que cobranza arranque
-// el dia con las posiciones frescas.
-const HORA_BARRIDO = 6;
+// Cada cuantos minutos se barren las posiciones. A 500 motos instaladas esto
+// cuesta unos 45 centavos al mes; el barrido diario ahorraba centavos y dejaba
+// el mapa con horas de atraso.
+const MINUTOS_BARRIDO = 60;
 
 // ── Sesion ────────────────────────────────────────────────────────
 // Su login es un GET con las credenciales en la URL. Guardamos las cookies
@@ -200,18 +201,18 @@ if (require.main !== module) return;
     // el app, o una vez al dia a la hora del barrido.
     const cfgRef = db.collection('config').doc('gps');
     const cfg = (await cfgRef.get()).data() || {};
-    const hora = Number(new Date().toLocaleString('en-US',
-      { timeZone: 'America/Caracas', hour: '2-digit', hour12: false }));
-    const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+    const ultimo = cfg.ultimaSync ? new Date(cfg.ultimaSync).getTime() : 0;
+    const minutos = ultimo ? Math.round((Date.now() - ultimo) / 60000) : 99999;
 
     const pidieron = !!cfg.refrescoPedido;
-    const tocaBarrido = hora === HORA_BARRIDO && cfg.ultimoBarrido !== hoy;
+    const tocaBarrido = minutos >= MINUTOS_BARRIDO;
 
     if (!pidieron && !tocaBarrido) {
-      console.log('Nada que hacer (sin refresco pedido, y el barrido de hoy ya se hizo)');
+      console.log('Nada que hacer (ultimo barrido hace ' + minutos + ' min)');
       return;
     }
-    console.log(pidieron ? 'Refresco pedido desde el app' : 'Barrido diario');
+    console.log(pidieron ? 'Refresco pedido desde el app'
+                         : 'Barrido horario (ultimo hace ' + minutos + ' min)');
 
     // Se limpia la bandera de una: si el job falla mas adelante, el proximo
     // barrido igual lo cubre, y asi un boton mal apretado no deja el job
@@ -219,7 +220,6 @@ if (require.main !== module) return;
     await cfgRef.set({
       refrescoPedido: false,
       ultimoIntento: new Date().toISOString(),
-      ...(tocaBarrido ? { ultimoBarrido: hoy } : {}),
     }, { merge: true });
     // Se piden SOLO los instalados. Leer la coleccion entera costaba 500
     // lecturas por corrida —36.000 al dia— para vigilar dos motos.

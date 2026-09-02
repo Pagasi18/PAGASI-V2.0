@@ -2,9 +2,9 @@ name: Posiciones GPS (MiCODUS)
 
 on:
   schedule:
-    # Cada 5 min, pero casi siempre no hace nada: solo lee un documento para
-    # ver si alguien pidio refresco desde el app. El barrido completo es una
-    # vez al dia, a las 6 de la mañana. Una corrida en vacio cuesta 1 lectura.
+    # Cada 5 min. La mayoria de las corridas leen UN documento, ven que el
+    # barrido es reciente y salen. El barrido completo es cada hora, o cuando
+    # alguien le da a Actualizar en el app.
     - cron: '*/5 * * * *'
   workflow_dispatch: {}
 
