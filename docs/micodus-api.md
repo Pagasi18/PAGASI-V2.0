@@ -101,6 +101,39 @@ Páginas de la interfaz, no servicios: `Tracking.aspx` (mapa),
 `Command2.aspx` y `Command3.aspx` (comandos), **`oilset2.aspx`** (corte de
 combustible), `ProductUpdate.aspx` (editar equipo).
 
+## Subcuentas
+
+La cuenta de solo lectura para el bot:
+
+| | |
+|---|---|
+| Login | `pagasi-lectura` |
+| `UserID` | **140853** |
+| Tipo | End User |
+| Padre | `info@pagasi.io` (139351) |
+
+```
+POST /Ajax/DevicesAjax.asmx/ChangeDevicesUser
+{DeviceIDs:'521777,521709', OldUserID:139351, NewUserID:140853, TimeZone:'0'}
+```
+
+Devuelve cuántos movió. **Ojo: el equipo SALE de la cuenta principal** — al
+mover tres, el distribuidor pasó de 500 a 497 y dejaron de aparecer en su
+lista. Pero el padre los sigue leyendo pasando el `UserID` del hijo a
+`GetDevices` y a `GetTracking`. Es reversible: se mueven de vuelta
+invirtiendo `OldUserID` y `NewUserID`.
+
+Listar subcuentas (solo lo tiene un distribuidor):
+
+```
+POST /Ajax/UsersAjax.asmx/GetLowerUsers2
+{UserID:139351, PageNo:1, PageCount:50, UserType:-1, IsChildUser:false, Key:''}
+```
+
+**Una cuenta End User no tiene subcuentas**, así que ahí este servicio no
+sirve para averiguar el propio `UserID`. Se lee del campo oculto
+`hidUserID` de cualquier página de la plataforma, que existe en ambos tipos.
+
 ## Corte de motor
 
 El comando documentado del fabricante es `RELAY,1#` para cortar y `RELAY,0#`
