@@ -592,13 +592,14 @@ function _gpsAsignar(id){
   $('msb').textContent = g.idGps || g.id;
   $('modal-box').className = 'modal';
 
+  var esc = function(v){ return String(v==null?'':v).replace(/"/g,'&quot;'); };
   window._gpsCredsLibres = libres;
   var hoy = (typeof hoyLocalISO === 'function') ? hoyLocalISO() : new Date().toISOString().slice(0,10);
   $('mbd').innerHTML = ''
     + '<div style="font-size:12.5px;color:var(--ink2);line-height:1.6;margin-bottom:12px">'
     + 'Equipo <b style="font-family:ui-monospace,monospace">' + (g.idGps||g.id) + '</b>'
     + (g.linea ? ' · linea ' + g.linea : '')
-    + (g.iccid ? '' : ' <span style="color:var(--amber)">· sin SIM cargada</span>')
+
     + '</div>'
     + '<div class="fgr c1" style="gap:10px">'
     + '<div class="fg"><label>Cliente o credito <span style="color:var(--red)">*</span></label>'
@@ -610,9 +611,19 @@ function _gpsAsignar(id){
     + '<div style="font-size:10.5px;color:var(--ink3);margin-top:5px">'
     + libres.length + ' creditos vigentes sin equipo, <b>los mas nuevos primero</b>. '
     + 'El cliente, la moto y la placa salen del credito.</div></div>'
+    + '<div style="font-size:11px;font-weight:800;color:var(--p1);letter-spacing:.06em;text-transform:uppercase;margin-top:6px">SIM Movistar</div>'
     + '<div class="fgr" style="gap:10px">'
-    + '<div class="fg"><label>Dia de instalacion</label><input type="date" class="fi" id="gpsa_fecha" value="' + hoy + '"></div>'
-    + '<div class="fg"><label>Tecnico</label><input class="fi" id="gpsa_tecnico" value="' + String(g.tecnico||'').replace(/"/g,'&quot;') + '" placeholder="Quien la instalo"></div>'
+    + '<div class="fg"><label>N° de linea</label><input class="fi" id="gpsa_linea" value="' + esc(g.linea) + '" placeholder="Ej: 143557051"></div>'
+    + '<div class="fg"><label>ICCID</label><input class="fi" id="gpsa_iccid" value="' + esc(g.iccid) + '" placeholder="Ej: 895804420015136641"></div>'
+    + '</div>'
+    + '<div style="font-size:10.5px;color:var(--ink3);margin-top:-4px">'
+    + (g.linea ? 'Este equipo ya trae su SIM cargada. Cambiala solo si la reemplazaron.'
+               : 'La SIM que le pusiste a este equipo. Si todavia no tiene, dejalo en blanco.')
+    + '</div>'
+    + '<div style="font-size:11px;font-weight:800;color:var(--p1);letter-spacing:.06em;text-transform:uppercase;margin-top:6px">Instalacion</div>'
+    + '<div class="fgr" style="gap:10px">'
+    + '<div class="fg"><label>Dia</label><input type="date" class="fi" id="gpsa_fecha" value="' + hoy + '"></div>'
+    + '<div class="fg"><label>Tecnico</label><input class="fi" id="gpsa_tecnico" value="' + esc(g.tecnico) + '" placeholder="Quien la instalo"></div>'
     + '</div>'
     + '</div>';
 
@@ -629,9 +640,21 @@ function _gpsAsignar(id){
       toast('El credito ' + cred + ' ya tiene el equipo ' + (choque.idGps||choque.id), 'error');
       return false;
     }
+    var linea = (($('gpsa_linea')||{}).value || '').trim();
+    var iccid = (($('gpsa_iccid')||{}).value || '').trim();
+    // Una linea no puede estar en dos equipos: se cargo mal en alguno.
+    if(linea){
+      var repe = _gpsLista().find(function(x){ return x.id !== id && x.linea === linea; });
+      if(repe){
+        toast('La linea ' + linea + ' ya esta en el equipo ' + (repe.idGps||repe.id), 'error');
+        return false;
+      }
+    }
     var o = Object.assign({}, g, {
       estado: 'instalado',
       creditoId: cred,
+      linea: linea,
+      iccid: iccid,
       fechaInstalacion: (($('gpsa_fecha')||{}).value || hoy),
       tecnico: (($('gpsa_tecnico')||{}).value || '').trim(),
       actualizado: new Date().toISOString()

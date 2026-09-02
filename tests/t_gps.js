@@ -493,6 +493,59 @@ ok('_gpsHtmlRevision existe y devuelve texto',
 ok('un equipo en stock no muestra revision',
    API._gpsHtmlRevision({estado:'stock'}).indexOf('—') > -1);
 
+// ══════════════════════════════════════════════════════════════════
+// La SIM se carga al asignar: en la calle el tecnico monta el equipo,
+// le mete la SIM y se la entrega al cliente, todo en el mismo momento.
+// ══════════════════════════════════════════════════════════════════
+S.creds = [{id:'CRED-490', cli:'ANA PEREZ', modelo:'Bera', placa:'PP1', fecha:'2026-09-02', estado:'activo', mora:0, eliminado:false}];
+S.gps = [
+  {id:'NUEVO', estado:'stock', idGps:'19210077000', eliminado:false},
+  {id:'OTRO',  estado:'stock', idGps:'19210077001', linea:'143557051', eliminado:false},
+];
+guardados.length = 0;
+API._gpsAsignar('NUEVO');
+ok('la pantalla de asignar pide la linea', $('mbd').innerHTML.indexOf('gpsa_linea') > -1);
+ok('y el ICCID', $('mbd').innerHTML.indexOf('gpsa_iccid') > -1);
+
+API._gpsElegirCred('CRED-490');
+$('gpsa_linea').value   = '144999888';
+$('gpsa_iccid').value   = '895804420015199999';
+$('gpsa_fecha').value   = '2026-09-02';
+$('gpsa_tecnico').value = 'FRANCISCO';
+ok('guarda todo junto', S.saveFn() === true);
+
+const recien = S.gps.find(g => g.id === 'NUEVO');
+ok('quedo instalado', recien.estado === 'instalado');
+ok('con su cliente', recien.creditoId === 'CRED-490');
+ok('con su linea', recien.linea === '144999888');
+ok('con su ICCID', recien.iccid === '895804420015199999');
+ok('con su tecnico', recien.tecnico === 'FRANCISCO');
+ok('una sola escritura, no dos pasos', guardados.length === 1);
+
+// Una linea repetida es un error de carga: se rechaza
+S.gps.push({id:'TERCERO', estado:'stock', idGps:'19210077002', eliminado:false});
+API._gpsAsignar('TERCERO');
+API._gpsElegirCred('CRED-490');
+$('gpsa_linea').value = '143557051';   // ya la tiene OTRO
+ok('rechaza una linea que ya esta en otro equipo', S.saveFn() === false);
+ok('y no toca el equipo', S.gps.find(g=>g.id==='TERCERO').estado === 'stock');
+
+// Sin SIM tambien se puede: a veces se instala y la linea se carga despues
+S.creds.push({id:'CRED-491', cli:'LUIS SILVA', modelo:'Toro', fecha:'2026-09-02', estado:'activo', mora:0, eliminado:false});
+API._gpsAsignar('TERCERO');
+API._gpsElegirCred('CRED-491');
+$('gpsa_linea').value = '';
+$('gpsa_iccid').value = '';
+ok('se puede asignar sin SIM todavia', S.saveFn() === true);
+ok('y queda instalado igual', S.gps.find(g=>g.id==='TERCERO').estado === 'instalado');
+
+// Si ya tenia SIM, la trae puesta para no retipearla
+API._gpsAsignar('OTRO');
+// Se comprueba sobre el HTML: el mock no parsea, asi que $('gpsa_linea')
+// conserva lo que quedo del caso anterior.
+ok('precarga la linea que ya tenia',
+   $('mbd').innerHTML.indexOf('id="gpsa_linea" value="143557051"') > -1);
+
 console.log('');
 console.log(pass+' pruebas OK, '+fail+' fallas');
 process.exit(fail?1:0);
