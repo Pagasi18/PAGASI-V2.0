@@ -68,13 +68,13 @@ async function entrar() {
 
   // Comprobar de verdad: si la clave esta mal, MiCODUS devuelve la pagina de
   // login con HTTP 200 y el job seguiria "sin errores" escribiendo nada.
-  const prueba = await pedir('/Ajax/UsersAjax.asmx/GetOnlineCount', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: '{}',
-  });
+  // Comprobar de verdad: si la clave esta mal, MiCODUS devuelve la pagina de
+  // login con HTTP 200 y el job seguiria "sin errores" escribiendo nada.
+  // Se usa la pagina, no un servicio: GetOnlineCount es de distribuidor y una
+  // cuenta End User no lo tiene.
+  const prueba = await pedir('/Distributor.aspx');
   const txt = await prueba.text();
-  if (!prueba.ok || /login|iniciar sesion/i.test(txt.slice(0, 300))) {
+  if (/txtAccountPassword|UrlLoginGet/.test(txt) || !/hidUserID/.test(txt)) {
     throw new Error('no se pudo iniciar sesion en MiCODUS (revisa usuario y clave)');
   }
 }
@@ -108,6 +108,29 @@ async function listarEquipos(userID) {
 // TimeZone 0 para que las marcas vengan en UTC, que es como las guardamos.
 async function posicionDe(deviceID) {
   return llamar('DevicesAjax.asmx/GetTracking', { DeviceID: deviceID, TimeZone: '0' });
+}
+
+// El UserID de la cuenta con la que entramos. Antes salia de GetLowerUsers2,
+// que lista SUBCUENTAS: una cuenta End User no tiene, asi que devolvia vacio y
+// el job se quedaba sin saber a quien preguntarle. La plataforma deja el id en
+// un campo oculto de su propia pagina, y eso funciona para los dos tipos.
+async function miUserID() {
+  if (process.env.MICODUS_USERID) return Number(process.env.MICODUS_USERID);
+  for (const pag of ['/Distributor.aspx', '/Main.aspx', '/index.aspx']) {
+    try {
+      const html = await (await pedir(pag)).text();
+      const m = html.match(/id="hidUserID"[^>]*value="(\d+)"/)
+             || html.match(/name="hidUserID"[^>]*value="(\d+)"/);
+      if (m && Number(m[1]) > 0) return Number(m[1]);
+    } catch (e) { /* siguiente */ }
+  }
+  // Ultimo recurso: si es distribuidor, GetLowerUsers2 devuelve su propio id
+  try {
+    const r = await llamar('UsersAjax.asmx/GetLowerUsers2',
+      { UserID: 0, PageNo: 1, PageCount: 1, UserType: -1, IsChildUser: false, Key: '' });
+    if (r && r.userID) return Number(r.userID);
+  } catch (e) { /* nada */ }
+  return 0;
 }
 
 function numero(v) {
@@ -151,8 +174,9 @@ if (require.main !== module) return;
     process.exit(0);
   }
 
-  const cuenta = await llamar('UsersAjax.asmx/GetLowerUsers2', { UserID: 0, PageNo: 1, PageCount: 1 });
-  const userID = (cuenta && cuenta.userID) || Number(process.env.MICODUS_USERID || 0);
+  const userID = await miUserID();
+  if (!userID) { console.log('WARN no se pudo determinar el UserID de la cuenta'); process.exit(0); }
+  console.log('MiCODUS: entramos como UserID ' + userID);
 
   const equipos = await listarEquipos(userID);
   console.log('MiCODUS: ' + equipos.length + ' equipos en la cuenta');
