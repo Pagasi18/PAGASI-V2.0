@@ -53,30 +53,60 @@ async function pedir(url, opts = {}) {
 async function entrar() {
   if (!USER || !PASS) throw new Error('faltan MICODUS_USER / MICODUS_PASS');
 
-  // El formulario trae un GUID que hay que devolver al iniciar sesion.
-  const login = await pedir('/Login2.aspx?v=2');
-  const html = await login.text();
-  const m = html.match(/id="hidYiwenGUID2"[^>]*value="([^"]*)"/)
-         || html.match(/name="hidYiwenGUID2"[^>]*value="([^"]*)"/);
-  const guid = m ? m[1] : '';
+  // Su login es un formulario ASP.NET WebForms: hay que traer __VIEWSTATE y
+  // __EVENTVALIDATION de la pagina y devolverlos en el POST, o el servidor lo
+  // rechaza. UrlLoginGet.aspx, que parecia el camino corto, es solo el enlace
+  // de la cuenta demo.
+  const pag = await pedir('/Login2.aspx?v=2');
+  const html = await pag.text();
 
-  const url = '/UrlLoginGet.aspx?loginType=0'
-    + '&txtUserName=' + encodeURIComponent(USER)
-    + '&txtAccountPassword=' + encodeURIComponent(PASS)
-    + '&hidYiwenGUID2=' + encodeURIComponent(guid);
-  await pedir(url);
+  const oculto = (n) => {
+    const re = new RegExp('name="' + n + '"[^>]*value="([^"]*)"');
+    const re2 = new RegExp('value="([^"]*)"[^>]*name="' + n + '"');
+    const m = html.match(re) || html.match(re2);
+    return m ? m[1] : '';
+  };
 
-  // Comprobar de verdad: si la clave esta mal, MiCODUS devuelve la pagina de
-  // login con HTTP 200 y el job seguiria "sin errores" escribiendo nada.
-  // Comprobar de verdad: si la clave esta mal, MiCODUS devuelve la pagina de
-  // login con HTTP 200 y el job seguiria "sin errores" escribiendo nada.
-  // Se usa la pagina, no un servicio: GetOnlineCount es de distribuidor y una
-  // cuenta End User no lo tiene.
-  const prueba = await pedir('/Distributor.aspx');
-  const txt = await prueba.text();
-  if (/txtAccountPassword|UrlLoginGet/.test(txt) || !/hidUserID/.test(txt)) {
-    throw new Error('no se pudo iniciar sesion en MiCODUS (revisa usuario y clave)');
+  const form = new URLSearchParams({
+    __VIEWSTATE:          oculto('__VIEWSTATE'),
+    __VIEWSTATEGENERATOR: oculto('__VIEWSTATEGENERATOR'),
+    __EVENTVALIDATION:    oculto('__EVENTVALIDATION'),
+    // 0 = entrar por cuenta; 1 es por numero de ID, que es lo que trae la
+    // pagina por defecto. Mandar 1 hace que ignore usuario y clave.
+    LType:                '0',
+    hidGMT:               '0',
+    hidLanguage:          'en-us',
+    hidYiwenGUID2:        oculto('hidYiwenGUID2'),
+    txtUserName:          USER,
+    txtAccountPassword:   PASS,
+    txtImeiNo:            '',
+    txtImeiPassword:      '',
+    btnLogin:             'Login',
+  });
+
+  if (!form.get('__VIEWSTATE')) throw new Error('no se pudo leer el formulario de login');
+
+  const res = await pedir('/Login2.aspx?v=2', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Referer': BASE + '/Login2.aspx?v=2',
+    },
+    body: form.toString(),
+  });
+
+  // Un login bueno responde con redireccion; uno malo vuelve a pintar el
+  // formulario con HTTP 200.
+  if (res.status >= 300 && res.status < 400) {
+    const destino = res.headers.get('location');
+    if (destino) await pedir(destino.startsWith('http') ? destino.replace(BASE, '') : destino);
   }
+
+  // Comprobar de verdad: con la clave mala MiCODUS devuelve HTTP 200 y el job
+  // seguiria "sin errores" sin escribir nada, que es la peor forma de fallar.
+  const uid = await miUserID();
+  if (!uid) throw new Error('no se pudo iniciar sesion en MiCODUS (revisa usuario y clave)');
+  return uid;
 }
 
 // ── Sus respuestas ────────────────────────────────────────────────
@@ -116,11 +146,15 @@ async function posicionDe(deviceID) {
 // un campo oculto de su propia pagina, y eso funciona para los dos tipos.
 async function miUserID() {
   if (process.env.MICODUS_USERID) return Number(process.env.MICODUS_USERID);
-  for (const pag of ['/Distributor.aspx', '/Main.aspx', '/index.aspx']) {
+  // Monitor.aspx existe para los dos tipos de cuenta; Distributor.aspx no.
+  for (const pag of ['/Monitor.aspx', '/Distributor.aspx', '/Main.aspx']) {
     try {
-      const html = await (await pedir(pag)).text();
+      const r = await pedir(pag);
+      if (r.status >= 300 && r.status < 400) continue;   // rebote al login
+      const html = await r.text();
       const m = html.match(/id="hidUserID"[^>]*value="(\d+)"/)
-             || html.match(/name="hidUserID"[^>]*value="(\d+)"/);
+             || html.match(/name="hidUserID"[^>]*value="(\d+)"/)
+             || html.match(/hidUserID"?\s*value="(\d+)"/);
       if (m && Number(m[1]) > 0) return Number(m[1]);
     } catch (e) { /* siguiente */ }
   }
@@ -166,16 +200,14 @@ if (require.main !== module) return;
     }
   }
 
+  let userID = 0;
   try {
-    await entrar();
+    userID = await entrar();
   } catch (e) {
     // Transitorio o clave mala: no reventar el workflow, el proximo cron reintenta.
     console.log('WARN ' + e.message);
     process.exit(0);
   }
-
-  const userID = await miUserID();
-  if (!userID) { console.log('WARN no se pudo determinar el UserID de la cuenta'); process.exit(0); }
   console.log('MiCODUS: entramos como UserID ' + userID);
 
   const equipos = await listarEquipos(userID);
