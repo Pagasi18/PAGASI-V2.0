@@ -17,7 +17,7 @@ global.ok=(l,v)=>{ if(v){pass++;console.log('OK   '+l);} else {fail++;console.lo
 
 const auto=new Proxy({},{has:()=>true,get:(t,k)=>{if(k===Symbol.unscopables)return undefined;if(k in t)return t[k];if(k in global)return global[k];return function(){return 0;};},set:(t,k,v)=>{t[k]=v;return true;}});
 const SRC=fs.readFileSync(path.join(ROOT,'logic/gps.js'),'utf8');
-const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar,_gpsNumCred,_gpsListaMapa,_gpsSetTab,_gpsHtmlSims,_gpsBuscarCred,_gpsElegirCred,_gpsHtmlRevision,_gpsGrupo,_gpsHtmlDetalle,_gpsSeleccionar,_gpsSel,_gpsSetFiltroMapa,_gpsFiltroMapa,_gpsClaveDir,_gpsHtmlPanel,_gpsHtmlSync,_gpsCfg}) }');
+const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar,_gpsNumCred,_gpsListaMapa,_gpsSetTab,_gpsHtmlSims,_gpsBuscarCred,_gpsElegirCred,_gpsHtmlRevision,_gpsGrupo,_gpsHtmlDetalle,_gpsSeleccionar,_gpsSel,_gpsSetFiltroMapa,_gpsFiltroMapa,_gpsClaveDir,_gpsHtmlPanel,_gpsHtmlSync,_gpsCfg,_gpsWorkerUrl}) }');
 
 // ── Escenario: 5 creditos, 3 con equipo ──
 S.creds = [
@@ -606,9 +606,22 @@ ok('media hora todavia no alarma', API._gpsHtmlSync().indexOf('var(--amber)') ==
 
 window._gpsConfig = {ultimaSync: minAtras(5), refrescoPedido: true};
 ok('con refresco pedido avisa que viene en camino',
-   API._gpsHtmlSync().indexOf('llega en unos minutos') > -1);
+   API._gpsHtmlSync().indexOf('Buscando posiciones nuevas') > -1);
 ok('y esconde el boton para no pedirlo dos veces',
    API._gpsHtmlSync().indexOf('_gpsPedirRefresco') === -1);
+window._gpsConfig = {};
+
+// ── La URL del Worker sale de config, no del codigo ──
+window._gpsConfig = {};
+ok('sin Worker configurado no hay URL', API._gpsWorkerUrl() === '');
+window._gpsConfig = {workerUrl: 'https://bot.pagasi.workers.dev'};
+ok('arma la ruta del endpoint',
+   API._gpsWorkerUrl() === 'https://bot.pagasi.workers.dev/gps-refresco');
+window._gpsConfig = {workerUrl: 'https://bot.pagasi.workers.dev/'};
+ok('tolera la barra al final',
+   API._gpsWorkerUrl() === 'https://bot.pagasi.workers.dev/gps-refresco');
+window._gpsConfig = {workerUrl: '   '};
+ok('espacios en blanco no cuentan como URL', API._gpsWorkerUrl() === '');
 window._gpsConfig = {};
 
 console.log('');

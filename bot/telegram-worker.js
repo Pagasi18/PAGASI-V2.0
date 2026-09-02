@@ -43,8 +43,46 @@ const MODOS = {
   '📸 Comprobantes': 'comprobantes'
 };
 
+// Origenes que pueden pedir un refresco de GPS desde el navegador.
+const ORIGENES = ['https://pagasi.io', 'https://www.pagasi.io'];
+
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+
+    // ── Refresco de GPS a pedido desde el app ──────────────────────
+    // GitHub retrasa los workflows programados de repos publicos horas
+    // enteras: un cron de 5 minutos corria cada 4 horas, y el boton del
+    // modulo quedaba esperando. Aqui se dispara al instante, porque el
+    // token de GitHub ya vive en este Worker y no en el navegador.
+    if (url.pathname === '/gps-refresco') {
+      const origen = request.headers.get('Origin') || '';
+      const cors = {
+        'Access-Control-Allow-Origin': ORIGENES.includes(origen) ? origen : ORIGENES[0],
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      };
+      if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
+      if (request.method !== 'POST') return new Response('metodo no permitido', { status: 405, headers: cors });
+      if (!ORIGENES.includes(origen)) return new Response('origen no permitido', { status: 403, headers: cors });
+
+      const r = await fetch(
+        `https://api.github.com/repos/${REPO}/actions/workflows/gps-micodus.yml/dispatches`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.GITHUB_PAT}`,
+            'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+            'User-Agent': 'pagasi-gps',
+          },
+          body: JSON.stringify({ ref: 'main' }),
+        }
+      );
+      return new Response(JSON.stringify({ ok: r.ok, estado: r.status }),
+        { status: r.ok ? 200 : 502, headers: { ...cors, 'Content-Type': 'application/json' } });
+    }
+
     if (request.method !== 'POST') return new Response('Bot de Pagasi activo.');
 
     let update;

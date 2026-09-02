@@ -764,13 +764,34 @@ function _gpsHtmlSync(){
     + (typeof c.ultimaSyncEquipos === 'number' ? ' · ' + c.ultimaSyncEquipos + ' equipos' : '')
     + '</span>'
     + (pedido
-        ? '<span style="font-size:11.5px;color:var(--p1);font-weight:700">Refresco pedido — llega en unos minutos</span>'
+        ? '<span style="font-size:11.5px;color:var(--p1);font-weight:700">Buscando posiciones nuevas...</span>'
         : '<button class="btn btn-p btn-xs" onclick="_gpsPedirRefresco()">↻ Actualizar ahora</button>')
     + '</div>';
 }
 
+// URL del Worker de Cloudflare que dispara el job. Se guarda en
+// config/gps.workerUrl para no tenerla escrita en el codigo: si cambia, se
+// cambia ahi y listo.
+function _gpsWorkerUrl(){
+  var u = String(_gpsCfg().workerUrl || '').trim();
+  return u ? u.replace(/\/+$/, '') + '/gps-refresco' : '';
+}
+
 function _gpsPedirRefresco(){
   if(typeof db === 'undefined' || !db){ toast('Sin conexion con la base', 'error'); return; }
+
+  // Se dispara el job de una. GitHub retrasa los workflows programados de
+  // repos publicos horas enteras, asi que esperar al cron no sirve para un
+  // boton. Si no hay Worker configurado, igual queda la bandera y el proximo
+  // barrido lo recoge.
+  var url = _gpsWorkerUrl();
+  if(url){
+    fetch(url, {method:'POST'})
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if(!j || !j.ok) console.warn('[gps] el Worker no pudo disparar el job', j); })
+      .catch(function(e){ console.warn('[gps] no se pudo avisar al Worker', e); });
+  }
+
   db.collection('config').doc('gps').set({
     refrescoPedido: true,
     refrescoPedidoPor: (S.currentUser && S.currentUser.nombre) || 'Admin',
@@ -779,7 +800,8 @@ function _gpsPedirRefresco(){
     window._gpsConfig = Object.assign({}, _gpsCfg(), {refrescoPedido:true});
     var el = document.getElementById('gps-sync');
     if(el) el.innerHTML = _gpsHtmlSync();
-    toast('Pedido enviado. Las posiciones llegan en unos minutos.', 'success');
+    toast(_gpsWorkerUrl() ? 'Buscando posiciones nuevas...'
+                          : 'Pedido anotado. Llega en el proximo barrido.', 'success');
     if(typeof logActividad === 'function') logActividad('gps_refresco','gps','',{});
     // Se vuelve a mirar solo, para que el usuario vea llegar la respuesta.
     var n = 0;
