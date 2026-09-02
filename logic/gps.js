@@ -725,6 +725,30 @@ function _gpsHtmlSims(lista){
 }
 
 // ── Pestaña: mapa ────────────────────────────────────────────────
+// Tres columnas: lista filtrable | mapa | detalle del seleccionado.
+// El detalle trae lo que MiCODUS no sabe — el credito, la cuota, la mora —
+// que es lo que de verdad se necesita cuando uno mira una moto en el mapa.
+
+function _gpsSel(){ return window._gpsSeleccionado || null; }
+
+function _gpsFiltroMapa(){ return window._gpsFiltroMapaActual || {q:'', grupo:'todos'}; }
+function _gpsSetFiltroMapa(campo, valor){
+  var f = _gpsFiltroMapa();
+  f[campo] = valor;
+  window._gpsFiltroMapaActual = f;
+  _gpsRepintarPanel();
+}
+
+// Clasifica cada equipo en un solo grupo, por lo que hay que atender primero.
+function _gpsGrupo(g){
+  var info = _gpsCredInfo(g.creditoId);
+  if(info && info.enMora) return 'mora';
+  var h = _gpsHorasSinReportar(g);
+  if(h !== null && h > 48) return 'mudos';
+  if(typeof g.velocidad === 'number' && g.velocidad > 3) return 'moviendo';
+  return 'aldia';
+}
+
 function _gpsHtmlMapa(instalados){
   var conPos = instalados.filter(_gpsTienePos);
   var sinPos = instalados.length - conPos.length;
@@ -733,7 +757,7 @@ function _gpsHtmlMapa(instalados){
     return '<div class="empty" style="padding:56px 20px;text-align:center">'
       + '<div style="font-size:40px;margin-bottom:12px;opacity:.35">🗺️</div>'
       + '<div style="font-size:16px;font-weight:800;margin-bottom:8px">El mapa esta listo, faltan las posiciones</div>'
-      + '<div style="font-size:12.5px;color:var(--ink3);max-width:470px;margin:0 auto 4px;line-height:1.65">'
+      + '<div style="font-size:12.5px;color:var(--ink3);max-width:470px;margin:0 auto;line-height:1.65">'
       + (instalados.length
           ? 'Hay <b>' + instalados.length + '</b> equipo' + (instalados.length===1?'':'s') + ' instalado'
             + (instalados.length===1?'':'s') + ' esperando su primera posicion.'
@@ -742,53 +766,30 @@ function _gpsHtmlMapa(instalados){
       + 'desde el boton <b>Revisar</b> de cada equipo.</div></div>';
   }
 
-  // Resumen que se lee de un golpe, antes del mapa
-  // Cada equipo cae en un solo grupo, en este orden: mora manda sobre
-  // 'sin reportar', porque es lo que hay que atender primero.
-  var enMora = [], viejas = [], alDia = [];
-  conPos.forEach(function(g){
-    var i = _gpsCredInfo(g.creditoId);
-    var h = _gpsHorasSinReportar(g);
-    if(i && i.enMora) enMora.push(g);
-    else if(h !== null && h > 48) viejas.push(g);
-    else alDia.push(g);
-  });
-  var gruesas = conPos.filter(function(g){ return !_gpsFuente(g).fino; });
-
-  var chip = function(color, texto){
-    return '<span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink2)">'
-      + '<span style="width:9px;height:9px;border-radius:50%;background:' + color + ';flex:0 0 9px"></span>'
-      + texto + '</span>';
-  };
-
-  var h = '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'
-    + chip('#00B876', alDia.length + ' al dia')
-    + chip('#F04B6A', enMora.length + ' en mora')
-    + chip('#F59E0B', viejas.length + ' sin reportar +48h')
-    + '</div>';
-
-  if(gruesas.length){
-    h += '<div style="background:rgba(255,165,0,0.07);border:1px solid rgba(255,165,0,0.25);border-radius:8px;'
-      + 'padding:8px 12px;margin-bottom:10px;font-size:11.5px;color:var(--ink2);line-height:1.55">'
-      + '<b style="color:var(--amber)">' + gruesas.length + ' posicion' + (gruesas.length===1?'':'es')
-      + ' sin GPS fino.</b> Vienen de antenas de telefonia y pueden errar cientos de metros. '
-      + 'Sirven para saber la zona, no para senalar una direccion.</div>';
-  }
+  // Si el seleccionado ya no esta, se limpia
+  if(_gpsSel() && !conPos.some(function(g){ return g.id === _gpsSel(); })) window._gpsSeleccionado = null;
 
   setTimeout(_gpsPintarMapa, 60);
-  // Mapa y lista lado a lado: el mapa dice donde, la lista dice quien.
-  var angosto = (typeof window !== 'undefined' && window.innerWidth && window.innerWidth < 900);
-  // La lista va a la izquierda: se lee antes que el mapa, de arriba abajo.
-  h += '<div style="display:grid;gap:12px;align-items:start;'
-    + (angosto ? 'grid-template-columns:1fr' : 'grid-template-columns:320px minmax(0,1fr)') + '">'
-    + '<div style="' + (angosto ? 'max-height:320px' : 'height:540px')
-    + ';overflow-y:auto;border:1px solid var(--rim);border-radius:12px;background:var(--surf)'
-    + (angosto ? ';order:2' : '') + '">'
-    + _gpsListaMapa(conPos)
-    + '</div>'
-    + '<div id="gps-mapa" style="height:540px;border-radius:12px;border:1px solid var(--rim);overflow:hidden;background:var(--surf2)'
-    + (angosto ? ';order:1' : '') + '"></div>'
-    + '</div>';
+  var angosto = (typeof window !== 'undefined' && window.innerWidth && window.innerWidth < 1100);
+  var alto = angosto ? 460 : 600;
+
+  var h = '<div style="display:grid;gap:10px;align-items:start;'
+    + (angosto ? 'grid-template-columns:1fr' : 'grid-template-columns:300px minmax(0,1fr) 340px') + '">';
+
+  // ── Columna 1: buscador, filtros y lista ──
+  h += '<div id="gps-panel" style="border:1px solid var(--rim);border-radius:12px;background:var(--surf);'
+    + 'height:' + alto + 'px;display:flex;flex-direction:column;overflow:hidden">'
+    + _gpsHtmlPanel(conPos) + '</div>';
+
+  // ── Columna 2: mapa ──
+  h += '<div id="gps-mapa" style="height:' + alto + 'px;border-radius:12px;border:1px solid var(--rim);'
+    + 'overflow:hidden;background:var(--surf2)"></div>';
+
+  // ── Columna 3: detalle ──
+  h += '<div id="gps-detalle" style="border:1px solid var(--rim);border-radius:12px;background:var(--surf);'
+    + 'height:' + alto + 'px;overflow-y:auto">' + _gpsHtmlDetalle(_gpsSel()) + '</div>';
+
+  h += '</div>';
   h += '<div style="font-size:11px;color:var(--ink3);margin-top:8px">'
     + conPos.length + ' de ' + instalados.length + ' equipos instalados con posicion conocida'
     + (sinPos ? ' · <b>' + sinPos + '</b> sin reportar todavia' : '')
@@ -796,64 +797,258 @@ function _gpsHtmlMapa(instalados){
   return h;
 }
 
-// Lista al lado del mapa. Ordenada por lo que hay que atender primero:
-// mora, despues los que dejaron de reportar, despues el resto.
+// Panel izquierdo completo. Se repinta solo el, no la pagina entera.
+function _gpsHtmlPanel(conPos){
+  var f = _gpsFiltroMapa();
+  var cuenta = {todos:conPos.length, moviendo:0, mora:0, mudos:0, aldia:0};
+  conPos.forEach(function(g){ cuenta[_gpsGrupo(g)]++; });
+
+  var chips = [
+    {k:'todos',    l:'Todos',      c:'var(--ink2)'},
+    {k:'moviendo', l:'En marcha',  c:'var(--green)'},
+    {k:'mora',     l:'En mora',    c:'var(--red)'},
+    {k:'mudos',    l:'Sin señal',  c:'var(--amber)'}
+  ];
+
+  var h = '<div style="padding:10px 10px 8px;border-bottom:1px solid var(--rim)">'
+    + '<input class="fi" id="gps-mapa-buscar" value="' + String(f.q||'').replace(/"/g,'&quot;') + '" '
+    + 'placeholder="Buscar cliente, placa o credito..." oninput="_gpsSetFiltroMapa(\'q\', this.value)" '
+    + 'style="width:100%;font-size:12.5px">'
+    + '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px">';
+  chips.forEach(function(c){
+    var on = f.grupo === c.k;
+    h += '<button class="btn btn-xs" onclick="_gpsSetFiltroMapa(\'grupo\', \'' + c.k + '\')" '
+      + 'style="border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:700;'
+      + (on ? 'background:var(--p1);color:#fff;border:1px solid var(--p1)'
+            : 'background:transparent;color:' + c.c + ';border:1px solid var(--rim)') + '">'
+      + c.l + ' ' + (cuenta[c.k]||0) + '</button>';
+  });
+  h += '</div></div>';
+
+  h += '<div style="flex:1;overflow-y:auto">' + _gpsListaMapa(conPos) + '</div>';
+  return h;
+}
+
+function _gpsRepintarPanel(){
+  var cont = document.getElementById('gps-panel');
+  if(!cont){ nav('gps'); return; }
+  var conPos = _gpsLista().filter(function(g){
+    return String(g.estado||'')==='instalado' && _gpsTienePos(g);
+  });
+  cont.innerHTML = _gpsHtmlPanel(conPos);
+  _gpsPintarMapa();
+}
+
+// Lista de la izquierda. Ordenada por urgencia: mora, mudos, el resto.
 function _gpsListaMapa(conPos){
-  var orden = conPos.slice().sort(function(a,b){
-    var ia = _gpsCredInfo(a.creditoId), ib = _gpsCredInfo(b.creditoId);
-    var pa = (ia && ia.enMora) ? 0 : ((_gpsHorasSinReportar(a)||0) > 48 ? 1 : 2);
-    var pb = (ib && ib.enMora) ? 0 : ((_gpsHorasSinReportar(b)||0) > 48 ? 1 : 2);
-    if(pa !== pb) return pa - pb;
-    if(pa === 0) return ((ib&&ib.diasMora)||0) - ((ia&&ia.diasMora)||0);
-    return (_gpsHorasSinReportar(b)||0) - (_gpsHorasSinReportar(a)||0);
+  var f = _gpsFiltroMapa();
+  var t = String(f.q||'').trim().toLowerCase();
+
+  var vistos = conPos.filter(function(g){
+    if(f.grupo !== 'todos' && _gpsGrupo(g) !== f.grupo) return false;
+    if(!t) return true;
+    var info = _gpsCredInfo(g.creditoId);
+    var heno = [g.idGps, g.creditoId, info && info.cliente, info && info.placa, info && info.modelo]
+      .join(' ').toLowerCase();
+    return t.split(/\s+/).every(function(w){ return heno.indexOf(w) > -1; });
   });
 
+  if(!vistos.length){
+    return '<div style="padding:26px 14px;text-align:center;color:var(--ink3);font-size:12px">'
+      + 'Ninguna moto en este grupo.</div>';
+  }
+
+  var orden = vistos.slice().sort(function(a,b){
+    var pa = ['mora','mudos','moviendo','aldia'].indexOf(_gpsGrupo(a));
+    var pb = ['mora','mudos','moviendo','aldia'].indexOf(_gpsGrupo(b));
+    if(pa !== pb) return pa - pb;
+    var ia = _gpsCredInfo(a.creditoId), ib = _gpsCredInfo(b.creditoId);
+    return ((ib&&ib.diasMora)||0) - ((ia&&ia.diasMora)||0);
+  });
+
+  var sel = _gpsSel();
   var h = '';
-  orden.forEach(function(g, i){
+  orden.forEach(function(g){
     var info  = _gpsCredInfo(g.creditoId);
     var color = _gpsColor(g);
     var horas = _gpsHorasSinReportar(g);
-    var fuente = _gpsFuente(g);
+    var on = g.id === sel;
     var moviendo = (typeof g.velocidad === 'number' && g.velocidad > 3);
 
-    h += '<div onclick="_gpsIrA(\'' + g.id + '\')" title="Centrar en el mapa" '
-      + 'style="padding:11px 13px;cursor:pointer;border-bottom:1px solid var(--rim)'
-      + (i === 0 ? ';border-top:none' : '') + '" '
-      + 'onmouseover="this.style.background=\'var(--surf2)\'" '
-      + 'onmouseout="this.style.background=\'\'">'
-      + '<div style="display:flex;align-items:center;gap:8px">'
-      + '<span style="width:9px;height:9px;border-radius:50%;background:' + color + ';flex:0 0 9px"></span>'
-      + '<span style="font-weight:700;font-size:12.5px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
-      + (info ? info.cliente : (g.idGps || g.id)) + '</span>'
-      + (moviendo ? '<span style="margin-left:auto;font-size:10px;font-weight:800;color:var(--green);white-space:nowrap">'
+    h += '<div onclick="_gpsSeleccionar(\'' + g.id + '\')" '
+      + 'style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--rim);'
+      + (on ? 'background:var(--surf2);border-left:3px solid ' + color + ';padding-left:9px' : 'border-left:3px solid transparent') + '">'
+      + '<div style="display:flex;align-items:center;gap:7px">'
+      + '<span style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex:0 0 8px"></span>'
+      + '<span style="font-weight:' + (on?'800':'700') + ';font-size:12px;line-height:1.3;overflow:hidden;'
+      + 'text-overflow:ellipsis;white-space:nowrap">' + (info ? info.cliente : (g.idGps||g.id)) + '</span>'
+      + (moviendo ? '<span style="margin-left:auto;font-size:9.5px;font-weight:800;color:var(--green);white-space:nowrap">'
                     + Math.round(g.velocidad) + ' km/h</span>' : '')
-      + '</div>';
-
-    var linea2 = [];
-    if(g.creditoId) linea2.push(g.creditoId);
-    if(info && info.placa) linea2.push(info.placa);
-    if(linea2.length){
-      h += '<div style="font-size:11px;color:var(--ink3);margin:2px 0 0 17px">' + linea2.join(' · ') + '</div>';
-    }
-    if(info && info.modelo){
-      h += '<div style="font-size:11px;color:var(--ink3);margin-left:17px">' + info.modelo + '</div>';
-    }
-
-    var marcas = [];
-    if(info && info.enMora) marcas.push('<span style="color:var(--red);font-weight:800">' + info.diasMora + ' d de mora</span>');
-    if(horas !== null){
-      marcas.push(horas === 0 ? 'hace menos de 1 h'
-                : horas < 48 ? 'hace ' + horas + ' h'
-                : '<span style="color:var(--amber);font-weight:700">' + Math.floor(horas/24) + ' d sin reportar</span>');
-    }
-    if(!fuente.fino) marcas.push('<span style="color:var(--amber)">' + fuente.l + '</span>');
-    if(typeof g.bateria === 'number' && g.bateria < 30) marcas.push('<span style="color:var(--red)">bateria ' + g.bateria + '%</span>');
-    if(marcas.length){
-      h += '<div style="font-size:10.5px;margin:3px 0 0 17px;line-height:1.5">' + marcas.join(' · ') + '</div>';
-    }
-    h += '</div>';
+      + '</div>'
+      + '<div style="font-size:10.5px;color:var(--ink3);margin:2px 0 0 15px;line-height:1.45">'
+      + (g.creditoId || '') + (info && info.placa ? ' · ' + info.placa : '')
+      + (horas !== null ? '<br>' + (horas === 0 ? 'hace menos de 1 h'
+                                  : horas < 48 ? 'hace ' + horas + ' h'
+                                  : '<span style="color:var(--amber);font-weight:700">' + Math.floor(horas/24) + ' d sin reportar</span>') : '')
+      + (info && info.enMora ? '<br><span style="color:var(--red);font-weight:800">' + info.diasMora + ' d de mora</span>' : '')
+      + '</div></div>';
   });
   return h;
+}
+
+// ── Panel derecho: el detalle ────────────────────────────────────
+function _gpsHtmlDetalle(id){
+  var g = id ? _gpsById(id) : null;
+  if(!g){
+    return '<div style="padding:40px 20px;text-align:center;color:var(--ink3);font-size:12.5px;line-height:1.6">'
+      + '<div style="font-size:30px;opacity:.3;margin-bottom:10px">👈</div>'
+      + 'Elige una moto de la lista<br>para ver su detalle.</div>';
+  }
+  var info   = _gpsCredInfo(g.creditoId);
+  var color  = _gpsColor(g);
+  var fuente = _gpsFuente(g);
+  var horas  = _gpsHorasSinReportar(g);
+  var moviendo = (typeof g.velocidad === 'number' && g.velocidad > 3);
+
+  var fila = function(k, v, extra){
+    if(v === null || v === undefined || v === '') return '';
+    return '<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:11.5px">'
+      + '<span style="color:var(--ink3)">' + k + '</span>'
+      + '<span style="font-weight:600;text-align:right;' + (extra||'') + '">' + v + '</span></div>';
+  };
+  var titulo = function(t){
+    return '<div style="font-size:10px;font-weight:800;color:var(--p1);letter-spacing:.08em;'
+      + 'text-transform:uppercase;margin:14px 0 4px">' + t + '</div>';
+  };
+
+  var h = '<div style="padding:14px">';
+
+  // Cabecera
+  h += '<div style="display:flex;align-items:flex-start;gap:9px;margin-bottom:3px">'
+    + '<span style="width:10px;height:10px;border-radius:50%;background:' + color + ';flex:0 0 10px;margin-top:5px"></span>'
+    + '<div style="flex:1;min-width:0">'
+    + '<div style="font-weight:800;font-size:14px;line-height:1.25">' + (info ? info.cliente : (g.idGps||g.id)) + '</div>'
+    + '<div style="font-size:11px;color:var(--ink3);font-family:ui-monospace,monospace">' + (g.idGps||'') + '</div>'
+    + '</div></div>';
+
+  // Estado grande
+  h += '<div style="background:var(--surf2);border-radius:9px;padding:9px 11px;margin:9px 0;'
+    + 'display:flex;align-items:center;justify-content:space-between;gap:8px">'
+    + '<span style="font-weight:800;font-size:13px;color:' + (moviendo ? 'var(--green)' : 'var(--ink)') + '">'
+    + (moviendo ? 'En marcha' : 'Detenida') + '</span>'
+    + '<span style="font-size:11px;color:var(--ink3)">'
+    + (horas === null ? 'sin marca'
+       : horas === 0 ? 'reporto hace menos de 1 h'
+       : horas < 48 ? 'reporto hace ' + horas + ' h'
+       : '<b style="color:var(--amber)">' + Math.floor(horas/24) + ' d sin reportar</b>')
+    + '</span></div>';
+
+  // Donde esta
+  h += titulo('Donde esta');
+  h += '<div id="gps-dir" style="font-size:12px;line-height:1.5;color:var(--ink2);min-height:18px">'
+    + (window._gpsDirs && window._gpsDirs[_gpsClaveDir(g)]
+        ? window._gpsDirs[_gpsClaveDir(g)]
+        : '<span style="color:var(--ink3)">buscando la direccion...</span>')
+    + '</div>';
+  h += fila('Coordenadas', '<span style="font-family:ui-monospace,monospace;font-size:11px">'
+        + g.lat.toFixed(5) + ', ' + g.lng.toFixed(5) + '</span>');
+  h += fila('Precision', fuente.fino ? 'GPS' : fuente.l + ' · aproximada',
+        fuente.fino ? '' : 'color:var(--amber)');
+
+  // El credito — esto MiCODUS no lo tiene
+  if(info){
+    h += titulo('El credito');
+    h += fila('N°', '<b>' + g.creditoId + '</b>');
+    h += fila('Moto', info.modelo + (info.placa ? ' · ' + info.placa : ''));
+    if(typeof info.cred.cuota === 'number') fila('Cuota', fmt ? fmt(info.cred.cuota) : info.cred.cuota);
+    h += fila('Estado', info.enMora
+        ? '<span style="color:var(--red)">' + info.diasMora + ' dias de mora</span>'
+        : '<span style="color:var(--green)">al dia</span>');
+  }
+
+  // El equipo
+  h += titulo('El equipo');
+  if(typeof g.velocidad === 'number') h += fila('Velocidad', Math.round(g.velocidad) + ' km/h');
+  if(g.voltaje) h += fila('Voltaje', g.voltaje + ' V');
+  if(typeof g.bateria === 'number') h += fila('Bateria', g.bateria + '%',
+      g.bateria < 30 ? 'color:var(--red)' : '');
+  if(g.acc !== undefined && g.acc !== null) h += fila('Contacto', (g.acc === 1 || g.acc === '1') ? 'encendido' : 'apagado');
+  if(typeof g.satelites === 'number') h += fila('Satelites', g.satelites);
+  if(typeof g.senal === 'number') h += fila('Señal GSM', g.senal);
+  if(typeof g.odometro === 'number') h += fila('Odometro', (g.odometro/1000).toFixed(1) + ' km');
+
+  // La SIM
+  if(g.linea || g.iccid){
+    h += titulo('SIM Movistar');
+    if(g.linea) h += fila('Linea', '<span style="font-family:ui-monospace,monospace;font-size:11px">' + g.linea + '</span>');
+    if(g.iccid) h += fila('ICCID', '<span style="font-family:ui-monospace,monospace;font-size:10.5px">' + g.iccid + '</span>');
+  }
+
+  // Instalacion
+  if(g.fechaInstalacion || g.tecnico){
+    h += titulo('Instalacion');
+    if(g.fechaInstalacion) h += fila('Dia', g.fechaInstalacion);
+    if(g.tecnico) h += fila('Tecnico', g.tecnico);
+    var d = _gpsDiasSinRevisar(g);
+    if(d !== null) h += fila('Revisado', d === 0 ? 'hoy' : 'hace ' + d + ' d',
+        d > GPS_DIAS_REVISION ? 'color:var(--amber)' : '');
+  }
+
+  // Acciones
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:16px">'
+    + '<button class="btn btn-g btn-xs" onclick="_gpsRevisar(\'' + g.id + '\')">Revisar</button>'
+    + '<button class="btn btn-g btn-xs" onclick="_gpsOpenEdit(\'' + g.id + '\')">Editar</button>'
+    + '</div>';
+
+  h += '</div>';
+  return h;
+}
+
+function _gpsClaveDir(g){
+  return g.lat.toFixed(4) + ',' + g.lng.toFixed(4);
+}
+
+// Direccion en texto. Nominatim de OpenStreetMap: gratis y sin llave. Se
+// cachea por coordenada redondeada para no repetir la consulta.
+function _gpsBuscarDireccion(g){
+  window._gpsDirs = window._gpsDirs || {};
+  var clave = _gpsClaveDir(g);
+  if(window._gpsDirs[clave]) return;
+  fetch('https://nominatim.openstreetmap.org/reverse?format=json&zoom=16&accept-language=es'
+        + '&lat=' + g.lat + '&lon=' + g.lng)
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      var a = j && j.address;
+      var partes = a ? [a.suburb || a.neighbourhood || a.village || a.hamlet,
+                        a.town || a.city || a.municipality,
+                        a.state].filter(Boolean) : [];
+      var txt = partes.length ? partes.join(', ') : (j && j.display_name) || 'Sin direccion conocida';
+      window._gpsDirs[clave] = txt;
+      var el = document.getElementById('gps-dir');
+      if(el && _gpsSel() === g.id) el.textContent = txt;
+    })
+    .catch(function(){
+      var el = document.getElementById('gps-dir');
+      if(el && _gpsSel() === g.id) el.textContent = 'No se pudo obtener la direccion';
+    });
+}
+
+function _gpsSeleccionar(id){
+  window._gpsSeleccionado = id;
+  var g = _gpsById(id);
+  var det = document.getElementById('gps-detalle');
+  if(det) det.innerHTML = _gpsHtmlDetalle(id);
+  var pan = document.getElementById('gps-panel');
+  if(pan){
+    var conPos = _gpsLista().filter(function(x){
+      return String(x.estado||'')==='instalado' && _gpsTienePos(x);
+    });
+    pan.innerHTML = _gpsHtmlPanel(conPos);
+  }
+  if(g && _gpsTienePos(g)){
+    _gpsBuscarDireccion(g);
+    _gpsIrA(id);
+  }
 }
 
 // Centrar el mapa en un equipo y abrir su globo.
@@ -869,7 +1064,9 @@ function _gpsIrA(id){
 function _gpsPintarMapa(){
   var cont = document.getElementById('gps-mapa');
   if(!cont) return;
-  if(typeof L === 'undefined'){
+  // Se comprueba L.map, no solo L: Leaflet puede quedar a medias si el CDN
+  // responde lento o parcial, y ahi L existe pero no sirve.
+  if(typeof L === 'undefined' || typeof L.map !== 'function'){
     if(window._gpsLeafletCargando) return;
     window._gpsLeafletCargando = true;
     var css = document.createElement('link');
@@ -888,8 +1085,10 @@ function _gpsPintarMapa(){
     return;
   }
 
+  var f = _gpsFiltroMapa();
   var puntos = _gpsLista().filter(function(g){
-    return String(g.estado||'') === 'instalado' && _gpsTienePos(g);
+    if(String(g.estado||'') !== 'instalado' || !_gpsTienePos(g)) return false;
+    return f.grupo === 'todos' || _gpsGrupo(g) === f.grupo;
   });
   if(!puntos.length) return;
 
@@ -902,50 +1101,38 @@ function _gpsPintarMapa(){
 
   var bounds = [];
   window._gpsMarcadores = {};
+  var sel = _gpsSel();
   puntos.forEach(function(g){
     var info  = _gpsCredInfo(g.creditoId);
     var color = _gpsColor(g);
     var fuente = _gpsFuente(g);
     var horas = _gpsHorasSinReportar(g);
 
-    // Con posicion gruesa se dibuja el circulo de incertidumbre, para que
-    // nadie lea el punto como una direccion exacta.
     if(!fuente.fino){
       L.circle([g.lat, g.lng], {radius:400, color:color, weight:1, opacity:.5,
         fillColor:color, fillOpacity:.08, dashArray:'4,4'}).addTo(mapa);
     }
     var m = L.circleMarker([g.lat, g.lng], {
-      radius: 8, color:'#fff', weight:2, fillColor:color, fillOpacity:.95
+      radius: g.id === sel ? 11 : 8, color:'#fff', weight: g.id === sel ? 3 : 2,
+      fillColor:color, fillOpacity:.95
     }).addTo(mapa);
     window._gpsMarcadores[g.id] = m;
+    m.on('click', function(){ _gpsSeleccionar(g.id); });
 
-    var pop = '<div style="font-family:system-ui,-apple-system,sans-serif;font-size:12px;line-height:1.55;min-width:190px">'
+    var pop = '<div style="font-family:system-ui,-apple-system,sans-serif;font-size:12px;line-height:1.55;min-width:170px">'
       + '<div style="font-weight:800;font-size:13px;margin-bottom:2px">'
       + (info ? info.cliente : (g.idGps || g.id)) + '</div>';
-    if(g.creditoId) pop += '<div style="color:#555">' + g.creditoId + '</div>';
-    if(info && info.modelo) pop += '<div style="color:#555">' + info.modelo + (info.placa ? ' · ' + info.placa : '') + '</div>';
-    if(info && info.enMora){
-      pop += '<div style="color:#F04B6A;font-weight:700;margin-top:4px">' + info.diasMora + ' dias de mora</div>';
-    }
-    pop += '<div style="border-top:1px solid #e5e5e5;margin-top:6px;padding-top:5px;color:#666;font-size:11px">';
-    pop += '<div>Posicion ' + fuente.l + (fuente.fino ? '' : ' · aproximada') + '</div>';
-    if(horas !== null){
-      pop += '<div>' + (horas === 0 ? 'Reporto hace menos de 1 h'
-                      : horas < 48 ? 'Reporto hace ' + horas + ' h'
-                      : '<b style="color:#B45309">Sin reportar hace ' + Math.floor(horas/24) + ' dias</b>') + '</div>';
-    }
-    if(typeof g.bateria === 'number') pop += '<div>Bateria ' + g.bateria + '%</div>';
-    if(g.acc === 1 || g.acc === '1') pop += '<div style="color:#00B876;font-weight:700">Contacto encendido</div>';
-    pop += '<div style="margin-top:4px;font-family:ui-monospace,monospace;font-size:10px">' + g.idGps + '</div>';
-    pop += '</div></div>';
-
+    if(g.creditoId) pop += '<div style="color:#555">' + g.creditoId
+      + (info && info.placa ? ' · ' + info.placa : '') + '</div>';
+    if(info && info.enMora) pop += '<div style="color:#F04B6A;font-weight:700">' + info.diasMora + ' dias de mora</div>';
+    if(horas !== null) pop += '<div style="color:#888;font-size:11px">'
+      + (horas === 0 ? 'hace menos de 1 h' : 'hace ' + horas + ' h') + '</div>';
+    pop += '</div>';
     m.bindPopup(pop);
     bounds.push([g.lat, g.lng]);
   });
 
   if(bounds.length > 1) mapa.fitBounds(bounds, {padding:[40,40], maxZoom:15});
-  // El contenedor nace con alto 0 dentro de la pestana: sin esto Leaflet
-  // dibuja los tiles del tamano equivocado.
   setTimeout(function(){ try{ mapa.invalidateSize(); }catch(e){} }, 120);
 }
 

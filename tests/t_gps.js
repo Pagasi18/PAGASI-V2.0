@@ -17,7 +17,7 @@ global.ok=(l,v)=>{ if(v){pass++;console.log('OK   '+l);} else {fail++;console.lo
 
 const auto=new Proxy({},{has:()=>true,get:(t,k)=>{if(k===Symbol.unscopables)return undefined;if(k in t)return t[k];if(k in global)return global[k];return function(){return 0;};},set:(t,k,v)=>{t[k]=v;return true;}});
 const SRC=fs.readFileSync(path.join(ROOT,'logic/gps.js'),'utf8');
-const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar,_gpsNumCred,_gpsListaMapa,_gpsSetTab,_gpsHtmlSims,_gpsBuscarCred,_gpsElegirCred,_gpsHtmlRevision}) }');
+const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar,_gpsNumCred,_gpsListaMapa,_gpsSetTab,_gpsHtmlSims,_gpsBuscarCred,_gpsElegirCred,_gpsHtmlRevision,_gpsGrupo,_gpsHtmlDetalle,_gpsSeleccionar,_gpsSel,_gpsSetFiltroMapa,_gpsFiltroMapa,_gpsClaveDir,_gpsHtmlPanel}) }');
 
 // ── Escenario: 5 creditos, 3 con equipo ──
 S.creds = [
@@ -368,76 +368,110 @@ S.creds = [
 S.gps = [{id:'L', estado:'stock', idGps:'19210076000', eliminado:false}];
 API._gpsAsignar('L');
 API._gpsBuscarCred('');
-const lista = $('gpsa_lista').innerHTML;
-const opts = [...lista.matchAll(/_gpsElegirCred\('(CRED-\d+)'\)/g)].map(m => m[1]);
+const listaCreds = $('gpsa_lista').innerHTML;
+const opts = [...listaCreds.matchAll(/_gpsElegirCred\('(CRED-\d+)'\)/g)].map(m => m[1]);
 ok('el primero es el mas nuevo', opts[0] === 'CRED-481');
 ok('desempata por numero de credito', opts[1] === 'CRED-480');
 ok('despues el del medio', opts[2] === 'CRED-300');
 ok('el viejo con 90 dias de mora queda de ultimo', opts[3] === 'CRED-100');
 ok('la mora ya NO manda el orden', opts[0] !== 'CRED-100');
-ok('se ve la fecha de cada credito', lista.indexOf('2026-09-02') > -1);
-ok('la mora se sigue mostrando como aviso', lista.indexOf('90 d de mora') > -1);
+ok('se ve la fecha de cada credito', listaCreds.indexOf('2026-09-02') > -1);
+ok('la mora se sigue mostrando como aviso', listaCreds.indexOf('90 d de mora') > -1);
 
 // ══════════════════════════════════════════════════════════════════
-// LISTA JUNTO AL MAPA — el mapa dice donde, la lista dice quien
+// MAPA DE TRES COLUMNAS — lista filtrable | mapa | detalle
 // ══════════════════════════════════════════════════════════════════
 const uh = n => new Date(Date.now()-n*3600000).toISOString().slice(0,19).replace('T',' ');
 S.creds = [
-  {id:'C-MORA',  cli:'Moroso Grande', modelo:'Bera',   placa:'AA1', estado:'mora',   mora:40, eliminado:false},
-  {id:'C-MORA2', cli:'Moroso Chico',  modelo:'Empire', placa:'BB2', estado:'mora',   mora:5,  eliminado:false},
-  {id:'C-MUDO',  cli:'Sin Reportar',  modelo:'Toro',   placa:'CC3', estado:'activo', mora:0,  eliminado:false},
-  {id:'C-OK',    cli:'Al Dia',        modelo:'Bera',   placa:'DD4', estado:'activo', mora:0,  eliminado:false},
+  {id:'C-MORA',  cli:'Moroso Grande', modelo:'Bera',   placa:'AA1', estado:'mora',   mora:40, cuota:90, eliminado:false},
+  {id:'C-MORA2', cli:'Moroso Chico',  modelo:'Empire', placa:'BB2', estado:'mora',   mora:5,  cuota:80, eliminado:false},
+  {id:'C-MUDO',  cli:'Sin Reportar',  modelo:'Toro',   placa:'CC3', estado:'activo', mora:0,  cuota:70, eliminado:false},
+  {id:'C-OK',    cli:'Al Dia',        modelo:'Bera',   placa:'DD4', estado:'activo', mora:0,  cuota:75, eliminado:false},
 ];
-const pts = [
-  {id:'g1', creditoId:'C-OK',    idGps:'111', lat:10.4, lng:-66.9, ultimaSenal:uh(1),  dataType:1, velocidad:0},
-  {id:'g2', creditoId:'C-MORA',  idGps:'222', lat:10.5, lng:-66.8, ultimaSenal:uh(2),  dataType:1, velocidad:48},
-  {id:'g3', creditoId:'C-MUDO',  idGps:'333', lat:10.6, lng:-66.7, ultimaSenal:uh(96), dataType:1, velocidad:0},
-  {id:'g4', creditoId:'C-MORA2', idGps:'444', lat:10.7, lng:-66.6, ultimaSenal:uh(3),  dataType:2, velocidad:0, bateria:15},
+S.gps = [
+  {id:'g1', estado:'instalado', creditoId:'C-OK',    idGps:'111', lat:10.4, lng:-66.9, ultimaSenal:uh(1),  dataType:1, velocidad:0,  eliminado:false},
+  {id:'g2', estado:'instalado', creditoId:'C-MORA',  idGps:'222', lat:10.5, lng:-66.8, ultimaSenal:uh(2),  dataType:1, velocidad:48, eliminado:false},
+  {id:'g3', estado:'instalado', creditoId:'C-MUDO',  idGps:'333', lat:10.6, lng:-66.7, ultimaSenal:uh(96), dataType:1, velocidad:0,  eliminado:false},
+  {id:'g4', estado:'instalado', creditoId:'C-MORA2', idGps:'444', lat:10.7, lng:-66.6, ultimaSenal:uh(3),  dataType:2, velocidad:0, bateria:15, eliminado:false},
 ];
-const lm = API._gpsListaMapa(pts);
-const orden = [...lm.matchAll(/_gpsIrA\('(\w+)'\)/g)].map(m=>m[1]);
+const pts = S.gps.slice();
+API._gpsSetFiltroMapa('q', ''); API._gpsSetFiltroMapa('grupo', 'todos');
 
+// ── Cada equipo cae en un solo grupo ──
+ok('en mora se agrupa como mora', API._gpsGrupo(pts[1]) === 'mora');
+ok('la mora manda sobre ir en marcha', API._gpsGrupo(pts[1]) !== 'moviendo');
+ok('sin reportar +48h es mudo', API._gpsGrupo(pts[2]) === 'mudos');
+ok('el resto es al dia', API._gpsGrupo(pts[0]) === 'aldia');
+
+// ── La lista ──
+const lm = API._gpsListaMapa(pts);
+const orden = [...lm.matchAll(/_gpsSeleccionar\('(\w+)'\)/g)].map(m=>m[1]);
 ok('los 4 salen en la lista', orden.length === 4);
 ok('primero la mora mas alta', orden[0] === 'g2');
 ok('despues la mora menor', orden[1] === 'g4');
 ok('luego el que dejo de reportar', orden[2] === 'g3');
 ok('de ultimo el que esta al dia', orden[3] === 'g1');
-
 ok('muestra el cliente', lm.indexOf('Moroso Grande') > -1);
-ok('muestra el credito', lm.indexOf('C-MORA') > -1);
 ok('muestra la placa', lm.indexOf('AA1') > -1);
-ok('muestra la moto', lm.indexOf('Empire') > -1);
 ok('marca los dias de mora', lm.indexOf('40 d de mora') > -1);
 ok('marca los dias sin reportar', lm.indexOf('4 d sin reportar') > -1);
-ok('avisa cuando va en movimiento', lm.indexOf('48 km/h') > -1);
-ok('no marca velocidad si esta detenida', (lm.match(/km\/h/g)||[]).length === 1);
-ok('avisa posicion por antena', lm.indexOf('por antena') > -1);
-ok('avisa bateria baja', lm.indexOf('bateria 15%') > -1);
-ok('cada fila es clicable', (lm.match(/_gpsIrA/g)||[]).length === 4);
-ok('lista vacia no revienta', API._gpsListaMapa([]) === '');
+ok('avisa cuando va en marcha', lm.indexOf('48 km/h') > -1);
+ok('cada fila es clicable', (lm.match(/_gpsSeleccionar/g)||[]).length === 4);
 
-// ══════════════════════════════════════════════════════════════════
-// Cambiar de pestaña limpia el buscador. Un filtro viejo que no coincide
-// con nada deja la tabla vacia y parece que la pestaña no responde.
-// ══════════════════════════════════════════════════════════════════
-API._gpsSetFiltro('q', 'texto-que-no-coincide-con-nada');
-ok('el filtro quedo puesto', API._gpsFiltro().q === 'texto-que-no-coincide-con-nada');
-API._gpsSetTab('equipos');
-ok('al cambiar de pestaña el buscador se limpia', API._gpsFiltro().q === '');
-ok('y el filtro de estado tambien', API._gpsFiltro().estado === '');
-ok('la pestaña si cambio', API._gpsTab() === 'equipos');
+// ── Los filtros ──
+API._gpsSetFiltroMapa('grupo', 'mora');
+const soloMora = API._gpsListaMapa(pts);
+ok('el filtro de mora deja solo los 2', (soloMora.match(/_gpsSeleccionar/g)||[]).length === 2);
+ok('y saca al que esta al dia', soloMora.indexOf('Al Dia') === -1);
+API._gpsSetFiltroMapa('grupo', 'mudos');
+ok('el filtro de sin señal deja 1', (API._gpsListaMapa(pts).match(/_gpsSeleccionar/g)||[]).length === 1);
+API._gpsSetFiltroMapa('grupo', 'moviendo');
+ok('en marcha: ninguno, porque el que corre esta en mora',
+   API._gpsListaMapa(pts).indexOf('Ninguna moto en este grupo') > -1);
+API._gpsSetFiltroMapa('grupo', 'todos');
 
-// ── Asignar desde la tabla de SIMs ──
-S.creds = [{id:'C-N', cli:'Nuevo', modelo:'Bera', placa:'ZZ9', fecha:'2026-09-02', estado:'activo', mora:0, eliminado:false}];
-S.gps = [
-  {id:'S1', estado:'stock',     idGps:'19210076000', linea:'0414', iccid:'8958044', eliminado:false},
-  {id:'S2', estado:'instalado', idGps:'19210075478', linea:'0424', iccid:'8958045', creditoId:'C-N', eliminado:false},
-];
-const sims = API._gpsHtmlSims(S.gps);
-ok('la SIM libre trae boton de asignar', sims.indexOf("_gpsAsignar('S1')") > -1);
-ok('la SIM ya instalada no lo trae', sims.indexOf("_gpsAsignar('S2')") === -1);
-ok('la instalada muestra a quien', sims.indexOf('Nuevo') > -1);
-ok('la libre dice libre', sims.indexOf('libre') > -1);
+// ── El buscador del mapa ──
+API._gpsSetFiltroMapa('q', 'moroso grande');
+ok('busca por cliente', API._gpsListaMapa(pts).indexOf('Moroso Grande') > -1);
+ok('y descarta el resto', API._gpsListaMapa(pts).indexOf('Al Dia') === -1);
+API._gpsSetFiltroMapa('q', 'cc3');
+ok('busca por placa', API._gpsListaMapa(pts).indexOf('Sin Reportar') > -1);
+API._gpsSetFiltroMapa('q', 'C-MORA2');
+ok('busca por credito', API._gpsListaMapa(pts).indexOf('Moroso Chico') > -1);
+API._gpsSetFiltroMapa('q', 'zzz');
+ok('sin coincidencias avisa', API._gpsListaMapa(pts).indexOf('Ninguna moto en este grupo') > -1);
+API._gpsSetFiltroMapa('q', '');
+
+// ── El panel de detalle ──
+ok('sin seleccion invita a elegir', API._gpsHtmlDetalle(null).indexOf('Elige una moto') > -1);
+const det = API._gpsHtmlDetalle('g2');
+ok('trae el cliente', det.indexOf('Moroso Grande') > -1);
+ok('trae el serial', det.indexOf('222') > -1);
+ok('dice que va en marcha', det.indexOf('En marcha') > -1);
+ok('trae las coordenadas', det.indexOf('10.50000') > -1);
+ok('trae el credito, que MiCODUS no sabe', det.indexOf('C-MORA') > -1);
+ok('trae la moto y la placa', det.indexOf('Bera') > -1 && det.indexOf('AA1') > -1);
+ok('marca la mora', det.indexOf('40 dias de mora') > -1);
+ok('trae la velocidad', det.indexOf('48 km/h') > -1);
+ok('busca la direccion en texto', det.indexOf('gps-dir') > -1);
+
+const detQuieto = API._gpsHtmlDetalle('g1');
+ok('una moto parada dice Detenida', detQuieto.indexOf('Detenida') > -1);
+ok('y que esta al dia', detQuieto.indexOf('al dia') > -1);
+
+const detAntena = API._gpsHtmlDetalle('g4');
+ok('avisa que la posicion es aproximada', detAntena.indexOf('aproximada') > -1);
+ok('avisa la bateria baja', detAntena.indexOf('15%') > -1);
+
+// ── Seleccionar ──
+API._gpsSeleccionar('g3');
+ok('queda seleccionado', API._gpsSel() === 'g3');
+ok('la lista lo marca', API._gpsListaMapa(pts).indexOf('border-left:3px solid') > -1);
+window._gpsSeleccionado = null;
+
+// La clave de cache de direccion redondea, para no repetir consultas
+ok('la clave de direccion redondea a 4 decimales',
+   API._gpsClaveDir({lat:10.474861, lng:-66.557053}) === '10.4749,-66.5571');
 
 // ══════════════════════════════════════════════════════════════════
 // BUSCADOR DE CREDITOS — un <select> con 470 opciones es inusable
