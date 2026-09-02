@@ -2,7 +2,10 @@ name: Posiciones GPS (MiCODUS)
 
 on:
   schedule:
-    - cron: '*/20 * * * *'   # cada 20 min; GitHub puede demorarlo unos minutos
+    # Cada 30 min. Para cobranza basta con saber en que zona esta la moto y si
+    # sigue reportando; para una recuperacion en curso se mira MiCODUS directo,
+    # que es tiempo real. Subir la frecuencia multiplica lecturas de Firestore.
+    - cron: '*/30 * * * *'
   workflow_dispatch: {}
 
 permissions:

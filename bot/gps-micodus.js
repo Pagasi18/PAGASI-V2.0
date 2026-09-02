@@ -190,10 +190,12 @@ if (require.main !== module) return;
   if (!DRY) {
     const { Firestore } = require('@google-cloud/firestore');
     db = new Firestore({ projectId: 'pagasi-v2' });
-    const snap = await db.collection('gps').get();
+    // Se piden SOLO los instalados. Leer la coleccion entera costaba 500
+    // lecturas por corrida —36.000 al dia— para vigilar dos motos.
+    const snap = await db.collection('gps').where('estado', '==', 'instalado').get();
     instalados = snap.docs
       .map(d => ({ _id: d.id, ...d.data() }))
-      .filter(g => !g.eliminado && g.estado === 'instalado' && g.idGps);
+      .filter(g => !g.eliminado && g.idGps);
     if (!instalados.length) {
       console.log('No hay equipos instalados en PAGASI. Nada que consultar.');
       return;
@@ -230,7 +232,7 @@ if (require.main !== module) return;
     return;
   }
 
-  let ok = 0, sinPos = 0, noEstan = 0, caidos = 0;
+  let ok = 0, sinPos = 0, noEstan = 0, caidos = 0, sinCambio = 0;
   const lote = db.batch();
 
   for (const g of instalados) {
@@ -248,6 +250,14 @@ if (require.main !== module) return;
     const horas = horasDesde(p.deviceUtcDate);
     const caido = horas !== null && horas > HORAS_CAIDO;
     if (caido) caidos++;
+
+    // Una moto estacionada manda la misma posicion cada vez. Reescribirla es
+    // pagar por no cambiar nada: la mayoria de las motos estan quietas la
+    // mayor parte del dia.
+    const igual = g.ultimaSenal === (p.deviceUtcDate || '')
+      && Math.abs((g.lat || 0) - lat) < 0.00002
+      && Math.abs((g.lng || 0) - lng) < 0.00002;
+    if (igual) { sinCambio++; continue; }
 
     lote.set(db.collection('gps').doc(g._id), {
       lat, lng,
@@ -269,8 +279,9 @@ if (require.main !== module) return;
     ok++;
   }
 
-  await lote.commit();
+  if (ok) await lote.commit();
   console.log('Actualizados ' + ok + ' equipos'
+    + (sinCambio ? ' · ' + sinCambio + ' sin moverse (no se reescriben)' : '')
     + (sinPos   ? ' · ' + sinPos   + ' sin posicion' : '')
     + (noEstan  ? ' · ' + noEstan  + ' no estan en MiCODUS' : '')
     + (caidos   ? ' · ' + caidos   + ' sin señal hace mas de ' + HORAS_CAIDO + 'h' : ''));
