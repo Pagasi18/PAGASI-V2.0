@@ -201,7 +201,13 @@ function _gpsPorRecuperar(){
 // ══════════════════════════════════════════════════════════════════
 
 function _gpsTab(){ return window._gpsTabActual || 'mapa'; }
-function _gpsSetTab(t){ window._gpsTabActual = t; nav('gps'); }
+function _gpsSetTab(t){
+  window._gpsTabActual = t;
+  // Se limpia el buscador al cambiar de pestaña: un filtro viejo que no
+  // coincide con nada deja la tabla vacia y parece que la pestaña no responde.
+  window._gpsFiltroActual = {q:'', estado:''};
+  nav('gps');
+}
 
 function _gpsRender(){
   var lista = _gpsLista();
@@ -549,7 +555,7 @@ function _gpsHtmlSims(lista){
     h += '</div>';
   }
   h += '<div style="overflow-x:auto"><table class="tbl"><thead><tr>'
-    + '<th>Linea Movistar</th><th>ICCID</th><th>Equipo</th><th>Estado</th><th>Asignada a</th>'
+    + '<th>Linea Movistar</th><th>ICCID</th><th>Equipo</th><th>Estado</th><th>Asignada a</th><th></th>'
     + '</tr></thead><tbody>';
   conSim.slice().sort(function(a,b){ return String(a.linea||'').localeCompare(String(b.linea||'')); })
     .forEach(function(g){
@@ -561,6 +567,11 @@ function _gpsHtmlSims(lista){
         + '<td style="font-family:ui-monospace,monospace;font-size:11.5px">' + (g.idGps || '—') + '</td>'
         + '<td><span style="color:' + def.c + ';font-weight:800;font-size:11px">' + def.l + '</span></td>'
         + '<td style="font-size:11.5px">' + (info ? info.cliente + ' · ' + g.creditoId : '<span style="color:var(--ink3)">libre</span>') + '</td>'
+        + '<td style="white-space:nowrap">'
+        + (String(g.estado||'') !== 'instalado'
+            ? '<button class="btn btn-p btn-xs" onclick="_gpsAsignar(\'' + g.id + '\')">Asignar a cliente</button>'
+            : '<button class="btn btn-g btn-xs" onclick="_gpsOpenEdit(\'' + g.id + '\')">Ver</button>')
+        + '</td>'
         + '</tr>';
     });
   h += '</tbody></table></div>';

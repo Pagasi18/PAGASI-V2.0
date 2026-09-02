@@ -17,7 +17,7 @@ global.ok=(l,v)=>{ if(v){pass++;console.log('OK   '+l);} else {fail++;console.lo
 
 const auto=new Proxy({},{has:()=>true,get:(t,k)=>{if(k===Symbol.unscopables)return undefined;if(k in t)return t[k];if(k in global)return global[k];return function(){return 0;};},set:(t,k,v)=>{t[k]=v;return true;}});
 const SRC=fs.readFileSync(path.join(ROOT,'logic/gps.js'),'utf8');
-const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar,_gpsNumCred,_gpsListaMapa}) }');
+const API=eval('with(auto){'+SRC+'\n; ({_gpsCobertura,_gpsCredInfo,_gpsPorRecuperar,_gpsEstadoDef,_gpsLista,_gpsCredsVivos,_gpsImportarProcesar,_gpsById,_gpsDiasSinRevisar,_gpsSinRevisar,_gpsCaidosEnMora,GPS_DIAS_REVISION,_gpsNuevoId,_gpsTienePos,_gpsFuente,_gpsHorasSinReportar,_gpsColor,_gpsTab,_gpsParseFecha,_gpsCoincide,_gpsFiltro,_gpsSetFiltro,_gpsFilasEquipos,_gpsAsignar,_gpsNumCred,_gpsListaMapa,_gpsSetTab,_gpsHtmlSims}) }');
 
 // ── Escenario: 5 creditos, 3 con equipo ──
 S.creds = [
@@ -413,6 +413,29 @@ ok('avisa posicion por antena', lm.indexOf('por antena') > -1);
 ok('avisa bateria baja', lm.indexOf('bateria 15%') > -1);
 ok('cada fila es clicable', (lm.match(/_gpsIrA/g)||[]).length === 4);
 ok('lista vacia no revienta', API._gpsListaMapa([]) === '');
+
+// ══════════════════════════════════════════════════════════════════
+// Cambiar de pestaña limpia el buscador. Un filtro viejo que no coincide
+// con nada deja la tabla vacia y parece que la pestaña no responde.
+// ══════════════════════════════════════════════════════════════════
+API._gpsSetFiltro('q', 'texto-que-no-coincide-con-nada');
+ok('el filtro quedo puesto', API._gpsFiltro().q === 'texto-que-no-coincide-con-nada');
+API._gpsSetTab('equipos');
+ok('al cambiar de pestaña el buscador se limpia', API._gpsFiltro().q === '');
+ok('y el filtro de estado tambien', API._gpsFiltro().estado === '');
+ok('la pestaña si cambio', API._gpsTab() === 'equipos');
+
+// ── Asignar desde la tabla de SIMs ──
+S.creds = [{id:'C-N', cli:'Nuevo', modelo:'Bera', placa:'ZZ9', fecha:'2026-09-02', estado:'activo', mora:0, eliminado:false}];
+S.gps = [
+  {id:'S1', estado:'stock',     idGps:'19210076000', linea:'0414', iccid:'8958044', eliminado:false},
+  {id:'S2', estado:'instalado', idGps:'19210075478', linea:'0424', iccid:'8958045', creditoId:'C-N', eliminado:false},
+];
+const sims = API._gpsHtmlSims(S.gps);
+ok('la SIM libre trae boton de asignar', sims.indexOf("_gpsAsignar('S1')") > -1);
+ok('la SIM ya instalada no lo trae', sims.indexOf("_gpsAsignar('S2')") === -1);
+ok('la instalada muestra a quien', sims.indexOf('Nuevo') > -1);
+ok('la libre dice libre', sims.indexOf('libre') > -1);
 
 console.log('');
 console.log(pass+' pruebas OK, '+fail+' fallas');
