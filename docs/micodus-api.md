@@ -101,27 +101,30 @@ Páginas de la interfaz, no servicios: `Tracking.aspx` (mapa),
 `Command2.aspx` y `Command3.aspx` (comandos), **`oilset2.aspx`** (corte de
 combustible), `ProductUpdate.aspx` (editar equipo).
 
-## Subcuentas
+## Subcuentas — probadas y descartadas
 
-La cuenta de solo lectura para el bot:
+Se creó `pagasi-lectura` (UserID **140853**, tipo End User, bajo
+`info@pagasi.io`) para que el bot no cargara con la clave de la cuenta
+principal. **Se descartó en septiembre de 2026.** Dos razones:
 
-| | |
-|---|---|
-| Login | `pagasi-lectura` |
-| `UserID` | **140853** |
-| Tipo | End User |
-| Padre | `info@pagasi.io` (139351) |
+1. **La razón de seguridad no existía.** Creíamos que MiCODUS mandaba la
+   clave en la query string. El login que funciona es un POST de formulario
+   contra `Login2.aspx` y la clave viaja en el cuerpo.
+2. **En MiCODUS una subcuenta no "ve" equipos: los POSEE.** Mover un equipo
+   al hijo lo SACA del padre — al mover tres, el distribuidor pasó de 500 a
+   497 y dejaron de aparecer en su lista. Así que cada GPS recién instalado
+   había que moverlo a mano o no salía en el mapa. Eso dejó la moto de
+   CRED-482 invisible durante días, y además la subcuenta no puede mandar
+   comandos, que es justo lo que hace falta para restituir corriente.
+
+Por si hiciera falta revertirlo, el endpoint para mover equipos:
 
 ```
 POST /Ajax/DevicesAjax.asmx/ChangeDevicesUser
 {DeviceIDs:'521777,521709', OldUserID:139351, NewUserID:140853, TimeZone:'0'}
 ```
 
-Devuelve cuántos movió. **Ojo: el equipo SALE de la cuenta principal** — al
-mover tres, el distribuidor pasó de 500 a 497 y dejaron de aparecer en su
-lista. Pero el padre los sigue leyendo pasando el `UserID` del hijo a
-`GetDevices` y a `GetTracking`. Es reversible: se mueven de vuelta
-invirtiendo `OldUserID` y `NewUserID`.
+Devuelve cuántos movió. Es reversible invirtiendo `OldUserID` y `NewUserID`.
 
 Listar subcuentas (solo lo tiene un distribuidor):
 

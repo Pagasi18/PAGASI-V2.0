@@ -7,9 +7,17 @@
    instalados: son los unicos que estan en una moto. Preguntar por los 500
    seria 500 llamadas para nada.
 
-   Credenciales: MICODUS_USER y MICODUS_PASS, de los secretos del repo. Debe
-   ser una SUBCUENTA DE SOLO LECTURA, no la cuenta principal — MiCODUS manda
-   la clave en la query string de la URL, donde queda en logs y proxies.
+   Credenciales: MICODUS_USER y MICODUS_PASS, de los secretos del repo.
+   Van las de la cuenta principal.
+
+   Hubo una subcuenta de solo lectura (pagasi-lectura) porque creiamos que
+   MiCODUS mandaba la clave en la query string. No es asi: el login que
+   funciona es un POST de formulario y la clave viaja en el cuerpo. Y la
+   subcuenta salia cara: en MiCODUS mover un equipo a una subcuenta lo SACA
+   de la principal, asi que cada GPS recien instalado habia que moverlo a
+   mano o no aparecia en el mapa. Eso ya dejo una moto invisible.
+
+   Este job solo LEE (GetDevices y GetTracking). No manda comandos.
 
    Uso local sin escribir nada:  node gps-micodus.js --dry                */
 

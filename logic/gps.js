@@ -293,7 +293,7 @@ function _gpsRender(){
     html += '<div style="background:rgba(29,78,216,0.07);border:1px solid rgba(29,78,216,0.25);border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:11.5px;color:var(--ink2);line-height:1.6">'
       + '<strong style="color:var(--p1)">Todavia sin posiciones.</strong> '
       + 'El bot consulta MiCODUS una vez al dia y cuando alguien le da a Actualizar. '
-      + 'Si nunca ha traido nada, revisa que los equipos esten en la subcuenta de lectura.'
+      + 'Si nunca ha traido nada, revisa que el ID GPS de cada equipo sea igual al serial que muestra MiCODUS.'
       + '</div>';
   }
 
