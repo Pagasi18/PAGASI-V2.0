@@ -267,7 +267,7 @@ ok('basura devuelve null', API._gpsParseFecha('no es fecha') === null);
 // BUSCADOR — con 500 equipos es la unica forma de llegar a uno
 // ══════════════════════════════════════════════════════════════════
 S.creds = [
-  {id:'CRED-467', cli:'WILMER CARRANZA', modelo:'CF MT 450', placa:'AM2D29J', estado:'activo', mora:0,  eliminado:false},
+  {id:'CRED-467', cli:'JOSE PRUEBA', modelo:'CF MT 450', placa:'AM2D29J', estado:'activo', mora:0,  eliminado:false},
   {id:'CRED-477', cli:'ABEL RAMIREZ',    modelo:'NEW OUTLOOK 175', placa:'AM6C46J', estado:'mora', mora:9, eliminado:false},
 ];
 const eq = {id:'X', estado:'instalado', creditoId:'CRED-467', idGps:'19210075478',
@@ -281,13 +281,13 @@ ok('busca por IMEI', API._gpsCoincide(eq, '866557086115211'));
 ok('busca por linea', API._gpsCoincide(eq, '143557051'));
 ok('busca por ICCID', API._gpsCoincide(eq, '136641'));
 ok('busca por credito', API._gpsCoincide(eq, 'CRED-467'));
-ok('busca por cliente', API._gpsCoincide(eq, 'wilmer'));
+ok('busca por cliente', API._gpsCoincide(eq, 'jose'));
 ok('busca por placa', API._gpsCoincide(eq, 'am2d29j'));
 ok('busca por moto', API._gpsCoincide(eq, 'CF MT'));
 ok('busca por tecnico', API._gpsCoincide(eq, 'francisco'));
-ok('no distingue mayusculas', API._gpsCoincide(eq, 'WiLmEr'));
-ok('varias palabras: todas deben estar', API._gpsCoincide(eq, 'wilmer 75478'));
-ok('si una palabra no esta, no coincide', !API._gpsCoincide(eq, 'wilmer zzz'));
+ok('no distingue mayusculas', API._gpsCoincide(eq, 'JoSe'));
+ok('varias palabras: todas deben estar', API._gpsCoincide(eq, 'jose 75478'));
+ok('si una palabra no esta, no coincide', !API._gpsCoincide(eq, 'jose zzz'));
 ok('lo que no existe no coincide', !API._gpsCoincide(eq, 'pedro'));
 
 // El filtro combina texto y estado

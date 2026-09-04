@@ -1,0 +1,4 @@
+
+# cache local de wrangler: no va al repo
+.wrangler/
+bot/.wrangler/
