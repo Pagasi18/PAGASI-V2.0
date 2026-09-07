@@ -33,6 +33,7 @@ function onCredContratoChange(){
     var c = (S.creds||[]).find(function(x){ return x.id===sc.value; });
     if(c) td.value = _contratoVersionDe(c);
   }
+  if(typeof _docsContratoPintar==='function') _docsContratoPintar();
   if(typeof renderContrato==='function') renderContrato();
 }
 function renderContrato(){
@@ -1074,6 +1075,7 @@ function verContratoById(credId){
     }
     var td = document.getElementById('sel-tipo-doc');
     if(td) td.value = _contratoVersionDe(c);
+    if(typeof _docsContratoPintar==='function') _docsContratoPintar();
     if(typeof renderContrato==='function') renderContrato();
     var cz = document.getElementById('cz');
     var html = cz ? cz.innerHTML : '<div style="padding:40px;text-align:center;color:#888">No se pudo generar el contrato</div>';

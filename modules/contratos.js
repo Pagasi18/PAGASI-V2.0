@@ -36,6 +36,10 @@ PG.contratos = function(){
   var recuperados = credsArchivados.filter(function(c){return c.estado==='recuperado' || c.estado==='recuperada';}).length;
   var cancelados = credsArchivados.filter(function(c){return c.estado==='cancelado';}).length;
 
+  // El cuadro de documentos se pinta cuando el DOM ya existe
+  // Y si la pagina se re-renderizo por tiempo real, volver al credito que estaba
+  setTimeout(function(){ if(typeof _docsRestaurarSeleccion==='function') _docsRestaurarSeleccion(); }, 0);
+
   return`<div class="page">
 
   ${pageBanner(
@@ -109,6 +113,10 @@ PG.contratos = function(){
         <button class="btn btn-p btn-sm" onclick="onCredContratoChange()">️ Vista Previa</button>
         <button class="btn btn-g btn-sm" onclick="descargarContratoPDF()">↓ Descargar PDF</button>
       </div>
+
+      <!-- Documentos del contrato: factura, certificado, poliza, recaudos, PEP.
+           Se llena con el cliente delante y sale impreso. Lo pinta contratos-docs.js -->
+      <div id="docs-contrato"></div>
 
       <!-- Impresión por lote: todos los contratos de una fecha en un solo documento -->
       <div style="margin-top:11px;padding:11px 12px;background:var(--surf2);border:1px solid var(--rim);border-radius:10px">

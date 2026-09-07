@@ -968,7 +968,12 @@ function descargarContratoPDFById(credId){
     // guardamos temporalmente y restauramos
     var prevSel = sel ? sel.value : null;
     if(sel) sel.value = credId;
+    // La version del contrato es la del credito, no la que este en el selector
+    var td = $('sel-tipo-doc'), cc = (S.creds||[]).find(function(x){ return String(x.id)===String(credId); });
+    var prevTd = td ? td.value : null;
+    if(td && cc && typeof _contratoVersionDe==='function') td.value = _contratoVersionDe(cc);
     renderContrato();
+    if(td && prevTd!==null) td.value = prevTd;
     var cz = $('cz');
     if(!cz){ toast('No se pudo generar el contrato','error'); return; }
     _abrirVentanaImpresion('Contrato '+credId, cz.innerHTML, {sinHeader:true});

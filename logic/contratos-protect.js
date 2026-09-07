@@ -36,6 +36,33 @@
 
 var _CONTRATO_PROTECT_DESDE = '2026-09-07';
 
+// Lista canonica de recaudos del Anexo D. Vive aqui, en el contrato, y el
+// formulario de "Documentos del contrato" la importa: asi el papel nunca
+// depende de que se haya cargado el archivo del formulario.
+function _docsRecaudosLista(hayFiador){
+  var l = [
+    ['cedCli',  'Copia de cédula de identidad del Comprador'],
+    ['rifCli',  'Copia del RIF del Comprador'],
+    ['domCli',  'Comprobante de domicilio del Comprador (no mayor a 3 meses)'],
+    ['ingCli',  'Constancia o soporte de ingresos / actividad económica del Comprador'],
+    ['refCli',  'Referencias personales y/o comerciales del Comprador']
+  ];
+  if(hayFiador) l = l.concat([
+    ['cedFia',  'Copia de cédula de identidad del Fiador'],
+    ['rifFia',  'Copia del RIF del Fiador'],
+    ['domFia',  'Comprobante de domicilio del Fiador'],
+    ['ingFia',  'Constancia o soporte de ingresos / actividad económica del Fiador']
+  ]);
+  return l.concat([
+    ['factura',    'Factura de la Compraventa emitida por el Concesionario, con mención del origen de los fondos'],
+    ['finiquito',  'Recibo o finiquito de pago del precio emitido por el Concesionario'],
+    ['certOrigen', 'Certificado de origen o documento de propiedad del Vehículo'],
+    ['poliza',     'Póliza de Garantía y Responsabilidad Civil de Vehículos'],
+    ['fotos',      'Fotografías del Vehículo al momento de la recepción']
+  ]);
+}
+function fechaLocalISOhoy(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
 // Tasa financiera anual del contrato y su equivalente quincenal (ano de 360
 // dias, quincenas de 15). 12 % / 24 = 0,5 % por quincena.
 var _PROTECT_TASA_ANUAL = 0.12;
@@ -91,6 +118,10 @@ function _protectDatos(credId){
   var conc = (c.concesionarioId && typeof _concGetById==='function') ? (_concGetById(c.concesionarioId)||{}) : {};
   var gps  = (S.gps||[]).find(function(g){ return g && !g.eliminado && String(g.creditoId)===String(c.id); }) || {};
   var F    = _protectFinanzas(c);
+  var dc   = c.docsContrato || {};
+  // Lo que escribe un empleado se imprime escapado: un '<' en el nombre de
+  // una aseguradora no puede comerse medio Anexo C.
+  var E    = function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
 
   var num = function(x){ return (parseFloat(x)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); };
   var letras = function(x){ return (typeof _numALetras==='function') ? _numALetras(x) : num(x); };
@@ -128,7 +159,7 @@ function _protectDatos(credId){
     // ── Fiador ──
     hayFiador: !!T(cli.fiador_nom),
     fiaNom: V(cli.fiador_nom, 28), fiaCi: V(cli.fiador_ci, 11), fiaDir: V(cli.fiador_dir, 40),
-    fiaEmail: V(cli.fiador_email, 22), fiaTel: V(cli.fiador_tel, 14), fiaProf: b(16),
+    fiaEmail: V(cli.fiador_email, 22), fiaTel: V(cli.fiador_tel, 14), fiaProf: V(E(dc.fiadorProfesion), 16),
     // ── Concesionario (no firma, pero se identifica en los considerandos) ──
     concNom: V(conc.nombre, 26), concRif: V(conc.rif, 12),
     // ── Vehiculo ──
@@ -151,7 +182,24 @@ function _protectDatos(credId){
     // ── Fechas ──
     fechaLarga: '<strong>'+fechaLarga+'</strong>', diaNum: '<strong>'+fc.getDate()+'</strong>',
     mesNom: '<strong>'+MESES[fc.getMonth()]+'</strong>', anioNum: '<strong>'+fc.getFullYear()+'</strong>',
-    protectDesde: '<strong>'+fmt(fc)+'</strong>', protectHasta: '<strong>'+fmt(fechaProtectFin)+'</strong>'
+    protectDesde: '<strong>'+fmt(fc)+'</strong>', protectHasta: '<strong>'+fmt(fechaProtectFin)+'</strong>',
+    // ── Documentos del contrato (lo que se llena con el cliente delante) ──
+    docs: dc,
+    facturaNum: V(E(dc.facturaNum), 10),
+    // Sin fecha de factura guardada, la del credito: es lo que imprimia antes
+    facturaFecha: V(fmt(new Date((dc.facturaFecha || c.fecha || fechaLocalISOhoy())+'T12:00:00')), 10),
+    certOrigenNum: V(E(dc.certOrigenNum), 14),
+    poliza: V([E(dc.polizaCia), E(dc.polizaNum)].filter(Boolean).join(' · '), 22),
+    actividad: V(E(dc.actividad || cli.profesion || cli.ocupacion), 16),
+    ingresoMensual: V(dc.ingresoMensual ? 'US$ '+num(dc.ingresoMensual) : '', 12),
+    pepNo: dc.pep==='si' ? '(&nbsp;&nbsp;)' : (dc.pep==='no' ? '(&nbsp;X&nbsp;)' : '(&nbsp;&nbsp;)'),
+    pepSi: dc.pep==='si' ? '(&nbsp;X&nbsp;)' : '(&nbsp;&nbsp;)',
+    pepDetalle: V(E(dc.pepDetalle), 24),
+    verFecha: V(dc.verificado && dc.verificadoFecha ? fmt(new Date(dc.verificadoFecha+'T12:00:00')) : '', 8),
+    verRes: dc.verificado ? '<strong>sin novedad</strong>' : b(10),
+    analista: V(E(dc.analista), 16), aprobadoPor: V(E(dc.aprobadoPor), 14),
+    recaudo: function(key){ return (dc.recaudos && dc.recaudos[key]===true) ? 'Sí (&nbsp;X&nbsp;) &nbsp; No (&nbsp;&nbsp;)' : (dc.recaudos && dc.recaudos[key]===false ? 'Sí (&nbsp;&nbsp;) &nbsp; No (&nbsp;X&nbsp;)' : 'Sí (&nbsp;&nbsp;) &nbsp; No (&nbsp;&nbsp;)'); },
+    otrosTexto: V(E(dc.otrosTexto), 24)
   };
 }
 
@@ -166,7 +214,7 @@ var _PROTECT_CUERPO = [
   function(D){ return D.hayFiador ? 'Asimismo interviene en el presente Contrato (iii) '+D.fiaNom+', venezolano(a), mayor de edad, de profesión u oficio '+D.fiaProf+', domiciliado(a) en '+D.fiaDir+', titular de la cédula de identidad venezolana N° V-'+D.fiaCi+', quien actúa en su carácter de fiador solidario y principal pagador del Comprador (el “Fiador”), quedando comprendido dentro de la definición de “Partes” para todos los efectos de este Contrato.' : ''; },
   function(D){ return 'Todo ello de conformidad con lo previsto en los artículos 1.133, 1.159, 1.160, 1.167, 1.211, 1.215, 1.264, 1.266, 1.268, 1.269, 1.283, 1.296, 1.299, 1.300, 1.302, 1.735 y siguientes, y 1.804 y siguientes del Código Civil; el artículo 128 del Decreto con Rango, Valor y Fuerza de Ley del Banco Central de Venezuela; la Ley de Transporte Terrestre; y demás normativa aplicable, en base a los términos y condiciones siguientes:'; },
   function(D){ return 'CONSIDERANDO QUE '+D.concNom+', sociedad mercantil, RIF N° '+D.concRif+' (el “Concesionario”), es una agencia distribuidora de motocicletas en los términos previstos en el artículo 18(1) del Reglamento Parcial de la Ley de Transporte Terrestre sobre el Uso y Circulación de Motocicletas en la Red Vial Nacional y el Transporte Público de Personas en la Modalidad Individual Moto Taxis, contenido en el Decreto Presidencial N° 8.495, publicado en Gaceta Oficial N° 39.772 del 5 de octubre de 2011 (el “Reglamento LTT—Motos”).'; },
-  function(D){ return 'CONSIDERANDO QUE el Comprador ha celebrado, o celebra en esta misma fecha, un contrato de compraventa con el Concesionario, en virtud del cual adquiere de éste, para sí, un vehículo automotor de la clase motocicleta identificado con las siguientes características: marca: '+D.marca+'; modelo: '+D.modelo+'; año: '+D.anio+'; clase: <strong>MOTO</strong>; tipo: '+D.tipo+'; color: '+D.color+'; placa: '+D.placa+'; serial de carrocería o chasis: '+D.chasis+'; serial de motor: '+D.motor+'; uso: '+D.uso+'; N° de certificado de origen: '+D.b(14)+'; según factura N° '+D.b(10)+' de fecha '+D.b(10)+' emitida por el Concesionario (el “Vehículo” y la “Compraventa”, respectivamente).'; },
+  function(D){ return 'CONSIDERANDO QUE el Comprador ha celebrado, o celebra en esta misma fecha, un contrato de compraventa con el Concesionario, en virtud del cual adquiere de éste, para sí, un vehículo automotor de la clase motocicleta identificado con las siguientes características: marca: '+D.marca+'; modelo: '+D.modelo+'; año: '+D.anio+'; clase: <strong>MOTO</strong>; tipo: '+D.tipo+'; color: '+D.color+'; placa: '+D.placa+'; serial de carrocería o chasis: '+D.chasis+'; serial de motor: '+D.motor+'; uso: '+D.uso+'; N° de certificado de origen: '+D.certOrigenNum+'; según factura N° '+D.facturaNum+' de fecha '+D.facturaFecha+' emitida por el Concesionario (el “Vehículo” y la “Compraventa”, respectivamente).'; },
   function(D){ return 'CONSIDERANDO QUE el Comprador no dispone de los fondos necesarios para pagar de contado el precio del Vehículo, y ha solicitado a Pagasi el otorgamiento de un financiamiento con dicha finalidad, el cual Pagasi ha convenido en otorgar con recursos propios, en los términos y condiciones del presente Contrato.'; },
   function(D){ return 'CONSIDERANDO QUE, en ejecución de dicho financiamiento, Pagasi paga o pone a disposición del Concesionario, por cuenta, orden y en descargo del Comprador, la porción financiada del precio del Vehículo, quedando el Comprador obligado a reembolsar dicha suma a Pagasi, con sus intereses, en la forma prevista en la Cláusula 3.'; },
   function(D){ return 'CONSIDERANDO QUE es voluntad expresa del Comprador subrogar a Pagasi en todos los derechos, acciones, privilegios y garantías que el Concesionario tenga o pudiera tener contra él por razón del precio del Vehículo, de conformidad con el ordinal 2° del artículo 1.299 del Código Civil.'; },
@@ -270,7 +318,7 @@ var _PROTECT_CUERPO = [
   function(D){ return '(b)\tToda la información, documentación y recaudos suministrados a Pagasi —incluyendo, sin limitación, identidad, domicilio, actividad económica, ingresos, referencias personales y comerciales, y los documentos de la Compraventa— son veraces, exactos, completos y se encuentran vigentes; y se obliga'+(D.hayFiador?'n':'')+' a informar a Pagasi cualquier cambio sustancial dentro de los cinco (5) días continuos siguientes.'; },
   function(D){ return '(c)\tEl Vehículo fue adquirido del Concesionario mediante operación real y lícita; se encuentra libre de gravámenes, prohibiciones y medidas judiciales o administrativas distintas de las constituidas bajo este Contrato; su documentación de origen es auténtica; y no ha sido objeto de ventas, cesiones ni actos de disposición previos que afecten la adquisición.'; },
   function(D){ return '(d)\tLos fondos empleados para el pago de la Inicial y de las Cuotas Quincenales provienen y provendrán de actividades lícitas, y no tienen su origen, ni serán destinados, a actividades relacionadas con la legitimación de capitales, el financiamiento al terrorismo, el financiamiento de la proliferación de armas de destrucción masiva, el narcotráfico, la corrupción ni cualquier otra actividad ilícita, en los términos de la Ley Orgánica contra la Delincuencia Organizada y Financiamiento al Terrorismo y demás normativa aplicable.'; },
-  function(D){ return '(e)\tNO ostenta'+(D.hayFiador?'n':'')+' (&nbsp;&nbsp;) / SÍ ostenta'+(D.hayFiador?'n':'')+' (&nbsp;&nbsp;) la condición de Persona Expuesta Políticamente (PEP), ni son cónyuge, pariente dentro del segundo grado de afinidad o cuarto de consanguinidad, ni asociado cercano de una PEP. En caso afirmativo, indicar: '+D.b(24)+'.'; },
+  function(D){ return '(e)\tNO ostenta'+(D.hayFiador?'n':'')+' '+D.pepNo+' / SÍ ostenta'+(D.hayFiador?'n':'')+' '+D.pepSi+' la condición de Persona Expuesta Políticamente (PEP), ni son cónyuge, pariente dentro del segundo grado de afinidad o cuarto de consanguinidad, ni asociado cercano de una PEP. En caso afirmativo, indicar: '+D.pepDetalle+'.'; },
   function(D){ return '(f)\tAutoriza'+(D.hayFiador?'n':'')+' expresamente a Pagasi a verificar, consultar y validar la información suministrada ante fuentes públicas y privadas, incluyendo listas restrictivas nacionales e internacionales, registros públicos, el INTT, centrales de riesgo y referencias personales y comerciales, así como a realizar los procesos de debida diligencia y conocimiento del cliente que resulten aplicables.'; },
   function(D){ return '(g)\tEl Vehículo no será destinado, directa ni indirectamente, a la comisión de delitos, al transporte de sustancias o bienes de comercio prohibido, ni a actividad ilícita alguna.'; },
   function(D){ return '(h)\tHa'+(D.hayFiador?'n':'')+' contado con la oportunidad de leer íntegramente este Contrato y sus Anexos, formular preguntas y recibir asesoría legal independiente de su elección; y celebra'+(D.hayFiador?'n':'')+' el Contrato con pleno conocimiento y consentimiento libre de vicios.'; },
@@ -420,7 +468,7 @@ function _protectAnexoB(D, S_){
     + sub('B.3 Condiciones y Exclusiones')
     + p('Los servicios de cambio de aceite y lavado no son acumulables, transferibles ni canjeables por dinero, y caducan al vencimiento del Período Protect. El Programa no incluye repuestos, piezas, insumos distintos de los indicados, reparaciones, grúa, asistencia vial, ni cobertura o indemnización alguna. El Programa NO es un contrato de seguro y no indemniza la pérdida, robo, hurto o daño del Vehículo, conforme a la Sección 2.3 del Contrato.')
     + sub('B.4 Canales de Atención')
-    + p('Solicitud de servicios y reporte de robo o hurto: (i) Teléfono / WhatsApp: <strong>+58 424-2177798</strong>; (ii) E-Mail: <strong>info@pagasi.io</strong>; (iii) Horario de atención: '+D.b(18)+'. Tiempo objetivo de respuesta ante reporte de robo o hurto: '+D.b(4)+' minutos.')
+    + p('Solicitud de servicios y reporte de robo o hurto: (i) Teléfono / WhatsApp: <strong>+58 424-2177798</strong>; (ii) E-Mail: <strong>info@pagasi.io</strong>; (iii) Horario de atención: <strong>lunes a viernes, de 9:00 a.m. a 5:00 p.m.</strong> Tiempo objetivo de respuesta ante reporte de robo o hurto: <strong>entre una (1) y cinco (5) horas</strong>.')
     + sub('B.5 Declaración del Comprador')
     + p('El Comprador declara haber recibido, leído y comprendido las condiciones del Programa; haber sido informado de que su contratación es voluntaria y de que el Programa no constituye un contrato de seguro; y haber recibido los Dispositivos instalados y en funcionamiento a su entera satisfacción, o, en su defecto, conocer la fecha y lugar de su instalación.')
     + '<div style="display:flex;gap:24px;align-items:flex-start;margin-top:14px;page-break-inside:avoid">'
@@ -435,14 +483,14 @@ function _protectAnexoC(D, S_){
   // llaves. Se imprime asi y lo que no aplique se tacha a mano.
   var S = function(t){ return '<strong>'+t+'</strong>'; };
   var filas = [
-    ['Concesionario que entrega', D.concNom], ['Factura de la Compraventa N° / fecha', D.b(10)+' / '+D.protectDesde],
+    ['Concesionario que entrega', D.concNom], ['Factura de la Compraventa N° / fecha', D.facturaNum+' / '+D.facturaFecha],
     ['Kilometraje al momento de la recepción', S('0 km (vehículo nuevo)')], ['Estado de carrocería y pintura', S('Nuevo, sin detalles')],
     ['Estado mecánico y de funcionamiento', S('Nuevo, en funcionamiento')], ['Estado eléctrico y de luces', S('Nuevo, operativo')],
     ['Estado de neumáticos', S('Nuevos')], ['Nivel de combustible', S('10 litros')],
     ['Llaves recibidas (cantidad)', S('2')], ['Cascos recibidos (cantidad)', S('1')],
     ['Manuales y documentos recibidos', S('Manual del propietario y documentos del Vehículo')], ['Accesorios recibidos', S('Los de fábrica')],
     ['Dispositivo GPS instalado (serial)', D.gpsSerial], ['Dispositivo de apagado remoto instalado (serial)', D.gpsSerial+' (mismo equipo)'],
-    ['Certificado de origen (N° / entregado a Pagasi en depósito)', S('Original entregado a Pagasi en depósito')], ['Póliza de Seguro (compañía y N°)', D.b(22)],
+    ['Certificado de origen (N° / entregado a Pagasi en depósito)', D.certOrigenNum+' · '+S('original entregado a Pagasi en depósito')], ['Póliza de Seguro (compañía y N°)', D.poliza],
     ['Observaciones', S('Sin observaciones')]
   ];
   var lbl = 'background:#EFF6FF;color:'+S_.azD+';font-weight:700;font-size:8.8px;padding:3px 8px;width:44%;border-bottom:1px solid #DBEAFE';
@@ -463,39 +511,24 @@ function _protectAnexoC(D, S_){
 function _protectAnexoD(D, S_){
   var sub = function(t){ return '<div style="font-weight:800;color:'+S_.azD+';font-size:9.4px;margin:6px 0 2px">'+t+'</div>'; };
   var p = function(t){ return '<p style="'+S_.p+'">'+t+'</p>'; };
-  var recaudos = [
-    'Copia de cédula de identidad del Comprador', 'Copia del RIF del Comprador',
-    'Comprobante de domicilio del Comprador (no mayor a 3 meses)', 'Constancia o soporte de ingresos / actividad económica del Comprador',
-    'Referencias personales y/o comerciales del Comprador'
-  ];
-  if(D.hayFiador) recaudos = recaudos.concat([
-    'Copia de cédula de identidad del Fiador', 'Copia del RIF del Fiador',
-    'Comprobante de domicilio del Fiador', 'Constancia o soporte de ingresos / actividad económica del Fiador'
-  ]);
-  recaudos = recaudos.concat([
-    'Factura de la Compraventa emitida por el Concesionario, con mención del origen de los fondos',
-    'Recibo o finiquito de pago del precio emitido por el Concesionario',
-    'Certificado de origen o documento de propiedad del Vehículo',
-    'Póliza de Garantía y Responsabilidad Civil de Vehículos',
-    'Fotografías del Vehículo al momento de la recepción'
-  ]);
+  // La misma lista que el formulario de "Documentos del contrato"
+  var recaudos = _docsRecaudosLista(D.hayFiador);
   var lbl = 'padding:2.5px 8px;font-size:8.6px;border-bottom:1px solid #DBEAFE';
   var val = 'padding:2.5px 8px;font-size:8.6px;border-bottom:1px solid #DBEAFE;white-space:nowrap;width:24%';
-  var caja = 'Sí (&nbsp;&nbsp;) &nbsp; No (&nbsp;&nbsp;)';
   var quien = D.hayFiador ? 'El Comprador y el Fiador declaran' : 'El Comprador declara';
   return '<div style="'+S_.h1+'">ANEXO “D” — RECAUDOS Y DECLARACIÓN DE CONOCIMIENTO DEL CLIENTE</div>'
     + p('El presente Anexo forma parte integrante del Contrato y documenta los recaudos y la debida diligencia realizada respecto del Comprador'+(D.hayFiador?' y del Fiador':'')+', a los efectos de las declaraciones de la Cláusula 8 y de la normativa aplicable en materia de prevención de legitimación de capitales y financiamiento al terrorismo.')
     + sub('D.1 Recaudos Consignados')
     + '<table style="width:100%;border-collapse:collapse;border:1px solid #BFDBFE;margin:4px 0">'
     + '<tr><th style="background:'+S_.az+';color:#fff;font-size:8.6px;padding:3px 8px;text-align:left">Recaudo</th><th style="background:'+S_.az+';color:#fff;font-size:8.6px;padding:3px 8px;text-align:left">Consignado</th></tr>'
-    + recaudos.map(function(r){ return '<tr><td style="'+lbl+'">'+r+'</td><td style="'+val+'">'+caja+'</td></tr>'; }).join('')
-    + '<tr><td style="'+lbl+'">Otros: '+D.b(24)+'</td><td style="'+val+'">'+caja+'</td></tr></table>'
+    + recaudos.map(function(r){ return '<tr><td style="'+lbl+'">'+r[1]+'</td><td style="'+val+'">'+D.recaudo(r[0])+'</td></tr>'; }).join('')
+    + '<tr><td style="'+lbl+'">Otros: '+D.otrosTexto+'</td><td style="'+val+'">'+D.recaudo('otros')+'</td></tr></table>'
     + sub('D.2 Declaración sobre el Origen de los Fondos')
-    + p('El Comprador declara que la actividad económica de la cual provienen los fondos destinados al pago de la Inicial y de las Cuotas Quincenales es: '+D.cliProf+', con un ingreso mensual aproximado de '+D.b(12)+'. El Comprador declara que dichos fondos provienen de actividades lícitas y se obliga a suministrar a Pagasi, cuando ésta lo requiera razonablemente, los soportes que lo acrediten.')
+    + p('El Comprador declara que la actividad económica de la cual provienen los fondos destinados al pago de la Inicial y de las Cuotas Quincenales es: '+D.actividad+', con un ingreso mensual aproximado de '+D.ingresoMensual+'. El Comprador declara que dichos fondos provienen de actividades lícitas y se obliga a suministrar a Pagasi, cuando ésta lo requiera razonablemente, los soportes que lo acrediten.')
     + sub('D.3 Declaración PEP')
-    + p(quien+' que: NO ostenta'+(D.hayFiador?'n':'')+' (&nbsp;&nbsp;) / SÍ ostenta'+(D.hayFiador?'n':'')+' (&nbsp;&nbsp;) la condición de Persona Expuesta Políticamente, ni son cónyuge, pariente dentro del segundo grado de afinidad o cuarto de consanguinidad, ni asociado cercano de una PEP. En caso afirmativo, especificar: '+D.b(24)+'.')
+    + p(quien+' que: NO ostenta'+(D.hayFiador?'n':'')+' '+D.pepNo+' / SÍ ostenta'+(D.hayFiador?'n':'')+' '+D.pepSi+' la condición de Persona Expuesta Políticamente, ni son cónyuge, pariente dentro del segundo grado de afinidad o cuarto de consanguinidad, ni asociado cercano de una PEP. En caso afirmativo, especificar: '+D.pepDetalle+'.')
     + sub('D.4 Verificaciones Realizadas por Pagasi')
-    + p('Consulta en listas restrictivas: fecha '+D.b(8)+' · resultado '+D.b(10)+'. Verificación de identidad: fecha '+D.b(8)+' · medio '+D.b(10)+'. Verificación de domicilio: fecha '+D.b(8)+' · medio '+D.b(10)+'. Verificación del Vehículo ante el INTT: fecha '+D.b(8)+' · resultado '+D.b(10)+'. Analista responsable: '+D.b(16)+'. Aprobación del financiamiento: fecha '+D.b(8)+' · aprobado por '+D.b(14)+'.')
+    + p('Consulta en listas restrictivas: fecha '+D.verFecha+' · resultado '+D.verRes+'. Verificación de identidad: fecha '+D.verFecha+' · medio '+(D.docs.verificado?'<strong>cédula y RIF</strong>':D.b(10))+'. Verificación de domicilio: fecha '+D.verFecha+' · medio '+(D.docs.verificado?'<strong>comprobante de domicilio</strong>':D.b(10))+'. Verificación del Vehículo ante el INTT: fecha '+D.verFecha+' · resultado '+D.verRes+'. Analista responsable: '+D.analista+'. Aprobación del financiamiento: fecha '+D.fechaLarga+' · aprobado por '+D.aprobadoPor+'.')
     + _protectFirmas(D);
 }
 
