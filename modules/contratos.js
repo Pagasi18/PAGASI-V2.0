@@ -54,42 +54,6 @@ PG.contratos = function(){
   )}
 
 
-  <!-- ═══ LISTADO DE CONTRATOS (en lista, como Clientes y Créditos) ═══ -->
-  ${totalContratos?`<div class="card" style="margin-bottom:14px">
-    <div class="ch">
-      <div>
-        <div class="ct">Listado de contratos</div>
-        <div class="cs">${totalContratos} contrato${totalContratos!==1?'s':''} · click en una fila para ver el detalle</div>
-      </div>
-      <div class="srch" style="width:260px"><span class="srch-i">◆</span><input type="text" id="ctrQ" placeholder="Buscar por ID, cliente, modelo, concesionario..." oninput="var q=this.value.toLowerCase();var rs=document.querySelectorAll('#ctr-tbody tr');for(var i=0;i&lt;rs.length;i++){rs[i].style.display=(rs[i].getAttribute('data-s')||'').indexOf(q)>=0?'':'none';}" style="width:100%"></div>
-    </div>
-    <div class="tw tw-compact"><table>
-      <thead><tr>
-        <th>ID</th><th>Cliente</th><th>Modelo</th><th>Concesionario</th><th>Fecha</th><th style="white-space:nowrap">Total</th><th>Estado</th><th style="text-align:right">Acciones</th>
-      </tr></thead>
-      <tbody id="ctr-tbody">${credsActivos.concat(credsArchivados).sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');}).map(function(c){
-        var estColor = c.mora>0 ? 'var(--red)' : (c.estado==='completado' ? 'var(--green)' : ((c.estado==='cancelado'||c.estado==='recuperado'||c.estado==='recuperada') ? '#6b7280' : 'var(--p1)'));
-        var estLabel = c.mora>0 ? ('En mora '+c.mora+'d') : (c.estado==='completado' ? 'Completado' : (c.estado==='cancelado' ? 'Cancelado' : ((c.estado==='recuperado'||c.estado==='recuperada') ? 'Recuperado' : 'Activo')));
-        var fechaFmt = c.fecha ? parseFechaLocal(c.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
-        var concNom = (c.concesionarioId && typeof _concGetById==='function') ? ((_concGetById(c.concesionarioId)||{}).nombre||'') : '';
-        var s = (c.id+' '+(c.cli||'')+' '+(c.modelo||'')+' '+concNom+' '+estLabel).toLowerCase().replace(/"/g,'');
-        return '<tr data-s="'+s+'" style="cursor:pointer" onclick="openAmort(\''+c.id+'\')">'
-          +'<td class="tdm" style="font-family:var(--fd)">'+c.id+'</td>'
-          +'<td style="max-width:180px"><div class="tdm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(c.cli||'')+'">'+(c.cli||'—')+'</div></td>'
-          +'<td class="tds">'+(c.modelo||'—')+'</td>'
-          +'<td class="tds" style="max-width:150px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+concNom+'">'+(concNom||'—')+'</div></td>'
-          +'<td class="tds" style="font-family:var(--fd);font-size:11px;color:var(--ink3);white-space:nowrap">'+fechaFmt+'</td>'
-          +'<td style="font-family:var(--fd);font-weight:700;white-space:nowrap">'+fmt(c.total||0)+'</td>'
-          +'<td><span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:9.5px;font-weight:800;color:#fff;background:'+estColor+';white-space:nowrap">'+estLabel+'</span></td>'
-          +'<td onclick="event.stopPropagation()" style="white-space:nowrap;text-align:right"><div style="display:inline-flex;gap:4px">'
-            +'<button class="btn btn-g btn-xs" onclick="event.stopPropagation();verContratoById(\''+c.id+'\')" title="Ver contrato">Ver</button>'
-            +'<button class="btn btn-p btn-xs" onclick="descargarContratoPDFById(\''+c.id+'\')" title="Descargar PDF">↓ PDF</button>'
-          +'</div></td>'
-          +'</tr>';
-      }).join('')}</tbody>
-    </table></div>
-  </div>`:''}
-
   <!-- ═══ GENERADOR + VISTA PREVIA ═══ -->
   <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:12px">
     <div class="card">
@@ -100,7 +64,7 @@ PG.contratos = function(){
         </div>
       </div>
       <div class="fgr c1" style="gap:9px;margin-top:12px">
-        <div class="fg"><label> Cliente / Crédito</label><select class="fs" id="sel-cred" onchange="onCredContratoChange()">${credsActivos.map(c=>`<option value="${c.id}">${c.id} — ${c.cli} · ${c.modelo}</option>`).join('')||'<option value="">— Sin créditos activos —</option>'}</select></div>
+        <div class="fg"><label> Cliente / Crédito</label><select class="fs" id="sel-cred" onchange="onCredContratoChange()">${credsActivos.slice().sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'') || String(b.id).localeCompare(String(a.id));}).map(c=>`<option value="${c.id}">${c.id} — ${c.cli} · ${c.modelo}</option>`).join('')||'<option value="">— Sin créditos activos —</option>'}</select></div>
         <div class="fg"><label> Tipo de documento</label><select class="fs" id="sel-tipo-doc" onchange="renderContrato()"><option value="protect">Financiamiento + Pagasi Protect (vigente desde 7-sep-2026)</option><option value="dra">Compraventa con Reserva de Dominio + Cesión (31-ago a 6-sep-2026)</option><option value="contrato">Contrato completo · Venta + Cesión (estructura anterior)</option><option value="venta">Solo el Contrato de Venta · Agente de Cobro</option><option value="cesion">Solo el Contrato de Cesión de Cuotas</option><option value="ambos">Venta y Cesión como dos documentos separados</option><option value="pagare">Pagaré</option><option value="carta">Carta de Instrucciones</option><option value="arriendo">Contrato de Arrendamiento con Opción a Compra (anterior)</option></select></div>
       </div>
       <div style="margin-top:12px;padding:12px 14px;background:linear-gradient(135deg,rgba(37,99,235,.06),rgba(124,109,255,.03));border:1px solid rgba(37,99,235,.15);border-radius:10px;font-size:11.5px;color:var(--ink2);line-height:1.5">
@@ -195,6 +159,42 @@ PG.contratos = function(){
     </div>
 
   </div>
+
+  <!-- ═══ LISTADO DE CONTRATOS (en lista, como Clientes y Créditos) ═══ -->
+  ${totalContratos?`<div class="card" style="margin-bottom:14px">
+    <div class="ch">
+      <div>
+        <div class="ct">Listado de contratos</div>
+        <div class="cs">${totalContratos} contrato${totalContratos!==1?'s':''} · click en una fila para ver el detalle</div>
+      </div>
+      <div class="srch" style="width:260px"><span class="srch-i">◆</span><input type="text" id="ctrQ" placeholder="Buscar por ID, cliente, modelo, concesionario..." oninput="var q=this.value.toLowerCase();var rs=document.querySelectorAll('#ctr-tbody tr');for(var i=0;i&lt;rs.length;i++){rs[i].style.display=(rs[i].getAttribute('data-s')||'').indexOf(q)>=0?'':'none';}" style="width:100%"></div>
+    </div>
+    <div class="tw tw-compact"><table>
+      <thead><tr>
+        <th>ID</th><th>Cliente</th><th>Modelo</th><th>Concesionario</th><th>Fecha</th><th style="white-space:nowrap">Total</th><th>Estado</th><th style="text-align:right">Acciones</th>
+      </tr></thead>
+      <tbody id="ctr-tbody">${credsActivos.concat(credsArchivados).sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');}).map(function(c){
+        var estColor = c.mora>0 ? 'var(--red)' : (c.estado==='completado' ? 'var(--green)' : ((c.estado==='cancelado'||c.estado==='recuperado'||c.estado==='recuperada') ? '#6b7280' : 'var(--p1)'));
+        var estLabel = c.mora>0 ? ('En mora '+c.mora+'d') : (c.estado==='completado' ? 'Completado' : (c.estado==='cancelado' ? 'Cancelado' : ((c.estado==='recuperado'||c.estado==='recuperada') ? 'Recuperado' : 'Activo')));
+        var fechaFmt = c.fecha ? parseFechaLocal(c.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+        var concNom = (c.concesionarioId && typeof _concGetById==='function') ? ((_concGetById(c.concesionarioId)||{}).nombre||'') : '';
+        var s = (c.id+' '+(c.cli||'')+' '+(c.modelo||'')+' '+concNom+' '+estLabel).toLowerCase().replace(/"/g,'');
+        return '<tr data-s="'+s+'" style="cursor:pointer" onclick="openAmort(\''+c.id+'\')">'
+          +'<td class="tdm" style="font-family:var(--fd)">'+c.id+'</td>'
+          +'<td style="max-width:180px"><div class="tdm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(c.cli||'')+'">'+(c.cli||'—')+'</div></td>'
+          +'<td class="tds">'+(c.modelo||'—')+'</td>'
+          +'<td class="tds" style="max-width:150px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+concNom+'">'+(concNom||'—')+'</div></td>'
+          +'<td class="tds" style="font-family:var(--fd);font-size:11px;color:var(--ink3);white-space:nowrap">'+fechaFmt+'</td>'
+          +'<td style="font-family:var(--fd);font-weight:700;white-space:nowrap">'+fmt(c.total||0)+'</td>'
+          +'<td><span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:9.5px;font-weight:800;color:#fff;background:'+estColor+';white-space:nowrap">'+estLabel+'</span></td>'
+          +'<td onclick="event.stopPropagation()" style="white-space:nowrap;text-align:right"><div style="display:inline-flex;gap:4px">'
+            +'<button class="btn btn-g btn-xs" onclick="event.stopPropagation();verContratoById(\''+c.id+'\')" title="Ver contrato">Ver</button>'
+            +'<button class="btn btn-p btn-xs" onclick="descargarContratoPDFById(\''+c.id+'\')" title="Descargar PDF">↓ PDF</button>'
+          +'</div></td>'
+          +'</tr>';
+      }).join('')}</tbody>
+    </table></div>
+  </div>`:''}
 
   <!-- ═══ TIPOS DE DOCUMENTOS (al fondo) ═══ -->
   <div class="card" style="margin-top:14px">
