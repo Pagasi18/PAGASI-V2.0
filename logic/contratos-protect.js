@@ -537,7 +537,9 @@ function _htmlContratoProtect(credId){
       + _protectFirmas(D, false))
     + anexo(_protectAnexoB(D, S_))
     + anexo(_protectAnexoC(D, S_))
-    + anexo(_protectAnexoD(D, S_))
+    // El Anexo D (recaudos y KYC) va entero en su propia hoja: es el que se
+    // llena a mano con el cliente delante y no puede quedar partido.
+    + '<div style="page-break-before:always;break-inside:avoid">' + _protectAnexoD(D, S_) + '</div>'
     + '</div>';
 }
 function _renderContratoProtect(){ _pintarDoc(_htmlContratoProtect()); }
