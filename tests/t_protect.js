@@ -16,8 +16,8 @@ let pass=0, fail=0;
 global.ok=(l,v)=>{ if(v){pass++;console.log('OK   '+l);} else {fail++;console.log('FALLA '+l);} };
 
 const auto=new Proxy({},{has:()=>true,get:(t,k)=>{if(k===Symbol.unscopables)return undefined;if(k in t)return t[k];if(k in global)return global[k];return function(){return 0;};},set:(t,k,v)=>{t[k]=v;return true;}});
-const SRC=['logic/contratos.js','logic/contratos-dra.js','logic/contratos-protect.js','logic/contratos-docs.js'].map(f=>fs.readFileSync(path.join(ROOT,f),'utf8')).join('\n;\n');
-const API=eval('with(auto){'+SRC+'\n; ({_protectFinanzas,_protectDatos,_htmlContratoProtect,_contratoVersionDe,_CONTRATO_PROTECT_DESDE,_docsRecaudosLista,_docsValores,_docsContratoHtml,_docsContratoLeer}) }');
+const SRC=['logic/contratos.js','logic/contratos-dra.js','logic/contratos-protect.js'].map(f=>fs.readFileSync(path.join(ROOT,f),'utf8')).join('\n;\n');
+const API=eval('with(auto){'+SRC+'\n; ({_protectFinanzas,_protectDatos,_htmlContratoProtect,_contratoVersionDe,_CONTRATO_PROTECT_DESDE,_docsRecaudosLista}) }');
 const F=API._protectFinanzas;
 const cerca=(a,b,tol)=>Math.abs(a-b)<=(tol==null?0.02:tol);
 
@@ -97,7 +97,7 @@ ok('sin fiador: "dos (2) ejemplares"',          sinF.includes('dos (2) ejemplare
 S.clientes[0].fiador_nom='MARIA GARANTE'; S.clientes[0].fiador_ci='87654321';
 const sinDocs=API._htmlContratoProtect('CRED-900');
 ok('sin docs: recaudos todos en blanco',        (sinDocs.match(/Sí \(&nbsp;&nbsp;\) &nbsp; No \(&nbsp;&nbsp;\)/g)||[]).length>=14);
-ok('sin docs: PEP sin marcar',                  !sinDocs.includes('(&nbsp;X&nbsp;)'));
+ok('sin docs: PEP marcado en NO por defecto',   (sinDocs.match(/NO ostentan \(&nbsp;X&nbsp;\)/g)||[]).length===2 && sinDocs.includes('SÍ ostentan (&nbsp;&nbsp;)'));
 
 // ── Con documentos guardados: sale impreso ──
 S.creds[0].docsContrato={facturaNum:'00012345',facturaFecha:'2026-09-07',certOrigenNum:'BB-998877',polizaCia:'Seguros Caracas',polizaNum:'POL-555',
@@ -119,24 +119,15 @@ ok('recaudos con fiador = 14',                  API._docsRecaudosLista(true).len
 ok('recaudos sin fiador = 10',                  API._docsRecaudosLista(false).length===10);
 ok('cada recaudo tiene clave y texto',          API._docsRecaudosLista(true).every(r=>r.length===2 && r[0] && r[1]));
 
-// ── Valores por defecto: lo que el sistema ya sabe ──
-const v0=API._docsValores({fecha:'2026-09-07',creadoPor:'yoel'},{profesion:'Chofer'});
-ok('sin guardar: fecha factura = fecha credito', v0.facturaFecha==='2026-09-07');
-ok('sin guardar: actividad = profesion',         v0.actividad==='Chofer');
-ok('sin guardar: analista = quien creo',         v0.analista==='yoel');
-ok('sin guardar: aprobadoPor VACIO (es una atestacion)', v0.aprobadoPor==='');
-ok('sin guardar: PEP = no',                      v0.pep==='no');
-ok('sin guardar: verificado = false',            v0.verificado===false);
-const v1=API._docsValores({fecha:'2026-09-07',docsContrato:{facturaNum:'X1',pep:'si',verificado:true}},{});
-ok('guardado manda sobre el defecto',            v1.facturaNum==='X1' && v1.pep==='si' && v1.verificado===true);
 
-// ── El formulario se arma y trae los valores ──
-const form=API._docsContratoHtml('CRED-900');
-ok('el formulario se arma',                      typeof form==='string' && form.includes('Documentos del contrato'));
-ok('trae la factura guardada',                   form.includes('value="00012345"'));
-ok('14 recaudos + otros = 15 casillas con fiador', (form.match(/id="dc_r_/g)||[]).length===15);
-ok('el recaudo marcado sale checked',            /id="dc_r_cedCli" checked/.test(form));
-ok('el recaudo sin marcar NO sale checked',      /id="dc_r_domCli" (?!checked)/.test(form));
+// ── Sin cuadro: el papel se llena con lo que el sistema ya sabe ──
+S.clientes[0].trabajo='Mecánico'; S.clientes[0].ingreso=520; S.creds[0].creadoPor='Miguel'; S.creds[0].aprobadoPor='Adam';
+const auto_=(function(){ const d=S.creds[0].docsContrato; delete S.creds[0].docsContrato; const h=API._htmlContratoProtect('CRED-900'); S.creds[0].docsContrato=d; return h; })();
+ok('actividad = trabajo del cliente',            auto_.includes('<strong>Mecánico</strong>'));
+ok('ingreso = ingreso del cliente',              auto_.includes('US$ 520.00'));
+ok('analista = quien creo el credito',           auto_.includes('Analista responsable: <strong>Miguel</strong>'));
+ok('aprobado por = quien lo aprobo (Aprobaciones)', auto_.includes('aprobado por <strong>Adam</strong>'));
+ok('recaudos en blanco para marcar a boligrafo', (auto_.match(/Sí \(&nbsp;&nbsp;\) &nbsp; No \(&nbsp;&nbsp;\)/g)||[]).length>=14);
 
 // ── Lo que escribe un empleado se imprime escapado ──
 S.creds[0].docsContrato.polizaCia='Seguros <La Previsora>'; S.creds[0].docsContrato.otrosTexto='<carta laboral>';
@@ -159,15 +150,6 @@ ok('profesion del fiador impresa',               API._htmlContratoProtect('CRED-
 ok('horario L-V 9 a 5',                          esc.includes('lunes a viernes, de 9:00 a.m. a 5:00 p.m.'));
 ok('respuesta ante robo: 1 a 5 horas',           esc.includes('entre una (1) y cinco (5) horas'));
 
-// ── El cuadro esta atado a su credito y el borrador manda sobre lo guardado ──
-const f2=API._docsContratoHtml('CRED-900');
-ok('el cuadro lleva data-cred del credito',      f2.includes('data-cred="CRED-900"'));
-ok('el cuadro anota borrador al escribir',       f2.includes('oninput="_docsAnotarBorrador()"'));
-const vb=API._docsValores({fecha:'2026-09-07',docsContrato:{facturaNum:'GUARDADO'}},{},{facturaNum:'BORRADOR'});
-ok('borrador > guardado',                        vb.facturaNum==='BORRADOR');
-const vg=API._docsValores({fecha:'2026-09-07',docsContrato:{facturaNum:'GUARDADO'}},{},null);
-ok('sin borrador, manda lo guardado',            vg.facturaNum==='GUARDADO');
-ok('la lista de recaudos vive en el contrato',   typeof API._docsRecaudosLista==='function' && API._docsRecaudosLista(false).length===10);
 
 // ── El router manda los creditos nuevos aqui ──
 ok('credito sin firmar hoy -> protect',         API._contratoVersionDe({contratoFirmado:false})==='protect');

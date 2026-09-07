@@ -4,6 +4,18 @@
 // firma, interes financiero explicito del 12 % anual (sistema frances), y el
 // programa Pagasi Protect como negocio separable.
 //
+// LO QUE SALE LLENO Y LO QUE SALE EN GRIS (decision de Adam, 7-sep-2026)
+// No hay ningun formulario extra: "ya es suficiente con todos los datos que
+// tienen que llenar". El papel se llena con lo que el sistema ya sabe:
+//   - actividad e ingreso del cliente (los pide el wizard de credito)
+//   - quien creo el credito (analista) y quien lo aprobo (modulo Aprobaciones)
+//   - PEP marcado en NO: es el 99,9 % de los casos; si es PEP se tacha a mano
+// Y queda en gris, para escribir con los papeles del concesionario en la mano:
+// N° de factura, certificado de origen, poliza, profesion del fiador, y las
+// casillas de recaudos del Anexo D, que se marcan con boligrafo conforme el
+// cliente entrega cada papel. Menos de dos minutos, sin pantalla.
+// (c.docsContrato, si algun dia existe, manda sobre estos defaults.)
+//
 // LO QUE ESTE ARCHIVO HACE Y LO QUE NO
 // - Solo produce la HOJA. El sistema sigue calculando, guardando y cobrando la
 //   cuota exactamente igual que hoy (factor sobre el financiado). Nada de lo
@@ -190,14 +202,15 @@ function _protectDatos(credId){
     facturaFecha: V(fmt(new Date((dc.facturaFecha || c.fecha || fechaLocalISOhoy())+'T12:00:00')), 10),
     certOrigenNum: V(E(dc.certOrigenNum), 14),
     poliza: V([E(dc.polizaCia), E(dc.polizaNum)].filter(Boolean).join(' · '), 22),
-    actividad: V(E(dc.actividad || cli.profesion || cli.ocupacion), 16),
-    ingresoMensual: V(dc.ingresoMensual ? 'US$ '+num(dc.ingresoMensual) : '', 12),
-    pepNo: dc.pep==='si' ? '(&nbsp;&nbsp;)' : (dc.pep==='no' ? '(&nbsp;X&nbsp;)' : '(&nbsp;&nbsp;)'),
+    actividad: V(E(dc.actividad || cli.trabajo || cli.profesion || cli.ocupacion), 16),
+    ingresoMensual: V((dc.ingresoMensual || cli.ingreso) ? 'US$ '+num(dc.ingresoMensual || cli.ingreso) : '', 12),
+    // PEP en NO por defecto: si alguien lo es, se tacha y se marca SI a mano
+    pepNo: dc.pep==='si' ? '(&nbsp;&nbsp;)' : '(&nbsp;X&nbsp;)',
     pepSi: dc.pep==='si' ? '(&nbsp;X&nbsp;)' : '(&nbsp;&nbsp;)',
     pepDetalle: V(E(dc.pepDetalle), 24),
     verFecha: V(dc.verificado && dc.verificadoFecha ? fmt(new Date(dc.verificadoFecha+'T12:00:00')) : '', 8),
     verRes: dc.verificado ? '<strong>sin novedad</strong>' : b(10),
-    analista: V(E(dc.analista), 16), aprobadoPor: V(E(dc.aprobadoPor), 14),
+    analista: V(E(dc.analista || c.creadoPor), 16), aprobadoPor: V(E(dc.aprobadoPor || c.aprobadoPor), 14),
     recaudo: function(key){ return (dc.recaudos && dc.recaudos[key]===true) ? 'Sí (&nbsp;X&nbsp;) &nbsp; No (&nbsp;&nbsp;)' : (dc.recaudos && dc.recaudos[key]===false ? 'Sí (&nbsp;&nbsp;) &nbsp; No (&nbsp;X&nbsp;)' : 'Sí (&nbsp;&nbsp;) &nbsp; No (&nbsp;&nbsp;)'); },
     otrosTexto: V(E(dc.otrosTexto), 24)
   };
