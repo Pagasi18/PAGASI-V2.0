@@ -145,6 +145,8 @@ S.creds.pop();
 // ── Profesion del fiador ──
 S.creds[0].docsContrato.fiadorProfesion='Enfermera';
 ok('profesion del fiador impresa',               API._htmlContratoProtect('CRED-900').includes('oficio <strong>Enfermera</strong>'));
+ok('trabajo del cliente en el encabezado',       auto_.includes('oficio <strong>Mecánico</strong>, domiciliado'));
+ok('sin profesion del fiador: la frase se omite, sin raya', !/DELGADO|GARANTE[^.]*oficio <span/.test(auto_) && auto_.includes('GARANTE</strong>, venezolano(a), mayor de edad, domiciliado(a)'));
 
 // ── B.4 con los valores de Adam ──
 ok('horario L-V 9 a 5',                          esc.includes('lunes a viernes, de 9:00 a.m. a 5:00 p.m.'));
