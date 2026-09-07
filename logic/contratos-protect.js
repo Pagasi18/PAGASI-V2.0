@@ -351,10 +351,10 @@ function _protectEstilos(){
     az:az, azD:azD,
     doc:"font-family:'Nunito Sans','Segoe UI',Arial,sans-serif;color:#1f2937;max-width:820px;margin:0 auto;padding:14px 22px;background:#fff",
     h1:'background:'+az+';color:#fff;text-align:center;padding:8px 12px;border-radius:4px;margin:0 0 8px;border-bottom:3px solid '+azD+';font-size:12px;font-weight:900;letter-spacing:.3px;line-height:1.3;column-span:all;break-after:avoid',
-    cl:'color:'+az+';font-weight:900;font-size:10.2px;text-transform:uppercase;letter-spacing:.2px;margin:8px 0 3px;padding-bottom:2px;border-bottom:1.5px solid '+az+';break-after:avoid',
-    p:'font-size:9.1px;line-height:1.38;color:#222;margin:0 0 3.5px;text-align:justify',
-    sub:'font-size:9.1px;line-height:1.38;color:#222;margin:0 0 3.5px 8px;text-align:justify',
-    def:'font-size:8.6px;line-height:1.3;color:#333;margin:0 0 2px 14px;text-align:justify',
+    cl:'color:'+az+';font-weight:900;font-size:9.2px;text-transform:uppercase;letter-spacing:.2px;margin:7px 0 3px;padding-bottom:2px;border-bottom:1.5px solid '+az+';break-after:avoid',
+    p:'font-size:8.1px;line-height:1.36;color:#222;margin:0 0 3px;text-align:justify',
+    sub:'font-size:8.1px;line-height:1.36;color:#222;margin:0 0 3px 8px;text-align:justify',
+    def:'font-size:7.6px;line-height:1.3;color:#333;margin:0 0 2px 14px;text-align:justify',
     cols:'column-count:2;column-gap:18px;column-fill:auto',
     // Los anexos fluyen uno tras otro (B y C caben juntos en una hoja). Lo
     // unico que no se parte son los bloques de firma, que ya lo traen puesto.
