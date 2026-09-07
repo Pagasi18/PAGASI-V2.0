@@ -79,7 +79,7 @@ ok('medios: 100% Banco y Binance',              html.includes('100% Banco Univer
 ok('canal +58 424-2177798',                     html.includes('+58 424-2177798'));
 ok('la cuota impresa es la del sistema',        html.includes('US$ 71.51'));
 ok('el Protect impreso es el despejado',        html.includes('US$ '+prom.protect.toFixed(2)));
-ok('anexo A con las 4 columnas',                html.includes('Capital') && html.includes('Intereses') && html.includes('Saldo Insoluto'));
+ok('anexo A con capital, interes y saldo por cuota', /cap [\d.,]+ · int [\d.,]+ · saldo [\d.,]+/.test(html) && html.includes('TOTALES'));
 ok('anexos B, C y D',                           html.includes('ANEXO “B”') && html.includes('ANEXO “C”') && html.includes('ANEXO “D”'));
 ok('GPS del modulo en el anexo B',              html.includes('19210076409') && html.includes('866557087286946'));
 ok('sin "undefined" ni "NaN" en el documento',  !/undefined|NaN/.test(html));

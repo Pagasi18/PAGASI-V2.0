@@ -342,6 +342,27 @@ var _PROTECT_CUERPO = [
 
 var _PROTECT_CIERRE = 'Las Partes firman el presente Contrato en señal de conformidad y aceptación, en la Fecha de Celebración.-';
 
+// ── Estilos: mas apretados que los del contrato dra ─────────────────────
+// El contrato es largo (15 clausulas + 4 anexos). A la letra del dra salian 18
+// hojas; a dos columnas y con la letra un punto mas chica salen ~10, que es lo
+// que se puede imprimir por cada moto. Es letra de contrato: densa y legible.
+function _protectEstilos(){
+  var az='#2563EB', azD='#1D4ED8';
+  return {
+    az:az, azD:azD,
+    doc:"font-family:'Nunito Sans','Segoe UI',Arial,sans-serif;color:#1f2937;max-width:820px;margin:0 auto;padding:14px 22px;background:#fff",
+    h1:'background:'+az+';color:#fff;text-align:center;padding:8px 12px;border-radius:4px;margin:0 0 8px;border-bottom:3px solid '+azD+';font-size:12px;font-weight:900;letter-spacing:.3px;line-height:1.3;column-span:all;break-after:avoid',
+    cl:'color:'+az+';font-weight:900;font-size:10.2px;text-transform:uppercase;letter-spacing:.2px;margin:8px 0 3px;padding-bottom:2px;border-bottom:1.5px solid '+az+';break-after:avoid',
+    p:'font-size:9.1px;line-height:1.38;color:#222;margin:0 0 3.5px;text-align:justify',
+    sub:'font-size:9.1px;line-height:1.38;color:#222;margin:0 0 3.5px 8px;text-align:justify',
+    def:'font-size:8.6px;line-height:1.3;color:#333;margin:0 0 2px 14px;text-align:justify',
+    cols:'column-count:2;column-gap:18px;column-fill:auto',
+    // Los anexos fluyen uno tras otro (B y C caben juntos en una hoja). Lo
+    // unico que no se parte son los bloques de firma, que ya lo traen puesto.
+    anexo:'margin-top:12px'
+  };
+}
+
 // ── Bloque de firmas (2 o 3 segun haya fiador) ──────────────────────────
 function _protectFirmas(D, incluirPagasi){
   var f = [];
@@ -357,35 +378,34 @@ function _protectFirmas(D, incluirPagasi){
 function _protectCronograma(D, S_){
   var F = D.F, num = D.num;
   var M = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-  var th = 'background:'+S_.az+';color:#fff;font-size:9.5px;font-weight:800;padding:6px 8px;text-align:right;letter-spacing:.2px;text-transform:uppercase';
-  var td = 'padding:4.5px 8px;font-size:9.8px;border-bottom:1px solid #DBEAFE;text-align:right;font-variant-numeric:tabular-nums';
-  var h = '<div style="margin:8px 0 6px">'
-    + '<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;padding:9px 12px;font-size:10px;line-height:1.7;margin-bottom:8px">'
+  var celda = 'display:flex;flex-direction:column;gap:1px;padding:4px 6px;background:#fff;border:1px solid #BFDBFE;border-radius:4px;break-inside:avoid';
+  var badge = 'display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;background:'+S_.az+';color:#fff;font-size:8.5px;font-weight:800;border-radius:50%;flex-shrink:0';
+  var h = '<div style="margin:6px 0 4px">'
+    + '<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:5px;padding:6px 10px;font-size:8.8px;line-height:1.55;margin-bottom:6px">'
     + '<strong>Resumen:</strong> Precio del Vehículo: <strong>US$ '+num(F.precio)+'</strong> · Precio Protect: <strong>US$ '+num(F.protect)+'</strong> · Inicial: <strong>US$ '+num(F.inicial)+'</strong> · '
     + 'Monto Financiado: <strong>US$ '+num(F.MF)+'</strong> · Tasa de Intereses Financieros: <strong>12% anual</strong> · Total Intereses Financieros: <strong>US$ '+num(F.intereses)+'</strong> · '
     + 'Tasa de Intereses Moratorios: <strong>3% anual</strong> (adicional a los Intereses Financieros) · N° de Cuotas: <strong>'+F.n+'</strong> · '
     + 'Cuota Quincenal: <strong>US$ '+num(F.cuota)+'</strong> · Monto Total Adeudado: <strong>US$ '+num(F.MTA)+'</strong>.</div>'
-    + '<table style="width:100%;border-collapse:collapse;border:1px solid #BFDBFE">'
-    + '<tr><th style="'+th+';text-align:center">N°</th><th style="'+th+';text-align:left">Fecha de Vencimiento</th>'
-    + '<th style="'+th+'">Capital</th><th style="'+th+'">Intereses</th><th style="'+th+'">Cuota Total</th><th style="'+th+'">Saldo Insoluto</th></tr>';
-  F.filas.forEach(function(r, i){
-    var bg = i%2 ? 'background:#F8FAFF' : '';
-    h += '<tr style="'+bg+'"><td style="'+td+';text-align:center;font-weight:800;color:'+S_.azD+'">'+r.n+'</td>'
-       + '<td style="'+td+';text-align:left">'+r.fecha.getDate()+' '+M[r.fecha.getMonth()]+' '+r.fecha.getFullYear()+'</td>'
-       + '<td style="'+td+'">'+num(r.capital)+'</td><td style="'+td+'">'+num(r.interes)+'</td>'
-       + '<td style="'+td+';font-weight:800">'+num(r.cuota)+'</td><td style="'+td+'">'+num(r.saldo)+'</td></tr>';
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">';
+  F.filas.forEach(function(r){
+    h += '<div style="'+celda+'">'
+       + '<div style="display:flex;align-items:center;gap:5px"><span style="'+badge+'">'+r.n+'</span>'
+       + '<span style="font-size:8.8px;color:#444;font-weight:600;flex:1;line-height:1.1">'+r.fecha.getDate()+' '+M[r.fecha.getMonth()]+' '+String(r.fecha.getFullYear()).slice(-2)+'</span>'
+       + '<span style="font-size:9.2px;font-weight:800;color:'+S_.azD+';white-space:nowrap">$'+num(r.cuota)+'</span></div>'
+       + '<div style="font-size:7.3px;color:#6b7280;line-height:1.2;padding-left:22px">cap '+num(r.capital)+' · int '+num(r.interes)+' · saldo '+num(r.saldo)+'</div>'
+       + '</div>';
   });
-  h += '<tr style="background:#EFF6FF;font-weight:800"><td style="'+td+'" colspan="2">TOTALES</td>'
-     + '<td style="'+td+'">'+num(F.MF)+'</td><td style="'+td+'">'+num(F.intereses)+'</td>'
-     + '<td style="'+td+'">'+num(F.MTA)+'</td><td style="'+td+'">0.00</td></tr></table>'
-     + '<p style="'+S_.p+';font-size:9.8px;color:#555;margin-top:6px">La porción del Precio Protect financiada se encuentra incluida dentro de la columna “Capital”.</p>'
+  h += '</div>'
+     + '<div style="display:flex;justify-content:space-between;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:4px;padding:4px 10px;margin-top:5px;font-size:8.8px;font-weight:800">'
+     + '<span>TOTALES</span><span>Capital '+num(F.MF)+' · Intereses '+num(F.intereses)+' · <span style="color:'+S_.azD+'">Total '+num(F.MTA)+'</span></span></div>'
+     + '<p style="'+S_.p+';font-size:8.4px;color:#555;margin-top:4px">La porción del Precio Protect financiada se encuentra incluida dentro de “cap” (capital).</p>'
      + '</div>';
   return h;
 }
 
 // ── Anexo B: condiciones de Protect ─────────────────────────────────────
 function _protectAnexoB(D, S_){
-  var sub = function(t){ return '<div style="font-weight:800;color:'+S_.azD+';font-size:10.5px;margin:10px 0 3px">'+t+'</div>'; };
+  var sub = function(t){ return '<div style="font-weight:800;color:'+S_.azD+';font-size:9.4px;margin:6px 0 2px">'+t+'</div>'; };
   var p = function(t){ return '<p style="'+S_.p+'">'+t+'</p>'; };
   return '<div style="'+S_.h1+'">ANEXO “B” — CONDICIONES DEL PROGRAMA «PAGASI PROTECT»</div>'
     + p('El presente Anexo forma parte integrante del Contrato y regula las condiciones operativas del Programa contratado conforme a la Cláusula 2.')
@@ -412,19 +432,22 @@ function _protectAnexoB(D, S_){
 
 // ── Anexo C: constancia de recepcion ────────────────────────────────────
 function _protectAnexoC(D, S_){
+  // Una moto nueva sale del concesionario siempre igual: 0 km, 10 litros, dos
+  // llaves. Se imprime asi y lo que no aplique se tacha a mano.
+  var S = function(t){ return '<strong>'+t+'</strong>'; };
   var filas = [
-    ['Concesionario que entrega', D.concNom], ['Factura de la Compraventa N° / fecha', D.b(22)],
-    ['Kilometraje al momento de la recepción', D.b(10)], ['Estado de carrocería y pintura', D.b(22)],
-    ['Estado mecánico y de funcionamiento', D.b(22)], ['Estado eléctrico y de luces', D.b(22)],
-    ['Estado de neumáticos', D.b(22)], ['Nivel de combustible', D.b(10)],
-    ['Llaves recibidas (cantidad)', D.b(6)], ['Cascos recibidos (cantidad)', D.b(6)],
-    ['Manuales y documentos recibidos', D.b(22)], ['Accesorios recibidos', D.b(22)],
-    ['Dispositivo GPS instalado (serial)', D.gpsSerial], ['Dispositivo de apagado remoto instalado (serial)', D.gpsSerial],
-    ['Certificado de origen (N° / entregado a Pagasi en depósito)', D.b(22)], ['Póliza de Seguro (compañía y N°)', D.b(22)],
-    ['Observaciones', D.b(30)]
+    ['Concesionario que entrega', D.concNom], ['Factura de la Compraventa N° / fecha', D.b(10)+' / '+D.protectDesde],
+    ['Kilometraje al momento de la recepción', S('0 km (vehículo nuevo)')], ['Estado de carrocería y pintura', S('Nuevo, sin detalles')],
+    ['Estado mecánico y de funcionamiento', S('Nuevo, en funcionamiento')], ['Estado eléctrico y de luces', S('Nuevo, operativo')],
+    ['Estado de neumáticos', S('Nuevos')], ['Nivel de combustible', S('10 litros')],
+    ['Llaves recibidas (cantidad)', S('2')], ['Cascos recibidos (cantidad)', S('1')],
+    ['Manuales y documentos recibidos', S('Manual del propietario y documentos del Vehículo')], ['Accesorios recibidos', S('Los de fábrica')],
+    ['Dispositivo GPS instalado (serial)', D.gpsSerial], ['Dispositivo de apagado remoto instalado (serial)', D.gpsSerial+' (mismo equipo)'],
+    ['Certificado de origen (N° / entregado a Pagasi en depósito)', S('Original entregado a Pagasi en depósito')], ['Póliza de Seguro (compañía y N°)', D.b(22)],
+    ['Observaciones', S('Sin observaciones')]
   ];
-  var lbl = 'background:#EFF6FF;color:'+S_.azD+';font-weight:700;font-size:10px;padding:5px 9px;width:44%;border-bottom:1px solid #DBEAFE';
-  var val = 'padding:5px 9px;font-size:10px;border-bottom:1px solid #DBEAFE';
+  var lbl = 'background:#EFF6FF;color:'+S_.azD+';font-weight:700;font-size:8.8px;padding:3px 8px;width:44%;border-bottom:1px solid #DBEAFE';
+  var val = 'padding:3px 8px;font-size:8.8px;border-bottom:1px solid #DBEAFE';
   return '<div style="'+S_.h1+'">ANEXO “C” — CONSTANCIA DE RECEPCIÓN DEL VEHÍCULO</div>'
     + '<p style="'+S_.p+'">En <strong>Caracas</strong>, a los '+D.diaNum+' días del mes de '+D.mesNom+' de '+D.anioNum+', el Comprador deja constancia de que ha recibido del Concesionario el Vehículo identificado en los Considerandos del Contrato, previa inspección directa y personal, a su entera y cabal satisfacción, en las condiciones que a continuación se detallan.</p>'
     + '<table style="width:100%;border-collapse:collapse;border:1px solid #BFDBFE;margin:8px 0">'
@@ -439,7 +462,7 @@ function _protectAnexoC(D, S_){
 
 // ── Anexo D: recaudos y KYC ─────────────────────────────────────────────
 function _protectAnexoD(D, S_){
-  var sub = function(t){ return '<div style="font-weight:800;color:'+S_.azD+';font-size:10.5px;margin:10px 0 3px">'+t+'</div>'; };
+  var sub = function(t){ return '<div style="font-weight:800;color:'+S_.azD+';font-size:9.4px;margin:6px 0 2px">'+t+'</div>'; };
   var p = function(t){ return '<p style="'+S_.p+'">'+t+'</p>'; };
   var recaudos = [
     'Copia de cédula de identidad del Comprador', 'Copia del RIF del Comprador',
@@ -457,15 +480,15 @@ function _protectAnexoD(D, S_){
     'Póliza de Garantía y Responsabilidad Civil de Vehículos',
     'Fotografías del Vehículo al momento de la recepción'
   ]);
-  var lbl = 'padding:4px 9px;font-size:10px;border-bottom:1px solid #DBEAFE';
-  var val = 'padding:4px 9px;font-size:10px;border-bottom:1px solid #DBEAFE;white-space:nowrap;width:26%';
+  var lbl = 'padding:2.5px 8px;font-size:8.6px;border-bottom:1px solid #DBEAFE';
+  var val = 'padding:2.5px 8px;font-size:8.6px;border-bottom:1px solid #DBEAFE;white-space:nowrap;width:24%';
   var caja = 'Sí (&nbsp;&nbsp;) &nbsp; No (&nbsp;&nbsp;)';
   var quien = D.hayFiador ? 'El Comprador y el Fiador declaran' : 'El Comprador declara';
   return '<div style="'+S_.h1+'">ANEXO “D” — RECAUDOS Y DECLARACIÓN DE CONOCIMIENTO DEL CLIENTE</div>'
     + p('El presente Anexo forma parte integrante del Contrato y documenta los recaudos y la debida diligencia realizada respecto del Comprador'+(D.hayFiador?' y del Fiador':'')+', a los efectos de las declaraciones de la Cláusula 8 y de la normativa aplicable en materia de prevención de legitimación de capitales y financiamiento al terrorismo.')
     + sub('D.1 Recaudos Consignados')
     + '<table style="width:100%;border-collapse:collapse;border:1px solid #BFDBFE;margin:4px 0">'
-    + '<tr><th style="background:'+S_.az+';color:#fff;font-size:9.5px;padding:5px 9px;text-align:left">Recaudo</th><th style="background:'+S_.az+';color:#fff;font-size:9.5px;padding:5px 9px;text-align:left">Consignado</th></tr>'
+    + '<tr><th style="background:'+S_.az+';color:#fff;font-size:8.6px;padding:3px 8px;text-align:left">Recaudo</th><th style="background:'+S_.az+';color:#fff;font-size:8.6px;padding:3px 8px;text-align:left">Consignado</th></tr>'
     + recaudos.map(function(r){ return '<tr><td style="'+lbl+'">'+r+'</td><td style="'+val+'">'+caja+'</td></tr>'; }).join('')
     + '<tr><td style="'+lbl+'">Otros: '+D.b(24)+'</td><td style="'+val+'">'+caja+'</td></tr></table>'
     + sub('D.2 Declaración sobre el Origen de los Fondos')
@@ -480,7 +503,7 @@ function _protectAnexoD(D, S_){
 // ── Ensamblado ──────────────────────────────────────────────────────────
 function _htmlContratoProtect(credId){
   var D = _protectDatos(credId); if(!D) return null;
-  var S_ = _draEstilos(), c = D.c;
+  var S_ = _protectEstilos(), c = D.c;
   var logo = _draLogo();
   var fecha = c.fecha ? new Date(c.fecha+'T12:00:00').toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'}) : '';
   // El preambulo (partes + considerandos) se imprime parrafo a parrafo, SIN
@@ -488,15 +511,13 @@ function _htmlContratoProtect(credId){
   // ~una pagina de texto seguido sin ningun titulo de clausula que cierre el
   // bloque, asi que el navegador lo saltaba entero a la pagina 2 y dejaba la
   // primera en blanco. Las clausulas numeradas si van por _draCuerpo.
-  var corte = 0;
-  for(var k=0; k<_PROTECT_CUERPO.length; k++){
-    if(/^1\. OBJETO DEL CONTRATO$/.test(_PROTECT_CUERPO[k](D))){ corte = k; break; }
-  }
-  var preambulo = _PROTECT_CUERPO.slice(0, corte).map(function(fn){
+  // Todo el cuerpo parrafo a parrafo, SIN los bloques anti-salto de
+  // _draCuerpo: a dos columnas esos bloques dejan huecos al pie de cada
+  // columna. El texto legal fluye entre columnas y hojas, que es lo normal.
+  var cuerpo = _PROTECT_CUERPO.map(function(fn){
     var t = fn(D); return (t && String(t).trim()) ? _draParrafo(t, S_) : '';
   }).join('');
-  var cuerpo = preambulo + _draCuerpo(_PROTECT_CUERPO.slice(corte), D, S_);
-  var salto = '<div style="page-break-before:always;padding-top:10px"></div>';
+  var anexo = function(html){ return '<div style="'+S_.anexo+'">'+html+'</div>'; };
 
   return '<div class="cdoc" style="'+S_.doc+'">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
@@ -504,24 +525,20 @@ function _htmlContratoProtect(credId){
     +   '<div style="font-size:10.5px;color:#555;text-align:right;line-height:1.7">'
     +     '<strong>N° de Contrato:</strong> '+c.id+'<br><strong>Fecha:</strong> <strong>'+fecha+'</strong></div></div>'
     + '<div style="'+S_.h1+'">CONTRATO DE FINANCIAMIENTO PARA LA ADQUISICIÓN DE VEHÍCULO AUTOMOTOR, CON GARANTÍAS'+(D.hayFiador?', FIANZA':'')+' Y PRESTACIÓN DE SERVICIOS «PAGASI PROTECT»</div>'
-    + cuerpo
-    + '<div style="page-break-inside:avoid;margin-top:16px">'
+    + '<div style="'+S_.cols+'">' + cuerpo + '</div>'
+    + '<div style="break-inside:avoid;margin-top:10px">'
     +   _draParrafo(_PROTECT_CIERRE, S_)
     +   _protectFirmas(D)
     + '</div>'
-    // ── Anexo A ──
-    + salto
-    + '<div style="'+S_.h1+'">ANEXO “A” — CRONOGRAMA DE PAGOS</div>'
-    + '<p style="'+S_.p+'">El presente Anexo forma parte integrante del Contrato y refleja el calendario de vencimiento de las Cuotas Quincenales a cargo del Comprador, con el desglose de capital, Intereses Financieros y saldo insoluto.</p>'
-    + _protectCronograma(D, S_)
-    + '<p style="'+S_.p+';margin-top:10px">El Comprador'+(D.hayFiador?' y el Fiador declaran':' declara')+' conocer y aceptar el presente cronograma de pagos.</p>'
-    + _protectFirmas(D, false)
-    // ── Anexo B ──
-    + salto + _protectAnexoB(D, S_)
-    // ── Anexo C ──
-    + salto + _protectAnexoC(D, S_)
-    // ── Anexo D ──
-    + salto + _protectAnexoD(D, S_)
+    // ── Anexos: fluyen uno tras otro; cada uno evita partirse, pero no fuerza hoja nueva ──
+    + anexo('<div style="'+S_.h1+'">ANEXO “A” — CRONOGRAMA DE PAGOS</div>'
+      + '<p style="'+S_.p+'">El presente Anexo forma parte integrante del Contrato y refleja el calendario de vencimiento de las Cuotas Quincenales a cargo del Comprador, con el desglose de capital, Intereses Financieros y saldo insoluto.</p>'
+      + _protectCronograma(D, S_)
+      + '<p style="'+S_.p+';margin-top:6px">El Comprador'+(D.hayFiador?' y el Fiador declaran':' declara')+' conocer y aceptar el presente cronograma de pagos.</p>'
+      + _protectFirmas(D, false))
+    + anexo(_protectAnexoB(D, S_))
+    + anexo(_protectAnexoC(D, S_))
+    + anexo(_protectAnexoD(D, S_))
     + '</div>';
 }
 function _renderContratoProtect(){ _pintarDoc(_htmlContratoProtect()); }
