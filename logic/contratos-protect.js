@@ -118,9 +118,8 @@ function _protectDatos(credId){
     // ── Pagasi ──
     empRm: V(emp.rm, 12), empRmEstado: V(emp.rmEstado, 16), empRmNum: V(emp.rmNum, 5),
     empRmTomo: V(emp.rmTomo, 6), empRmFecha: V(emp.rmFecha, 10),
-    // Por decision de la empresa el representante NO se identifica: firma la
-    // compania por su RIF. Quedan en blanco para completar al firmar.
-    empRep: b(24), empRepCi: b(11), empRepCargo: b(14),
+    // Por decision de la empresa el representante NO se identifica en el
+    // contrato: firma la compania, identificada por su RIF.
     // ── Comprador ──
     cliNom: V(cli.nombre || c.cli, 28), cliCi: V(cli.cedula || cli.ci, 11),
     cliRif: V(cli.rif || (cli.cedula||cli.ci ? 'V-'+(cli.cedula||cli.ci) : ''), 12),
@@ -162,7 +161,7 @@ function _protectDatos(credId){
 var _PROTECT_CUERPO = [
   // ── Preambulo ──
   function(D){ return 'El presente CONTRATO DE FINANCIAMIENTO PARA LA ADQUISICIÓN DE VEHÍCULO AUTOMOTOR, CON GARANTÍAS, FIANZA Y PRESTACIÓN DE SERVICIOS «PAGASI PROTECT» (en lo sucesivo, el “Contrato”) se celebra en la fecha de su otorgamiento (la “Fecha de Celebración”), entre:'; },
-  function(D){ return '(i) <strong>PAGASI 18 C.A.</strong>, sociedad mercantil domiciliada en Caracas, Distrito Capital, inscrita en el Registro Mercantil '+D.empRm+' de la Circunscripción Judicial '+D.empRmEstado+', bajo el N° '+D.empRmNum+', Tomo '+D.empRmTomo+', de fecha '+D.empRmFecha+', inscrita en el Registro de Información Fiscal (“RIF”) bajo el N° <strong>J-50829589-7</strong>, representada en este acto por '+D.empRep+', venezolano(a), mayor de edad, titular de la cédula de identidad N° V-'+D.empRepCi+', en su carácter de '+D.empRepCargo+' (en adelante “Pagasi”, y en su condición de otorgante del financiamiento y acreedor, también el “Financista”); y'; },
+  function(D){ return '(i) <strong>PAGASI 18 C.A.</strong>, sociedad mercantil domiciliada en Caracas, Distrito Capital, inscrita en el Registro Mercantil '+D.empRm+' de la Circunscripción Judicial '+D.empRmEstado+', bajo el N° '+D.empRmNum+', Tomo '+D.empRmTomo+', de fecha '+D.empRmFecha+', inscrita en el Registro de Información Fiscal (“RIF”) bajo el N° <strong>J-50829589-7</strong> (en adelante “Pagasi”, y en su condición de otorgante del financiamiento y acreedor, también el “Financista”); y'; },
   function(D){ return '(ii) '+D.cliNom+', venezolano(a), mayor de edad, de profesión u oficio '+D.cliProf+', domiciliado(a) en '+D.cliDir+', titular de la cédula de identidad venezolana N° V-'+D.cliCi+' y del RIF N° '+D.cliRif+' (el “Comprador” o “Deudor”, y conjuntamente con Pagasi, las “Partes” y cada una, una “Parte”).'; },
   function(D){ return D.hayFiador ? 'Asimismo interviene en el presente Contrato (iii) '+D.fiaNom+', venezolano(a), mayor de edad, de profesión u oficio '+D.fiaProf+', domiciliado(a) en '+D.fiaDir+', titular de la cédula de identidad venezolana N° V-'+D.fiaCi+', quien actúa en su carácter de fiador solidario y principal pagador del Comprador (el “Fiador”), quedando comprendido dentro de la definición de “Partes” para todos los efectos de este Contrato.' : ''; },
   function(D){ return 'Todo ello de conformidad con lo previsto en los artículos 1.133, 1.159, 1.160, 1.167, 1.211, 1.215, 1.264, 1.266, 1.268, 1.269, 1.283, 1.296, 1.299, 1.300, 1.302, 1.735 y siguientes, y 1.804 y siguientes del Código Civil; el artículo 128 del Decreto con Rango, Valor y Fuerza de Ley del Banco Central de Venezuela; la Ley de Transporte Terrestre; y demás normativa aplicable, en base a los términos y condiciones siguientes:'; },
