@@ -366,6 +366,11 @@ function _concRender(){
         + '</tr>';
     }).join('');
     var saldoTot = totFin.env - totFin.con;
+    // Chart de motos por sede (concesionarios-chart.js). Se pinta despues del render.
+    if(typeof _concChartHtml==='function'){
+      html += _concChartHtml();
+      setTimeout(function(){ if(typeof _concChartPintar==='function') _concChartPintar(); }, 30);
+    }
     html += '<div class="card">'
       + '<div class="ch"><div><div class="ct">Concesionarios</div><div class="cs">Saldo = anticipos enviados − costo de las motos que salieron</div></div>'
       + '<button class="btn btn-p btn-sm" onclick="_concAbrirDetalleTotal()">Σ Detalle total</button></div>'

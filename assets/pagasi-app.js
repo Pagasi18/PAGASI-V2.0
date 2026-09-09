@@ -1619,6 +1619,19 @@ try {
     }
     db = firebase.firestore();
 
+    // Cache local (IndexedDB). Sin esto, cada F5 vuelve a bajar las 14
+    // colecciones enteras desde el servidor —unos 9.000 documentos— antes de
+    // que la pantalla pinte nada, y ademas startRealtime las vuelve a traer.
+    // Con cache, lo repetido sale del disco y por la red solo viaja lo que
+    // cambio. synchronizeTabs permite tener el sistema abierto en varias
+    // pestanas. Si el navegador no lo soporta, se sigue sin cache: el .catch
+    // no puede romper el arranque.
+    try {
+      db.enablePersistence({ synchronizeTabs: true }).catch(function(err){
+        console.warn('Cache local no disponible (' + (err && err.code) + '): se trabaja sin ella.');
+      });
+    } catch(e){ console.warn('Cache local:', e.message); }
+
     if(typeof firebase.auth === 'function') auth = firebase.auth();
     if(typeof firebase.storage === 'function') storage = firebase.storage();
     FIREBASE_READY = true;
