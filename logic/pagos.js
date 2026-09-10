@@ -1049,6 +1049,38 @@ window.ejecutarLiquidacionAnticipada=ejecutarLiquidacionAnticipada;
 window.updLiquidacionFinal=updLiquidacionFinal;
 window.updLiquidacionDescuento=updLiquidacionDescuento;
 
+// ── Nota de cobranza al registrar un pago ──────────────────────────────
+// Adam (10-sep-2026): "cuando haces un cobro, el cliente sigue en gestion de
+// cobro... deberia salir". La nota (c.cobranzaStatus) solo la cambiaba el
+// cobrador a mano, asi que un cliente que se ponia al dia seguia marcado.
+//
+// Se limpian SOLO las notas que describen que se esta persiguiendo la deuda,
+// y SOLO si el pago deja al cliente al dia. "Cliente con problema" y "En
+// revision" no se tocan: pueden ser por algo distinto de la deuda (una
+// disputa, un robo, una revision del credito). Un abono parcial que deja al
+// cliente todavia atrasado tampoco la limpia: sigue en cobranza.
+var NOTAS_COBRANZA_DE_DEUDA = ['gestion','promesa','acuerdo','pago_verificar','avisado','no_contesta','reprogramado','ilocalizable'];
+
+// ¿Esta al dia? Misma regla que calcularMoraAuto: la cuota siguiente vence a
+// los (cuotasPagadas+1)*15 dias de la fecha del credito; si ese vencimiento no
+// ha pasado, no hay atraso.
+function _creditoAlDia(c, cuotasPagadas, totalCuotas, estado){
+  if(estado==='completado') return true;
+  if(totalCuotas>0 && cuotasPagadas>=totalCuotas) return true;
+  if(!c || !c.fecha) return false;
+  var hoy=new Date(); hoy.setHours(0,0,0,0);
+  var inicio=parseFechaLocal(c.fecha); inicio.setHours(0,0,0,0);
+  var fechaVence=new Date(inicio.getTime()+((cuotasPagadas+1)*15*24*60*60*1000));
+  fechaVence.setHours(0,0,0,0);
+  return Math.floor((hoy-fechaVence)/(24*60*60*1000)) <= 0;
+}
+
+function _notaCobranzaSeLimpia(c, cuotasPagadas, totalCuotas, estado){
+  var nota=String((c && c.cobranzaStatus) || '');
+  if(!nota || NOTAS_COBRANZA_DE_DEUDA.indexOf(nota) < 0) return false;
+  return _creditoAlDia(c, cuotasPagadas, totalCuotas, estado);
+}
+
 function recalcularCreditoDesdePagos(credId){
   var ci=S.creds.findIndex(function(x){return x.id===credId;});
   if(ci<0) return null;
@@ -1144,6 +1176,13 @@ function recalcularCreditoDesdePagos(credId){
       S.creds[ci].fechaCompletado=null;
       extraClear={tipoCierre:null,descuentoLiquidacion:0,montoLiquidado:0,saldoOriginalLiquidacion:0,fechaCompletado:null};
     }
+  }
+
+  // Si el pago dejo al cliente al dia, la nota de cobranza ya no aplica: se
+  // limpia en este mismo guardado, sin una escritura extra.
+  if(_notaCobranzaSeLimpia(S.creds[ci], cuotasPagadas, totalCuotas, nuevoEstado)){
+    S.creds[ci].cobranzaStatus='';
+    extraClear.cobranzaStatus='';
   }
 
   DB.updateCred(credId,Object.assign({

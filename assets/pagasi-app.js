@@ -1619,18 +1619,10 @@ try {
     }
     db = firebase.firestore();
 
-    // Cache local (IndexedDB). Sin esto, cada F5 vuelve a bajar las 14
-    // colecciones enteras desde el servidor —unos 9.000 documentos— antes de
-    // que la pantalla pinte nada, y ademas startRealtime las vuelve a traer.
-    // Con cache, lo repetido sale del disco y por la red solo viaja lo que
-    // cambio. synchronizeTabs permite tener el sistema abierto en varias
-    // pestanas. Si el navegador no lo soporta, se sigue sin cache: el .catch
-    // no puede romper el arranque.
-    try {
-      db.enablePersistence({ synchronizeTabs: true }).catch(function(err){
-        console.warn('Cache local no disponible (' + (err && err.code) + '): se trabaja sin ella.');
-      });
-    } catch(e){ console.warn('Cache local:', e.message); }
+    // SIN cache local (enablePersistence). Se activo el 8-sep-2026 para
+    // acelerar y el sistema se puso mas lento: con ~9.000 documentos cada
+    // cambio en tiempo real se escribia ademas en IndexedDB, y synchronizeTabs
+    // coordinaba entre pestanas. Se quito el 10-sep. No reactivar sin medir.
 
     if(typeof firebase.auth === 'function') auth = firebase.auth();
     if(typeof firebase.storage === 'function') storage = firebase.storage();
@@ -1700,30 +1692,80 @@ function _restoreFocus(f){
   }, 0);
 }
 
+// ── Redibujo en tiempo real ─────────────────────────────────────────────
+// Cada cambio de CUALQUIER empleado en las colecciones escuchadas llega a TODAS
+// las pantallas abiertas. Antes cada llegada redibujaba la pagina entera a los
+// 350 ms, y el redibujo pasaba por nav(), que ademas reseteaba la paginacion.
+// A mediodia, con todos registrando pagos, las pantallas no paraban de
+// redibujarse, el Dashboard recalculaba sus graficos cada vez, y el empleado
+// volvia a la pagina 1 de la tabla. Ademas, con cambios cada menos de 350 ms
+// el temporizador se reiniciaba sin fin y la pantalla nunca se actualizaba.
+// Desde el 10-sep-2026:
+//   - pestana oculta: no se redibuja; se hace una sola vez al volver a ella
+//   - como maximo un redibujo cada _RT_MIN_MS mientras sigan llegando cambios;
+//     los que llegan mientras tanto entran en ese mismo redibujo
+//   - se conserva la pagina de la tabla en la que estaba el empleado
+//   - el Dashboard no muestra el esqueleto de "cargando" en estos redibujos
+var _RT_MIN_MS = 4000;
+var _rtUltimoRender = 0;
+
+// Decide que hacer cuando llegan datos nuevos. Pura, para poder probarla.
+// Devuelve {accion:'render'|'pendiente'|'esperar', espera:ms}
+function _rtDecidir(ahora, ultimo, oculta, modal){
+  if(oculta || modal) return { accion:'pendiente', espera:0 };
+  var pasado = ahora - (ultimo || 0);
+  if(pasado >= _RT_MIN_MS) return { accion:'render', espera:0 };
+  return { accion:'esperar', espera:_RT_MIN_MS - pasado };
+}
+
+// Redibuja la pagina actual sin sacar al empleado de donde estaba
+function _rtRedibujar(){
+  if(!S || !S.currentUser || !S.page || typeof nav!=='function') return;
+  _rtRenderPending = false;
+  _rtUltimoRender = Date.now();
+  var focus = _captureFocus();
+  window._pgKeep = true;           // nav() lo consume: conserva la paginacion
+  window._rtRenderizando = true;   // nav() no muestra el esqueleto
+  try { nav(S.page); }
+  finally {
+    window._rtRenderizando = false;
+    window._pgKeep = false;        // por si nav() salio antes de consumirlo (sin acceso)
+  }
+  _restoreFocus(focus);
+}
+
 function scheduleRealtimeRender(){
-  if(_rtTimer) clearTimeout(_rtTimer);
+  if(!S || !S.currentUser) return;
+  _rtRenderPending = true;
+  if(_rtTimer) return;   // ya viene un redibujo en camino: este cambio entra en ese
+  var modal = (typeof _isModalOpen==='function') && _isModalOpen();
+  var d = _rtDecidir(Date.now(), _rtUltimoRender, !!document.hidden, modal);
+  if(d.accion === 'pendiente') return;   // se hace al volver a la pestana o al cerrar el modal
   _rtTimer = setTimeout(function(){
     _rtTimer = null;
-    if(!S || !S.currentUser) return;
+    if(!_rtRenderPending) return;
     try{ if(typeof updateBadge==='function') updateBadge(); }catch(e){}
-    if(typeof _isModalOpen==='function' && _isModalOpen()){
-      _rtRenderPending = true;
-      return;
-    }
-    if(!S.page || typeof nav!=='function') return;
-    _rtRenderPending = false;
-    var focus = _captureFocus();
-    nav(S.page);
-    _restoreFocus(focus);
-  }, 350);
+    var modalAhora = (typeof _isModalOpen==='function') && _isModalOpen();
+    if(document.hidden || modalAhora) return;   // queda pendiente
+    _rtRedibujar();
+  }, Math.max(350, d.espera));
 }
 
 function flushRealtimeRender(){
   if(!_rtRenderPending || !S || !S.currentUser || !S.page || typeof nav!=='function') return;
-  _rtRenderPending = false;
+  if(document.hidden) return;
+  if(_rtTimer){ clearTimeout(_rtTimer); _rtTimer = null; }
   try{ if(typeof updateBadge==='function') updateBadge(); }catch(e){}
-  nav(S.page);
+  _rtRedibujar();
 }
+
+// Al volver a la pestana, se aplica lo que llego mientras estaba oculta
+if(typeof document!=='undefined' && document.addEventListener){
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden) flushRealtimeRender();
+  });
+}
+// ── fin redibujo en tiempo real ─────────────────────────────────────────
 
 function _aplicarConcesionarioActivoRealtime(){
   try{
@@ -2978,7 +3020,9 @@ function nav(p){
   const fn=PG[p];
   if(fn){
     if(p==='dash'){
-      showSkeleton();
+      // En un redibujo por tiempo real no se muestra el esqueleto de 'cargando':
+      // la pantalla parpadeaba cada vez que otro empleado registraba algo.
+      if(!window._rtRenderizando) showSkeleton();
       setTimeout(function(){
         $('cnt').innerHTML=fn();
         updateBadge();
