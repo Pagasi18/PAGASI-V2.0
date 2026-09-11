@@ -42,6 +42,26 @@ window.restaurarPago=restaurarPago;
 // ── Estado del wizard ──
 // Logica de creditos y wizard de solicitudes movida a logic/creditos.js.
 
+// Al entrar a un campo que viene LLENO (el monto trae la cuota), se selecciona
+// todo: lo que el cobrador escriba REEMPLAZA el valor en vez de pegarse al
+// final. Paso de verdad (prueba en navegador del 11-sep-2026): con "50,00"
+// en el campo, tocarlo y escribir "50" dejaba "50,0050" = pago de $50,005.
+// El primer mouseup se anula porque en algunos navegadores ese mismo clic
+// deshace la seleccion recien hecha.
+function _seleccionarAlEntrar(el){
+  if(!el) return;
+  el._mantenerSel = true;
+  setTimeout(function(){ try{ el.select(); }catch(e){} }, 0);
+}
+function _mantenerSeleccion(ev, el){
+  if(el && el._mantenerSel){
+    el._mantenerSel = false;
+    if(ev && typeof ev.preventDefault === 'function') ev.preventDefault();
+  }
+}
+window._seleccionarAlEntrar = _seleccionarAlEntrar;
+window._mantenerSeleccion = _mantenerSeleccion;
+
 function openAddPago(preCredId){
   setMicon('pago');$('mtt').textContent='Registrar Pago';$('msb').textContent='Plan '+PLAN.plazo+' meses';
   $('modal-box').className='modal';
@@ -50,7 +70,7 @@ function openAddPago(preCredId){
     <div class="fgr" style="margin-top:9px">
       <div class="fg"><label>Frecuencia</label><input class="fi" value="Quincenal (cada 15 días)" readonly style="color:var(--p1);font-weight:700;background:var(--surf)"></div>
       <div class="fg"><label>Fecha de pago</label><input class="fi" id="p_fecha" type="date" value="${hoyLocalISO()}"></div>
-      <div class="fg"><label>Monto ($)</label><input class="fi" id="p_monto" type="number" placeholder="0.00"></div>
+      <div class="fg"><label>Monto ($)</label><input class="fi" id="p_monto" type="number" placeholder="0.00" onfocus="_seleccionarAlEntrar(this)" onmouseup="_mantenerSeleccion(event,this)"></div>
 <div class="fg"><label>Recibido en</label><select class="fs" id="p_forma">${_cuentasOrdenadasPago().map(c=>`<option value="${c.nombre}">${c.label}</option>`).join('')}${(!_cuentasBanc||!_cuentasBanc.length)?'<option value="">— Sin cuentas configuradas —</option>':''}</select></div>
       <div class="fg"><label>N° Referencia</label><input class="fi" id="p_ref" placeholder="Número de referencia o comprobante"></div>
       <div class="fg"><label>Cobrador</label><select class="fs" id="p_cobrador">${getCobradoresList().map(u=>`<option>${u}</option>`).join('')}</select></div>
