@@ -1,0 +1,36 @@
+name: Limpiar notas de cobranza pegadas (manual)
+
+# Limpieza puntual del 10-sep-2026: quita "En gestion de cobro" y las demas
+# notas de deuda de clientes que ya pagaron y estan al dia. Solo a mano, nunca
+# automatico. Con dry (por defecto) no escribe nada.
+on:
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: 'Solo mostrar lo que haria, sin escribir'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  limpiar:
+    runs-on: ubuntu-latest
+    env:
+      TZ: America/Caracas   # "al dia" y "ultimos 30 dias" con la fecha de Venezuela
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: pagasi-v2
+          workload_identity_provider: projects/951911859002/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: firebase-adminsdk-fbsvc@pagasi-v2.iam.gserviceaccount.com
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - working-directory: bot
+        run: npm install --omit=dev
+      - working-directory: bot
+        run: node limpiar-notas-cobranza.js ${{ inputs.dry && '--dry' || '' }}
