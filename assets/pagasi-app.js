@@ -1443,21 +1443,50 @@ function getCreditoTotalCuotas(c){
 function getCreditoCuotaBase(c){
   return parseFloat((c&&(c.cuotaQ||c.cuota)) || 0) || 0;
 }
+// ── Indice de pagos confirmados por credito ──────────────────────────────
+// getCreditoPagosConfirmados recorria los ~2.500 pagos completos por CADA
+// credito. La pantalla de creditos lo llama ~12.000 veces por redibujo (KPIs,
+// ranking, cartera por modelo, cada fila): 30 millones de comparaciones por
+// cada letra del buscador. Adam, 10-sep-2026: "en el buscador cuando buscas un
+// credito se tarda full".
+// Ahora el recorrido se hace UNA vez por redibujo y el resto son consultas
+// directas. El resultado es identico: misma condicion, misma suma en el mismo
+// orden. El indice vive un solo tick y ademas se rearma si S.pagos es otro
+// array, cambio de largo, o hubo una escritura (_dbSilent), un nav() o un
+// closeM(): cualquier cambio local se ve en el redibujo que le sigue.
+var _pagosIdx = null;
+var _pagosIdxVer = 0;
+function _pagosIdxInvalidar(){ _pagosIdxVer++; }
+function _pagosIdxObtener(){
+  var arr = (S && Array.isArray(S.pagos)) ? S.pagos : null;
+  if(!arr) return null;
+  if(_pagosIdx && _pagosIdx.ref === arr && _pagosIdx.len === arr.length && _pagosIdx.ver === _pagosIdxVer) return _pagosIdx.map;
+  var map = new Map();   // Map compara como ===: un cred '12' no casa con un id 12, igual que antes
+  for(var i=0;i<arr.length;i++){
+    var p = arr[i];
+    if(!(p && !p.eliminado && p.estado==='confirmado' && !p.esInicial && p.tipoOperacion!=='inicial_credito')) continue;
+    var e = map.get(p.cred);
+    if(!e){ e = {sum:0, n:0}; map.set(p.cred, e); }
+    e.sum = e.sum + (parseFloat(p.monto)||0);
+    e.n++;
+  }
+  _pagosIdx = { ref: arr, len: arr.length, ver: _pagosIdxVer, map: map };
+  setTimeout(function(){ _pagosIdx = null; }, 0);   // vive un solo tick
+  return map;
+}
 function getCreditoPagosConfirmados(c){
   if(!c) return 0;
-  var pagosDelCred = (S&&Array.isArray(S.pagos))
-    ? S.pagos.filter(function(p){
-        return p && !p.eliminado && p.estado==='confirmado' && p.cred===c.id && !p.esInicial && p.tipoOperacion!=='inicial_credito';
-      })
-    : [];
-  if(pagosDelCred.length){
-    return pagosDelCred.reduce(function(a,p){ return a + (parseFloat(p.monto)||0); }, 0);
+  var idx = _pagosIdxObtener();
+  var e = idx ? idx.get(c.id) : null;
+  if(e && e.n){
+    return e.sum;
   }
   if(Array.isArray(c.pagosRegistrados) && c.pagosRegistrados.length){
     return c.pagosRegistrados.reduce(function(a,h){ return a + (parseFloat(h.montoPagado)||0); }, 0);
   }
   return (parseInt(c.pagado,10)||0) * getCreditoCuotaBase(c);
 }
+// ── fin indice de pagos ──────────────────────────────────────────────────
 function getCreditoCuotasPagadas(c){
   if(!c) return 0;
   var totalCuotas = getCreditoTotalCuotas(c);
@@ -1986,6 +2015,7 @@ window.addEventListener('offline', function(){ _dbOnline=false; });
 
 function _dbSilent(fn){
   // Ejecuta fn() y avisa errores reales sin romper los flujos existentes.
+  if(typeof _pagosIdxInvalidar==='function') _pagosIdxInvalidar();   // toda escritura rearma el indice de pagos
   try {
     var p = fn();
     if(p && p.then) return p.then(function(){ return true; }).catch(function(e){
@@ -3086,6 +3116,7 @@ function nav(p){
       _pushNavState(p);
     }
   }
+  if(typeof _pagosIdxInvalidar==='function') _pagosIdxInvalidar();   // cada redibujo parte de un indice fresco
   S.page=p;
   S.clienteFiltro='';
   if(window._pgKeep){ window._pgKeep=false; } else { window._pages={}; } // reset pagination on module change (preserve when navigating pages)
@@ -3299,6 +3330,7 @@ function auditBadge(item){
 // Logica de comisiones movida a logic/comisiones.js.
 
 function closeM(){
+  if(typeof _pagosIdxInvalidar==='function') _pagosIdxInvalidar();
   $('ov').style.display='none';
   $('modal-box').className='modal';
   $('mft').style.display='';
