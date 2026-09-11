@@ -1216,7 +1216,7 @@ input[type=number] { -moz-appearance: textfield; }
       <div class="preview-card">
         <div class="preview-label">Vista previa · plan base</div>
         <h3 class="preview-title" id="pv_modelo">Moto</h3>
-        <div class="preview-price" id="pv_precio">$1,500.00</div>
+        <div class="preview-price" id="pv_precio">$1,500</div>
         <div class="preview-row"><span>Método</span><span>APY objetivo</span></div>
         <div class="preview-row"><span>Plazo</span><span id="pv_plazo">12 meses · 24 quincenas</span></div>
         <div class="preview-row"><span>APY estimado</span><span id="pv_apy">— %</span></div>
@@ -1235,7 +1235,7 @@ input[type=number] { -moz-appearance: textfield; }
       <h2 class="present-model" id="ph_model">Moto</h2>
       <div class="present-price-wrap">
         <span class="present-price-pre">$</span>
-        <span class="present-price" id="ph_price">0.00</span>
+        <span class="present-price" id="ph_price">0</span>
       </div>
     </div>
 
@@ -1414,7 +1414,8 @@ function calcCustom(precio, iniMonto, cuotaQ, plazo){
 
 function calcCardsFromPlan(planParams){
   const cards = [];
-  const targetPcts = [0.45, 0.50, 0.55, CUSTOM_PCT];
+  // La tarjeta destacada (la del medio, con la etiqueta RECOMENDADO) va en 40% (Adam, 11-sep-2026; antes 50%).
+  const targetPcts = [0.45, 0.40, 0.55, CUSTOM_PCT];
   const labels     = ['Conservador', 'Equilibrado', 'Recomendado', 'Premium'];
   targetPcts.forEach((pct, idx) => {
     const r = calcApy(planParams.precio, pct, planParams.apy, planParams.plazo);
@@ -1423,11 +1424,13 @@ function calcCardsFromPlan(planParams){
   return cards;
 }
 
+// Sin decimales en todo lo que se muestra (Adam, 11-sep-2026): $88.68 se ve $89.
+// Solo cambia lo que se VE: los calculos siguen usando los valores exactos.
 function fmtNum(n){
-  return (parseFloat(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (parseFloat(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 function fmtQ(n){ return '$' + fmtNum(n); }
-function fmtPct(n){ return (parseFloat(n) || 0).toFixed(2) + '%'; }
+function fmtPct(n){ return Math.round(parseFloat(n) || 0) + '%'; }
 function escapeAttr(s){
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
@@ -1439,7 +1442,7 @@ function onModeloChange(){
   if(!id) return;
   const m = CATALOGO.find(x => x.id == id);
   if(m){
-    document.getElementById('precio').value = m.precio.toFixed(2);
+    document.getElementById('precio').value = String(m.precio);   // sin .00, pero sin redondear el precio
     render();
   }
 }
@@ -1488,7 +1491,7 @@ function syncApyFromInput(val){
     const sliderVal = Math.max(350, Math.min(800, n));
     slider.value = sliderVal;
   }
-  display.textContent = (parseFloat(val) || 0).toFixed(2).replace(/\.00$/,'');
+  display.textContent = String(Math.round(parseFloat(val) || 0));
   updateApyTrack(slider ? slider.value : n);
   render();
 }
