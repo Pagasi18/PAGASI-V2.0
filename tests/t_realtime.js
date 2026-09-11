@@ -42,6 +42,7 @@ function montar(opts){
   const f=new Function('S','nav','document','window','setTimeout','clearTimeout','Date','_isModalOpen','_captureFocus','_restoreFocus','updateBadge',
     'var _rtTimer=null, _rtRenderPending=false;\n'+BLOQUE+
     '\nreturn {schedule:scheduleRealtimeRender, flush:flushRealtimeRender, decidir:_rtDecidir, MIN:_RT_MIN_MS,'+
+    ' prep:_rtBootPreparar, marca:_rtMarcarPrimera, bootListo:realtimeBootListo,'+
     ' get pendiente(){ return _rtRenderPending; }};');
   const api=f(S, nav, doc, win, setT, clearT, {now:()=>reloj.now}, ()=>modal, ()=>null, ()=>{}, ()=>{});
   return {api, reloj, avanzar, doc, win, log, S, setModal:v=>{ modal=v; }, timers:()=>timers};
@@ -135,11 +136,44 @@ function montar(opts){
   ok('sin sesion: no programa nada', m.log.length===0 && m.timers().length===0);
 }
 
+// ── Primera bajada (arranque sin doble descarga) ──
+(async () => {
+  const tick = async () => { await null; await null; await null; };
+  { const m=montar();
+    let res=null; m.api.prep(3).then(v=>{res=v;});
+    m.api.marca('motos'); m.api.marca('motos'); m.api.marca('clientes');
+    await tick();
+    ok('2 de 3 colecciones (una repetida): sigue esperando', res===null);
+    m.api.marca('creditos'); await tick();
+    ok('llego la ultima: arranque completo', !!res && res.completo===true);
+    let res2=null; m.api.bootListo().then(v=>{res2=v;}); await tick();
+    ok('preguntar despues del arranque tambien da completo', !!res2 && res2.completo===true);
+  }
+  { const m=montar();
+    let res=null; m.api.prep(2).then(v=>{res=v;});
+    m.api.marca('motos'); m.api.marca('pagos', true); await tick();
+    ok('una coleccion fallo: completo=false (cae a la carga clasica)', !!res && res.completo===false);
+  }
+  { const m=montar();
+    m.api.prep(2); m.api.marca('motos');
+    let res=null; m.api.bootListo(45000).then(v=>{res=v;});
+    m.avanzar(45001); await tick();
+    ok('45 s sin terminar: completo=false, no se queda colgado', !!res && res.completo===false);
+  }
+  { const m=montar();
+    let res=null; m.api.bootListo(1000).then(v=>{res=v;}); await tick();
+    ok('tiempo real sin arrancar: completo=false', !!res && res.completo===false);
+  }
+  _finalizar();
+})();
+
 // ── En pagasi-app.js ──
 ok('la cache local (enablePersistence) ya no se activa', !/db\.enablePersistence\s*\(/.test(app));
 ok('nav no muestra el esqueleto en redibujos de tiempo real', /if\(!window\._rtRenderizando\) showSkeleton\(\);/.test(app));
 ok('quedo una sola definicion de scheduleRealtimeRender', (app.match(/function scheduleRealtimeRender\(/g)||[]).length===1);
 ok('quedo una sola definicion de flushRealtimeRender', (app.match(/function flushRealtimeRender\(/g)||[]).length===1);
 
-console.log(''); console.log(pass+' pruebas OK, '+fail+' fallas');
-if(fail) process.exitCode=1;
+function _finalizar(){
+  console.log(''); console.log(pass+' pruebas OK, '+fail+' fallas');
+  if(fail) process.exitCode=1;
+}

@@ -1663,6 +1663,52 @@ function _docsArray(snap){
   return snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
 }
 
+// Sanea el score_indexa de un cliente EN MEMORIA (sin escribir en la base).
+// Antes vivia dentro de DB.load y solo corria al abrir; pero cada foto de
+// 'clientes' del tiempo real reemplaza S.clientes entero, asi que el saneado
+// se perdia con la primera actualizacion. Ahora lo aplica tambien mapCliente.
+// Devuelve true si el score estaba corrupto (objeto en vez de numero).
+var _scoreCorruptosVistos = 0;
+function _sanearScoreCliente(cli){
+  if(!cli) return false;
+  var fueCorrupto = false;
+  var sr = cli.score_indexa;
+  // Caso 1: objeto → rescatar total/score/valor
+  if(sr && typeof sr === 'object' && sr !== null){
+    fueCorrupto = true;
+    _scoreCorruptosVistos++;
+    if(_scoreCorruptosVistos <= 2) console.log('[SCORE CORRUPTO]', cli.nombre, 'tenía:', sr);
+    var t = parseFloat(sr.total || sr.score || sr.valor || sr.value || 0);
+    cli.score_indexa = (t >= 300 && t <= 850) ? t : 0;
+    cli._scoreFueCorrupto = true;
+  } else {
+    var n = parseFloat(sr);
+    if(isNaN(n) || n < 300 || n > 850) cli.score_indexa = 0;
+    else cli.score_indexa = n;
+  }
+  // Fallback: si no hay score pero hay ingreso, calcular uno estimado simple
+  if(!cli.score_indexa && cli.ingreso){
+    var ing = parseFloat(cli.ingreso) || 0;
+    var emp = (cli.trabajo || '').toLowerCase();
+    // Score base por ingreso (300 a 850 según rango)
+    var base = 300;
+    if(ing >= 2000) base = 720;
+    else if(ing >= 1000) base = 650;
+    else if(ing >= 500) base = 580;
+    else if(ing >= 300) base = 500;
+    else if(ing >= 150) base = 430;
+    else base = 380;
+    // Bonus/penalización por tipo de empleo
+    if(emp.indexOf('formal')>=0 || emp.indexOf('público')>=0 || emp.indexOf('publico')>=0) base += 40;
+    else if(emp.indexOf('informal')>=0 || emp.indexOf('indepen')>=0) base -= 20;
+    // Limitar 300-850
+    cli.score_indexa = Math.max(300, Math.min(850, base));
+    cli._scoreEstimado = true;
+  }
+  return fueCorrupto;
+}
+function mapCliente(r){ _sanearScoreCliente(r); return r; }
+
 function stopRealtime(){
   _rtUnsubs.forEach(function(unsub){ try{ if(typeof unsub==='function') unsub(); }catch(e){} });
   _rtUnsubs = [];
@@ -1765,6 +1811,47 @@ if(typeof document!=='undefined' && document.addEventListener){
     if(!document.hidden) flushRealtimeRender();
   });
 }
+// ── Primera bajada (arranque) ───────────────────────────────────────────
+// startRealtime avisa aqui cuando cada coleccion entrega su primera foto.
+// DB.load({viaRealtime:true}) espera esa señal en lugar de volver a pedir las
+// mismas colecciones con .get(): antes cada apertura bajaba TODO dos veces
+// (los .get() de DB.load y, encima, la primera foto de cada onSnapshot).
+var _rtPrimeras = {};
+var _rtFallidas = {};
+var _rtBootTotal = 0;
+var _rtBootResolver = null;
+var _rtBootPromesa = null;
+
+function _rtBootPreparar(total){
+  _rtPrimeras = {};
+  _rtFallidas = {};
+  _rtBootTotal = total;
+  _rtBootPromesa = new Promise(function(res){ _rtBootResolver = res; });
+  return _rtBootPromesa;
+}
+
+function _rtMarcarPrimera(col, fallo){
+  if(_rtPrimeras[col]) return;
+  _rtPrimeras[col] = true;
+  if(fallo) _rtFallidas[col] = true;
+  if(_rtBootResolver && _rtBootTotal > 0 && Object.keys(_rtPrimeras).length >= _rtBootTotal){
+    var r = _rtBootResolver; _rtBootResolver = null;
+    // Si alguna coleccion fallo, el arranque NO se da por completo: DB.load
+    // cae a la carga clasica y el app no queda a medias sin darse cuenta.
+    r({ completo: Object.keys(_rtFallidas).length === 0 });
+  }
+}
+
+// Promesa del arranque; con maxMs responde {completo:false} si se pasa el plazo
+function realtimeBootListo(maxMs){
+  if(!_rtBootPromesa) return Promise.resolve({ completo:false });
+  if(!maxMs) return _rtBootPromesa;
+  var p = _rtBootPromesa;
+  return new Promise(function(res){
+    var t = setTimeout(function(){ res({ completo:false }); }, maxMs);
+    p.then(function(v){ clearTimeout(t); res(v); });
+  });
+}
 // ── fin redibujo en tiempo real ─────────────────────────────────────────
 
 function _aplicarConcesionarioActivoRealtime(){
@@ -1794,9 +1881,9 @@ function startRealtime(){
   if(!db || !S || !S.currentUser || _rtStarted) return;
   stopRealtime();
   _rtStarted = true;
-  [
+  var especs = [
     {col:'motos', key:'motos', map:mapMoto},
-    {col:'clientes', key:'clientes'},
+    {col:'clientes', key:'clientes', map:mapCliente},   // sanea el score en cada foto
     {col:'creditos', key:'creds', map:mapCred},
     {col:'pagos', key:'pagos', map:mapPago},
     {col:'egresos', key:'egresos'},
@@ -1806,21 +1893,31 @@ function startRealtime(){
     {col:'concesionarios', key:'concesionarios'},
     {col:'tareas', key:'tareas'},
     {col:'recursos', key:'recursos'}
-  ].forEach(function(spec){
+  ];
+  _rtBootPreparar(especs.length);
+  especs.forEach(function(spec){
     try{
       var unsub = db.collection(spec.col).onSnapshot(function(snap){
         var arr = _docsArray(snap);
         if(typeof spec.map==='function') arr = arr.map(spec.map);
+        if(spec.key==='motos' && !_rtPrimeras[spec.col]){
+          // Primera foto de motos: respetar lo editado sin internet (cache
+          // local), igual que hacia la carga clasica
+          arr = mergeMotosPreferLocal(arr, loadMotosCache());
+        }
         S[spec.key] = arr;
         if(spec.key==='motos') saveMotosCache(S.motos);
         if(spec.key==='concesionarios') _aplicarConcesionarioActivoRealtime();
+        _rtMarcarPrimera(spec.col);
         scheduleRealtimeRender();
       }, function(err){
         console.warn('Realtime '+spec.col+':', err && (err.message || err));
+        _rtMarcarPrimera(spec.col, true);   // no dejar el arranque colgado
       });
       _rtUnsubs.push(unsub);
     }catch(e){
       console.warn('Realtime init '+spec.col+':', e.message);
+      _rtMarcarPrimera(spec.col, true);
     }
   });
 }
@@ -1916,35 +2013,49 @@ function _flushDbQueue(){
 }
 
 var DB = {
-  load: function(){
+  load: function(opts){
+    opts = opts || {};
     var motosCacheLocal = loadMotosCache();
     if(!db){
       if(motosCacheLocal.length) S.motos = mergeMotosPreferLocal(S.motos, motosCacheLocal);
       return Promise.resolve();
     }
+    // Arranque por tiempo real: las colecciones grandes NO se piden aqui;
+    // la primera foto de cada suscripcion de startRealtime ES la carga.
+    // La carga clasica (sin opts) sigue igual para respaldos y recargas.
+    var viaRT = !!opts.viaRealtime && typeof realtimeBootListo === 'function';
+    var NADA = Promise.resolve(null);
     showLoader('Cargando datos...','Conectando con Firebase');
     return Promise.all([
-      db.collection('motos').get(),
-      db.collection('clientes').get(),
-      db.collection('creditos').get(),
-      db.collection('pagos').get(),
-      db.collection('egresos').get(),
+      viaRT ? NADA : db.collection('motos').get(),
+      viaRT ? NADA : db.collection('clientes').get(),
+      viaRT ? NADA : db.collection('creditos').get(),
+      viaRT ? NADA : db.collection('pagos').get(),
+      viaRT ? NADA : db.collection('egresos').get(),
       Promise.resolve({docs:[]}),
-      db.collection('movimientos').get(),
-      db.collection('cuentasPendientes').get(),
+      viaRT ? NADA : db.collection('movimientos').get(),
+      viaRT ? NADA : db.collection('cuentasPendientes').get(),
       db.collection('config').doc('plan').get(),
       db.collection('config').doc('catalogo').get(),
       db.collection('config').doc('planes').get(),
-      db.collection('facturas').get(),
-      db.collection('concesionarios').get(),
+      viaRT ? NADA : db.collection('facturas').get(),
+      viaRT ? NADA : db.collection('concesionarios').get(),
       db.collection('config').doc('inventarioOficina').get(),
       db.collection('gps').get(),
+      viaRT ? realtimeBootListo(45000) : NADA,
     ]).then(function(snaps){
+      // Si la primera bajada por tiempo real no llego completa (una coleccion
+      // fallo o pasaron 45 s), se cae a la carga clasica de siempre.
+      if(viaRT && !(snaps[15] && snaps[15].completo)){
+        console.warn('Carga por tiempo real incompleta; usando la carga clasica.');
+        return DB.load();
+      }
       function read(snap, withId){return snap.docs.map(function(d){return withId ? Object.assign({id:d.id}, d.data()) : d.data();});}
-      var m=read(snaps[0], true),cl=read(snaps[1], true),cr=read(snaps[2]),p=read(snaps[3]),e=read(snaps[4]),_skip=snaps[5],mv=read(snaps[6]),pnd=read(snaps[7]);
+      // Con viaRealtime estos vienen en null: ya estan en S por el tiempo real
+      var m=snaps[0]?read(snaps[0], true):null,cl=snaps[1]?read(snaps[1], true):null,cr=snaps[2]?read(snaps[2]):null,p=snaps[3]?read(snaps[3]):null,e=snaps[4]?read(snaps[4]):null,_skip=snaps[5],mv=snaps[6]?read(snaps[6]):null,pnd=snaps[7]?read(snaps[7]):null;
       var planDoc = snaps[8], catalogoDoc = snaps[9], planesDoc = snaps[10];
-      var fac = snaps[11] ? read(snaps[11]) : [];
-      var conc = snaps[12] ? read(snaps[12], true) : [];
+      var fac = snaps[11] ? read(snaps[11]) : null;
+      var conc = snaps[12] ? read(snaps[12], true) : null;
       if(planDoc && planDoc.exists){
         var pd = planDoc.data() || {};
         if(Object.prototype.hasOwnProperty.call(pd,'factor')) PLAN.factor = pd.factor;
@@ -1978,59 +2089,27 @@ var DB = {
       } else {
         window._planesExtra = window._planesExtra || [];
       }
-      S.motos = mergeMotosPreferLocal(m.map(mapMoto), motosCacheLocal);
-      saveMotosCache(S.motos);
+      if(m){
+        S.motos = mergeMotosPreferLocal(m.map(mapMoto), motosCacheLocal);
+        saveMotosCache(S.motos);
+      }
 
       // ══════ SANEAR score_indexa corrupto ══════
-      // En algunos clientes se guardó el objeto completo del score en lugar del número
+      // (la logica vive en _sanearScoreCliente; el tiempo real la aplica
+      //  igual en cada foto via mapCliente)
       var _scoreCorruptos = 0;
-      cl.forEach(function(cli){
-        if(!cli) return;
-        var sr = cli.score_indexa;
-        // Caso 1: objeto → rescatar total/score/valor
-        if(sr && typeof sr === 'object' && sr !== null){
-          _scoreCorruptos++;
-          if(_scoreCorruptos <= 2) console.log('[SCORE CORRUPTO]', cli.nombre, 'tenía:', sr);
-          var t = parseFloat(sr.total || sr.score || sr.valor || sr.value || 0);
-          cli.score_indexa = (t >= 300 && t <= 850) ? t : 0;
-          cli._scoreFueCorrupto = true;
-        } else {
-          var n = parseFloat(sr);
-          if(isNaN(n) || n < 300 || n > 850) cli.score_indexa = 0;
-          else cli.score_indexa = n;
-        }
-
-        // Fallback: si no hay score pero hay ingreso, calcular uno estimado simple
-        if(!cli.score_indexa && cli.ingreso){
-          var ing = parseFloat(cli.ingreso) || 0;
-          var emp = (cli.trabajo || '').toLowerCase();
-          // Score base por ingreso (300 a 750 según rango)
-          var base = 300;
-          if(ing >= 2000) base = 720;
-          else if(ing >= 1000) base = 650;
-          else if(ing >= 500) base = 580;
-          else if(ing >= 300) base = 500;
-          else if(ing >= 150) base = 430;
-          else base = 380;
-          // Bonus/penalización por tipo de empleo
-          if(emp.indexOf('formal')>=0 || emp.indexOf('público')>=0 || emp.indexOf('publico')>=0) base += 40;
-          else if(emp.indexOf('informal')>=0 || emp.indexOf('indepen')>=0) base -= 20;
-          // Limitar 300-850
-          cli.score_indexa = Math.max(300, Math.min(850, base));
-          cli._scoreEstimado = true;
-        }
-      });
+      if(cl){ cl.forEach(function(cli){ if(_sanearScoreCliente(cli)) _scoreCorruptos++; }); }
       if(_scoreCorruptos > 0){
         console.log('[SCORE] Se sanearon '+_scoreCorruptos+' scores corruptos de Firestore');
       }
 
-      S.clientes = cl;
+      if(cl) S.clientes = cl;
 
       // Persistir en background los scores saneados — sobrescribe el objeto corrupto en Firestore
       setTimeout(function(){
         if(!db) return;
         var fixed = 0;
-        cl.forEach(function(cli){
+        (cl || S.clientes || []).forEach(function(cli){
           if(cli._scoreFueCorrupto && cli.id){
             delete cli._scoreFueCorrupto;
             try {
@@ -2043,13 +2122,13 @@ var DB = {
         });
         if(fixed>0) console.log('[SCORE] Persistidos '+fixed+' scores saneados en Firestore');
       }, 1500);
-      S.creds = cr.map(mapCred);
-      S.pagos = p.map(mapPago);
-      S.egresos = e;
-      S.movimientos = mv;
-      S.cuentasPendientes = pnd;
-      S.facturas = fac;
-      S.concesionarios = conc;
+      if(cr) S.creds = cr.map(mapCred);
+      if(p) S.pagos = p.map(mapPago);
+      if(e) S.egresos = e;
+      if(mv) S.movimientos = mv;
+      if(pnd) S.cuentasPendientes = pnd;
+      if(fac) S.facturas = fac;
+      if(conc) S.concesionarios = conc;
       S.gps = snaps[14] ? read(snaps[14], true) : [];
       try {
         var _invDoc = snaps[13];
@@ -2067,7 +2146,7 @@ var DB = {
           try{ localStorage.removeItem('concesionarioActivo'); }catch(e){}
         } else {
           var savedConc = localStorage.getItem('concesionarioActivo');
-          if(savedConc && conc.find(function(c){return c.id === savedConc;})){
+          if(savedConc && (conc || S.concesionarios || []).find(function(c){return c.id === savedConc;})){
             S.concesionarioActivo = savedConc;
           }
         }
@@ -3444,8 +3523,12 @@ function init() {
     }
   } catch(e){}
 
-  // Cargar datos desde Firebase o usar datos locales de demostración
-  DB.load().then(function() {
+  // Cargar datos desde Firebase o usar datos locales de demostración.
+  // startRealtime va PRIMERO: la primera foto de cada suscripcion es la carga
+  // inicial, y DB.load({viaRealtime:true}) solo la espera y trae la
+  // configuracion. Antes cada apertura bajaba las colecciones DOS veces.
+  startRealtime();
+  DB.load({ viaRealtime: true }).then(function() {
     // ── Migración única: créditos existentes (sin contratoFirmado) → confirmados automáticamente ──
     // Los créditos creados ANTES de esta versión ya tienen historial contable,
     // así que se marcan como firmados sin tocar nada más.

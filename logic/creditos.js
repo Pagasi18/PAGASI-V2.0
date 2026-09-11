@@ -2059,8 +2059,9 @@ function _wzGuardar(){
         f3: WZ.f3||S.creds[_ei].f3||'',
         f4: WZ.f4||S.creds[_ei].f4||'',
         f5: WZ.f5||S.creds[_ei].f5||'',
-        wizardDraft: _wizardDraft,
-        wizardData: _wizardDraft
+        // Solo wizardDraft: guardarlo ademas en wizardData duplicaba el peso
+        // del credito en Firestore (el lector acepta cualquiera de los dos)
+        wizardDraft: _wizardDraft
       };
       // ── Aviso antes de escribir: muestra que va a cambiar y deja cancelar ──
       // No modifica _upd ni ningun calculo. Solo compara y pregunta.
@@ -2179,8 +2180,8 @@ function _wzGuardar(){
     creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
     creado: new Date().toISOString(),
     contratoFirmado: false,
+    // Solo wizardDraft: duplicarlo en wizardData doblaba el peso del credito
     wizardDraft: _wizardDraft,
-    wizardData: _wizardDraft,
     // ── Paso 2: Residencia ──
     viv: WZ.viv||'', tdir: WZ.tdir||'',
     estado_ubi: WZ.estado_ubi||'', ciudad_res: WZ.ciudad_res||'',
