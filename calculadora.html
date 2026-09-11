@@ -728,11 +728,23 @@ input[type=number] { -moz-appearance: textfield; }
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
+  grid-template-columns: repeat(5, 1fr);   /* 5 tarjetas: 40 · 45 · 50 · 55 · Premium */
+  gap: 14px;
   margin-bottom: 36px;
 }
-@media (max-width: 1100px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1101px) {
+  .cards[data-n="4"] { grid-template-columns: repeat(4, 1fr); gap: 18px; }   /* Premium oculta */
+  .cards[data-n="5"] .card { padding: 28px 18px 22px; }
+  .cards[data-n="5"] .card-pct,
+  .cards[data-n="5"] .card-pct-input { font-size: 50px; letter-spacing: -2.5px; }
+  .cards[data-n="5"] .card-pct .sym { font-size: 24px; }
+  .cards[data-n="5"] .card-row-label { font-size: 12px; }
+  .cards[data-n="5"] .card-row-value { font-size: 19px; }
+  .cards[data-n="5"] .card-inicial { padding: 14px 12px; }
+  .cards[data-n="5"] .card-inicial-label { letter-spacing: .08em; }
+}
+@media (max-width: 1100px) { .cards { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 800px)  { .cards { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 580px)  { .cards { grid-template-columns: 1fr; } }
 
 .card {
@@ -954,6 +966,71 @@ input[type=number] { -moz-appearance: textfield; }
 .card.is-featured .card-inicial-input:focus {
   border-bottom-color: var(--p-l);
   background: rgba(124,108,245,.14);
+}
+
+/* Tarjeta Premium: que se note que se puede editar (Adam, 11-sep-2026) */
+.card.is-custom {
+  border: 2px dashed rgba(37,99,235,.45);
+  background: linear-gradient(180deg, rgba(37,99,235,.05), rgba(37,99,235,0) 60%), var(--white);
+}
+.card.is-custom:hover { border-color: var(--p); }
+.card-badge-edit {
+  display: block;
+  background: var(--white);
+  color: var(--p);
+  border: 1.5px solid var(--p);
+  box-shadow: 0 4px 12px rgba(37,99,235,.18);
+}
+.card-edit-ico {
+  font-size: 15px;
+  color: var(--p);
+  margin-left: 6px;
+  align-self: center;
+  letter-spacing: 0;
+  pointer-events: none;
+}
+.card-edit-hint {
+  margin-top: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--p);
+  background: rgba(37,99,235,.08);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.card.is-custom .card-pct-input {
+  border: 1.5px solid rgba(37,99,235,.45);
+  border-radius: 12px;
+  background: var(--white);
+  padding: 2px 6px 4px;
+  width: 96px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.05);
+  cursor: text;
+}
+.card.is-custom .card-pct-input:hover,
+.card.is-custom .card-pct-input:focus { border-color: var(--p); background: rgba(37,99,235,.06); }
+.card.is-custom .card-inicial {
+  background: rgba(37,99,235,.06);
+  border: 1px dashed rgba(37,99,235,.35);
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.card.is-custom .card-inicial-edit { margin-left: auto; align-items: center; }
+.card.is-custom .card-inicial-input {
+  border: 1.5px solid rgba(37,99,235,.45);
+  border-radius: 8px;
+  background: var(--white);
+  padding: 3px 6px;
+  width: 78px;
+  cursor: text;
+}
+.card.is-custom .card-inicial-input:hover,
+.card.is-custom .card-inicial-input:focus { border-color: var(--p); background: rgba(37,99,235,.06); padding-bottom: 3px; }
+@media print {
+  .card-edit-ico, .card-edit-hint, .card-badge-edit { display: none; }
+  .card.is-custom { border: 1px solid #ddd; background: #fff; }
 }
 
 .card-slider-wrap {
@@ -1264,9 +1341,12 @@ input[type=number] { -moz-appearance: textfield; }
 <script>
 let CUSTOM_VISIBLE = true;
 let CUSTOM_SLIDER_VISIBLE = false;
-// Inicial por defecto: 40% (Adam, 11-sep-2026). La usan la tarjeta editable y la vista previa.
+// Inicial por defecto: 40% (Adam, 11-sep-2026). La usan la tarjeta recomendada y la vista previa.
 const INICIAL_DEFECTO = 0.40;
-let CUSTOM_PCT = INICIAL_DEFECTO;
+// Cinco tarjetas en orden, de 40% a 60% (Adam, 11-sep-2026):
+const IDX_DESTACADA = 0;   // la de 40%, con la etiqueta RECOMENDADO
+const IDX_CUSTOM = 4;      // Premium: la que el vendedor puede editar, arranca en 60%
+let CUSTOM_PCT = 0.60;
 let USER_INI_RAW = null;
 let CURRENT_PLAZO = 12;
 
@@ -1414,23 +1494,30 @@ function calcCustom(precio, iniMonto, cuotaQ, plazo){
 
 function calcCardsFromPlan(planParams){
   const cards = [];
-  // La tarjeta destacada (la del medio, con la etiqueta RECOMENDADO) va en 40% (Adam, 11-sep-2026; antes 50%).
-  const targetPcts = [0.45, 0.40, 0.55, CUSTOM_PCT];
-  const labels     = ['Conservador', 'Equilibrado', 'Recomendado', 'Premium'];
+  // En orden de 40% a 60%: la de 40% es la recomendada (destacada) y la ultima,
+  // Premium, es la editable (Adam, 11-sep-2026).
+  const targetPcts = [INICIAL_DEFECTO, 0.45, 0.50, 0.55, CUSTOM_PCT];
+  const labels     = ['Recomendado', 'Conservador', 'Equilibrado', 'Estable', 'Premium'];
   targetPcts.forEach((pct, idx) => {
     const r = calcApy(planParams.precio, pct, planParams.apy, planParams.plazo);
-    cards.push({ pct: r.inicialPct, label: labels[idx], data: r, isCustom: (idx === 3) });
+    cards.push({ pct: r.inicialPct, label: labels[idx], data: r, isCustom: (idx === IDX_CUSTOM) });
   });
   return cards;
 }
 
-// Sin decimales en todo lo que se muestra (Adam, 11-sep-2026): $88.68 se ve $89.
+// Sin decimales y redondeando HACIA ARRIBA todo lo que se muestra (Adam,
+// 11-sep-2026): $88.01 se ve $89. Primero se redondean los centavos, para que un
+// resto de coma flotante (726.0000000001) no sume un dolar de mas.
 // Solo cambia lo que se VE: los calculos siguen usando los valores exactos.
+function arriba(n){ const x = parseFloat(n) || 0; return Math.ceil(Math.round(x * 100) / 100); }
 function fmtNum(n){
-  return (parseFloat(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return arriba(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 function fmtQ(n){ return '$' + fmtNum(n); }
-function fmtPct(n){ return Math.round(parseFloat(n) || 0) + '%'; }
+function fmtPct(n){ return arriba(n) + '%'; }
+// La cuota mensual que se ve es el doble de la quincenal que se ve, para que
+// cuadre a simple vista ($82 quincenal -> $164 mensual).
+function cuotaMensualVista(cuotaQ){ return arriba(cuotaQ) * 2; }
 function escapeAttr(s){
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
@@ -1491,7 +1578,7 @@ function syncApyFromInput(val){
     const sliderVal = Math.max(350, Math.min(800, n));
     slider.value = sliderVal;
   }
-  display.textContent = String(Math.round(parseFloat(val) || 0));
+  display.textContent = String(arriba(val));
   updateApyTrack(slider ? slider.value : n);
   render();
 }
@@ -1540,16 +1627,17 @@ function renderCards(planParams, opts){
   document.getElementById('fm_quincenas').textContent = (planParams.plazo * 2) + ' pagos';
 
   wrap.innerHTML = '';
+  wrap.dataset.n = String(cards.length - (CUSTOM_VISIBLE ? 0 : 1));   // columnas segun tarjetas visibles
   cards.forEach((c, i) => {
-    const featured = (i === 1);
-    const hidden = (i === 3 && !CUSTOM_VISIBLE);
-    const showSlider = (i === 3 && CUSTOM_SLIDER_VISIBLE);
-    const pctDisplay = Math.round(c.pct * 100);
+    const featured = (i === IDX_DESTACADA);
+    const hidden = (i === IDX_CUSTOM && !CUSTOM_VISIBLE);
+    const showSlider = (i === IDX_CUSTOM && CUSTOM_SLIDER_VISIBLE);
+    const pctDisplay = arriba(c.pct * 100);
 
     const el = document.createElement('div');
-    el.className = 'card' + (featured ? ' is-featured' : '') + (hidden ? ' is-hidden' : '');
+    el.className = 'card' + (featured ? ' is-featured' : '') + (c.isCustom ? ' is-custom' : '') + (hidden ? ' is-hidden' : '');
     el.innerHTML = `
-      <div class="card-badge">Recomendado</div>
+      ${ c.isCustom ? '<div class="card-badge card-badge-edit">✎ Premium · editable</div>' : '<div class="card-badge">Recomendado</div>' }
       <div class="card-head">
         ${ c.isCustom ? `
           <div class="card-pct card-pct-edit">
@@ -1559,13 +1647,14 @@ function renderCards(planParams, opts){
                    title="Escribe el % de inicial (ej: 40)"
                    oninput="onPctInputChange(this.value)"
                    onblur="onPctInputBlur()"
-                   onfocus="this.select()"><span class="sym">%</span>
+                   onfocus="this.select()"><span class="sym">%</span><span class="card-edit-ico" aria-hidden="true">✎</span>
           </div>
         ` : `
           <div class="card-pct">${pctDisplay}<span class="sym">%</span></div>
         ` }
       </div>
       <div class="card-label">${c.label}</div>
+      ${ c.isCustom ? '<div class="card-edit-hint">Toca el % o la inicial para cambiarlos</div>' : '' }
       <div class="card-divider"></div>
 
       <div class="card-row">
@@ -1574,7 +1663,7 @@ function renderCards(planParams, opts){
       </div>
       <div class="card-row">
         <span class="card-row-label">Cuota mensual</span>
-        <span class="card-row-value">${fmtQ(c.data.cuotaM)}</span>
+        <span class="card-row-value">${fmtQ(cuotaMensualVista(c.data.cuotaQ))}</span>
       </div>
 
       <div class="card-inicial">
@@ -1587,7 +1676,7 @@ function renderCards(planParams, opts){
                    inputmode="decimal"
                    oninput="onIniInputChange(this.value)"
                    onblur="onIniInputBlur()"
-                   onfocus="this.select()">
+                   onfocus="this.select()"><span class="card-edit-ico" aria-hidden="true">✎</span>
           </span>
         ` : `
           <span class="card-inicial-value">${fmtQ(c.data.ini)}</span>
@@ -1658,13 +1747,13 @@ function onIniInputBlur(){
 
 function updateCustomCard(planParams){
   const cards = calcCardsFromPlan(planParams);
-  const customCard = cards[3];
+  const customCard = cards[IDX_CUSTOM];
   if(!customCard) return;
   const pct = customCard.pct;
-  const pctDisplay = Math.round(pct * 100);
+  const pctDisplay = arriba(pct * 100);
 
   const allCards = document.querySelectorAll('#cardsWrap .card');
-  const customCardEl = allCards[3];
+  const customCardEl = allCards[IDX_CUSTOM];
   if(!customCardEl) return;
 
   // El % y la inicial son dos vistas del mismo dato: al mover uno se refresca el
@@ -1682,7 +1771,7 @@ function updateCustomCard(planParams){
 
   const rowValues = customCardEl.querySelectorAll('.card-row-value');
   if(rowValues[0]) rowValues[0].textContent = fmtQ(customCard.data.cuotaQ);
-  if(rowValues[1]) rowValues[1].textContent = fmtQ(customCard.data.cuotaM);
+  if(rowValues[1]) rowValues[1].textContent = fmtQ(cuotaMensualVista(customCard.data.cuotaQ));
 
   const slider = document.getElementById('customSlider');
   if(slider){
