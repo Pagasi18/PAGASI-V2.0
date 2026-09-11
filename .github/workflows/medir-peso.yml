@@ -1,0 +1,28 @@
+name: Medir peso de los datos (solo lectura)
+
+# Diagnostico de lentitud (10-sep-2026): cuanto baja el app al abrir, por
+# coleccion, y que campos pesan mas. No escribe nada. Solo a mano.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  medir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: pagasi-v2
+          workload_identity_provider: projects/951911859002/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: firebase-adminsdk-fbsvc@pagasi-v2.iam.gserviceaccount.com
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - working-directory: bot
+        run: npm install --omit=dev
+      - working-directory: bot
+        run: node medir-peso.js
