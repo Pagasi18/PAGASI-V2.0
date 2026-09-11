@@ -159,5 +159,17 @@ ok('firmado el 7-sep -> protect',               API._contratoVersionDe({contrato
 ok('firmado el 6-sep -> dra (no retroactivo)',  API._contratoVersionDe({contratoFirmado:true,fechaContratoFirmado:'2026-09-06'})==='dra');
 ok('version grabada manda sobre la fecha',      API._contratoVersionDe({contratoVersion:'dra',contratoFirmado:true,fechaContratoFirmado:'2026-09-20'})==='dra');
 
+// ── Hora del credito en el contrato (Adam, 10-sep-2026) ──
+S.creds[0].creado='2026-09-10T14:35:00';
+const htmlHora=API._htmlContratoProtect('CRED-900');
+ok('el contrato dice "siendo las"',             htmlHora.includes('siendo las'));
+ok('sale la hora del credito (2:35)',           htmlHora.includes('2:35'));
+ok('la hora sale en la celebracion y el anexo C', (htmlHora.split('siendo las').length-1)>=2);
+delete S.creds[0].creado;
+const htmlSinHora=API._htmlContratoProtect('CRED-900');
+ok('sin c.creado: queda raya para boligrafo',   htmlSinHora.includes('siendo las') && !htmlSinHora.includes('2:35'));
+S.creds[0].creado='no-es-fecha';
+ok('c.creado invalido no rompe el contrato',    API._htmlContratoProtect('CRED-900').length>20000);
+
 console.log(''); console.log(pass+' pruebas OK, '+fail+' fallas');
 if(fail) process.exitCode=1;

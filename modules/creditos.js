@@ -315,6 +315,9 @@ PG.creditos = function(){
         : `<span style="color:var(--ink3);font-size:11px">—</span>`;
       var apyVal = Number.isFinite(parseFloat(c.apy)) ? parseFloat(c.apy) : (Number.isFinite(parseFloat((c.plan||{}).apy)) ? parseFloat((c.plan||{}).apy) : parseFloat(PLAN.apy||0));
       var fechaFmt = c.fecha ? parseFechaLocal(c.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
+      // La hora exacta en que se registro el credito (c.creado); pedida por Adam 10-sep-2026
+      var horaCre='';
+      if(c.creado){ var _hc=new Date(c.creado); if(!isNaN(_hc.getTime())) horaCre=_hc.toLocaleTimeString('es-VE',{hour:'numeric',minute:'2-digit'}); }
       var precio = parseFloat(c.precioBaseReal||c.precio||0);
       var totalC = parseFloat(c.total||0);
       var sedeName = c.concesionarioId ? (((_concGetById(c.concesionarioId)||{}).nombre)||'—') : '—';
@@ -323,7 +326,7 @@ PG.creditos = function(){
       <td style="max-width:140px"><div class="tdm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px" title="${c.cli}">${c.cli}</div></td>
       <td class="tds">${c.modelo||'—'}</td>
       <td class="tds" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${sedeName}">${sedeName}</td>
-      <td class="tds" style="font-family:var(--fd);font-size:11px;color:var(--ink3);white-space:nowrap">${fechaFmt}</td>
+      <td class="tds" style="font-family:var(--fd);font-size:11px;color:var(--ink3);white-space:nowrap">${fechaFmt}${horaCre?`<div style="font-size:9.5px;opacity:.75">${horaCre}</div>`:''}</td>
       <td style="font-family:var(--fd);font-size:11.5px;color:var(--ink3)">${fmt(precio)}</td>
       <td style="font-family:var(--fd);font-size:11.5px;font-weight:700">${fmt(totalC)}</td>
       <td style="font-weight:900;font-family:var(--fd);color:var(--p1)">${fmt(cuotaVal)}</td>

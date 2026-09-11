@@ -144,6 +144,12 @@ function _protectDatos(credId){
 
   var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   var fc = c.fecha ? new Date(c.fecha+'T12:00:00') : new Date();
+  // Adam (10-sep-2026): cada contrato debe llevar la hora ademas de la fecha.
+  // Sale de c.creado (el momento exacto en que se registro el credito). En un
+  // credito viejo sin ese campo queda la raya para llenar a boligrafo.
+  var hcre = null;
+  if(c.creado){ var _h=new Date(c.creado); if(!isNaN(_h.getTime())) hcre=_h; }
+  var horaDoc = hcre ? hcre.toLocaleTimeString('es-VE',{hour:'numeric',minute:'2-digit'}) : '';
   var fechaLarga = fc.toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
   var tasaEuro = parseFloat(window._tasaEuro||0) || 0;
   var mtaBs = tasaEuro>0 ? '<strong>Bs. '+num(F.MTA*tasaEuro)+'</strong>' : b(16);
@@ -196,6 +202,7 @@ function _protectDatos(credId){
     medios: medios,
     // ── Fechas ──
     fechaLarga: '<strong>'+fechaLarga+'</strong>', diaNum: '<strong>'+fc.getDate()+'</strong>',
+    hora: horaDoc ? '<strong>'+horaDoc+'</strong>' : b(8),
     mesNom: '<strong>'+MESES[fc.getMonth()]+'</strong>', anioNum: '<strong>'+fc.getFullYear()+'</strong>',
     protectDesde: '<strong>'+fmt(fc)+'</strong>', protectHasta: '<strong>'+fmt(fechaProtectFin)+'</strong>',
     // ── Documentos del contrato (lo que se llena con el cliente delante) ──
@@ -224,7 +231,7 @@ function _protectDatos(credId){
 // imprimen (asi desaparece el fiador cuando no hay).
 var _PROTECT_CUERPO = [
   // ── Preambulo ──
-  function(D){ return 'El presente CONTRATO DE FINANCIAMIENTO PARA LA ADQUISICIÓN DE VEHÍCULO AUTOMOTOR, CON GARANTÍAS, FIANZA Y PRESTACIÓN DE SERVICIOS «PAGASI PROTECT» (en lo sucesivo, el “Contrato”) se celebra en la fecha de su otorgamiento (la “Fecha de Celebración”), entre:'; },
+  function(D){ return 'El presente CONTRATO DE FINANCIAMIENTO PARA LA ADQUISICIÓN DE VEHÍCULO AUTOMOTOR, CON GARANTÍAS, FIANZA Y PRESTACIÓN DE SERVICIOS «PAGASI PROTECT» (en lo sucesivo, el “Contrato”) se celebra el dia '+D.fechaLarga+', siendo las '+D.hora+' (la “Fecha de Celebración”), entre:'; },
   function(D){ return '(i) <strong>PAGASI 18 C.A.</strong>, sociedad mercantil domiciliada en Caracas, Distrito Capital, inscrita en el Registro Mercantil '+D.empRm+' de la Circunscripción Judicial '+D.empRmEstado+', bajo el N° '+D.empRmNum+', Tomo '+D.empRmTomo+', de fecha '+D.empRmFecha+', inscrita en el Registro de Información Fiscal (“RIF”) bajo el N° <strong>J-50829589-7</strong> (en adelante “Pagasi”, y en su condición de otorgante del financiamiento y acreedor, también el “Financista”); y'; },
   function(D){ return '(ii) '+D.cliNom+', venezolano(a), mayor de edad, '+D.cliProfFrase+'domiciliado(a) en '+D.cliDir+', titular de la cédula de identidad venezolana N° V-'+D.cliCi+' y del RIF N° '+D.cliRif+' (el “Comprador” o “Deudor”, y conjuntamente con Pagasi, las “Partes” y cada una, una “Parte”).'; },
   function(D){ return D.hayFiador ? 'Asimismo interviene en el presente Contrato (iii) '+D.fiaNom+', venezolano(a), mayor de edad, '+D.fiaProfFrase+'domiciliado(a) en '+D.fiaDir+', titular de la cédula de identidad venezolana N° V-'+D.fiaCi+', quien actúa en su carácter de fiador solidario y principal pagador del Comprador (el “Fiador”), quedando comprendido dentro de la definición de “Partes” para todos los efectos de este Contrato.' : ''; },
@@ -512,7 +519,7 @@ function _protectAnexoC(D, S_){
   var lbl = 'background:#EFF6FF;color:'+S_.azD+';font-weight:700;font-size:8.8px;padding:3px 8px;width:44%;border-bottom:1px solid #DBEAFE';
   var val = 'padding:3px 8px;font-size:8.8px;border-bottom:1px solid #DBEAFE';
   return '<div style="'+S_.h1+'">ANEXO “C” — CONSTANCIA DE RECEPCIÓN DEL VEHÍCULO</div>'
-    + '<p style="'+S_.p+'">En <strong>Caracas</strong>, a los '+D.diaNum+' días del mes de '+D.mesNom+' de '+D.anioNum+', el Comprador deja constancia de que ha recibido del Concesionario el Vehículo identificado en los Considerandos del Contrato, previa inspección directa y personal, a su entera y cabal satisfacción, en las condiciones que a continuación se detallan.</p>'
+    + '<p style="'+S_.p+'">En <strong>Caracas</strong>, a los '+D.diaNum+' días del mes de '+D.mesNom+' de '+D.anioNum+', siendo las '+D.hora+', el Comprador deja constancia de que ha recibido del Concesionario el Vehículo identificado en los Considerandos del Contrato, previa inspección directa y personal, a su entera y cabal satisfacción, en las condiciones que a continuación se detallan.</p>'
     + '<table style="width:100%;border-collapse:collapse;border:1px solid #BFDBFE;margin:8px 0">'
     + filas.map(function(r){ return '<tr><td style="'+lbl+'">'+r[0]+'</td><td style="'+val+'">'+r[1]+'</td></tr>'; }).join('')
     + '</table>'
@@ -544,7 +551,7 @@ function _protectAnexoD(D, S_){
     + sub('D.3 Declaración PEP')
     + p(quien+' que: NO ostenta'+(D.hayFiador?'n':'')+' '+D.pepNo+' / SÍ ostenta'+(D.hayFiador?'n':'')+' '+D.pepSi+' la condición de Persona Expuesta Políticamente, ni son cónyuge, pariente dentro del segundo grado de afinidad o cuarto de consanguinidad, ni asociado cercano de una PEP. En caso afirmativo, especificar: '+D.pepDetalle+'.')
     + sub('D.4 Verificaciones Realizadas por Pagasi')
-    + p('Consulta en listas restrictivas: fecha '+D.verFecha+' · resultado '+D.verRes+'. Verificación de identidad: fecha '+D.verFecha+' · medio '+(D.docs.verificado?'<strong>cédula y RIF</strong>':D.b(10))+'. Verificación de domicilio: fecha '+D.verFecha+' · medio '+(D.docs.verificado?'<strong>comprobante de domicilio</strong>':D.b(10))+'. Verificación del Vehículo ante el INTT: fecha '+D.verFecha+' · resultado '+D.verRes+'. Analista responsable: '+D.analista+'. Aprobación del financiamiento: fecha '+D.fechaLarga+' · aprobado por '+D.aprobadoPor+'.')
+    + p('Consulta en listas restrictivas: fecha '+D.verFecha+' · resultado '+D.verRes+'. Verificación de identidad: fecha '+D.verFecha+' · medio '+(D.docs.verificado?'<strong>cédula y RIF</strong>':D.b(10))+'. Verificación de domicilio: fecha '+D.verFecha+' · medio '+(D.docs.verificado?'<strong>comprobante de domicilio</strong>':D.b(10))+'. Verificación del Vehículo ante el INTT: fecha '+D.verFecha+' · resultado '+D.verRes+'. Analista responsable: '+D.analista+'. Aprobación del financiamiento: fecha '+D.fechaLarga+' · hora '+D.hora+' · aprobado por '+D.aprobadoPor+'.')
     + _protectFirmas(D);
 }
 
