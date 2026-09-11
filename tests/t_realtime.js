@@ -45,6 +45,7 @@ function montar(opts){
     '\nreturn {schedule:scheduleRealtimeRender, flush:flushRealtimeRender, decidir:_rtDecidir, MIN:_RT_MIN_MS,'+
     ' prep:_rtBootPreparar, marca:_rtMarcarPrimera, bootListo:realtimeBootListo,'+
     ' minPara:_rtMinPara, anim:_chartsAnimacion, perfAnotar:_perfAnotar, perfResumen:perfResumen, MIN_DASH:_RT_MIN_DASH_MS,'+
+    ' aplicar:_rtAplicarFoto, objetosReset:_rtObjetosReset, get ultimaFoto(){ return _rtUltimaFoto; },'+
     ' get pendiente(){ return _rtRenderPending; }};');
   const lentos=[];
   const api=f(S, nav, doc, win, setT, clearT, {now:()=>reloj.now}, ()=>modal, ()=>null, ()=>{}, ()=>{}, chartFalso, (a,m,tg,d)=>lentos.push({a,m,tg,d}));
@@ -172,17 +173,48 @@ function montar(opts){
 
 // ── Dashboard: cada 15 s, no cada 4 ──
 { const m=montar();
-  ok('el dashboard espera 15 s entre redibujos', m.api.MIN_DASH===15000 && m.api.minPara('dash')===15000);
+  ok('el dashboard espera 1 min entre redibujos', m.api.MIN_DASH===60000 && m.api.minPara('dash')===60000);
   ok('las demas pantallas siguen en 4 s', m.api.minPara('pagos')===4000 && m.api.minPara('')===4000);
-  const e=m.api.decidir(10000,9000,false,false,15000);
-  ok('decidir respeta el minimo que le pasan', e.accion==='esperar' && e.espera===14000);
+  const e=m.api.decidir(10000,9000,false,false,60000);
+  ok('decidir respeta el minimo que le pasan', e.accion==='esperar' && e.espera===59000);
   ok('sin minimo explicito usa 4 s', m.api.decidir(10000,9000,false,false).espera===3000);
 }
-{ const m=montar(); m.S.page='dash'; const t0=m.reloj.now;
-  for(let i=0;i<30;i++){ m.api.schedule(); m.avanzar(1000); }
-  m.avanzar(20000);
-  ok('en el dashboard, 30 s de cambios -> 3 redibujos (350 ms, 15 s, 30 s), no 8', m.log.length===3);
-  ok('el segundo llega a los 15 s', m.log[1].at-m.log[0].at>=15000);
+{ const m=montar(); m.S.page='dash';
+  for(let i=0;i<70;i++){ m.api.schedule(); m.avanzar(1000); }
+  m.avanzar(5000);
+  ok('en el dashboard, 70 s de cambios -> 2 redibujos (350 ms y 1 min), no 18', m.log.length===2);
+  ok('el segundo llega al minuto', m.log[1].at-m.log[0].at>=60000);
+}
+// ── Foto incremental: desempaca solo lo que cambio ──
+{ const m=montar(); m.api.objetosReset();
+  let lecturas=0;
+  const doc=(id,data)=>({ id, data:()=>{ lecturas++; return Object.assign({}, data); } });
+  const foto=(docs, cambios)=>({ docs, docChanges: cambios ? ()=>cambios : undefined });
+  const spec={col:'pagos', key:'pagos'};
+  const d1=doc('a',{monto:1}), d2=doc('b',{monto:2}), d3=doc('c',{monto:3});
+  const arr1=m.api.aplicar(spec, foto([d1,d2,d3]));
+  ok('primera foto: desempaca todo (3 lecturas)', lecturas===3 && arr1.length===3 && arr1[0].id==='a' && arr1[2].monto===3);
+  lecturas=0;
+  const d2b=doc('b',{monto:20}), d4=doc('d',{monto:4});
+  const arr2=m.api.aplicar(spec, foto([d1,d2b,d3,d4], [{type:'modified',doc:d2b},{type:'added',doc:d4}]));
+  ok('segunda foto: solo desempaca lo que cambio (2 lecturas, no 4)', lecturas===2);
+  ok('los no cambiados son los MISMOS objetos', arr2[0]===arr1[0] && arr2[2]===arr1[2]);
+  ok('el modificado trae el dato nuevo', arr2[1].monto===20 && arr2[1]!==arr1[1]);
+  ok('el agregado esta, en el orden de la foto', arr2.length===4 && arr2[3].id==='d');
+  ok('es un array nuevo (los caches por identidad se rearman)', arr2!==arr1);
+  ok('anota cuantos cambios hubo', m.api.ultimaFoto.cambios===2 && m.api.ultimaFoto.total===4);
+  lecturas=0;
+  const arr3=m.api.aplicar(spec, foto([d1,d3,d4], [{type:'removed',doc:d2b}]));
+  ok('borrado: sale del array sin desempacar nada', lecturas===0 && arr3.length===3 && !arr3.some(x=>x.id==='b'));
+  let mapeados=0; const specM={col:'clientes',key:'clientes',map:o=>{ mapeados++; o.m=true; return o; }};
+  m.api.aplicar(specM, foto([doc('x',{}),doc('y',{})]));
+  const yb=doc('y',{v:1});
+  m.api.aplicar(specM, foto([doc('x',{}),yb], [{type:'modified',doc:yb}]));
+  ok('el map (saneado del score) corre 2 veces al inicio y 1 en el cambio', mapeados===3);
+  lecturas=0; const arr4=m.api.aplicar(spec, foto([d1,d3,d4,doc('e',{monto:5})], []));
+  ok('un doc que la cache no tenia se desempaca igual', lecturas===1 && arr4.length===4 && arr4[3].id==='e');
+  m.api.objetosReset(); lecturas=0; m.api.aplicar(spec, foto([d1,d3], []));
+  ok('tras stopRealtime la siguiente foto desempaca todo', lecturas===2);
 }
 // ── Animacion de Chart.js apagada y restaurada ──
 { const m=montar();

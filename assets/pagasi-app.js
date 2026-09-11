@@ -1742,6 +1742,7 @@ function stopRealtime(){
   _rtUnsubs.forEach(function(unsub){ try{ if(typeof unsub==='function') unsub(); }catch(e){} });
   _rtUnsubs = [];
   _rtStarted = false;
+  if(typeof _rtObjetosReset==='function') _rtObjetosReset();   // la siguiente foto desempaca todo
   if(_rtTimer){ clearTimeout(_rtTimer); _rtTimer = null; }
 }
 
@@ -1782,7 +1783,7 @@ function _restoreFocus(f){
 //   - se conserva la pagina de la tabla en la que estaba el empleado
 //   - el Dashboard no muestra el esqueleto de "cargando" en estos redibujos
 var _RT_MIN_MS = 4000;
-var _RT_MIN_DASH_MS = 15000;   // el Dashboard es un resumen: cada 15 s basta
+var _RT_MIN_DASH_MS = 60000;   // el Dashboard es un resumen: cada 1 min basta (Adam, 11-sep)
 var _rtUltimoRender = 0;
 
 function _rtMinPara(pagina){ return pagina==='dash' ? _RT_MIN_DASH_MS : _RT_MIN_MS; }
@@ -1884,6 +1885,47 @@ if(typeof document!=='undefined' && document.addEventListener){
     if(!document.hidden) flushRealtimeRender();
   });
 }
+// ── Foto incremental: desempacar solo lo que cambio ────────────────────
+// Cada foto de Firestore trae la coleccion COMPLETA; antes se desempacaban
+// (d.data()) los ~2.500 pagos o ~540 creditos enteros cada vez que cualquier
+// empleado guardaba un solo documento. Ahora se desempaca solo lo que cambio
+// (snap.docChanges) y los demas objetos se reusan. El array resultante sigue
+// el orden de snap.docs, como siempre, y es un array NUEVO en cada foto (los
+// caches que miran la identidad, como el indice de pagos, se rearman).
+var _rtObjetos = {};                 // key -> Map(docId -> objeto desempacado)
+var _rtUltimaFoto = { cambios: 0, total: 0 };
+function _rtObjetosReset(){ _rtObjetos = {}; }
+function _rtDesempacar(spec, d){
+  var o = Object.assign({ id: d.id }, d.data());
+  return (typeof spec.map === 'function') ? spec.map(o) : o;
+}
+function _rtAplicarFoto(spec, snap){
+  var cache = _rtObjetos[spec.key];
+  var docs = snap.docs || [];
+  var cambios = (cache && typeof snap.docChanges === 'function') ? snap.docChanges() : null;
+  if(!cache || !cambios){
+    // Primera foto de esta coleccion (o sin docChanges): se desempaca todo
+    cache = _rtObjetos[spec.key] = new Map();
+    for(var i = 0; i < docs.length; i++) cache.set(docs[i].id, _rtDesempacar(spec, docs[i]));
+    _rtUltimaFoto = { cambios: docs.length, total: docs.length };
+  } else {
+    for(var j = 0; j < cambios.length; j++){
+      var ch = cambios[j];
+      if(ch.type === 'removed') cache.delete(ch.doc.id);
+      else cache.set(ch.doc.id, _rtDesempacar(spec, ch.doc));
+    }
+    _rtUltimaFoto = { cambios: cambios.length, total: docs.length };
+  }
+  var arr = new Array(docs.length);
+  for(var k = 0; k < docs.length; k++){
+    var d = docs[k];
+    var o = cache.get(d.id);
+    if(!o){ o = _rtDesempacar(spec, d); cache.set(d.id, o); }   // no deberia pasar; por si acaso
+    arr[k] = o;
+  }
+  return arr;
+}
+
 // ── Primera bajada (arranque) ───────────────────────────────────────────
 // startRealtime avisa aqui cuando cada coleccion entrega su primera foto.
 // DB.load({viaRealtime:true}) espera esa señal en lugar de volver a pedir las
@@ -1972,8 +2014,7 @@ function startRealtime(){
     try{
       var unsub = db.collection(spec.col).onSnapshot(function(snap){
         var _t0 = Date.now();
-        var arr = _docsArray(snap);
-        if(typeof spec.map==='function') arr = arr.map(spec.map);
+        var arr = _rtAplicarFoto(spec, snap);   // desempaca solo lo que cambio
         if(spec.key==='motos' && !_rtPrimeras[spec.col]){
           // Primera foto de motos: respetar lo editado sin internet (cache
           // local), igual que hacia la carga clasica
@@ -1983,7 +2024,7 @@ function startRealtime(){
         if(spec.key==='motos') saveMotosCache(S.motos);
         if(spec.key==='concesionarios') _aplicarConcesionarioActivoRealtime();
         _rtMarcarPrimera(spec.col);
-        _perfAnotar('datos', spec.col + ' ' + arr.length, Date.now() - _t0);
+        _perfAnotar('datos', spec.col + ' ' + arr.length + ' (' + _rtUltimaFoto.cambios + ' cambios)', Date.now() - _t0);
         scheduleRealtimeRender();
       }, function(err){
         console.warn('Realtime '+spec.col+':', err && (err.message || err));

@@ -28,7 +28,15 @@ function elemento() {
 function baseFalsa(DATA, opts) {
   opts = opts || {};
   const gets = [];
-  const snapDe = docs => ({ docs: (docs || []).map(d => ({ id: d.id, data: () => d })), forEach(fn){ this.docs.forEach(fn); } });
+  const lecturas = { n: 0 };
+  const subs = {};
+  const wrap = d => ({ id: d.id, data: () => { lecturas.n++; return d; } });
+  const snapDe = (docs, cambios) => {
+    const ws = (docs || []).map(wrap);
+    const s = { docs: ws, forEach(fn){ ws.forEach(fn); } };
+    if (cambios) s.docChanges = () => cambios.map(c => ({ type: c.type, doc: ws.find(w => w.id === c.id) || wrap(c.doc) }));
+    return s;
+  };
   const db = {
     collection(name){
       return {
@@ -40,6 +48,7 @@ function baseFalsa(DATA, opts) {
           };
         },
         onSnapshot(cb, errCb){
+          subs[name] = cb;
           setImmediate(() => {
             if (opts.falla === name) errCb(new Error('sin permiso (prueba)'));
             else cb(snapDe(DATA[name]));
@@ -51,7 +60,9 @@ function baseFalsa(DATA, opts) {
       };
     },
   };
-  return { db, gets };
+  // Una foto nueva de una coleccion, con sus cambios (como manda Firestore)
+  const emitir = (name, docs, cambios) => subs[name] && subs[name](snapDe(docs, cambios));
+  return { db, gets, lecturas, emitir };
 }
 
 function contexto() {
@@ -133,6 +144,18 @@ function montarApp(base) {
     ok('los creditos llegaron por el tiempo real', ctx.S.creds.length === 1 && ctx.S.creds[0].id === 'CRED-1');
     ok('pagos, motos y concesionarios tambien', ctx.S.pagos.length === 1 && ctx.S.motos.length === 1 && ctx.S.concesionarios.length === 1);
     ok('el score corrupto se sanea igual que antes', ctx.S.clientes.length === 1 && ctx.S.clientes[0].score_indexa === 600);
+
+    // ── Segunda foto de pagos: entra un pago nuevo ──
+    const antesPagos = ctx.S.pagos;
+    base.lecturas.n = 0;
+    const nuevo = { id: 'P-2', cred: 'CRED-1', monto: 25, fecha: '2026-09-10', estado: 'confirmado' };
+    base.emitir('pagos', [DATA.pagos[0], nuevo], [{ type: 'added', id: 'P-2', doc: nuevo }]);
+    ok('segunda foto: desempaca 1 documento, no los 2', base.lecturas.n === 1);
+    ok('S.pagos es un array nuevo con el pago nuevo', ctx.S.pagos !== antesPagos && ctx.S.pagos.length === 2 && ctx.S.pagos[1].id === 'P-2');
+    ok('el pago viejo es el mismo objeto de antes', ctx.S.pagos[0] === antesPagos[0]);
+    ok('el saldo del credito ya ve el pago nuevo (indice rearmado): 75', ctx.getCreditoPagosConfirmados(ctx.S.creds[0]) === 75);
+    base.emitir('pagos', [DATA.pagos[0]], [{ type: 'removed', id: 'P-2', doc: nuevo }]);
+    ok('borrado: vuelve a 1 pago y el saldo a 50', ctx.S.pagos.length === 1 && ctx.getCreditoPagosConfirmados(ctx.S.creds[0]) === 50);
 
     // La carga clasica sigue pidiendo todo (respaldos, recargas)
     base.gets.length = 0;
