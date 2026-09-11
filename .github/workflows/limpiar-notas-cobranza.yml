@@ -10,6 +10,10 @@ on:
         description: 'Solo mostrar lo que haria, sin escribir'
         type: boolean
         default: true
+      notas:
+        description: 'Limpiar solo estas notas (coma), p.ej. gestion. Vacio = todas las de deuda'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -33,4 +37,4 @@ jobs:
       - working-directory: bot
         run: npm install --omit=dev
       - working-directory: bot
-        run: node limpiar-notas-cobranza.js ${{ inputs.dry && '--dry' || '' }}
+        run: node limpiar-notas-cobranza.js ${{ inputs.dry && '--dry' || '' }} ${{ inputs.notas && format('--notas={0}', inputs.notas) || '' }}

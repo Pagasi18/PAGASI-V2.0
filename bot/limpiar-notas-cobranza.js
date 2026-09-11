@@ -110,6 +110,16 @@ async function correr(db, opts) {
   const log = opts.log || console.log;
   const regla = cargarRegla();
 
+  // Filtro opcional: limpiar solo algunas notas (p.ej. solo 'gestion').
+  // Solo se aceptan notas que ya esten en la lista de deuda del sistema:
+  // pedir 'problema' o una nota inventada es un error, no un permiso.
+  if (opts.notas && opts.notas.length) {
+    const malas = opts.notas.filter(n => regla.notas.indexOf(n) < 0);
+    if (malas.length) throw new Error('Notas fuera de la lista de deuda: ' + malas.join(', '));
+    regla.notas = regla.notas.filter(n => opts.notas.indexOf(n) >= 0);
+    log('Filtro: solo ' + regla.notas.join(', ') + ' (las demas notas de deuda se quedan)');
+  }
+
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const limite = new Date(hoy); limite.setDate(limite.getDate() - VENTANA_DIAS);
   const limiteISO = isoLocal(limite);
@@ -202,7 +212,11 @@ async function correr(db, opts) {
 if (require.main === module) {
   const { Firestore } = require('@google-cloud/firestore');
   const db = new Firestore({ projectId: 'pagasi-v2' });
-  correr(db, { dry: process.argv.includes('--dry') })
+  const argNotas = (process.argv.find(x => x.startsWith('--notas=')) || '').slice(8);
+  correr(db, {
+    dry: process.argv.includes('--dry'),
+    notas: argNotas ? argNotas.split(',').map(x => x.trim()).filter(Boolean) : null,
+  })
     .catch(e => { console.error('ERROR', e.message); process.exit(1); });
 }
 

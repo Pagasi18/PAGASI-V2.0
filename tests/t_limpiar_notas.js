@@ -146,6 +146,20 @@ function fakeDb(creds, pagos, opts) {
   r = await B.correr(db, { dry: false, log: s => L.push(String(s)) });
   ok('segunda vez: nada que limpiar y nada escrito', r.limpiar === 0 && db.writes.length === antes);
 
+  // Filtro: solo 'gestion'
+  db = fakeDb(creds, pagos); L = [];
+  r = await B.correr(db, { dry: false, notas: ['gestion'], log: s => L.push(String(s)) });
+  ok('filtro gestion: limpia solo esa (1)', r.limpiadas === 1 && db.docs.creditos.get('CRED-901').cobranzaStatus === '');
+  ok('filtro gestion: "no_contesta" se queda', db.docs.creditos.get('CRED-905').cobranzaStatus === 'no_contesta');
+  ok('filtro gestion: lo avisa en el log', L.some(s => /Filtro: solo gestion/.test(s)));
+  db = fakeDb(creds, pagos);
+  let errF = null;
+  try { await B.correr(db, { dry: true, notas: ['problema'], log: () => {} }); } catch (e) { errF = e; }
+  ok('filtro con "problema": error y nada escrito', !!errF && db.writes.length === 0);
+  db = fakeDb(creds, pagos); errF = null;
+  try { await B.correr(db, { dry: true, notas: ['nota_inventada'], log: () => {} }); } catch (e) { errF = e; }
+  ok('filtro con nota inventada: error', !!errF);
+
   // Un empleado cambia una nota justo en el medio
   db = fakeDb(creds, pagos, { enLaTransaccion: docs => { docs.creditos.get('CRED-905').cobranzaStatus = 'problema'; } });
   r = await B.correr(db, { dry: false, log: () => {} });
