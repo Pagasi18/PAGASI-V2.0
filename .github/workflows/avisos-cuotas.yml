@@ -1,0 +1,42 @@
+name: Avisos de cuotas (diario)
+
+# Todas las mananas manda por Telegram la lista de clientes con cuota que
+# vence HOY y en 3 dias, con el WhatsApp de cada uno ya redactado: el
+# cobrador solo toca el enlace y envia. Solo lectura sobre Firestore.
+on:
+  schedule:
+    - cron: '46 11 * * *'   # 7:46 am Venezuela
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: 'Solo calcular y mostrar cantidades, sin enviar'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  avisos:
+    runs-on: ubuntu-latest
+    env:
+      TZ: America/Caracas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: pagasi-v2
+          workload_identity_provider: projects/951911859002/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: firebase-adminsdk-fbsvc@pagasi-v2.iam.gserviceaccount.com
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - working-directory: bot
+        run: npm install --omit=dev
+      - working-directory: bot
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_CHAT_ID_AVISOS: ${{ secrets.TELEGRAM_CHAT_ID_AVISOS }}
+        run: node avisos-cuotas.js ${{ (github.event_name == 'workflow_dispatch' && inputs.dry) && '--dry' || '' }}
