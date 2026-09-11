@@ -1782,15 +1782,57 @@ function _restoreFocus(f){
 //   - se conserva la pagina de la tabla en la que estaba el empleado
 //   - el Dashboard no muestra el esqueleto de "cargando" en estos redibujos
 var _RT_MIN_MS = 4000;
+var _RT_MIN_DASH_MS = 15000;   // el Dashboard es un resumen: cada 15 s basta
 var _rtUltimoRender = 0;
+
+function _rtMinPara(pagina){ return pagina==='dash' ? _RT_MIN_DASH_MS : _RT_MIN_MS; }
+
+// Animacion de Chart.js: apagada durante los redibujos por tiempo real del
+// Dashboard (7 graficos animando a la vez cada pocos segundos, a mediodia, era
+// lo que lo ponia lento). Se restaura al terminar.
+var _chartAnimOriginal;
+function _chartsAnimacion(encender){
+  if(typeof Chart==='undefined' || !Chart || !Chart.defaults) return;
+  if(_chartAnimOriginal===undefined) _chartAnimOriginal = Chart.defaults.animation;
+  Chart.defaults.animation = encender ? _chartAnimOriginal : false;
+}
+
+// ── Diagnostico de tiempos ──────────────────────────────────────────────
+// Anota cuanto tarda cada redibujo, cada foto del tiempo real y cada grafico
+// (ultimas 300). perfResumen() en la consola lo resume. Lo que pase de
+// _PERF_LENTO_MS se manda al registro de actividad (maximo 5 por sesion) para
+// poder ver desde afuera QUE fue lo lento y a que hora, en vez de adivinar.
+var _perf = [];
+var _perfLentosEnviados = 0;
+var _PERF_MAX = 300, _PERF_LENTO_MS = 1500, _PERF_LENTOS_MAX = 5;
+function _perfAnotar(tipo, det, ms){
+  _perf.push({ t: Date.now(), tipo: tipo, det: det || '', ms: ms });
+  if(_perf.length > _PERF_MAX) _perf.splice(0, _perf.length - _PERF_MAX);
+  if(ms >= _PERF_LENTO_MS && _perfLentosEnviados < _PERF_LENTOS_MAX && typeof logActividad==='function'){
+    _perfLentosEnviados++;
+    try{ logActividad('lento', 'diagnostico', tipo + ' ' + (det || ''), Math.round(ms) + ' ms'); }catch(e){}
+  }
+}
+function perfResumen(){
+  var por = {};
+  _perf.forEach(function(x){
+    var r = por[x.tipo] || (por[x.tipo] = { n:0, total:0, max:0, peor:'' });
+    r.n++; r.total += x.ms; if(x.ms > r.max){ r.max = x.ms; r.peor = x.det; }
+  });
+  Object.keys(por).forEach(function(k){ por[k].promedio = Math.round(por[k].total / por[k].n); });
+  try{ console.table(por); }catch(e){ console.log(por); }
+  return por;
+}
+if(typeof window!=='undefined'){ window._perf = _perf; window.perfResumen = perfResumen; }
 
 // Decide que hacer cuando llegan datos nuevos. Pura, para poder probarla.
 // Devuelve {accion:'render'|'pendiente'|'esperar', espera:ms}
-function _rtDecidir(ahora, ultimo, oculta, modal){
+function _rtDecidir(ahora, ultimo, oculta, modal, minMs){
   if(oculta || modal) return { accion:'pendiente', espera:0 };
+  var min = minMs || _RT_MIN_MS;
   var pasado = ahora - (ultimo || 0);
-  if(pasado >= _RT_MIN_MS) return { accion:'render', espera:0 };
-  return { accion:'esperar', espera:_RT_MIN_MS - pasado };
+  if(pasado >= min) return { accion:'render', espera:0 };
+  return { accion:'esperar', espera:min - pasado };
 }
 
 // Redibuja la pagina actual sin sacar al empleado de donde estaba
@@ -1801,8 +1843,10 @@ function _rtRedibujar(){
   var focus = _captureFocus();
   window._pgKeep = true;           // nav() lo consume: conserva la paginacion
   window._rtRenderizando = true;   // nav() no muestra el esqueleto
+  var _t0 = Date.now();
   try { nav(S.page); }
   finally {
+    _perfAnotar('redibujo-rt', S.page, Date.now() - _t0);
     window._rtRenderizando = false;
     window._pgKeep = false;        // por si nav() salio antes de consumirlo (sin acceso)
   }
@@ -1814,7 +1858,7 @@ function scheduleRealtimeRender(){
   _rtRenderPending = true;
   if(_rtTimer) return;   // ya viene un redibujo en camino: este cambio entra en ese
   var modal = (typeof _isModalOpen==='function') && _isModalOpen();
-  var d = _rtDecidir(Date.now(), _rtUltimoRender, !!document.hidden, modal);
+  var d = _rtDecidir(Date.now(), _rtUltimoRender, !!document.hidden, modal, _rtMinPara(S.page));
   if(d.accion === 'pendiente') return;   // se hace al volver a la pestana o al cerrar el modal
   _rtTimer = setTimeout(function(){
     _rtTimer = null;
@@ -1927,6 +1971,7 @@ function startRealtime(){
   especs.forEach(function(spec){
     try{
       var unsub = db.collection(spec.col).onSnapshot(function(snap){
+        var _t0 = Date.now();
         var arr = _docsArray(snap);
         if(typeof spec.map==='function') arr = arr.map(spec.map);
         if(spec.key==='motos' && !_rtPrimeras[spec.col]){
@@ -1938,6 +1983,7 @@ function startRealtime(){
         if(spec.key==='motos') saveMotosCache(S.motos);
         if(spec.key==='concesionarios') _aplicarConcesionarioActivoRealtime();
         _rtMarcarPrimera(spec.col);
+        _perfAnotar('datos', spec.col + ' ' + arr.length, Date.now() - _t0);
         scheduleRealtimeRender();
       }, function(err){
         console.warn('Realtime '+spec.col+':', err && (err.message || err));
@@ -3095,6 +3141,7 @@ window.addEventListener('popstate', function(ev){
 });
 
 function nav(p){
+  var _navT0 = Date.now();
   if(typeof closeMobileMenu==='function') closeMobileMenu();
   // Verificar permiso
   if(S.currentUser){
@@ -3132,28 +3179,46 @@ function nav(p){
     if(p==='dash'){
       // En un redibujo por tiempo real no se muestra el esqueleto de 'cargando':
       // la pantalla parpadeaba cada vez que otro empleado registraba algo.
-      if(!window._rtRenderizando) showSkeleton();
+      var esRT = !!window._rtRenderizando;
+      if(!esRT) showSkeleton();
       setTimeout(function(){
+        var _t0 = Date.now();
         $('cnt').innerHTML=fn();
+        _perfAnotar('dash-html', esRT ? 'rt' : 'nav', Date.now() - _t0);
         updateBadge();
         if(!isEmpleadoRole()){
-          if(typeof renderDashChart==='function') renderDashChart();
-          setTimeout(function(){ if(typeof renderCredChart==='function') renderCredChart(); }, 50);
-          setTimeout(function(){ if(typeof renderMoraChart==='function') renderMoraChart(); }, 80);
-          setTimeout(function(){ if(typeof renderDashEgrChart==='function') renderDashEgrChart(); }, 200);
-          setTimeout(function(){ if(typeof renderDashCuotasChart==='function') renderDashCuotasChart(); }, 220);
-          setTimeout(function(){ if(typeof renderDashCobrospChart==='function') renderDashCobrospChart(); }, 240);
+          // Cada grafico se destruye y se vuelve a crear en cada redibujo. En
+          // un redibujo por tiempo real: sin animacion, y sin las pasadas
+          // repetidas de los 900 y 2500 ms (existen para el primer pintado,
+          // cuando el lienzo todavia no tiene su tamaño).
+          if(esRT) _chartsAnimacion(false);
+          var _ch = function(nombre, fnCh){
+            if(typeof fnCh!=='function') return;
+            var t = Date.now();
+            try { fnCh(); } finally { _perfAnotar('grafico', nombre, Date.now() - t); }
+          };
+          _ch('ingresos', typeof renderDashChart==='function' ? renderDashChart : null);
+          setTimeout(function(){ _ch('creditos', typeof renderCredChart==='function' ? renderCredChart : null); }, 50);
+          setTimeout(function(){ _ch('mora', typeof renderMoraChart==='function' ? renderMoraChart : null); }, 80);
+          setTimeout(function(){ _ch('egresos', typeof renderDashEgrChart==='function' ? renderDashEgrChart : null); }, 200);
+          setTimeout(function(){ _ch('cuotas', typeof renderDashCuotasChart==='function' ? renderDashCuotasChart : null); }, 220);
           setTimeout(function(){
-            if(typeof renderCredChart==='function') renderCredChart();
-            if(typeof renderDashChart==='function' && !_dashChart) renderDashChart();
-            if(typeof renderDashEgrChart==='function') renderDashEgrChart();
-            if(typeof renderDashCuotasChart==='function' && !_dashCuotasChart) renderDashCuotasChart();
-            if(typeof renderDashCobrospChart==='function' && !_dashCobrospChart) renderDashCobrospChart();
-          }, 900);
-          setTimeout(function(){
-            if(typeof renderDashEgrChart==='function') renderDashEgrChart();
-            if(typeof renderDashCuotasChart==='function' && !_dashCuotasChart) renderDashCuotasChart();
-          }, 2500);
+            _ch('cobros-pendientes', typeof renderDashCobrospChart==='function' ? renderDashCobrospChart : null);
+            if(esRT) _chartsAnimacion(true);
+          }, 240);
+          if(!esRT){
+            setTimeout(function(){
+              if(typeof renderCredChart==='function') renderCredChart();
+              if(typeof renderDashChart==='function' && !_dashChart) renderDashChart();
+              if(typeof renderDashEgrChart==='function') renderDashEgrChart();
+              if(typeof renderDashCuotasChart==='function' && !_dashCuotasChart) renderDashCuotasChart();
+              if(typeof renderDashCobrospChart==='function' && !_dashCobrospChart) renderDashCobrospChart();
+            }, 900);
+            setTimeout(function(){
+              if(typeof renderDashEgrChart==='function') renderDashEgrChart();
+              if(typeof renderDashCuotasChart==='function' && !_dashCuotasChart) renderDashCuotasChart();
+            }, 2500);
+          }
         }
       },80);
     }
@@ -3170,6 +3235,7 @@ function nav(p){
   }
   updateBadge();
   wtInjectDataLabels();
+  _perfAnotar('nav', p, Date.now() - _navT0);
 }
 
 // ── Mobile: inyectar data-label en celdas de tabla para CSS card layout ──

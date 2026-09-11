@@ -39,13 +39,16 @@ function montar(opts){
     if(!opts.noConsume) win._pgKeep=false;
     if(opts.navFalla) throw new Error('boom');
   };
-  const f=new Function('S','nav','document','window','setTimeout','clearTimeout','Date','_isModalOpen','_captureFocus','_restoreFocus','updateBadge',
+  const chartFalso={defaults:{animation:{duration:400}}};
+  const f=new Function('S','nav','document','window','setTimeout','clearTimeout','Date','_isModalOpen','_captureFocus','_restoreFocus','updateBadge','Chart','logActividad',
     'var _rtTimer=null, _rtRenderPending=false;\n'+BLOQUE+
     '\nreturn {schedule:scheduleRealtimeRender, flush:flushRealtimeRender, decidir:_rtDecidir, MIN:_RT_MIN_MS,'+
     ' prep:_rtBootPreparar, marca:_rtMarcarPrimera, bootListo:realtimeBootListo,'+
+    ' minPara:_rtMinPara, anim:_chartsAnimacion, perfAnotar:_perfAnotar, perfResumen:perfResumen, MIN_DASH:_RT_MIN_DASH_MS,'+
     ' get pendiente(){ return _rtRenderPending; }};');
-  const api=f(S, nav, doc, win, setT, clearT, {now:()=>reloj.now}, ()=>modal, ()=>null, ()=>{}, ()=>{});
-  return {api, reloj, avanzar, doc, win, log, S, setModal:v=>{ modal=v; }, timers:()=>timers};
+  const lentos=[];
+  const api=f(S, nav, doc, win, setT, clearT, {now:()=>reloj.now}, ()=>modal, ()=>null, ()=>{}, ()=>{}, chartFalso, (a,m,tg,d)=>lentos.push({a,m,tg,d}));
+  return {api, reloj, avanzar, doc, win, log, S, setModal:v=>{ modal=v; }, timers:()=>timers, chart:chartFalso, lentos};
 }
 
 // ── La decision, sola ──
@@ -167,9 +170,47 @@ function montar(opts){
   _finalizar();
 })();
 
+// ── Dashboard: cada 15 s, no cada 4 ──
+{ const m=montar();
+  ok('el dashboard espera 15 s entre redibujos', m.api.MIN_DASH===15000 && m.api.minPara('dash')===15000);
+  ok('las demas pantallas siguen en 4 s', m.api.minPara('pagos')===4000 && m.api.minPara('')===4000);
+  const e=m.api.decidir(10000,9000,false,false,15000);
+  ok('decidir respeta el minimo que le pasan', e.accion==='esperar' && e.espera===14000);
+  ok('sin minimo explicito usa 4 s', m.api.decidir(10000,9000,false,false).espera===3000);
+}
+{ const m=montar(); m.S.page='dash'; const t0=m.reloj.now;
+  for(let i=0;i<30;i++){ m.api.schedule(); m.avanzar(1000); }
+  m.avanzar(20000);
+  ok('en el dashboard, 30 s de cambios -> 3 redibujos (350 ms, 15 s, 30 s), no 8', m.log.length===3);
+  ok('el segundo llega a los 15 s', m.log[1].at-m.log[0].at>=15000);
+}
+// ── Animacion de Chart.js apagada y restaurada ──
+{ const m=montar();
+  m.api.anim(false);
+  ok('apagar: Chart.defaults.animation=false', m.chart.defaults.animation===false);
+  m.api.anim(true);
+  ok('restaurar: vuelve el objeto original', m.chart.defaults.animation && m.chart.defaults.animation.duration===400);
+  m.api.anim(false); m.api.anim(false); m.api.anim(true);
+  ok('apagar dos veces no pierde el original', m.chart.defaults.animation.duration===400);
+}
+// ── Diagnostico de tiempos ──
+{ const m=montar();
+  for(let i=0;i<350;i++) m.api.perfAnotar('nav','pagos',10);
+  ok('guarda las ultimas 300', m.win._perf.length===300);
+  m.api.perfAnotar('redibujo-rt','dash',2100);
+  ok('un redibujo de 2,1 s se manda al registro', m.lentos.length===1 && m.lentos[0].a==='lento' && /redibujo-rt dash/.test(m.lentos[0].tg) && m.lentos[0].d==='2100 ms');
+  for(let i=0;i<10;i++) m.api.perfAnotar('nav','dash',3000);
+  ok('maximo 5 lentos por sesion', m.lentos.length===5);
+  m.api.perfAnotar('nav','dash',1499);
+  const r=m.api.perfResumen();
+  ok('perfResumen agrupa por tipo con promedio y maximo', r.nav && r.nav.max===3000 && r['redibujo-rt'] && r['redibujo-rt'].n===1);
+}
+
 // ── En pagasi-app.js ──
 ok('la cache local (enablePersistence) ya no se activa', !/db\.enablePersistence\s*\(/.test(app));
-ok('nav no muestra el esqueleto en redibujos de tiempo real', /if\(!window\._rtRenderizando\) showSkeleton\(\);/.test(app));
+ok('nav no muestra el esqueleto en redibujos de tiempo real', /var esRT = !!window\._rtRenderizando;\s*if\(!esRT\) showSkeleton\(\);/.test(app));
+ok('en redibujo rt: animacion apagada y restaurada tras el ultimo grafico', /if\(esRT\) _chartsAnimacion\(false\);/.test(app) && /if\(esRT\) _chartsAnimacion\(true\);\s*\}, 240\);/.test(app));
+ok('las pasadas repetidas (900/2500 ms) solo en el primer pintado', /if\(!esRT\)\{\s*setTimeout\(function\(\)\{\s*if\(typeof renderCredChart/.test(app));
 ok('quedo una sola definicion de scheduleRealtimeRender', (app.match(/function scheduleRealtimeRender\(/g)||[]).length===1);
 ok('quedo una sola definicion de flushRealtimeRender', (app.match(/function flushRealtimeRender\(/g)||[]).length===1);
 
