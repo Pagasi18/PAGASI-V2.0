@@ -2599,7 +2599,7 @@ const S = {
   concesionarios: [], gps:[],
   concesionarioActivo: null, // null = "Todos" / id = trabajando en un concesionario
   page:'dash', mTab:'todas', credTab:'todos', pagosTab:'todos', saveFn:null, clienteFiltro:'',
-  credSort:{col:'id',dir:'asc'}, cliSort:{col:'nombre',dir:'asc'}, pagosSort:{col:'fecha',dir:'desc'}, motosSort:{col:'modelo',dir:'asc'}, credFiltro:'',
+  credSort:{col:'id',dir:'desc'}, cliSort:{col:'nombre',dir:'asc'}, pagosSort:{col:'fecha',dir:'desc'}, motosSort:{col:'modelo',dir:'asc'}, credFiltro:'',
   pagosDesde:'', pagosHasta:'',
   currentUser: null,
   tareas: []
@@ -3313,7 +3313,7 @@ function showSkeleton(){
 // Helpers de pago/egreso para compra de motos movidos a logic/moto-pagos.js.
 
 function setCredTab(t){S.credTab=t;S.credFiltro='';window._pages={};nav('creditos');}
-function setCredSort(col){var cur=S.credSort||{col:'id',dir:'asc'};S.credSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('creditos');}
+function setCredSort(col){var cur=S.credSort||{col:'id',dir:'desc'};S.credSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('creditos');}
 var _credSearchTimer=null;
 function liveSearchCred(q){
   S.credFiltro=q||'';

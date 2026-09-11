@@ -122,7 +122,7 @@ PG.creditos = function(){
   if(tab==='archivados') filtered = archivados;
 
   // ─── 11b. Ordenamiento de tabla ───
-  var _cs = S.credSort || {col:'id', dir:'asc'};
+  var _cs = S.credSort || {col:'id', dir:'desc'};   // por defecto el credito mas nuevo arriba (Adam, 11-sep-2026)
   filtered = filtered.slice().sort(function(a,b){
     var col=_cs.col, dir=_cs.dir==='asc'?1:-1;
     var va,vb;
