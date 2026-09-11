@@ -1693,9 +1693,9 @@ function _docsArray(snap){
 }
 
 // Sanea el score_indexa de un cliente EN MEMORIA (sin escribir en la base).
-// Antes vivia dentro de DB.load y solo corria al abrir; pero cada foto de
-// 'clientes' del tiempo real reemplaza S.clientes entero, asi que el saneado
-// se perdia con la primera actualizacion. Ahora lo aplica tambien mapCliente.
+// Es la misma logica que vivia dentro de DB.load. Ojo: el tiempo real deja
+// S.clientes crudo, como siempre quedo tras la primera foto; esto solo se usa
+// en la carga clasica y, sobre COPIAS, para reparar en la base los corruptos.
 // Devuelve true si el score estaba corrupto (objeto en vez de numero).
 var _scoreCorruptosVistos = 0;
 function _sanearScoreCliente(cli){
@@ -1736,7 +1736,6 @@ function _sanearScoreCliente(cli){
   }
   return fueCorrupto;
 }
-function mapCliente(r){ _sanearScoreCliente(r); return r; }
 
 function stopRealtime(){
   _rtUnsubs.forEach(function(unsub){ try{ if(typeof unsub==='function') unsub(); }catch(e){} });
@@ -1807,6 +1806,7 @@ var _perf = [];
 var _perfLentosEnviados = 0;
 var _PERF_MAX = 300, _PERF_LENTO_MS = 1500, _PERF_LENTOS_MAX = 5;
 function _perfAnotar(tipo, det, ms){
+  if(!_perf) return;   // por si algo lo llama antes de que cargue este bloque
   _perf.push({ t: Date.now(), tipo: tipo, det: det || '', ms: ms });
   if(_perf.length > _PERF_MAX) _perf.splice(0, _perf.length - _PERF_MAX);
   if(ms >= _PERF_LENTO_MS && _perfLentosEnviados < _PERF_LENTOS_MAX && typeof logActividad==='function'){
@@ -1998,7 +1998,7 @@ function startRealtime(){
   _rtStarted = true;
   var especs = [
     {col:'motos', key:'motos', map:mapMoto},
-    {col:'clientes', key:'clientes', map:mapCliente},   // sanea el score en cada foto
+    {col:'clientes', key:'clientes'},
     {col:'creditos', key:'creds', map:mapCred},
     {col:'pagos', key:'pagos', map:mapPago},
     {col:'egresos', key:'egresos'},
@@ -2015,11 +2015,8 @@ function startRealtime(){
       var unsub = db.collection(spec.col).onSnapshot(function(snap){
         var _t0 = Date.now();
         var arr = _rtAplicarFoto(spec, snap);   // desempaca solo lo que cambio
-        if(spec.key==='motos' && !_rtPrimeras[spec.col]){
-          // Primera foto de motos: respetar lo editado sin internet (cache
-          // local), igual que hacia la carga clasica
-          arr = mergeMotosPreferLocal(arr, loadMotosCache());
-        }
+        // Motos: la foto del servidor manda, sin mezclar con la cache local
+        // (asi fue siempre desde que existe el tiempo real).
         S[spec.key] = arr;
         if(spec.key==='motos') saveMotosCache(S.motos);
         if(spec.key==='concesionarios') _aplicarConcesionarioActivoRealtime();
@@ -2212,8 +2209,7 @@ var DB = {
       }
 
       // ══════ SANEAR score_indexa corrupto ══════
-      // (la logica vive en _sanearScoreCliente; el tiempo real la aplica
-      //  igual en cada foto via mapCliente)
+      // (la logica vive en _sanearScoreCliente)
       var _scoreCorruptos = 0;
       if(cl){ cl.forEach(function(cli){ if(_sanearScoreCliente(cli)) _scoreCorruptos++; }); }
       if(_scoreCorruptos > 0){
@@ -2226,7 +2222,10 @@ var DB = {
       setTimeout(function(){
         if(!db) return;
         var fixed = 0;
-        (cl || S.clientes || []).forEach(function(cli){
+        // Con la carga por tiempo real (cl vacio) S.clientes queda crudo, como
+        // siempre quedo tras la primera foto: el saneado se hace sobre COPIAS,
+        // solo para encontrar y reparar en la base los scores corruptos.
+        (cl || (S.clientes || []).map(function(x){ var y = Object.assign({}, x); _sanearScoreCliente(y); return y; })).forEach(function(cli){
           if(cli._scoreFueCorrupto && cli.id){
             delete cli._scoreFueCorrupto;
             try {
@@ -3244,8 +3243,8 @@ function nav(p){
           setTimeout(function(){ _ch('egresos', typeof renderDashEgrChart==='function' ? renderDashEgrChart : null); }, 200);
           setTimeout(function(){ _ch('cuotas', typeof renderDashCuotasChart==='function' ? renderDashCuotasChart : null); }, 220);
           setTimeout(function(){
-            _ch('cobros-pendientes', typeof renderDashCobrospChart==='function' ? renderDashCobrospChart : null);
-            if(esRT) _chartsAnimacion(true);
+            try { _ch('cobros-pendientes', typeof renderDashCobrospChart==='function' ? renderDashCobrospChart : null); }
+            finally { if(esRT) _chartsAnimacion(true); }   // aunque el grafico falle, la animacion vuelve
           }, 240);
           if(!esRT){
             setTimeout(function(){

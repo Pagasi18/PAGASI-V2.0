@@ -241,7 +241,7 @@ function montar(opts){
 // ── En pagasi-app.js ──
 ok('la cache local (enablePersistence) ya no se activa', !/db\.enablePersistence\s*\(/.test(app));
 ok('nav no muestra el esqueleto en redibujos de tiempo real', /var esRT = !!window\._rtRenderizando;\s*if\(!esRT\) showSkeleton\(\);/.test(app));
-ok('en redibujo rt: animacion apagada y restaurada tras el ultimo grafico', /if\(esRT\) _chartsAnimacion\(false\);/.test(app) && /if\(esRT\) _chartsAnimacion\(true\);\s*\}, 240\);/.test(app));
+ok('en redibujo rt: animacion apagada y restaurada tras el ultimo grafico', /if\(esRT\) _chartsAnimacion\(false\);/.test(app) && /finally \{ if\(esRT\) _chartsAnimacion\(true\); \}[^\n]*\n\s*\}, 240\);/.test(app));
 ok('las pasadas repetidas (900/2500 ms) solo en el primer pintado', /if\(!esRT\)\{\s*setTimeout\(function\(\)\{\s*if\(typeof renderCredChart/.test(app));
 ok('quedo una sola definicion de scheduleRealtimeRender', (app.match(/function scheduleRealtimeRender\(/g)||[]).length===1);
 ok('quedo una sola definicion de flushRealtimeRender', (app.match(/function flushRealtimeRender\(/g)||[]).length===1);

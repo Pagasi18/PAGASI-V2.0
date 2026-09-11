@@ -28,6 +28,7 @@ function elemento() {
 function baseFalsa(DATA, opts) {
   opts = opts || {};
   const gets = [];
+  const updates = [];
   const lecturas = { n: 0 };
   const subs = {};
   const wrap = d => ({ id: d.id, data: () => { lecturas.n++; return d; } });
@@ -44,7 +45,7 @@ function baseFalsa(DATA, opts) {
         doc(id){
           return {
             get(){ gets.push(name + '/' + id); return Promise.resolve({ exists: false, data: () => ({}) }); },
-            set(){ return Promise.resolve(); }, update(){ return Promise.resolve(); },
+            set(){ return Promise.resolve(); }, update(d){ updates.push({ name, id, d }); return Promise.resolve(); },
           };
         },
         onSnapshot(cb, errCb){
@@ -62,7 +63,7 @@ function baseFalsa(DATA, opts) {
   };
   // Una foto nueva de una coleccion, con sus cambios (como manda Firestore)
   const emitir = (name, docs, cambios) => subs[name] && subs[name](snapDe(docs, cambios));
-  return { db, gets, lecturas, emitir };
+  return { db, gets, lecturas, emitir, updates };
 }
 
 function contexto() {
@@ -143,7 +144,10 @@ function montarApp(base) {
     ok('la configuracion y gps si se piden', base.gets.includes('gps') && base.gets.includes('config/plan'));
     ok('los creditos llegaron por el tiempo real', ctx.S.creds.length === 1 && ctx.S.creds[0].id === 'CRED-1');
     ok('pagos, motos y concesionarios tambien', ctx.S.pagos.length === 1 && ctx.S.motos.length === 1 && ctx.S.concesionarios.length === 1);
-    ok('el score corrupto se sanea igual que antes', ctx.S.clientes.length === 1 && ctx.S.clientes[0].score_indexa === 600);
+    ok('en memoria el cliente queda como llega de la base (como siempre tras la primera foto)', ctx.S.clientes.length === 1 && typeof ctx.S.clientes[0].score_indexa === 'object');
+    await new Promise(r => setTimeout(r, 1700));
+    const fix = base.updates.find(u => u.name === 'clientes' && u.id === 'CLI-1');
+    ok('el score corrupto se repara en la base a los 1,5 s, igual que antes', !!fix && fix.d.score_indexa === 600);
 
     // ── Segunda foto de pagos: entra un pago nuevo ──
     const antesPagos = ctx.S.pagos;
