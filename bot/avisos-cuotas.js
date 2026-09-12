@@ -337,8 +337,13 @@ async function enviarTelegram(token, chats, mensajes) {
 async function main() {
   const DRY = process.argv.includes('--dry');
   const TOKEN = process.env.TELEGRAM_TOKEN;
-  const CHATS = (process.env.TELEGRAM_CHAT_ID_AVISOS || process.env.TELEGRAM_CHAT_ID || '8571975984,1280343056')
+  // CHAT_PRUEBA (solo desde el boton manual): manda UNA vez a un solo chat, para ver
+  // como se ve, sin tocar a quien le llega el envio diario.
+  const PRUEBA = String(process.env.CHAT_PRUEBA || '').trim();
+  if (PRUEBA && !/^-?\d{5,20}$/.test(PRUEBA)) { console.error('CHAT_PRUEBA invalido'); process.exit(1); }
+  const CHATS = PRUEBA ? [PRUEBA] : (process.env.TELEGRAM_CHAT_ID_AVISOS || process.env.TELEGRAM_CHAT_ID || '8571975984,1280343056')
     .split(',').map(s => s.trim()).filter(Boolean);
+  if (PRUEBA) console.log('Envio de PRUEBA a un solo chat');
   const COBRADORAS = (process.env.COBRADORAS || '').split(',').map(s => s.trim()).filter(Boolean);
   if (!DRY && !TOKEN) { console.error('Falta el secreto TELEGRAM_TOKEN.'); process.exit(1); }
 

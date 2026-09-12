@@ -12,6 +12,10 @@ on:
         description: 'Solo calcular y mostrar cantidades, sin enviar'
         type: boolean
         default: true
+      chat:
+        description: 'Prueba: mandar SOLO a este chat de Telegram (vacio = los de siempre)'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -39,4 +43,5 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_CHAT_ID_AVISOS: ${{ secrets.TELEGRAM_CHAT_ID_AVISOS }}
+          CHAT_PRUEBA: ${{ github.event_name == 'workflow_dispatch' && inputs.chat || '' }}
         run: node avisos-cuotas.js ${{ (github.event_name == 'workflow_dispatch' && inputs.dry) && '--dry' || '' }}
