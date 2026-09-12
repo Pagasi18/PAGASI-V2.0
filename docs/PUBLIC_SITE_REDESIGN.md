@@ -40,3 +40,19 @@ Se conservan las fotografías reales disponibles. Los cinco modelos Benmo muestr
 ## Publicación y reversión
 
 GitHub Pages sirve la raíz de `main`, con dominio `pagasi.io`. Las rutas existentes permanecen iguales. Los recursos nuevos llevan versión en sus URLs. Para revertir, hacer `git revert` del commit del rediseño y publicar el revert en `main`; no requiere migración de datos.
+
+## Corrección visual posterior a la primera publicación
+
+La revisión del sitio completo encontró una incompatibilidad entre los iconos insertados por JavaScript y los selectores directos del CSS. En móvil dejaba los párrafos de beneficios en una columna de solo 40 px y separaba la lupa del buscador. Se corrige insertando los SVG como hijos directos, con una asignación explícita de columnas para títulos y párrafos.
+
+Se ajustan también:
+
+- Composición de portada, jerarquía tipográfica, separación de botones y tamaño de la oferta. La moto aparece completa sobre una base y la oferta no tapa las ruedas. En 390 × 844 px la tarjeta de cuotas completa termina aproximadamente en el píxel 824.
+- Escena ilustrativa `assets/public/ek-xpress-scene-v2.webp` (1254 × 1254, 180.362 bytes), generada con la herramienta integrada a partir de la ilustración anterior. Brief: conservar la EK Xpress 150 Lite y su ángulo de tres cuartos, mostrar ambas ruedas y espejos completos, círculo blanco, base elíptica blanca, fondo azul, sin textos ni precios. Se mantiene la foto original en la galería. El intento de recorte transparente no se usa porque su fondo de cuadrícula estaba incrustado.
+- Encuadre CSS de las fotos reales mediante límites de sus márgenes blancos. No se alteran los archivos, colores, modelos, precios ni IDs. Las imágenes que son afiches conservan el encuadre completo. El encuadre se actualiza al cambiar modelo, filtrar o redimensionar.
+- Buscador con lupa alineada; filtros y ordenamiento juntos en móvil. Fichas con fotos mayores, etiquetas legibles e importes alineados.
+- Ficha compacta en el simulador móvil y solicitud inmediatamente después del importe calculado.
+- Campos y textos más legibles en la solicitud. Se evita que el WhatsApp flotante tape el botón Continuar. En portada se muestra después de salir de la sección principal.
+- Contactos del pie visibles también en móvil, iconos de beneficios y aliados consistentes y presentación de acceso a Mi Cuenta revisada.
+
+Validación de la corrección: 13 contratos del sitio público aprobados; comparación del código del portal, SDKs, cálculo y payload con la base aprobada. Navegador: 30 combinaciones (seis páginas a 320, 390, 768, 1024 y 1440 px), sin desbordamiento horizontal, párrafos largos en columnas menores de 100 px, encabezados o botones recortados ni imágenes visibles rotas. Se probaron búsqueda sin resultados, reinicio, orden por cuota, filtros Benmo, cambio entre ilustración y foto real, equivalencia mensual, traslado del ID 46 a la solicitud, cambio del modelo en el resumen, menú con Escape, preguntas frecuentes y acceso del equipo sin iniciar sesión ni enviar datos reales.

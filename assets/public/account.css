@@ -8,3 +8,11 @@
 @media(max-width:1000px){.pg-login-story{padding:43px 30px}.pg-login-story h1{font-size:37px}.pg-login-benefits{flex-direction:column;gap:14px;font-size:11px}.pg-login-panel{padding:35px 23px}.pg-account .lg-card{padding:30px 24px}.pg-login-moto{max-width:295px}.pg-account .pg-header .pg-brand img{width:195px}}
 @media(max-width:900px){.pg-account #scLogin.lg{min-height:calc(100svh - 84px)}.pg-account .pg-header .pg-brand img{width:185px}.pg-login-story h1{font-size:31px;letter-spacing:-1px}}
 @media(max-width:650px){.pg-account #scLogin.lg{grid-template-columns:1fr;min-height:calc(100svh - 77px)}.pg-login-story{padding:28px 24px 31px}.pg-login-story h1{font-size:29px;line-height:1.15;letter-spacing:-1px;margin-bottom:11px}.pg-login-story>p{font-size:11px;margin-bottom:0;max-width:280px}.pg-login-moto,.pg-login-benefits{display:none}.pg-login-panel{padding:25px 18px 35px;align-items:flex-start}.pg-account .lg-card{padding:27px 23px;max-width:100%}.pg-account .lg-t{font-size:27px}.pg-login-icon{margin-bottom:18px;width:51px;height:51px;border-radius:14px}.pg-account .lg-s{margin-bottom:23px;font-size:12px}.pg-account .pg-header .pg-brand img{width:177px}.pg-account #scApp .wrap{max-width:520px;padding-top:3px}.pg-account #scApp .top img{width:165px}.pg-account .umenu{right:16px}}
+
+/* Product artwork stays complete; the login fields and account logic are unchanged. */
+.pg-login-story{background:linear-gradient(135deg,#0050dc,#0563f5)}
+.pg-login-moto{background:transparent;border-radius:0;mask-image:linear-gradient(to right,transparent,#000 7%,#000 93%,transparent)}
+.pg-login-moto img{width:100%;height:100%;border-radius:0;mask-image:linear-gradient(to bottom,transparent,#000 5%,#000 95%,transparent)}
+.pg-account .lg-card .tiny{font-size:12px;line-height:1.7}
+.pg-account .lg-card #lgWa{font-size:12px}
+.pg-account .lg-card #lgStaff{font-size:12px}
