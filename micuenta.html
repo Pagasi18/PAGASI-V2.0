@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#2563EB">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <title>Mi Cuenta — Pagasi</title>
@@ -365,22 +365,22 @@ details summary::-webkit-details-marker{display:none}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media(min-width:521px){.ov{align-items:center}.md{border-radius:24px}}
 </style>
-</head>
-<body>
+<link rel="stylesheet" href="assets/public/site.css?v=20260912-1"><link rel="stylesheet" href="assets/public/account.css?v=20260912-1"></head>
+<body class="pg-site pg-account"><a class="pg-skip" href="#main">Ir al contenido</a><header class="pg-header" id="nav"><nav class="pg-nav pg-container" aria-label="Navegación principal"><a class="pg-brand" href="index.html" aria-label="Pagasi, inicio"><img src="assets/pagasi-logo.png" width="955" height="256" alt="Pagasi"></a><div class="pg-nav-links" id="pg-navigation"><a href="index.html" class="">Inicio</a><a href="simulador.html" class="">Simulador</a><a href="catalogo.html" class="">Catálogo</a><a href="nosotros.html" class="">Nosotros</a><a href="micuenta.html" class="pg-button pg-button-outline" aria-current="page"><span data-icon="user" aria-hidden="true"></span> Mi cuenta</a><a href="solicitar.html" class="pg-button">Solicitar</a></div><button type="button" class="pg-menu-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="pg-navigation"><span data-icon="menu" aria-hidden="true"></span></button></nav></header>
 
 <!-- ══ LOGIN ══ -->
-<div id="scLogin" class="lg">
-  <div class="lg-card">
+<div id="scLogin" class="lg" role="main"><div class="pg-login-story"><h1>Tu moto <i>contigo.</i><br>Tu cuenta también.</h1><p>Consulta tus cuotas, revisa tus pagos y mantén tu plan al día.</p><div class="pg-login-benefits"><span><span data-icon="calculator" aria-hidden="true"></span> Consulta tus cuotas</span><span><span data-icon="wallet" aria-hidden="true"></span> Reporta tus pagos</span><span><span data-icon="clock" aria-hidden="true"></span> Revisa tu historial</span></div><div class="pg-login-moto"><img src="assets/public/ek-xpress-hero.webp" width="1254" height="1254" alt="Vista ilustrativa de una EK Xpress 150 Lite"></div></div><div class="pg-login-panel" id="main">
+  <div class="lg-card"><div class="pg-login-icon"><span data-icon="phone" aria-hidden="true"></span></div>
     <img id="lgLogo" alt="Pagasi">
-    <div class="lg-t" id="lgT">Mi Cuenta</div>
+    <div class="lg-t" id="lgT">Entra a tu cuenta</div>
     <div class="lg-s" id="lgSub">Consulta tu crédito y envía tus pagos.</div>
-    <div id="lgErr" class="err hide"></div>
+    <div id="lgErr" class="err hide" role="alert"></div>
 
     <!-- Paso 1: teléfono -->
     <div id="stepTel">
       <div class="fg">
         <label for="tel">Tu número de teléfono</label>
-        <input id="tel" type="tel" inputmode="numeric" placeholder="04143081617" autocomplete="tel">
+        <input id="tel" type="tel" inputmode="numeric" placeholder="Tu número de celular" autocomplete="tel">
       </div>
       <button id="btnCodigo" class="btn btn-p" onclick="pedirCodigo()">Enviar código</button>
       <div class="tiny">Te llega un mensaje de texto con un código. Usa el mismo número que tienes registrado con Pagasi.</div>
@@ -428,11 +428,11 @@ details summary::-webkit-details-marker{display:none}
         <button class="lnk" id="lgStaff" onclick="toggleStaff()" style="color:var(--ink-4);text-decoration:none">Pagasi</button>
       </div>
     </div>
-    <div id="recaptcha-container"></div>
+    <a class="pg-login-back" href="index.html">← Volver al inicio</a><div id="recaptcha-container"></div>
   </div>
 </div>
 
-<!-- ══ PORTAL ══ -->
+</div><!-- ══ PORTAL ══ -->
 <div id="scApp" class="hide">
   <!-- Solo visible con cuenta Pagasi: deja claro que NO es la sesion del cliente -->
   <div class="mbar hide" id="mBar">
@@ -1676,5 +1676,5 @@ function enviarCodigoWhatsApp(cedula){
   return Promise.reject(new Error('pendiente-aprobacion-meta'));
 }
 </script>
-</body>
+<footer class="pg-footer"><div class="pg-container"><div class="pg-footer-main"><div class="pg-footer-brand"><a href="index.html"><img src="assets/pagasi-logo.png" width="955" height="256" alt="Pagasi"></a><p>Tu moto. Tus planes. Tu próximo paso.</p></div><nav class="pg-footer-links" aria-label="Enlaces del pie"><a href="catalogo.html">Explorar motos</a><a href="simulador.html">Calcular cuotas</a><a href="nosotros.html">Conoce Pagasi</a><a href="nosotros.html#concesionarios">Concesionarios</a><a href="solicitar.html">Solicitar mi moto</a><a href="micuenta.html">Mi cuenta</a></nav><div class="pg-footer-contact"><strong>Estamos para ayudarte.</strong><a href="https://wa.me/584222285526?text=Hola%2C%20necesito%20ayuda%20con%20mi%20cuenta%20Pagasi">+58 422-2285526</a><a href="mailto:info@pagasi.com.ve">info@pagasi.com.ve</a><span>Venezuela</span></div></div><div class="pg-footer-bottom"><span>© <span data-year>2026</span> Pagasi. Todos los derechos reservados.</span><span>Financiamiento sujeto a evaluación y disponibilidad.</span></div></div></footer><script src="assets/public/site.js?v=20260912-1"></script></body>
 </html>
