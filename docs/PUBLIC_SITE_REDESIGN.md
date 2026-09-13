@@ -67,3 +67,11 @@ Se sustituye el titular gigante “Llévatela YA!!” y la escena estática de p
 - El único ajuste compartido es reconocer la nueva clase del hero para mantener la aparición del WhatsApp flotante después de la portada. No se alteran catálogo, cálculos, solicitud, cuenta ni servicios.
 - `node tests/hero-motion.test.js`: control de pausa, visibilidad, preferencia de movimiento reducido y correspondencia de fotos/modelos. `node tests/public-site.test.js`: los 13 contratos conservados.
 - Navegador: portada comprobada a 320, 390, 768, 1024 y 1440 px, sin desbordamiento horizontal ni fotos rotas; imágenes WebP seleccionadas. Pausar mantiene las mismas posiciones entre observaciones y reanudar reactiva las tres columnas. Grupos duplicados verificados idénticos; consola sin errores. El botón de catálogo conserva el recorrido a la EK Xpress 150 Lite con inicial $510 y cuota $44.
+
+## Tarjetas de motos destacadas
+
+Se rediseña únicamente la selección de motos de la portada: categoría y nombre antes de la foto, fondo suave detrás de la moto real, cuota e inicial agrupadas con distinta jerarquía, precio de contado separado y enlace de acción con flecha circular. El catálogo completo conserva sus tarjetas. Los filtros se agrupan en un control con iconos y estado seleccionado. En tablet se muestran dos tarjetas y una tercera horizontal; en móvil, una columna.
+
+Los mismos grupos de IDs y los cálculos de `PagasiCatalog.plan()` alimentan la sección. Se conservan los enlaces de modelo al simulador, las fotografías y los datos originales. El WhatsApp flotante se oculta mientras esta sección está visible y vuelve a aparecer después para evitar que tape las acciones en móvil.
+
+Validación: 13 contratos del sitio público y pruebas de movimiento del hero aprobados; interfaz revisada a 320, 390, 768, 1024 y 1440 px, sin desbordamientos ni fotos rotas. Los tres filtros muestran sus IDs e importes originales. Recorrido a Matrix 150 Lite comprobado: ID 11, inicial $645, cuota $55 y solicitud con el mismo ID. Pares de importes de los ocho modelos de esta selección contrastados con el catálogo compartido. Se comprobó que WhatsApp reaparece fuera de las tarjetas y que la consola no presenta errores.

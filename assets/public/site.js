@@ -40,6 +40,10 @@
     const p=D.plan(m.id);
     return '<article class="pg-moto-card" data-moto-id="'+m.id+'"><a class="pg-moto-picture pg-photo-frame" href="simulador.html?moto='+m.id+'" aria-label="Ver '+escape(m.name)+'">'+picture(m)+(m.tag?'<span class="pg-tag '+(m.tag==='Más vendida'?'pg-tag-green':'')+'">'+escape(m.tag)+'</span>':'')+'</a><div class="pg-card-body"><div class="pg-card-meta">'+escape(m.sedeName)+'</div><h3 class="pg-card-name"><a href="simulador.html?moto='+m.id+'">'+escape(m.name)+'</a></h3><p class="pg-card-spec">'+escape(m.cat)+' · Contado '+D.money(m.precio)+'</p><div class="pg-card-payments"><div><span class="pg-offer-label">Cuota referencial</span><strong class="pg-card-price">'+D.money(p.quincenal)+' <small>/ quincena</small></strong></div><div><span class="pg-offer-label">Inicial</span><strong class="pg-card-initial">'+D.money(p.inicial)+'</strong></div></div><a class="pg-button" href="simulador.html?moto='+m.id+'">Ver moto y cuotas '+icon('arrow')+'</a></div></article>';
   }
+  function featuredCard(m){
+    const p=D.plan(m.id),url='simulador.html?moto='+m.id;
+    return '<article class="pg-featured-card" data-moto-id="'+m.id+'"><div class="pg-featured-heading"><div class="pg-featured-meta"><span>'+escape(m.cat)+'</span>'+(m.tag?'<span class="pg-featured-tag'+(m.tag==='Más vendida'?' pg-featured-tag-green':'')+'">'+escape(m.tag)+'</span>':'')+'</div><h3><a href="'+url+'">'+escape(m.name)+'</a></h3></div><a class="pg-featured-visual" href="'+url+'" aria-label="Ver '+escape(m.name)+'"><span class="pg-featured-photo pg-photo-frame">'+picture(m)+'</span></a><div class="pg-featured-details"><p class="pg-featured-dealer">'+icon('pin')+escape(m.sedeName)+'</p><div class="pg-featured-plan"><div><span>Cuota quincenal</span><strong class="pg-featured-quota">'+D.money(p.quincenal)+'</strong></div><div><span>Inicial · 50%</span><strong class="pg-featured-initial">'+D.money(p.inicial)+'</strong></div></div><div class="pg-featured-cash"><span>Precio de contado</span><strong>'+D.money(m.precio)+'</strong></div><a class="pg-featured-cta" href="'+url+'">Ver moto y cuotas <span>'+icon('arrow')+'</span></a></div></article>';
+  }
   function setupNav(){
     const toggle=document.querySelector('.pg-menu-toggle'),nav=document.querySelector('.pg-nav-links');
     if(!toggle||!nav)return;
@@ -50,18 +54,23 @@
     nav.addEventListener('click',e=>{if(e.target.closest('a'))close();});
     root.matchMedia('(min-width:901px)').addEventListener('change',close);
   }
-  function bindImageErrors(scope){fitPhotos(scope);scope.querySelectorAll('.pg-moto-picture img').forEach(img=>img.addEventListener('error',()=>{img.replaceWith(Object.assign(document.createElement('span'),{className:'pg-photo-missing',textContent:'Fotografía no disponible'}));},{once:true}));}
+  function bindImageErrors(scope){fitPhotos(scope);scope.querySelectorAll('.pg-moto-picture img,.pg-featured-photo img').forEach(img=>img.addEventListener('error',()=>{img.replaceWith(Object.assign(document.createElement('span'),{className:'pg-photo-missing',textContent:'Fotografía no disponible'}));},{once:true}));}
   function setupHome(){
     const hero=document.querySelector('.pg-index .pg-motion-hero, .pg-index .pg-hero'),whatsapp=document.querySelector('.pg-whatsapp');
     if(hero&&whatsapp&&typeof IntersectionObserver==='function'){
       whatsapp.hidden=true;
-      new IntersectionObserver(entries=>{whatsapp.hidden=entries[0].isIntersecting;},{rootMargin:'-90px 0px 0px 0px'}).observe(hero);
+      const visible=new Set();
+      const observer=new IntersectionObserver(entries=>{
+        entries.forEach(entry=>{if(entry.isIntersecting)visible.add(entry.target);else visible.delete(entry.target);});
+        whatsapp.hidden=visible.size>0;
+      },{rootMargin:'-90px 0px 0px 0px'});
+      [hero,document.querySelector('.pg-featured-section')].filter(Boolean).forEach(section=>observer.observe(section));
     }
 
     document.querySelectorAll('[data-plan-id]').forEach(el=>{const p=D.plan(el.dataset.planId);if(p&&p[el.dataset.planField]!==undefined)el.textContent=D.money(p[el.dataset.planField]);});
     const grid=document.querySelector('[data-home-grid]');if(!grid)return;
     const groups={all:[1,5,8],trabajo:[1,2,27],ciudad:[3,11,35]};
-    function show(use){grid.innerHTML=groups[use].map(id=>card(D.get(id))).join('');bindImageErrors(grid);}
+    function show(use){grid.innerHTML=groups[use].map(id=>featuredCard(D.get(id))).join('');bindImageErrors(grid);}
     document.querySelectorAll('[data-home-use]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-home-use]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));show(b.dataset.homeUse);}));show('all');
   }
   function setupCatalog(){
