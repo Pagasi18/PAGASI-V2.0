@@ -20,7 +20,7 @@ Los estilos y scripts nuevos están en `assets/public/`. El panel administrativo
 
 ## Imágenes
 
-La portada usa una vista ilustrativa de la EK Xpress 150 Lite en tres cuartos, creada con la herramienta integrada de generación de imágenes a partir de la foto existente. Está identificada como ilustrativa; el simulador permite ver la foto real del catálogo. El logo no fue generado ni sustituido.
+La primera portada usaba una vista ilustrativa de la EK Xpress 150 Lite en tres cuartos. La portada actual usa las fotografías reales del catálogo en columnas animadas (ver revisión al final). La ilustración permanece en la galería del simulador, identificada como tal y con acceso a la foto real. El logo no fue generado ni sustituido.
 
 Archivo publicado: `assets/public/ek-xpress-hero.webp` (1254 × 1254, 185.326 bytes). Se convirtió el PNG generado a WebP con calidad 90 para reducir su peso aproximadamente un 89%, sin cambiar composición. El PNG maestro corresponde a `exec-3f2917a5-0bc7-4fcb-9a60-3216df6693fe.png` en la carpeta local de imágenes generadas de Codex.
 
@@ -56,3 +56,14 @@ Se ajustan también:
 - Contactos del pie visibles también en móvil, iconos de beneficios y aliados consistentes y presentación de acceso a Mi Cuenta revisada.
 
 Validación de la corrección: 13 contratos del sitio público aprobados; comparación del código del portal, SDKs, cálculo y payload con la base aprobada. Navegador: 30 combinaciones (seis páginas a 320, 390, 768, 1024 y 1440 px), sin desbordamiento horizontal, párrafos largos en columnas menores de 100 px, encabezados o botones recortados ni imágenes visibles rotas. Se probaron búsqueda sin resultados, reinicio, orden por cuota, filtros Benmo, cambio entre ilustración y foto real, equivalencia mensual, traslado del ID 46 a la solicitud, cambio del modelo en el resumen, menú con Escape, preguntas frecuentes y acceso del equipo sin iniciar sesión ni enviar datos reales.
+
+## Hero con movimiento inspirado en maben.io
+
+Se sustituye el titular gigante “Llévatela YA!!” y la escena estática de portada por “Tu próxima moto. En cuotas.” y tres columnas inclinadas de fotos reales. Las columnas alternan dirección y repiten grupos idénticos para un movimiento continuo sin saltos. En móvil, las columnas aparecen debajo del texto y los botones, conservando la animación. El logo y el azul de Pagasi permanecen.
+
+- `hero-motion.css` y `hero-motion.js` están limitados a la portada. Los 12 modelos mostrados se leen del catálogo compartido. Las tarjetas decorativas no duplican enlaces en el orden de tabulación ni anuncios del lector de pantalla.
+- Las fotos tienen copias WebP de 600 px en `assets/public/motion-motos/`, 312.930 bytes en total. Se conserva la foto original como alternativa en `picture`; no se cambian colores ni modelos. El encuadre reutiliza los límites de márgenes blancos existentes.
+- Control accesible de pausa/reanudación. La animación se detiene al salir de la sección, ocultar la pestaña o activar movimiento reducido. Una pausa manual se conserva al volver a la sección o cambiar la preferencia del sistema.
+- El único ajuste compartido es reconocer la nueva clase del hero para mantener la aparición del WhatsApp flotante después de la portada. No se alteran catálogo, cálculos, solicitud, cuenta ni servicios.
+- `node tests/hero-motion.test.js`: control de pausa, visibilidad, preferencia de movimiento reducido y correspondencia de fotos/modelos. `node tests/public-site.test.js`: los 13 contratos conservados.
+- Navegador: portada comprobada a 320, 390, 768, 1024 y 1440 px, sin desbordamiento horizontal ni fotos rotas; imágenes WebP seleccionadas. Pausar mantiene las mismas posiciones entre observaciones y reanudar reactiva las tres columnas. Grupos duplicados verificados idénticos; consola sin errores. El botón de catálogo conserva el recorrido a la EK Xpress 150 Lite con inicial $510 y cuota $44.

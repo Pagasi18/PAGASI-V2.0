@@ -52,7 +52,7 @@
   }
   function bindImageErrors(scope){fitPhotos(scope);scope.querySelectorAll('.pg-moto-picture img').forEach(img=>img.addEventListener('error',()=>{img.replaceWith(Object.assign(document.createElement('span'),{className:'pg-photo-missing',textContent:'Fotografía no disponible'}));},{once:true}));}
   function setupHome(){
-    const hero=document.querySelector('.pg-index .pg-hero'),whatsapp=document.querySelector('.pg-whatsapp');
+    const hero=document.querySelector('.pg-index .pg-motion-hero, .pg-index .pg-hero'),whatsapp=document.querySelector('.pg-whatsapp');
     if(hero&&whatsapp&&typeof IntersectionObserver==='function'){
       whatsapp.hidden=true;
       new IntersectionObserver(entries=>{whatsapp.hidden=entries[0].isIntersecting;},{rootMargin:'-90px 0px 0px 0px'}).observe(hero);
