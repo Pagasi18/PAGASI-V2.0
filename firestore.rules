@@ -204,6 +204,36 @@ service cloud.firestore {
     // que el acceso al modulo se controla ademas por permiso en la app.
     match /gps/{id}               { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
 
+    // == GPS en Mi cuenta (Adam, 14-sep-2026) ==
+    // ubicacion_cliente/{credId}: la ficha que ve el CLIENTE en Mi cuenta. Trae
+    // solo donde esta la moto y la hora de la ultima senal: nunca la clave del
+    // equipo, el IMEI ni la linea (esos viven en /gps, que sigue siendo solo
+    // staff). Existe solo para los creditos a los que un admin le activo el GPS
+    // en el modulo; la escriben el admin (al activar) y el robot de GPS.
+    match /ubicacion_cliente/{credId} {
+      allow get: if esStaff() || esMiCredito(credId);
+      allow list: if esStaff();
+      allow create, update, delete: if esStaff();
+    }
+    // pedidos_gps/{credId}: el boton "Actualizar ubicacion" del cliente. Solo el
+    // dueno del credito, solo si su GPS esta activo, y como maximo UNA vez por
+    // hora: lo controla esta regla, no la pagina. El robot lo lee y busca la
+    // posicion. Solo guarda la hora del pedido.
+    match /pedidos_gps/{credId} {
+      allow get: if esStaff() || esMiCredito(credId);
+      allow list: if esStaff();
+      allow create: if request.resource.data.keys().hasOnly(['pedidoEn'])
+        && request.resource.data.pedidoEn == request.time
+        && (esStaff() || (esMiCredito(credId)
+              && exists(/databases/$(database)/documents/ubicacion_cliente/$(credId))));
+      allow update: if request.resource.data.keys().hasOnly(['pedidoEn'])
+        && request.resource.data.pedidoEn == request.time
+        && (esStaff() || (esMiCredito(credId)
+              && exists(/databases/$(database)/documents/ubicacion_cliente/$(credId))
+              && request.time > resource.data.pedidoEn + duration.value(1, 'h')));
+      allow delete: if esAdmin();
+    }
+
     // Contadores de numeracion (creditos, motos, clientes). El numero se reserva
     // dentro de una transaccion para que dos vendedores nunca reciban el mismo.
     // Solo pueden SUBIR: un contador que retrocede vuelve a entregar numeros ya

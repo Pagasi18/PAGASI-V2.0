@@ -1,0 +1,27 @@
+name: Probar reglas de Firestore (emulador)
+
+# Corre las reglas del repo (firestore.rules) en el emulador oficial de
+# Firebase y las prueba. No toca la base real ni publica nada. Solo a mano.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Instalar herramientas de prueba
+        run: npm install --no-save --no-audit --no-fund firebase-tools@13 @firebase/rules-unit-testing@3 firebase@10
+      - name: Probar reglas del GPS en Mi cuenta
+        run: npx firebase emulators:exec --config tests/reglas/firebase.json --only firestore --project demo-pagasi "node tests/reglas/t_reglas_gps_cliente.js"
