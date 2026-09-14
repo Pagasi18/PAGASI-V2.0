@@ -1,19 +1,29 @@
-// Busca la direccion del Worker de Cloudflare (la del webhook del bot de
-// Telegram), revisa que tenga la ruta /gps-refresco y, SOLO con GUARDAR=true,
-// la guarda en config/gps.workerUrl. Sin esa direccion, el boton de refresco
-// del modulo GPS y el de Mi cuenta esperan al barrido de cada hora.
+// Busca la direccion del Worker de Cloudflare, revisa que tenga la ruta
+// /gps-refresco y, SOLO con GUARDAR=true, la guarda en config/gps.workerUrl.
+// La direccion sale del secreto WORKER_URL o, si no hay, del webhook del bot
+// de Telegram. Sin esa direccion, el boton de refresco del modulo GPS y el de
+// Mi cuenta esperan al barrido.
 // El log de GitHub es publico: la direccion no se imprime.
 (async () => {
-  const tok = process.env.TELEGRAM_TOKEN;
-  if (!tok) { console.log('RESULTADO ERROR: falta TELEGRAM_TOKEN'); process.exit(1); }
-
-  const info = await fetch('https://api.telegram.org/bot' + tok + '/getWebhookInfo').then(r => r.json());
-  const url = (info && info.result && info.result.url) || '';
-  if (!url) { console.log('RESULTADO SIN_WEBHOOK: el bot de Telegram no tiene webhook, no hay Worker a la vista'); return; }
+  let url = String(process.env.WORKER_URL || '').trim();
+  let fuente = 'secreto WORKER_URL';
+  if (url) {
+    if (!/^https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev\/?$/i.test(url)) {
+      console.log('RESULTADO ERROR: WORKER_URL no es una direccion de Cloudflare Workers (https://nombre.cuenta.workers.dev)');
+      process.exit(1);
+    }
+  } else {
+    const tok = process.env.TELEGRAM_TOKEN;
+    if (!tok) { console.log('RESULTADO ERROR: no hay WORKER_URL ni TELEGRAM_TOKEN'); process.exit(1); }
+    const info = await fetch('https://api.telegram.org/bot' + tok + '/getWebhookInfo').then(r => r.json());
+    url = (info && info.result && info.result.url) || '';
+    fuente = 'webhook de Telegram';
+    if (!url) { console.log('RESULTADO SIN_WEBHOOK: el bot de Telegram no tiene webhook y no hay secreto WORKER_URL'); return; }
+    console.log('Telegram reporta errores recientes: ' + (info.result.last_error_message ? 'si' : 'no'));
+  }
   const base = new URL(url).origin;
-  const cloudflare = new URL(url).hostname.endsWith('.workers.dev');
-  console.log('Webhook del bot: ' + (cloudflare ? 'Cloudflare (*.workers.dev)' : 'otro dominio')
-    + ' · Telegram reporta errores recientes: ' + (info.result.last_error_message ? 'si' : 'no'));
+  console.log('Direccion tomada de: ' + fuente + ' · '
+    + (new URL(url).hostname.endsWith('.workers.dev') ? 'Cloudflare (*.workers.dev)' : 'otro dominio'));
 
   // GET no dispara nada: la raiz responde "Bot de Pagasi activo." y la ruta
   // /gps-refresco, si esta publicada, responde 405 (solo acepta POST).
@@ -28,7 +38,8 @@
   const db = new Firestore({ projectId: 'pagasi-v2' });
   const ref = db.collection('config').doc('gps');
   const antes = ((await ref.get()).data() || {}).workerUrl || '';
-  if (antes) { console.log('RESULTADO YA_ESTABA: config/gps.workerUrl ya tenia valor, no se toco'); return; }
+  if (antes === base) { console.log('RESULTADO YA_ESTABA: config/gps.workerUrl ya tenia esta direccion'); return; }
+  if (antes) { console.log('RESULTADO YA_ESTABA_OTRA: config/gps.workerUrl tenia otra direccion, no se toco'); return; }
   await ref.set({ workerUrl: base }, { merge: true });
   const despues = ((await ref.get()).data() || {}).workerUrl || '';
   console.log(despues === base ? 'RESULTADO GUARDADO: config/gps.workerUrl listo' : 'RESULTADO ERROR: no quedo guardado');

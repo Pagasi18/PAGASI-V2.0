@@ -1188,16 +1188,21 @@ function actualizarGps(credId){
     return;
   }
   if(btn){ btn.disabled = true; btn.textContent = 'Buscando tu moto...'; }
-  if(nota) nota.textContent = 'Esto tarda más o menos un minuto. Deja esta página abierta.';
+  if(nota) nota.textContent = 'Pidiendo la ubicación...';
   var ref = db.collection('pedidos_gps').doc(String(credId));
   ref.set({ pedidoEn: firebase.firestore.FieldValue.serverTimestamp() })
     .then(function(){ return ref.get(); })
     .then(function(p){
       var ms = (p && p.exists) ? msDeFecha(p.data().pedidoEn) : 0;
       S.gpsPedidoPorCred[credId] = ms || Date.now();
-      if(f.workerUrl){
-        fetch(String(f.workerUrl).replace(/\/+$/, '') + '/gps-refresco', { method: 'POST' }).catch(function(){});
+      if(!f.workerUrl){
+        // Sin el Worker el robot no se despierta al momento: toma el pedido en su proxima vuelta
+        if(btn){ btn.textContent = 'Actualizar ubicación'; btn.disabled = true; }
+        if(nota) nota.textContent = 'Listo, pedimos la ubicación de tu moto. Se actualiza en las próximas horas: vuelve a mirar más tarde.';
+        return;
       }
+      fetch(String(f.workerUrl).replace(/\/+$/, '') + '/gps-refresco', { method: 'POST' }).catch(function(){});
+      if(nota) nota.textContent = 'Esto tarda más o menos un minuto. Deja esta página abierta.';
       esperarGps(credId, S.gpsPedidoPorCred[credId]);
     })
     .catch(function(e){

@@ -168,14 +168,25 @@ const correrTimers = async () => { const t = timers.splice(0); for (const fn of 
   // El robot no responde: se rinde a los ~3 minutos sin quedarse pegado
   reiniciar();
   S.creditos = [{ id: 'CRED-523' }];
-  docs['ubicacion_cliente/CRED-523'] = { credId: 'CRED-523', lat: 10.48, lng: -66.9, ultimaSenal: '2026-09-14 15:00:00', revisado: new Date(AHORA - 2 * HORA).toISOString(), workerUrl: '' };
+  docs['ubicacion_cliente/CRED-523'] = { credId: 'CRED-523', lat: 10.48, lng: -66.9, ultimaSenal: '2026-09-14 15:00:00', revisado: new Date(AHORA - 2 * HORA).toISOString(), workerUrl: 'https://w.example' };
   await API.cargarGpsCliente();
   API.actualizarGps('CRED-523'); await vaciar();
-  ok('sin dirección del Worker: no llama a nada pero igual espera', fetches.length === 0 && timers.length === 1);
+  ok('con Worker: avisa y espera la respuesta del robot', fetches.length === 1 && timers.length === 1);
   let vueltas = 0;
   while (timers.length && vueltas < 100) { vueltas++; await correrTimers(); }
   ok('se rinde tras 36 miradas (unos 3 minutos)', lecturas.filter(k => k === 'ubicacion_cliente/CRED-523').length === 1 + 36);
   ok('y lo dice sin asustar', $('gps-CRED-523-nota').textContent.indexOf('Tu GPS no respondió todavía') === 0 && $('gps-CRED-523-btn').textContent === 'Actualizar ubicación');
+
+  // Sin dirección del Worker (el robot no se despierta al momento): no promete "un minuto"
+  reiniciar();
+  S.creditos = [{ id: 'CRED-523' }];
+  docs['ubicacion_cliente/CRED-523'] = { credId: 'CRED-523', lat: 10.48, lng: -66.9, ultimaSenal: '2026-09-14 15:00:00', revisado: new Date(AHORA - 2 * HORA).toISOString(), workerUrl: '' };
+  await API.cargarGpsCliente();
+  API.actualizarGps('CRED-523'); await vaciar();
+  ok('sin Worker: el pedido igual queda guardado para el robot', escrituras.length === 1 && escrituras[0].ruta === 'pedidos_gps/CRED-523');
+  ok('sin Worker: no llama a nada ni se queda esperando', fetches.length === 0 && timers.length === 0);
+  ok('sin Worker: dice la verdad (se actualiza en las próximas horas)', $('gps-CRED-523-nota').textContent.indexOf('próximas horas') > -1 && $('gps-CRED-523-nota').textContent.indexOf('minuto') === -1);
+  ok('sin Worker: el botón vuelve a su texto, apagado por una hora', $('gps-CRED-523-btn').textContent === 'Actualizar ubicación' && $('gps-CRED-523-btn').disabled === true);
 
   console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');
   if (fail) process.exitCode = 1;

@@ -1,9 +1,10 @@
-name: Worker de GPS (buscar su direccion)
+name: Worker de GPS (revisar y guardar su direccion)
 
-# A mano. Pregunta a Telegram a donde manda los mensajes del bot (la direccion
-# del Worker de Cloudflare), revisa que el Worker tenga /gps-refresco con un GET
-# que no dispara nada y, SOLO si guardar=true y con el OK de Adam, la escribe
-# en config/gps.workerUrl. El log es publico: la direccion no se imprime.
+# A mano. Toma la direccion del Worker de Cloudflare del secreto WORKER_URL (o,
+# si no hay, del webhook del bot de Telegram), revisa con un GET que no dispara
+# nada que el Worker tenga /gps-refresco y, SOLO si guardar=true y con el OK de
+# Adam, la escribe en config/gps.workerUrl. El log es publico: la direccion no
+# se imprime.
 on:
   workflow_dispatch:
     inputs:
@@ -33,6 +34,7 @@ jobs:
         run: npm install --omit=dev
       - working-directory: bot
         env:
+          WORKER_URL: ${{ secrets.WORKER_URL }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           GUARDAR: ${{ inputs.guardar }}
         run: node worker-direccion.js
