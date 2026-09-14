@@ -349,7 +349,9 @@ function getDashData(tipo, periodo){
   } else {
     var credsData = _concFiltrar(S.creds||[]);
     if(!credsData.length) credsData = S.creds||[];
-    credsData.filter(function(c){ return !c.eliminado; }).forEach(function(c){
+    // Los cancelados no cuentan: esa venta se anulo (igual que Finanzas y el grafico de concesionarios).
+    // Un recuperado si cuenta el dia que se otorgo. (Adam, 14-sep-2026: marcaba 10 con 9 en la lista)
+    credsData.filter(function(c){ return !c.eliminado && c.estado!=='cancelado'; }).forEach(function(c){
       var f = toDateStr(c.fecha || c.creadoEn || c.fechaCreacion || c.createdAt || '');
       if(f) buckets.forEach(function(b){ if(matchFn(f,b)){ b.count++; b.total+=parseFloat(c.total||c.precio||0); } });
     });
