@@ -4,36 +4,35 @@
 
    Adam (11-sep-2026): "necesito avisarles a los clientes 3 dias antes de que
    se venza la cuota, y tambien el dia que se vence. Mas de mil cuotas al mes."
-   "Son 2 cobradoras, Samantha y Jofanny, reparte parejo." Y eligio incluir
-   tambien a los ATRASADOS.
+   Adam (14-sep-2026): "la cobranza se divide en 2: preventiva, los que no
+   deben todavia, 3 dias antes de la cuota se le recuerda; y la critica, que
+   es desde el dia 1 en que el cliente entra en mora." Eligio (y corrigio:
+   "es al reves... Samantha preventiva"):
+     - PREVENTIVA (Samantha): vence en 3 dias y vence HOY.
+     - CRITICA (Jofanny): todos los que estan en mora desde el dia 1, en una
+       sola lista, los de mas dias primero.
 
    Corre en GitHub Actions todas las mananas (7:46 am Venezuela). Lee Firestore
-   (SOLO lectura) y, con el MISMO motor de cuotas del admin, arma para el grupo
-   de Telegram "Cobranza Pagasi":
-     1. un resumen con cuantos avisos le tocan a cada cobradora, y
-     2. la lista de CADA cobradora, con un boton de WhatsApp por cliente (el
+   (SOLO lectura) y, con el MISMO motor de cuotas del admin, arma para Telegram:
+     1. un resumen del dia, y
+     2. la lista de cada cobradora, con un boton de WhatsApp por cliente (el
         mensaje ya va escrito; la cobradora solo toca el enlace y le da enviar):
-          🔴 vence HOY          → plantilla "Recordatorio cuota"
-          🟡 vence en 3 DIAS    → plantilla "Recordatorio cuota"
-          ⏰ ATRASADOS 1-30 dias → plantilla "Aviso de mora"
-          🚨 CRITICOS +30 dias   → plantilla "Aviso urgente de mora"
+          🟢 PREVENTIVA · vence HOY o en 3 dias → plantilla "Recordatorio cuota"
+          🔴 CRITICA    · en mora 1-30 dias     → plantilla "Aviso de mora"
+                        · en mora +30 dias      → plantilla "Aviso urgente de mora"
    No escribe nada en la base.
 
    Mismas reglas que la pantalla de Cobranza (modules/pagos.js):
-   - Atrasado = la proxima cuota sin pagar ya vencio (lo que vence HOY no es
+   - En mora = la proxima cuota sin pagar ya vencio (lo que vence HOY no es
      mora) o el credito tiene c.mora > 0. Dias = el mayor de los dos.
-   - Criticos = mas de 30 dias de atraso (su propia seccion).
    - Los que tienen ACUERDO de pago (fechaCompromiso) y los ILOCALIZABLES no
      van: cada uno tiene su propia gestion.
 
-   Reparto: FIJO por cliente, para que dos cobradoras nunca le escriban al
-   mismo cliente y el cliente hable siempre con la misma. La cobradora sale
-   del numero del PRIMER credito del cliente (contando tambien los
-   eliminados, para que no cambie nunca): con 2 cobradoras, par → la
-   primera, impar → la segunda. Como los creditos se crean seguidos, la
-   carga de cada dia queda pareja.
+   Un cliente en mora lo lleva SOLO la cobradora de critica: si ademas le vence
+   otra cuota (otro credito), ese recordatorio va en la lista de critica, para
+   que dos cobradoras nunca le escriban al mismo cliente.
 
-   - Clientes sin telefono utilizable: aparte, en la lista de su cobradora.
+   - Clientes sin telefono utilizable: aparte, al final de la lista que les toca.
    - El log de Actions es publico: aqui NUNCA se imprimen nombres, telefonos
      ni enlaces; solo cantidades e ids de credito.
 
@@ -42,9 +41,8 @@
      - TELEGRAM_CHAT_ID_AVISOS   : el grupo "Cobranza Pagasi". Si no esta, usa
                                    TELEGRAM_CHAT_ID y si tampoco, los chats por
                                    defecto del resumen diario.
-     - COBRADORAS                : opcional, nombres separados por coma
-                                   (por defecto "Samantha,Jofanny"). El orden
-                                   importa: cambiarlo cambia a quien le toca.
+     - COBRADORA_PREVENTIVA      : opcional (por defecto "Samantha")
+     - COBRADORA_CRITICA         : opcional (por defecto "Jofanny")
    Con --dry calcula y reporta cantidades, sin mandar nada.
    ══════════════════════════════════════════════════════════════════════════ */
 
@@ -52,9 +50,11 @@ const Ledger = require('../logic/credito-ledger.js');
 
 const DIAS_GRACIA = 5;
 const DIAS_AVISO = 3;                 // el aviso anticipado: 3 dias antes
-const DIAS_CRITICO = 30;              // mas de esto: seccion de criticos (como en Cobranza)
+const DIAS_CRITICO = 30;              // mas de esto: aviso urgente (como en Cobranza)
 const TELEGRAM_MAX = 3500;            // margen bajo el limite real de 4096
-const COBRADORAS_DEFECTO = ['Samantha', 'Jofanny'];
+const PREVENTIVA_DEFECTO = 'Samantha';
+const CRITICA_DEFECTO = 'Jofanny';
+const COBRADORAS_DEFECTO = ['Samantha', 'Jofanny'];   // del reparto anterior (ver repartidor)
 
 /* ── Fechas ancladas a Venezuela (Actions corre en UTC) ── */
 function fechasDe(hoyISO) {
@@ -146,7 +146,7 @@ function mensajeCliente(o) {
   return mensajeRecordatorio(o);
 }
 
-/* ── Reparto fijo por cliente ── */
+/* ── Quien es quien ── */
 function claveCliente(c) {
   if (c && c.clienteId != null && String(c.clienteId) !== '') return 'id:' + c.clienteId;
   return 'nom:' + String((c && c.cli) || '').trim().toUpperCase();
@@ -155,8 +155,9 @@ function numeroCredito(id) {
   const m = String(id || '').match(/(\d+)/);
   return m ? parseInt(m[1], 10) : 0;
 }
-// Devuelve una funcion credito → cobradora. Usa TODOS los creditos (tambien
-// eliminados y completados) para ubicar el primero de cada cliente.
+// Reparto anterior (11-sep): fijo por cliente, par/impar del PRIMER credito.
+// Desde el 14-sep el reparto es por tipo de cobranza (ver duenas); se deja por
+// si se vuelve a usar.
 function repartidor(creds, cobradoras) {
   const lista = (cobradoras && cobradoras.length) ? cobradoras : COBRADORAS_DEFECTO;
   const primero = {};
@@ -167,12 +168,19 @@ function repartidor(creds, cobradoras) {
   });
   return c => lista[(primero[claveCliente(c)] || 0) % lista.length];
 }
+// Quien trabaja cada tipo de cobranza
+function duenas(opciones) {
+  const o = (opciones && !Array.isArray(opciones)) ? opciones : {};
+  return {
+    preventiva: String(o.preventiva || '').trim() || PREVENTIVA_DEFECTO,
+    critica: String(o.critica || '').trim() || CRITICA_DEFECTO
+  };
+}
 
 /* ── Que avisos tocan hoy. Puro: recibe los datos, devuelve las listas. ── */
-function calcularAvisos(creds, pagos, clientes, hoyISO, cobradoras) {
-  const lista = (cobradoras && cobradoras.length) ? cobradoras : COBRADORAS_DEFECTO;
+function calcularAvisos(creds, pagos, clientes, hoyISO, opciones) {
+  const quien = duenas(opciones);
   const { hoy, en3 } = fechasDe(hoyISO);
-  const dueno = repartidor(creds, lista);
   const pagosByCred = {};
   pagos.forEach(p => { (pagosByCred[p.cred] = pagosByCred[p.cred] || []).push(p); });
   const cliPorId = {}, cliPorNombre = {};
@@ -195,16 +203,16 @@ function calcularAvisos(creds, pagos, clientes, hoyISO, cobradoras) {
     const cli = (c.clienteId != null && cliPorId[String(c.clienteId)]) || cliPorNombre[c.cli] || {};
     const base = {
       cred: c.id,
+      clave: claveCliente(c),
       nombre: cli.nombre || c.cli || 'Cliente',
       tel: telWhatsapp(cli.tel),
       numero: prox.numero,
       totalCuotas: cuotas.length,
       fechaVence: prox.fechaVence,
-      modelo: c.modelo || '',
-      cobradora: dueno(c)
+      modelo: c.modelo || ''
     };
 
-    // ── ¿Atrasado? (misma definicion que Cobranza) ──
+    // ── ¿En mora? (misma definicion que Cobranza) → CRITICA ──
     const moraCampo = parseInt(c.mora, 10) || 0;
     const diasLedger = prox.fechaVence < hoy ? diasEntre(prox.fechaVence, hoy) : 0;
     if (diasLedger > 0 || moraCampo > 0) {
@@ -216,95 +224,86 @@ function calcularAvisos(creds, pagos, clientes, hoyISO, cobradoras) {
         tipo: dias > DIAS_CRITICO ? 'critico' : 'atrasado',
         dias,
         monto: vencido > 0.01 ? vencido : (Number(prox.saldo) || 0),
-        hoyMismo: false
+        hoyMismo: false,
+        cobradora: quien.critica
       });
       if (!aviso.tel) { sinTelefono.push(aviso); return; }
       (aviso.tipo === 'critico' ? criticos : atrasados).push(aviso);
       return;
     }
 
-    // ── Recordatorio: vence hoy o en 3 dias ──
+    // ── PREVENTIVA: vence hoy o en 3 dias ──
     if (prox.fechaVence !== hoy && prox.fechaVence !== en3) return;
     const hoyMismo = prox.fechaVence === hoy;
     const aviso = Object.assign(base, {
       tipo: hoyMismo ? 'hoy' : 'en3',
       dias: 0,
       monto: Number(prox.saldo) || 0,          // lo que falta de esa cuota (respeta abonos)
-      hoyMismo
+      hoyMismo,
+      cobradora: quien.preventiva
     });
     if (!aviso.tel) { sinTelefono.push(aviso); return; }
     (hoyMismo ? vencenHoy : vencenEn3).push(aviso);
+  });
+
+  // Un cliente en mora lo lleva solo la de critica: sus recordatorios tambien
+  const enMora = new Set([...atrasados, ...criticos, ...sinTelefono.filter(a => a.dias > 0)].map(a => a.clave));
+  [...vencenHoy, ...vencenEn3, ...sinTelefono.filter(a => a.dias === 0)].forEach(a => {
+    if (enMora.has(a.clave)) { a.cobradora = quien.critica; a.clienteEnMora = true; }
   });
 
   const porNombre = (a, b) => a.nombre.localeCompare(b.nombre);
   const porDias = (a, b) => (b.dias - a.dias) || porNombre(a, b);
   vencenHoy.sort(porNombre); vencenEn3.sort(porNombre); sinTelefono.sort(porNombre);
   atrasados.sort(porDias); criticos.sort(porDias);
-  return { hoy, en3, cobradoras: lista, vencenHoy, vencenEn3, atrasados, criticos, sinTelefono };
+  const critica = [...atrasados, ...criticos].sort(porDias);   // una sola lista desde el dia 1
+  return { hoy, en3, duenas: quien, vencenHoy, vencenEn3, atrasados, criticos, critica, sinTelefono };
 }
 
-/* ── Los mensajes de Telegram (HTML): resumen + una lista por cobradora ── */
+/* ── Los mensajes de Telegram (HTML): resumen + preventiva + critica ── */
 function armarMensajes(r) {
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const money = n => '$' + Math.round(Number(n) || 0).toLocaleString('es-VE');
   const total = arr => arr.reduce((s, a) => s + a.monto, 0);
-  const cobradoras = (r.cobradoras && r.cobradoras.length) ? r.cobradoras : COBRADORAS_DEFECTO;
-  const atrasados = r.atrasados || [], criticos = r.criticos || [];
-  const de = (arr, nom) => arr.filter(a => a.cobradora === nom);
+  const quien = r.duenas || duenas();
+  const critica = r.critica || [...(r.atrasados || []), ...(r.criticos || [])];
   const enlace = (a, texto) => '<a href="https://wa.me/' + a.tel + '?text=' + encodeURIComponent(mensajeCliente(a)) + '">' + texto + '</a>';
   const lineaAviso = a => '• ' + esc(a.nombre) + ' — ' + esc(a.cred) + ' · ' + money(a.monto) + ' · ' + enlace(a, '📲 Enviar aviso');
   const lineaMora = a => '• ' + esc(a.nombre) + ' — ' + esc(a.cred) + ' · ' + plural(a.dias, 'día', 'días') + ' · ' + money(a.monto)
     + ' · ' + enlace(a, a.tipo === 'critico' ? '🚨 Aviso urgente' : '📲 Enviar cobro');
   const etiquetaSinTel = a => a.tipo === 'hoy' ? ' (vence HOY)' : a.tipo === 'en3' ? ' (vence en ' + DIAS_AVISO + ' días)'
     : ' (' + plural(a.dias, 'día', 'días') + ' de atraso)';
+
+  // Cada aviso va en UNA lista: la de su tipo, salvo los recordatorios de clientes en mora
+  const prevHoy = r.vencenHoy.filter(a => !a.clienteEnMora);
+  const prevEn3 = r.vencenEn3.filter(a => !a.clienteEnMora);
+  const tambien = [...r.vencenHoy, ...r.vencenEn3].filter(a => a.clienteEnMora);
+  const sinPrev = r.sinTelefono.filter(a => a.dias === 0 && !a.clienteEnMora);
+  const sinCrit = r.sinTelefono.filter(a => a.dias > 0 || a.clienteEnMora);
+  const nPrev = prevHoy.length + prevEn3.length + sinPrev.length;
+  const nCrit = critica.length + tambien.length + sinCrit.length;
+  const urgentes = critica.filter(a => a.tipo === 'critico').length;
   const mensajes = [];
 
   // 1) Resumen del dia
   const res = [];
   res.push('<b>📣 Cobranza del día — ' + lindo(r.hoy) + '</b>');
-  res.push('🔴 Vencen HOY: <b>' + r.vencenHoy.length + '</b> · ' + money(total(r.vencenHoy)));
-  res.push('🟡 Vencen el ' + lindo(r.en3) + ' (en ' + DIAS_AVISO + ' días): <b>' + r.vencenEn3.length + '</b> · ' + money(total(r.vencenEn3)));
-  res.push('⏰ Atrasados (1–' + DIAS_CRITICO + ' días): <b>' + atrasados.length + '</b> · ' + money(total(atrasados)) + ' vencido');
-  res.push('🚨 Críticos (+' + DIAS_CRITICO + ' días): <b>' + criticos.length + '</b> · ' + money(total(criticos)) + ' vencido');
   res.push('');
-  cobradoras.forEach(nom => {
-    const s = de(r.sinTelefono, nom).length;
-    res.push('👩‍💼 <b>' + esc(nom) + '</b>: ' + de(r.vencenHoy, nom).length + ' hoy · ' + de(r.vencenEn3, nom).length + ' en ' + DIAS_AVISO + ' días · '
-      + plural(de(atrasados, nom).length, 'atrasado', 'atrasados') + ' · ' + plural(de(criticos, nom).length, 'crítico', 'críticos')
-      + (s ? ' · ' + s + ' sin teléfono' : ''));
-  });
+  res.push('🟢 <b>PREVENTIVA</b> · ' + esc(quien.preventiva) + ': <b>' + nPrev + '</b> aviso' + (nPrev === 1 ? '' : 's') + ' · ' + money(total([...prevHoy, ...prevEn3])));
+  res.push('   Vencen HOY: <b>' + prevHoy.length + '</b> · Vencen el ' + lindo(r.en3) + ' (en ' + DIAS_AVISO + ' días): <b>' + prevEn3.length + '</b>');
+  res.push('🔴 <b>CRÍTICA</b> · ' + esc(quien.critica) + ': <b>' + critica.length + '</b> en mora · ' + money(total(critica)) + ' vencido'
+    + (urgentes ? ' · ' + urgentes + ' con +' + DIAS_CRITICO + ' días' : ''));
+  if (tambien.length) res.push('   + ' + plural(tambien.length, 'cuota que también vence', 'cuotas que también vencen') + ' a clientes en mora');
+  const sinTotal = sinPrev.length + sinCrit.length;
+  if (sinTotal) res.push('⚠ Sin teléfono útil: ' + sinTotal + ' (van al final de cada lista)');
   res.push('');
-  res.push('<i>Cada una trabaja SOLO su lista (abajo). A cada cliente le toca siempre la misma cobradora.</i>');
+  res.push('<i>' + esc(quien.preventiva) + ' trabaja la preventiva y ' + esc(quien.critica) + ' la crítica. Un cliente en mora lo lleva solo ' + esc(quien.critica) + '.</i>');
   mensajes.push(res.join('\n'));
 
-  // 2) La lista de cada cobradora, troceada si hace falta
-  cobradoras.forEach(nom => {
-    const hoyL = de(r.vencenHoy, nom), en3L = de(r.vencenEn3, nom), atrL = de(atrasados, nom), criL = de(criticos, nom), sinL = de(r.sinTelefono, nom);
-    const n = hoyL.length + en3L.length + atrL.length + criL.length + sinL.length;
-    const cabeza = '<b>👩‍💼 ' + esc(String(nom).toUpperCase());
-    const b = [cabeza + ' — ' + n + ' aviso' + (n === 1 ? '' : 's') + '</b>', ''];
-    b.push('<b>🔴 VENCEN HOY (' + hoyL.length + ')</b>');
-    if (hoyL.length) hoyL.forEach(a => b.push(lineaAviso(a))); else b.push('— Ninguna 🎉');
-    b.push('');
-    b.push('<b>🟡 VENCEN EL ' + lindo(r.en3) + ' (' + en3L.length + ')</b>');
-    if (en3L.length) en3L.forEach(a => b.push(lineaAviso(a))); else b.push('— Ninguna');
-    b.push('');
-    b.push('<b>⏰ ATRASADOS 1–' + DIAS_CRITICO + ' DÍAS (' + atrL.length + ')</b>');
-    if (atrL.length) atrL.forEach(a => b.push(lineaMora(a))); else b.push('— Ninguno 🎉');
-    b.push('');
-    b.push('<b>🚨 CRÍTICOS +' + DIAS_CRITICO + ' DÍAS (' + criL.length + ')</b>');
-    if (criL.length) criL.forEach(a => b.push(lineaMora(a))); else b.push('— Ninguno');
-    if (atrL.length || criL.length) b.push('<i>Los atrasados salen cada día hasta que paguen: no hace falta escribirles a diario.</i>');
-    if (sinL.length) {
-      b.push('');
-      b.push('<b>⚠ SIN TELÉFONO ÚTIL (' + sinL.length + ')</b> — corregir en Clientes:');
-      sinL.forEach(a => b.push('• ' + esc(a.nombre) + ' — ' + esc(a.cred) + etiquetaSinTel(a)));
-    }
-    b.push('');
-    b.push('<i>Toca el enlace: WhatsApp se abre con el mensaje listo, solo dale enviar.</i>');
-
+  // Troceo: ninguna parte pasa el limite y las continuaciones dicen de quien son
+  const trocear = (cabeza, lineas) => {
     let actual = '';
-    b.forEach(x => {
+    lineas.forEach(x => {
       const cand = actual ? actual + '\n' + x : x;
       if (cand.length > TELEGRAM_MAX && actual) {
         mensajes.push(actual);
@@ -312,7 +311,47 @@ function armarMensajes(r) {
       } else actual = cand;
     });
     if (actual) mensajes.push(actual);
-  });
+  };
+
+  // 2) PREVENTIVA
+  const cabP = '<b>🟢 PREVENTIVA — ' + esc(String(quien.preventiva).toUpperCase());
+  const bP = [cabP + ' — ' + plural(nPrev, 'aviso', 'avisos') + '</b>', ''];
+  bP.push('<b>📅 VENCEN HOY (' + prevHoy.length + ')</b>');
+  if (prevHoy.length) prevHoy.forEach(a => bP.push(lineaAviso(a))); else bP.push('— Ninguna 🎉');
+  bP.push('');
+  bP.push('<b>🗓 VENCEN EL ' + lindo(r.en3) + ' (' + prevEn3.length + ')</b>');
+  if (prevEn3.length) prevEn3.forEach(a => bP.push(lineaAviso(a))); else bP.push('— Ninguna');
+  if (sinPrev.length) {
+    bP.push('');
+    bP.push('<b>⚠ SIN TELÉFONO ÚTIL (' + sinPrev.length + ')</b> — corregir en Clientes:');
+    sinPrev.forEach(a => bP.push('• ' + esc(a.nombre) + ' — ' + esc(a.cred) + etiquetaSinTel(a)));
+  }
+  bP.push('');
+  bP.push('<i>Toca el enlace: WhatsApp se abre con el mensaje listo, solo dale enviar.</i>');
+  trocear(cabP, bP);
+
+  // 3) CRITICA
+  const cabC = '<b>🔴 CRÍTICA — ' + esc(String(quien.critica).toUpperCase());
+  const bC = [cabC + ' — ' + plural(nCrit, 'aviso', 'avisos') + '</b>', ''];
+  bC.push('<b>EN MORA DESDE EL DÍA 1 (' + critica.length + ')</b> — los de más días primero');
+  if (critica.length) critica.forEach(a => bC.push(lineaMora(a))); else bC.push('— Ninguno 🎉');
+  if (tambien.length) {
+    bC.push('');
+    bC.push('<b>📅 TAMBIÉN LES VENCE (' + tambien.length + ')</b> — clientes que ya están en mora:');
+    tambien.forEach(a => bC.push(lineaAviso(a) + (a.hoyMismo ? ' (HOY)' : ' (' + lindo(a.fechaVence) + ')')));
+  }
+  if (sinCrit.length) {
+    bC.push('');
+    bC.push('<b>⚠ SIN TELÉFONO ÚTIL (' + sinCrit.length + ')</b> — corregir en Clientes:');
+    sinCrit.forEach(a => bC.push('• ' + esc(a.nombre) + ' — ' + esc(a.cred) + etiquetaSinTel(a)));
+  }
+  if (critica.length) {
+    bC.push('');
+    bC.push('<i>Los que están en mora salen cada día hasta que paguen: no hace falta escribirles a diario.</i>');
+  }
+  bC.push('');
+  bC.push('<i>Toca el enlace: WhatsApp se abre con el mensaje listo, solo dale enviar.</i>');
+  trocear(cabC, bC);
   return mensajes;
 }
 
@@ -344,7 +383,6 @@ async function main() {
   const CHATS = PRUEBA ? [PRUEBA] : (process.env.TELEGRAM_CHAT_ID_AVISOS || process.env.TELEGRAM_CHAT_ID || '8571975984,1280343056')
     .split(',').map(s => s.trim()).filter(Boolean);
   if (PRUEBA) console.log('Envio de PRUEBA a un solo chat');
-  const COBRADORAS = (process.env.COBRADORAS || '').split(',').map(s => s.trim()).filter(Boolean);
   if (!DRY && !TOKEN) { console.error('Falta el secreto TELEGRAM_TOKEN.'); process.exit(1); }
 
   const { Firestore } = require('@google-cloud/firestore');
@@ -360,19 +398,21 @@ async function main() {
   const pagos = pagoSnap.docs.map(d => d.data()).filter(p => p && !p.eliminado && (p.estado || 'confirmado') === 'confirmado');
   const clientes = cliSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-  const r = calcularAvisos(creds, pagos, clientes, hoyISO, COBRADORAS);
+  const r = calcularAvisos(creds, pagos, clientes, hoyISO,
+    { preventiva: process.env.COBRADORA_PREVENTIVA, critica: process.env.COBRADORA_CRITICA });
   const mensajes = armarMensajes(r);
 
   // Log SIN datos personales (los logs de Actions son publicos): ni clientes ni nombres de cobradoras
   const ids = arr => arr.map(a => a.cred).join(', ');
+  const vaACritica = a => a.dias > 0 || a.clienteEnMora;
+  const todos = [...r.vencenHoy, ...r.vencenEn3, ...r.critica, ...r.sinTelefono];
   console.log('Base: ' + creds.length + ' creditos · ' + pagos.length + ' pagos · hoy ' + r.hoy + ' · aviso para ' + r.en3);
   console.log('  vencen HOY: ' + r.vencenHoy.length + '  (' + ids(r.vencenHoy) + ')');
   console.log('  vencen en ' + DIAS_AVISO + ' dias: ' + r.vencenEn3.length + '  (' + ids(r.vencenEn3) + ')');
-  console.log('  atrasados 1-' + DIAS_CRITICO + ': ' + r.atrasados.length + '  (' + ids(r.atrasados) + ')');
-  console.log('  criticos +' + DIAS_CRITICO + ': ' + r.criticos.length + '  (' + ids(r.criticos) + ')');
+  console.log('  en mora (critica): ' + r.critica.length + '  (' + ids(r.critica) + ') · de ellos +' + DIAS_CRITICO + ' dias: ' + r.criticos.length);
+  console.log('  recordatorios de clientes en mora (van a critica): ' + todos.filter(a => a.dias === 0 && a.clienteEnMora).length);
   console.log('  sin telefono util: ' + r.sinTelefono.length + '  (' + ids(r.sinTelefono) + ')');
-  const todos = [...r.vencenHoy, ...r.vencenEn3, ...r.atrasados, ...r.criticos, ...r.sinTelefono];
-  r.cobradoras.forEach((nom, i) => console.log('  cobradora ' + (i + 1) + ': ' + todos.filter(a => a.cobradora === nom).length + ' avisos'));
+  console.log('  lista preventiva: ' + todos.filter(a => !vaACritica(a)).length + ' avisos · lista critica: ' + todos.filter(vaACritica).length + ' avisos');
   console.log('  mensajes de Telegram: ' + mensajes.length);
 
   const resumen = 'hoy=' + r.vencenHoy.length + ' en3=' + r.vencenEn3.length + ' atrasados=' + r.atrasados.length
@@ -387,5 +427,5 @@ if (require.main === module) {
   main().catch(e => { console.error('ERROR', e.message); process.exit(1); });
 }
 
-module.exports = { calcularAvisos, armarMensajes, mensajeCliente, telWhatsapp, fechasDe, repartidor, claveCliente,
-  DIAS_AVISO, DIAS_CRITICO, TELEGRAM_MAX, COBRADORAS_DEFECTO };
+module.exports = { calcularAvisos, armarMensajes, mensajeCliente, telWhatsapp, fechasDe, repartidor, claveCliente, duenas,
+  DIAS_AVISO, DIAS_CRITICO, TELEGRAM_MAX, PREVENTIVA_DEFECTO, CRITICA_DEFECTO, COBRADORAS_DEFECTO };
