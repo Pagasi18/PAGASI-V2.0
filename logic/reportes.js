@@ -513,13 +513,15 @@ function dfReporte(key, formato){
       var m=parseFloat(p.monto)||0; var c=d.credIdx[p.cred]; var ratio=0;
       if(c){ var pr=d.principal(c), tt=d.totalPI(c); ratio=tt>0?pr/tt:0; }
       var mp=m*ratio, mi=m*(1-ratio); tot+=m; tp+=mp; ti+=mi;
-      // "Recibido en": como se cobro la cuota (Adam, 11-sep-2026). Mismo dato y
-      // mismo nombre que la columna de la pantalla de Pagos.
-      rows.push([p.fecha||'', p.id, p.cred||'', p.cli||'', p.metodo||p.cuenta||'—', m, mp, mi]);
+      // "Recibido en": como se cobro la cuota (Adam, 11-sep-2026). "N° Referencia":
+      // el numero de la transferencia o comprobante (Adam, 14-sep-2026). Mismos datos
+      // y mismos nombres que el formulario de pago. La referencia va como TEXTO para
+      // que no se pierdan los ceros a la izquierda.
+      rows.push([p.fecha||'', p.id, p.cred||'', p.cli||'', p.metodo||p.cuenta||'—', String(p.referencia||'').trim()||'—', m, mp, mi]);
     });
     secciones.push({ titulo:'Detalle de cuotas cobradas ('+d.pagos.length+')',
-      headers:['Fecha','Pago','Crédito','Cliente','Recibido en','Monto','Principal','Interés'],
-      rows:rows, nums:[5,6,7], total:['TOTAL','','','','',tot,tp,ti] });
+      headers:['Fecha','Pago','Crédito','Cliente','Recibido en','N° Referencia','Monto','Principal','Interés'],
+      rows:rows, nums:[6,7,8], total:['TOTAL','','','','','',tot,tp,ti] });
   } else if(key==='mora'){
     secciones.push({ titulo:'Resumen', headers:['Créditos en mora','Balance en mora (P+I)','Intereses por mora'],
       rows:[[d.nMora, d.moraBalance, d.moraInt]], nums:[1,2] });
