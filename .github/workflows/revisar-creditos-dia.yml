@@ -1,0 +1,36 @@
+name: Revisar creditos de un dia (solo lectura)
+
+# A mano. Lista los creditos de un dia con su estado y sus fechas, para cuadrar
+# el grafico del dashboard con la lista de Creditos. Solo lectura; el log es
+# publico: sin nombres, cedulas ni telefonos.
+on:
+  workflow_dispatch:
+    inputs:
+      dia:
+        description: 'Dia a revisar (AAAA-MM-DD)'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: pagasi-v2
+          workload_identity_provider: projects/951911859002/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: firebase-adminsdk-fbsvc@pagasi-v2.iam.gserviceaccount.com
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - working-directory: bot
+        run: npm install --omit=dev
+      - working-directory: bot
+        env:
+          DIA: ${{ inputs.dia }}
+        run: node revisar-creditos-dia.js
