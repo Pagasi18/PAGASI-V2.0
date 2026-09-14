@@ -191,14 +191,47 @@ function horasDesde(utc) {
   return isNaN(d) ? null : Math.max(0, Math.round((Date.now() - d.getTime()) / 3600000));
 }
 
+// ── GPS en Mi cuenta (Adam, 14-sep-2026) ─────────────────────────
+// ¿Algun cliente pidio "Actualizar ubicacion" despues del ultimo barrido?
+// pedidos: [{ id, pedidoMs }] de pedidos_gps (hora del servidor).
+function hayPedidoNuevo(pedidos, ultimoMs) {
+  return (pedidos || []).some(p => Number(p.pedidoMs) > (Number(ultimoMs) || 0));
+}
+
+// Que hacer con las fichas que ve el cliente (ubicacion_cliente/{credId}):
+// se ponen al dia con la ultima posicion conocida del equipo instalado en ese
+// credito, y se borran si ese credito ya no tiene equipo instalado. La ficha
+// es la unica fuente de verdad: existe = un admin se lo activo. La ficha lleva SOLO posicion, hora de la
+// ultima senal, hora de revision y la direccion del boton: nunca la clave,
+// el IMEI ni la linea del equipo.
+function planFichas(fichaIds, instalados, posiciones, ahoraISO, workerUrl) {
+  const porCred = {};
+  (instalados || []).forEach(g => { if (g && g.creditoId) porCred[String(g.creditoId)] = g; });
+  const sets = [], deletes = [];
+  (fichaIds || []).forEach(credId => {
+    const g = porCred[String(credId)];
+    if (!g) { deletes.push(String(credId)); return; }
+    const p = (posiciones && posiciones[g._id]) || g;
+    sets.push({ credId: String(credId), data: {
+      credId: String(credId),
+      lat: typeof p.lat === 'number' ? p.lat : null,
+      lng: typeof p.lng === 'number' ? p.lng : null,
+      ultimaSenal: p.ultimaSenal || '',
+      revisado: ahoraISO,
+      workerUrl: workerUrl || '',
+    }});
+  });
+  return { sets, deletes };
+}
+
 // Exportado para las pruebas; el job solo corre si se invoca directo.
-module.exports = { abrir, horasDesde, numero, HORAS_CAIDO };
+module.exports = { abrir, horasDesde, numero, HORAS_CAIDO, hayPedidoNuevo, planFichas };
 
 // ── Principal ─────────────────────────────────────────────────────
 if (require.main !== module) return;
 
 (async () => {
-  let db = null, instalados = [];
+  let db = null, instalados = [], workerUrl = '';
 
   if (!DRY) {
     const { Firestore } = require('@google-cloud/firestore');
@@ -209,17 +242,28 @@ if (require.main !== module) return;
     // el app, o una vez al dia a la hora del barrido.
     const cfgRef = db.collection('config').doc('gps');
     const cfg = (await cfgRef.get()).data() || {};
+    workerUrl = String(cfg.workerUrl || '');
     const ultimo = cfg.ultimaSync ? new Date(cfg.ultimaSync).getTime() : 0;
     const minutos = ultimo ? Math.round((Date.now() - ultimo) / 60000) : 99999;
 
-    const pidieron = !!cfg.refrescoPedido;
+    // Pedidos de los clientes desde Mi cuenta (boton "Actualizar ubicacion")
+    let pidioCliente = false;
+    try {
+      const pedSnap = await db.collection('pedidos_gps').get();
+      pidioCliente = hayPedidoNuevo(pedSnap.docs.map(d => {
+        const t = d.data().pedidoEn;
+        return { id: d.id, pedidoMs: t && typeof t.toMillis === 'function' ? t.toMillis() : 0 };
+      }), ultimo);
+    } catch (e) { console.log('WARN pedidos de Mi cuenta: ' + e.message); }
+
+    const pidieron = !!cfg.refrescoPedido || pidioCliente;
     const tocaBarrido = minutos >= MINUTOS_BARRIDO;
 
     if (!pidieron && !tocaBarrido) {
       console.log('Nada que hacer (ultimo barrido hace ' + minutos + ' min)');
       return;
     }
-    console.log(pidieron ? 'Refresco pedido desde el app'
+    console.log(pidieron ? (cfg.refrescoPedido ? 'Refresco pedido desde el app' : 'Refresco pedido por un cliente desde Mi cuenta')
                          : 'Barrido horario (ultimo hace ' + minutos + ' min)');
 
     // Se limpia la bandera de una: si el job falla mas adelante, el proximo
@@ -273,6 +317,7 @@ if (require.main !== module) return;
 
   let ok = 0, sinPos = 0, noEstan = 0, caidos = 0, sinCambio = 0;
   const lote = db.batch();
+  const posiciones = {};   // lo recien leido, para las fichas de Mi cuenta
 
   for (const g of instalados) {
     const eq = porSerial[String(g.idGps)];
@@ -298,6 +343,7 @@ if (require.main !== module) return;
       && Math.abs((g.lng || 0) - lng) < 0.00002;
     if (igual) { sinCambio++; continue; }
 
+    posiciones[g._id] = { lat, lng, ultimaSenal: p.deviceUtcDate || '' };
     lote.set(db.collection('gps').doc(g._id), {
       lat, lng,
       ultimaSenal:  p.deviceUtcDate || '',
@@ -324,6 +370,27 @@ if (require.main !== module) return;
     ultimaSyncEquipos: ok,
     ultimaSyncSinCambio: sinCambio,
   }, { merge: true });
+
+  // Fichas de Mi cuenta: posicion + hora de revision de cada credito al que un
+  // admin le activo el GPS. "revisado" cambia en CADA barrido: la pagina del
+  // cliente lo usa para saber que su pedido ya se atendio.
+  try {
+    const fichasSnap = await db.collection('ubicacion_cliente').get();
+    if (!fichasSnap.empty) {
+      const plan = planFichas(fichasSnap.docs.map(d => d.id), instalados, posiciones, new Date().toISOString(), workerUrl);
+      let alDia = 0, quitadas = 0;
+      for (const x of plan.sets) {
+        // update y no set: si un admin la quito mientras corria el barrido, no se revive
+        try { await db.collection('ubicacion_cliente').doc(x.credId).update(x.data); alDia++; }
+        catch (e) { if (e.code !== 5) console.log('WARN ficha de Mi cuenta: ' + e.message); }
+      }
+      for (const id of plan.deletes) {
+        try { await db.collection('ubicacion_cliente').doc(id).delete(); quitadas++; }
+        catch (e) { console.log('WARN ficha de Mi cuenta: ' + e.message); }
+      }
+      console.log('Mi cuenta: ' + alDia + ' ficha(s) al dia' + (quitadas ? ' · ' + quitadas + ' quitada(s)' : ''));
+    }
+  } catch (e) { console.log('WARN fichas de Mi cuenta: ' + e.message); }
   console.log('Actualizados ' + ok + ' equipos'
     + (sinCambio ? ' · ' + sinCambio + ' sin moverse (no se reescriben)' : '')
     + (sinPos   ? ' · ' + sinPos   + ' sin posicion' : '')

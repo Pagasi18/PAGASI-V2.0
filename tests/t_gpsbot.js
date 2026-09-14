@@ -62,6 +62,32 @@ ok('texto no numerico da null', B.numero('abc') === null);
 ok('el cero es un valor valido', B.numero('0') === 0);
 ok('el cero como numero tambien', B.numero(0) === 0);
 
+// ── GPS en Mi cuenta ─────────────────────────────────────────────
+ok('sin pedidos: no hay pedido nuevo', B.hayPedidoNuevo([], 1000) === false);
+ok('pedido anterior al último barrido: no cuenta', B.hayPedidoNuevo([{ id: 'CRED-1', pedidoMs: 900 }], 1000) === false);
+ok('pedido posterior al último barrido: toca buscar', B.hayPedidoNuevo([{ id: 'CRED-1', pedidoMs: 900 }, { id: 'CRED-2', pedidoMs: 1500 }], 1000) === true);
+ok('nunca hubo barrido: cualquier pedido cuenta', B.hayPedidoNuevo([{ id: 'CRED-1', pedidoMs: 5 }], 0) === true);
+const INST = [
+  { _id: 'G1', creditoId: 'CRED-523', lat: 10.1, lng: -66.1, ultimaSenal: '2026-09-14 10:00:00', pass: '123456', imei: '8665', linea: '4140000000' },
+  { _id: 'G2', creditoId: 'CRED-600', lat: 10.2, lng: -66.2, ultimaSenal: '2026-09-14 09:00:00' },
+  { _id: 'G3', creditoId: 'CRED-700', lat: 10.3, lng: -66.3, ultimaSenal: '2026-09-14 08:00:00' },
+];
+const PLAN = B.planFichas(['CRED-523', 'CRED-600', 'CRED-999'], INST,
+  { G1: { lat: 10.5, lng: -66.5, ultimaSenal: '2026-09-14 12:00:00' } }, '2026-09-14T16:00:00.000Z', 'https://w.example');
+const F523 = PLAN.sets.find(x => x.credId === 'CRED-523');
+ok('la ficha toma la posición recién leída', !!F523 && F523.data.lat === 10.5 && F523.data.lng === -66.5 && F523.data.ultimaSenal === '2026-09-14 12:00:00');
+ok('la ficha marca la hora de revisión y la dirección del botón', F523.data.revisado === '2026-09-14T16:00:00.000Z' && F523.data.workerUrl === 'https://w.example');
+ok('la ficha NUNCA lleva la clave, el IMEI ni la línea', Object.keys(F523.data).sort().join() === 'credId,lat,lng,revisado,ultimaSenal,workerUrl');
+ok('otro crédito con equipo y ficha: se pone al día con lo que ya se sabía', !!PLAN.sets.find(x => x.credId === 'CRED-600' && x.data.lat === 10.2));
+ok('solo se borra la ficha del crédito que ya no tiene equipo', PLAN.deletes.length === 1 && PLAN.deletes[0] === 'CRED-999');
+ok('crédito sin equipo instalado: se borra su ficha', PLAN.deletes.includes('CRED-999'));
+ok('solo se tocan las fichas que existen (CRED-700 no tiene)', !PLAN.sets.some(x => x.credId === 'CRED-700'));
+const SRC_BOT = require('fs').readFileSync(require('path').join(__dirname, '..', 'bot', 'gps-micodus.js'), 'utf8');
+ok('el robot ACTUALIZA fichas (update): nunca revive una que el admin quitó', SRC_BOT.indexOf(".doc(x.credId).update(x.data)") > -1 && !/ubicacion_cliente'\)\.doc\([^)]*\)\.set\(/.test(SRC_BOT));
+const PLAN2 = B.planFichas(['CRED-523'], INST, {}, 'T', '');
+ok('si esta vez no se pudo leer la posición, queda la última conocida', PLAN2.sets[0].data.lat === 10.1 && PLAN2.sets[0].data.ultimaSenal === '2026-09-14 10:00:00');
+ok('sin posición conocida: lat y lng nulos, no inventados', B.planFichas(['CRED-X'], [{ _id: 'GX', creditoId: 'CRED-X' }], {}, 'T', '').sets[0].data.lat === null);
+
 console.log('');
 console.log(pass + ' pruebas OK, ' + fail + ' fallas');
 process.exit(fail ? 1 : 0);

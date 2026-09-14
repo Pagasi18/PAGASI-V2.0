@@ -1063,6 +1063,12 @@ function _gpsHtmlDetalle(id){
     h += fila('Estado', info.enMora
         ? '<span style="color:var(--red)">' + info.diasMora + ' dias de mora</span>'
         : '<span style="color:var(--green)">al dia</span>');
+    // GPS en Mi cuenta: solo un admin decide que cliente ve su moto (Adam, 14-sep-2026).
+    // La verdad es la ficha ubicacion_cliente/{credito}: se consulta aparte.
+    if(typeof isAdminUser === 'function' && isAdminUser() && String(g.estado||'') === 'instalado' && !g.eliminado){
+      h += '<div id="gps-mc" data-gps="' + g.id + '">' + _gpsMiCuentaHtml(g) + '</div>';
+      setTimeout(function(){ _gpsMiCuentaRevisar(g.id); }, 0);
+    }
   }
 
   // El equipo
@@ -1101,6 +1107,84 @@ function _gpsHtmlDetalle(id){
 
   h += '</div>';
   return h;
+}
+
+// ── GPS en Mi cuenta ─────────────────────────────────────────────
+// Un admin activa o quita la ficha que ve el cliente (ubicacion_cliente/{credito}).
+// La ficha trae SOLO la posicion y la hora de la ultima senal: la clave del
+// equipo, el IMEI y la linea se quedan en /gps. Existe la ficha = el cliente
+// ve su moto; el robot la mantiene al dia en cada barrido.
+var _gpsMiCuenta = {};   // credito -> { visible: true|false|null, t, cargando, error }
+
+function _gpsMiCuentaHtml(g){
+  var c = _gpsMiCuenta[String(g.creditoId)] || {};
+  var estado = c.error ? '<span style="color:var(--ink3)">no se pudo consultar</span>'
+    : c.visible === true  ? '<span style="color:var(--green)">el cliente ve su moto</span>'
+    : c.visible === false ? '<span style="color:var(--ink3)">el cliente no la ve</span>'
+    : '<span style="color:var(--ink3)">consultando...</span>';
+  var h = '<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:11.5px">'
+    + '<span style="color:var(--ink3)">Mi cuenta</span>'
+    + '<span style="font-weight:600;text-align:right">' + estado + '</span></div>';
+  if(!c.cargando && (c.visible === true || c.visible === false)){
+    h += '<button class="btn btn-xs ' + (c.visible ? 'btn-g' : 'btn-p') + '" style="width:100%;margin-top:6px" '
+      + 'onclick="_gpsVisibleCliente(\'' + g.id + '\',' + (c.visible ? 'false' : 'true') + ')">'
+      + (c.visible ? 'Quitarle su moto de Mi cuenta' : '📍 Mostrarle su moto en Mi cuenta') + '</button>';
+  }
+  return h;
+}
+
+function _gpsMiCuentaRevisar(id, forzar){
+  var g = _gpsById(id);
+  if(!g || !g.creditoId || typeof db === 'undefined' || !db) return;
+  var cred = String(g.creditoId), c = _gpsMiCuenta[cred], edad = c ? Date.now() - c.t : 0;
+  if(!forzar && c && (c.cargando ? edad < 15000 : edad < 60000)) return;
+  _gpsMiCuenta[cred] = { visible: (c && c.visible !== undefined) ? c.visible : null, t: Date.now(), cargando: true };
+  db.collection('ubicacion_cliente').doc(cred).get().then(function(d){
+    _gpsMiCuenta[cred] = { visible: !!d.exists, t: Date.now() };
+  }).catch(function(){
+    _gpsMiCuenta[cred] = { visible: null, error: true, t: Date.now() };
+  }).then(function(){ _gpsMiCuentaPintar(id); });
+}
+
+function _gpsMiCuentaPintar(id){
+  var el = document.getElementById('gps-mc');
+  var g = _gpsById(id);
+  if(el && g && el.getAttribute('data-gps') === String(id)) el.innerHTML = _gpsMiCuentaHtml(g);
+}
+
+function _gpsVisibleCliente(id, activar){
+  if(!(typeof isAdminUser === 'function' && isAdminUser())){ toast('Solo un administrador puede cambiar esto', 'error'); return; }
+  var g = _gpsById(id);
+  if(!g || !g.creditoId){ toast('Este equipo no tiene un credito asignado', 'error'); return; }
+  if(typeof db === 'undefined' || !db){ toast('Sin conexion con la base', 'error'); return; }
+  var info = _gpsCredInfo(g.creditoId);
+  var quien = (info && info.cliente) ? info.cliente : String(g.creditoId);
+  if(!confirm(activar
+      ? '¿Mostrarle a ' + quien + ' donde esta su moto en Mi cuenta?\n\nSolo vera el punto en el mapa y la hora de la ultima señal. Podra actualizar una vez por hora.'
+      : '¿Quitarle a ' + quien + ' la ubicacion de su moto en Mi cuenta?')) return;
+  var cred = String(g.creditoId);
+  var ficha = db.collection('ubicacion_cliente').doc(cred);
+  var antes = _gpsMiCuenta[cred] || {};
+  _gpsMiCuenta[cred] = { visible: antes.visible === undefined ? null : antes.visible, t: Date.now(), cargando: true };
+  _gpsMiCuentaPintar(id);
+  _dbSilent(function(){
+    return activar
+      ? ficha.set({
+          credId: cred,
+          lat: typeof g.lat === 'number' ? g.lat : null,
+          lng: typeof g.lng === 'number' ? g.lng : null,
+          ultimaSenal: g.ultimaSenal || '',
+          revisado: new Date().toISOString(),
+          workerUrl: String(_gpsCfg().workerUrl || '')
+        })
+      : ficha.delete();
+  }).then(function(ok){
+    if(ok){
+      if(typeof logActividad === 'function') logActividad(activar ? 'gps_mi_cuenta_activar' : 'gps_mi_cuenta_quitar', 'gps', String(g.id), { credito: cred });
+      toast(activar ? 'Listo: ' + quien + ' ya puede ver su moto en Mi cuenta' : 'Listo: ' + quien + ' ya no la ve en Mi cuenta', 'success');
+    }
+    _gpsMiCuentaRevisar(id, true);
+  });
 }
 
 function _gpsClaveDir(g){

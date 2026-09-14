@@ -364,6 +364,10 @@ details summary::-webkit-details-marker{display:none}
 .spin{width:17px;height:17px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media(min-width:521px){.ov{align-items:center}.md{border-radius:24px}}
+/* GPS en Mi cuenta */
+.gps-map{height:230px;border-radius:18px;overflow:hidden;margin-bottom:12px;background:var(--off-2);position:relative;z-index:0}
+.gps-meta{font-size:13.5px;font-weight:700;color:var(--ink-2);margin-bottom:12px;line-height:1.45}
+.gps-meta small{display:block;font-size:12px;font-weight:600;color:var(--ink-4);margin-top:2px}
 </style>
 <link rel="stylesheet" href="assets/public/site.css?v=20260912-2"><link rel="stylesheet" href="assets/public/account.css?v=20260912-2"></head>
 <body class="pg-site pg-account"><a class="pg-skip" href="#main">Ir al contenido</a><header class="pg-header" id="nav"><nav class="pg-nav pg-container" aria-label="Navegación principal"><a class="pg-brand" href="index.html" aria-label="Pagasi, inicio"><img src="assets/pagasi-logo.png" width="955" height="256" alt="Pagasi"></a><div class="pg-nav-links" id="pg-navigation"><a href="index.html" class="">Inicio</a><a href="simulador.html" class="">Simulador</a><a href="catalogo.html" class="">Catálogo</a><a href="nosotros.html" class="">Nosotros</a><a href="micuenta.html" class="pg-button pg-button-outline" aria-current="page"><span data-icon="user" aria-hidden="true"></span> Mi cuenta</a><a href="solicitar.html" class="pg-button">Solicitar</a></div><button type="button" class="pg-menu-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="pg-navigation"><span data-icon="menu" aria-hidden="true"></span></button></nav></header>
@@ -567,7 +571,7 @@ var LOGO = 'assets/pagasi-logo.png';
 
 var app=null, auth=null, db=null, storage=null;
 var S = { clienteId:'', token:'', cliente:null, creditos:[], pagosPorCred:{}, comprobantes:[], credSel:'',
-          master:false, staff:null, clientes:[], credsPorCliente:{} };
+          master:false, staff:null, clientes:[], credsPorCliente:{}, gpsPorCred:{}, gpsPedidoPorCred:{} };
 
 function $(id){ return document.getElementById(id); }
 function soloDigitos(s){ return String(s||'').replace(/\D/g,''); }
@@ -1041,12 +1045,186 @@ function cargarPortal(){
     return db.collection('comprobantes').where('clienteId','==',String(S.clienteId)).get()
       .then(function(s){ S.comprobantes = s.docs.map(function(x){ return Object.assign({id:x.id}, x.data()); }); })
       .catch(function(){ S.comprobantes = []; });
-  }).then(render)
+  }).then(cargarGpsCliente).then(render)
   .catch(function(e){
     console.error('cargar:',e);
     $('apBody').innerHTML = '<div class="card"><div class="err">No pudimos cargar tu información. Cierra y vuelve a entrar, o escríbenos por WhatsApp.</div>'
       + '<a class="btn btn-wa" href="https://wa.me/'+WA_PAGASI+'" target="_blank" rel="noopener">Escribir a Pagasi</a></div>';
   });
+}
+
+/* ── GPS en Mi cuenta (Adam, 14-sep-2026) ────────────────────────────────
+   Solo aparece si Pagasi le activo el GPS a ese credito: entonces existe la
+   ficha ubicacion_cliente/{credito}, con la posicion y la hora de la ultima
+   senal (nada mas). El boton "Actualizar" deja un pedido que las reglas de
+   Firebase aceptan como maximo UNA vez por hora, y despierta al robot de GPS.
+   Nada automatico: la ubicacion cambia en pantalla solo cuando el cliente
+   entra o toca el boton. */
+var GPS_ESPERA_MS = 60 * 60 * 1000;
+var LEAFLET_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
+var _gpsMapas = {};
+var _leafletPromesa = null;
+
+function cargarGpsCliente(){
+  S.gpsPorCred = {}; S.gpsPedidoPorCred = {};
+  return Promise.all((S.creditos||[]).map(function(c){
+    return db.collection('ubicacion_cliente').doc(String(c.id)).get().then(function(d){
+      if(!d.exists) return;
+      S.gpsPorCred[c.id] = d.data();
+      return db.collection('pedidos_gps').doc(String(c.id)).get().then(function(p){
+        var ms = p.exists ? msDeFecha(p.data().pedidoEn) : 0;
+        if(ms) S.gpsPedidoPorCred[c.id] = ms;
+      }).catch(function(){});
+    }).catch(function(){ /* sin ficha o sin permiso: no se muestra nada */ });
+  }));
+}
+function msDeFecha(v){
+  if(!v) return 0;
+  if(typeof v.toMillis === 'function') return v.toMillis();
+  var t = new Date(v).getTime();
+  return isFinite(t) ? t : 0;
+}
+// La hora de MiCODUS viene en UTC como "2026-09-14 16:02:11". Una revision a
+// mano guarda solo el dia ("2026-09-14").
+function msSenal(s){
+  if(!s) return 0;
+  var txt = String(s).trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(txt)) txt += ' 12:00:00';
+  var t = new Date(txt.replace(' ', 'T') + (/(z|[+-]\d\d:?\d\d)$/i.test(txt) ? '' : 'Z')).getTime();
+  return isFinite(t) ? t : 0;
+}
+function haceCuanto(ms){
+  var min = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if(min < 1) return 'hace un momento';
+  if(min < 60) return 'hace ' + min + (min === 1 ? ' minuto' : ' minutos');
+  var h = Math.floor(min / 60);
+  if(h < 48) return 'hace ' + h + (h === 1 ? ' hora' : ' horas');
+  return 'hace ' + Math.floor(h / 24) + ' días';
+}
+function gpsIdDom(credId){ return 'gps-' + String(credId).replace(/[^A-Za-z0-9_-]/g, ''); }
+function gpsMetaHTML(f){
+  var txt = String((f && f.ultimaSenal) || '').trim();
+  var ms = msSenal(txt);
+  if(!ms) return 'Tu GPS todavía no ha enviado su ubicación.';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(txt)) return 'Última señal: el ' + txt.slice(8, 10) + '/' + txt.slice(5, 7);
+  return 'Última señal: ' + haceCuanto(ms)
+    + '<small>' + esc(new Date(ms).toLocaleString('es-VE', {day:'2-digit', month:'2-digit', hour:'numeric', minute:'2-digit'})) + '</small>';
+}
+function gpsNotaBoton(credId){
+  var libre = ((S.gpsPedidoPorCred||{})[credId] || 0) + GPS_ESPERA_MS;
+  if(Date.now() >= libre) return 'Puedes actualizar una vez por hora.';
+  var hora = new Date(libre).toLocaleTimeString('es-VE', {hour:'numeric', minute:'2-digit'});
+  return 'Podrás actualizar de nuevo a las ' + hora + (/\.$/.test(hora) ? '' : '.');   // "7:24 p. m." ya trae su punto
+}
+function gpsHTML(c){
+  var f = (S.gpsPorCred||{})[c.id];
+  if(!f) return '';
+  var id = gpsIdDom(c.id);
+  var tienePos = typeof f.lat === 'number' && typeof f.lng === 'number';
+  var espera = Date.now() < ((S.gpsPedidoPorCred||{})[c.id] || 0) + GPS_ESPERA_MS;
+  return '<div class="sec">📍 Dónde está tu moto<span>Según el GPS de tu moto</span></div>'
+    + '<div class="card rev">'
+    +   '<div id="' + id + '-mapa" class="gps-map' + (tienePos ? '' : ' hide') + '" role="img" aria-label="Mapa con la ubicación de tu moto"></div>'
+    +   '<div class="gps-meta" id="' + id + '-meta">' + gpsMetaHTML(f) + '</div>'
+    +   '<button class="btn btn-p" id="' + id + '-btn"' + ((espera || S.master) ? ' disabled' : '') + ' onclick="actualizarGps(\'' + esc(c.id) + '\')">Actualizar ubicación</button>'
+    +   '<div class="tiny" id="' + id + '-nota">' + esc(S.master ? 'Modo Pagasi: solo lectura. Para buscar la moto usa el módulo GPS del panel.' : gpsNotaBoton(c.id)) + '</div>'
+    + '</div>';
+}
+function cargarLeaflet(){
+  if(window.L && window.L.map) return Promise.resolve();
+  if(_leafletPromesa) return _leafletPromesa;
+  // Se esperan los estilos Y el script: sin los estilos el mapa sale roto
+  var cargar = function(el){
+    return new Promise(function(ok, mal){
+      el.onload = function(){ ok(); };
+      el.onerror = function(){ mal(new Error('No cargo el mapa')); };
+      document.head.appendChild(el);
+    });
+  };
+  var css = document.createElement('link');
+  css.rel = 'stylesheet';
+  css.href = LEAFLET_CDN + 'leaflet.min.css';
+  var js = document.createElement('script');
+  js.src = LEAFLET_CDN + 'leaflet.min.js';
+  _leafletPromesa = Promise.all([cargar(css), cargar(js)]).catch(function(e){ _leafletPromesa = null; throw e; });
+  return _leafletPromesa;
+}
+function pintarMapasGps(){
+  var ids = Object.keys(S.gpsPorCred||{});
+  if(!ids.length) return;
+  cargarLeaflet().then(function(){
+    ids.forEach(pintarMapaGps);
+  }).catch(function(){
+    ids.forEach(function(credId){ var el = $(gpsIdDom(credId) + '-mapa'); if(el) el.classList.add('hide'); });
+  });
+}
+function pintarMapaGps(credId){
+  var f = (S.gpsPorCred||{})[credId];
+  var el = $(gpsIdDom(credId) + '-mapa');
+  if(!f || !el || typeof f.lat !== 'number' || typeof f.lng !== 'number' || !window.L) return;
+  el.classList.remove('hide');
+  var m = _gpsMapas[credId];
+  if(m && m.el === el){
+    m.marca.setLatLng([f.lat, f.lng]);
+    m.mapa.setView([f.lat, f.lng], m.mapa.getZoom());
+    return;
+  }
+  if(m){ try{ m.mapa.remove(); }catch(e){} }
+  // El pin sale del mismo CDN: cargado aparte, Leaflet no adivina la ruta de sus imagenes
+  if(L.Icon && L.Icon.Default) L.Icon.Default.imagePath = LEAFLET_CDN + 'images/';
+  var mapa = L.map(el).setView([f.lat, f.lng], 16);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
+  var marca = L.marker([f.lat, f.lng]).addTo(mapa);
+  _gpsMapas[credId] = { mapa: mapa, marca: marca, el: el };
+  setTimeout(function(){ try{ mapa.invalidateSize(); }catch(e){} }, 300);
+}
+function actualizarGps(credId){
+  var f = (S.gpsPorCred||{})[credId];
+  if(!f || S.master) return;   // modo Pagasi: solo lectura (no gasta la hora del cliente)
+  var id = gpsIdDom(credId), btn = $(id + '-btn'), nota = $(id + '-nota');
+  if(Date.now() < ((S.gpsPedidoPorCred||{})[credId] || 0) + GPS_ESPERA_MS){
+    if(btn) btn.disabled = true;
+    if(nota) nota.textContent = gpsNotaBoton(credId);
+    return;
+  }
+  if(btn){ btn.disabled = true; btn.textContent = 'Buscando tu moto...'; }
+  if(nota) nota.textContent = 'Esto tarda más o menos un minuto. Deja esta página abierta.';
+  var ref = db.collection('pedidos_gps').doc(String(credId));
+  ref.set({ pedidoEn: firebase.firestore.FieldValue.serverTimestamp() })
+    .then(function(){ return ref.get(); })
+    .then(function(p){
+      var ms = (p && p.exists) ? msDeFecha(p.data().pedidoEn) : 0;
+      S.gpsPedidoPorCred[credId] = ms || Date.now();
+      if(f.workerUrl){
+        fetch(String(f.workerUrl).replace(/\/+$/, '') + '/gps-refresco', { method: 'POST' }).catch(function(){});
+      }
+      esperarGps(credId, S.gpsPedidoPorCred[credId]);
+    })
+    .catch(function(e){
+      var denegado = !!(e && (e.code === 'permission-denied' || /permission/i.test(e.message || '')));
+      if(btn){ btn.textContent = 'Actualizar ubicación'; btn.disabled = denegado; }
+      if(nota) nota.textContent = denegado
+        ? 'Ya pediste una actualización en la última hora. Intenta más tarde.'
+        : 'No pudimos pedir la ubicación. Revisa tu conexión e intenta de nuevo.';
+    });
+}
+function esperarGps(credId, desdeMs){
+  var id = gpsIdDom(credId), intentos = 0;
+  (function mirar(){
+    intentos++;
+    db.collection('ubicacion_cliente').doc(String(credId)).get().then(function(d){
+      var f = d.exists ? d.data() : null;
+      var listo = !!(f && msDeFecha(f.revisado) >= desdeMs - 5000);
+      if(!listo && intentos < 36){ setTimeout(mirar, 5000); return; }
+      if(f) S.gpsPorCred[credId] = f;
+      var meta = $(id + '-meta'), btn = $(id + '-btn'), nota = $(id + '-nota');
+      if(meta && f) meta.innerHTML = gpsMetaHTML(f);
+      if(f) pintarMapaGps(credId);
+      if(btn){ btn.textContent = 'Actualizar ubicación'; btn.disabled = true; }
+      if(nota) nota.textContent = (listo ? 'Listo, ubicación actualizada. ' : 'Tu GPS no respondió todavía; vuelve a mirar en unos minutos. ')
+        + gpsNotaBoton(credId);
+    }).catch(function(){ if(intentos < 36) setTimeout(mirar, 5000); });
+  })();
 }
 
 /* ── Estado de un credito (mismo motor que el admin) ──────────────────── */
@@ -1123,6 +1301,7 @@ function render(){
   html += pieHTML();
   $('apBody').innerHTML = html;
   animarEntrada();
+  pintarMapasGps();
 }
 
 /* La pagina se arma sola al entrar: las tarjetas suben escalonadas, el anillo
@@ -1477,6 +1656,7 @@ function creditoHTML(c){
 
   /* ── Tu moto: anillo de "cuanto ya es tuya" ── */
   h += motoHTML(c, est, moto, completado);
+  h += gpsHTML(c);   // solo si Pagasi le activo el GPS a este credito
 
   /* ── Racha, nivel y premios ── */
   try{
