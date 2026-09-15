@@ -1,0 +1,46 @@
+name: Avisos de cobranza (registrar chats de las cobradoras)
+
+# A mano. Busca quien le toco Iniciar a @Pagasi_Cobranza_Bot, encuentra a las
+# cobradoras por su nombre, guarda sus chats en Firestore (config/avisosTelegram)
+# y le manda a Adam UN mensaje con el resultado. Log sin nombres ni numeros.
+on:
+  workflow_dispatch:
+    inputs:
+      preventiva:
+        description: 'Nombre de la cobradora de preventiva'
+        type: string
+        default: 'Samantha'
+      critica:
+        description: 'Nombre de la cobradora de critica'
+        type: string
+        default: 'Jofanny'
+      dry:
+        description: 'Solo buscar y avisar a Adam, sin guardar'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  chats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: pagasi-v2
+          workload_identity_provider: projects/951911859002/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: firebase-adminsdk-fbsvc@pagasi-v2.iam.gserviceaccount.com
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - working-directory: bot
+        run: npm install --omit=dev
+      - working-directory: bot
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          NOMBRE_PREVENTIVA: ${{ inputs.preventiva }}
+          NOMBRE_CRITICA: ${{ inputs.critica }}
+        run: node avisos-chats.js ${{ inputs.dry && '--dry' || '' }}

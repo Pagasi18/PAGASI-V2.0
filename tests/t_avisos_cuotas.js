@@ -185,6 +185,32 @@ ok('día tranquilo: 2 mensajes con "Ninguna"/"Ninguno"', tgVacio.length === 2
   && tgVacio[0].includes('<b>0 avisos</b>') && tgVacio[1].includes('<b>0 en mora</b>')
   && tgVacio[0].includes('Ninguna 🎉') && tgVacio[1].includes('Ninguno 🎉') && !tgVacio[1].includes('escribirles a diario'));
 
+// ── Cada una en su chat (Adam, 14-sep-2026): un resumen para Adam y una lista por cobradora ──
+const porDestino = B.armarPorDestino(r, 'Cada una recibió su lista con los WhatsApp listos en su chat.');
+const resumenAdam = porDestino.resumen[0] || '';
+ok('destino: 1 resumen, la lista de Samantha y la de Jofanny', porDestino.resumen.length === 1 && porDestino.preventiva[0].startsWith('<b>🟢 PREVENTIVA — SAMANTHA') && porDestino.critica[0].startsWith('<b>🔴 CRÍTICA — JOFANNY'));
+ok('las listas son las mismas de siempre', JSON.stringify([...porDestino.preventiva, ...porDestino.critica]) === JSON.stringify(partes));
+ok('resumen: el día y lo de cada una, en un solo mensaje', resumenAdam.startsWith('<b>📣 Cobranza del 11/09/2026</b>')
+  && resumenAdam.includes('🟢 Samantha (preventiva): <b>4 avisos</b> · $130 — 1 vence hoy · 2 vencen el 14/09/2026')
+  && resumenAdam.includes('🔴 Jofanny (crítica): <b>4 en mora</b> · $300 vencido · 1 con +30 días · 1 cuota más que vence'));
+ok('resumen: avisa de los que no tienen teléfono', resumenAdam.includes('⚠ 2 clientes sin teléfono útil'));
+ok('resumen: sin nombres de clientes ni botones de WhatsApp', !/PRUEBA|wa\.me/.test(resumenAdam));
+ok('resumen: lleva la nota que le toca', resumenAdam.includes('Cada una recibió su lista'));
+ok('resumen: cabe de sobra en un mensaje', resumenAdam.length < 1000);
+
+// ── A quién le llega cada cosa ──
+const dPropio = B.destinos({ chatPreventiva: '111111111', chatCritica: '222222222' }, {});
+ok('con los chats guardados: cada lista a su cobradora y el resumen a Adam y al socio', dPropio.preventiva.join() === '111111111' && dPropio.critica.join() === '222222222'
+  && dPropio.resumen.join() === '8571975984,1280343056' && dPropio.prevPropio && dPropio.critPropio);
+const dSin = B.destinos({}, {});
+ok('sin los chats: las listas siguen llegando a Adam y al socio (no se pierde nada)', dSin.preventiva.join() === '8571975984,1280343056' && dSin.critica.join() === '8571975984,1280343056' && !dSin.prevPropio && !dSin.critPropio);
+const dMedio = B.destinos({ chatPreventiva: '111111111' }, {});
+ok('si solo está Samantha: su lista a ella y la de Jofanny a Adam y al socio', dMedio.preventiva.join() === '111111111' && dMedio.critica.join() === '8571975984,1280343056');
+ok('un chat guardado inválido no se usa', B.destinos({ chatPreventiva: 'abc' }, {}).preventiva.join() === '8571975984,1280343056');
+const dPrueba = B.destinos({ chatPreventiva: '111111111' }, { CHAT_PRUEBA: '8571975984' });
+ok('prueba: todo a un solo chat', dPrueba.prueba && dPrueba.resumen.join() === '8571975984' && dPrueba.preventiva.join() === '8571975984' && dPrueba.critica.join() === '8571975984');
+ok('el resumen puede ir a otros chats por variable', B.destinos({}, { TELEGRAM_CHAT_RESUMEN: '333333333' }).resumen.join() === '333333333');
+
 // ── Partir un mensaje en dos ──
 const dos = B.partirEnDos('<b>🔴 CRÍTICA — JOFANNY</b>\n\n<b>EN MORA (3)</b>\n• a\n• b\n• c');
 ok('partir: la segunda parte dice "(continúa)"', !!dos && dos[1].startsWith('<b>🔴 CRÍTICA — JOFANNY (continúa)</b>'));

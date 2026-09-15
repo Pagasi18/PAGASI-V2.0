@@ -33,15 +33,22 @@
    otra cuota (otro credito), ese recordatorio va en la lista de critica, para
    que dos cobradoras nunca le escriban al mismo cliente.
 
+   Cada cobradora recibe SU lista en su propio chat con el bot (Adam, 14-sep:
+   "cada una en su chat"), y Adam y su socio solo un resumen corto. Los chats
+   estan en Firestore config/avisosTelegram (los guarda avisos-chats.js cuando
+   ellas le tocan Iniciar al bot). Mientras falte el chat de una cobradora, su
+   lista les sigue llegando a Adam y a su socio: no se pierde nada.
+
    - Clientes sin telefono utilizable: aparte, al final de la lista que les toca.
    - El log de Actions es publico: aqui NUNCA se imprimen nombres, telefonos
      ni enlaces; solo cantidades e ids de credito.
 
    Secretos / variables (en GitHub, no en el codigo):
      - TELEGRAM_TOKEN            : el token del bot (@BotFather)
-     - TELEGRAM_CHAT_ID_AVISOS   : el grupo "Cobranza Pagasi". Si no esta, usa
-                                   TELEGRAM_CHAT_ID y si tampoco, los chats por
-                                   defecto del resumen diario.
+     - TELEGRAM_CHAT_RESUMEN     : opcional, a quien le llega el resumen (por
+                                   defecto TELEGRAM_CHAT_ID o Adam y su socio)
+     - TELEGRAM_CHAT_ID_AVISOS   : opcional, un grupo para las listas cuyas
+                                   cobradoras todavia no tienen chat guardado
      - COBRADORA_PREVENTIVA      : opcional (por defecto "Samantha")
      - COBRADORA_CRITICA         : opcional (por defecto "Jofanny")
    Con --dry calcula y reporta cantidades, sin mandar nada.
@@ -271,11 +278,37 @@ function calcularAvisos(creds, pagos, clientes, hoyISO, opciones) {
   return { hoy, en3, duenas: quien, vencenHoy, vencenEn3, atrasados, criticos, critica, sinTelefono };
 }
 
-/* ── Los mensajes de Telegram (HTML): UNO por cobradora ── */
+/* ── El resumen para Adam y su socio: UN mensaje corto, sin nombres de clientes ── */
+function armarResumen(r, nota) {
+  const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const money = n => '$' + Math.round(Number(n) || 0).toLocaleString('es-VE');
+  const total = arr => arr.reduce((s, a) => s + a.monto, 0);
+  const quien = r.duenas || duenas();
+  const critica = r.critica || [...(r.atrasados || []), ...(r.criticos || [])];
+  const prevHoy = r.vencenHoy.filter(a => !a.clienteEnMora);
+  const prevEn3 = r.vencenEn3.filter(a => !a.clienteEnMora);
+  const tambien = [...r.vencenHoy, ...r.vencenEn3].filter(a => a.clienteEnMora);
+  const nPrev = prevHoy.length + prevEn3.length + r.sinTelefono.filter(a => a.dias === 0 && !a.clienteEnMora).length;
+  const urgentes = critica.filter(a => a.tipo === 'critico').length;
+  const sinTel = r.sinTelefono.length;
+  return [
+    '<b>📣 Cobranza del ' + lindo(r.hoy) + '</b>',
+    '🟢 ' + esc(quien.preventiva) + ' (preventiva): <b>' + plural(nPrev, 'aviso', 'avisos') + '</b> · ' + money(total([...prevHoy, ...prevEn3]))
+      + ' — ' + plural(prevHoy.length, 'vence hoy', 'vencen hoy') + ' · ' + plural(prevEn3.length, 'vence', 'vencen') + ' el ' + lindo(r.en3),
+    '🔴 ' + esc(quien.critica) + ' (crítica): <b>' + critica.length + ' en mora</b> · ' + money(total(critica)) + ' vencido'
+      + (urgentes ? ' · ' + urgentes + ' con +' + DIAS_CRITICO + ' días' : '')
+      + (tambien.length ? ' · ' + plural(tambien.length, 'cuota más que vence', 'cuotas más que vencen') : ''),
+    sinTel ? '⚠ ' + plural(sinTel, 'cliente sin teléfono útil', 'clientes sin teléfono útil') + ' (corregir en Clientes)' : '',
+    nota ? '<i>' + esc(nota) + '</i>' : ''
+  ].filter(Boolean).join('\n');
+}
+
+/* ── Las listas de Telegram (HTML): una por cobradora ── */
 // Adam (14-sep-2026): "mandame solo 2 mensajes, uno para Samantha y otro para
-// Jofanny". Cada mensaje trae arriba el dia y sus totales (ya no hay resumen
-// aparte). Solo si una lista no cabe en un mensaje de Telegram se parte.
-function armarMensajes(r) {
+// Jofanny", y despues eligio que cada una la reciba en su propio chat y el
+// solo el resumen. Cada lista trae arriba el dia y sus totales. Si no cabe en
+// un mensaje se parte, y al enviar mandarPartiendo la parte mas si Telegram lo pide.
+function armarPorDestino(r, nota) {
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const money = n => '$' + Math.round(Number(n) || 0).toLocaleString('es-VE');
   const total = arr => arr.reduce((s, a) => s + a.monto, 0);
@@ -297,20 +330,21 @@ function armarMensajes(r) {
   const sinCrit = r.sinTelefono.filter(a => a.dias > 0 || a.clienteEnMora);
   const nPrev = prevHoy.length + prevEn3.length + sinPrev.length;
   const urgentes = critica.filter(a => a.tipo === 'critico').length;
-  const mensajes = [];
 
   // Solo se parte una lista si no cabe en un mensaje de Telegram
   const trocear = (cabeza, lineas) => {
+    const salida = [];
     let actual = '';
     lineas.forEach(x => {
       const cand = actual ? actual + '\n' + x : x;
       const noCabe = textoVisible(cand).length > TELEGRAM_MAX || entidades(cand) > TELEGRAM_MAX_ENTIDADES;
       if (noCabe && actual) {
-        mensajes.push(actual);
+        salida.push(actual);
         actual = cabeza + ' (continúa)</b>\n' + x;
       } else actual = cand;
     });
-    if (actual) mensajes.push(actual);
+    if (actual) salida.push(actual);
+    return salida;
   };
 
   // 1) PREVENTIVA
@@ -331,7 +365,7 @@ function armarMensajes(r) {
   }
   bP.push('');
   bP.push('<i>Toca el enlace: WhatsApp se abre con el mensaje listo, solo dale enviar.</i>');
-  trocear(cabP, bP);
+  const msgsPrev = trocear(cabP, bP);
 
   // 2) CRITICA
   const cabC = '<b>🔴 CRÍTICA — ' + esc(String(quien.critica).toUpperCase());
@@ -359,8 +393,13 @@ function armarMensajes(r) {
   }
   bC.push('');
   bC.push('<i>Toca el enlace: WhatsApp se abre con el mensaje listo, solo dale enviar.</i>');
-  trocear(cabC, bC);
-  return mensajes;
+  const msgsCrit = trocear(cabC, bC);
+  return { resumen: [armarResumen(r, nota)], preventiva: msgsPrev, critica: msgsCrit };
+}
+
+function armarMensajes(r) {
+  const d = armarPorDestino(r);
+  return [...d.preventiva, ...d.critica];
 }
 
 /* ── Envio: Telegram tambien limita lo que pesan los enlaces de un mensaje ──
@@ -397,35 +436,35 @@ async function mandar(token, chat, texto) {
 }
 
 // Devuelve las partes que Telegram SI acepto (en orden) y si salio todo
-async function mandarPartiendo(token, chat, texto, nivel) {
+async function mandarPartiendo(token, chat, texto, nivel, etiqueta) {
   const body = await mandar(token, chat, texto);
   if (body.ok) return { partes: [texto], completo: true };
   const desc = String(body.description || '');
   if (body.error_code === 429 && nivel < 8) {                    // demasiado rapido: esperar lo que pide y reintentar
     await new Promise(r => setTimeout(r, (((body.parameters || {}).retry_after) || 2) * 1000));
-    return mandarPartiendo(token, chat, texto, nivel + 1);
+    return mandarPartiendo(token, chat, texto, nivel + 1, etiqueta);
   }
   if (DEMASIADO_LARGO.test(desc) && nivel < 8) {
     const dos = partirEnDos(texto);
     if (dos) {
-      const a = await mandarPartiendo(token, chat, dos[0], nivel + 1);
-      const b = await mandarPartiendo(token, chat, dos[1], nivel + 1);
+      const a = await mandarPartiendo(token, chat, dos[0], nivel + 1, etiqueta);
+      const b = await mandarPartiendo(token, chat, dos[1], nivel + 1, etiqueta);
       return { partes: a.partes.concat(b.partes), completo: a.completo && b.completo };
     }
   }
-  console.error('Telegram', chat + ':', desc);
+  console.error('Telegram (' + (etiqueta || 'envio') + '):', desc);
   return { partes: [], completo: false };
 }
 
-async function enviarTelegram(token, chats, mensajes) {
+async function enviarTelegram(token, chats, mensajes, etiqueta) {
   let algunoOk = false;
   const probado = new Map();   // mensaje → partes que Telegram ya acepto enteras
-  for (const chat of chats) {
+  for (const [i, chat] of chats.entries()) {
     let n = 0, mayor = 0;
     for (const m of mensajes) {
       const lista = probado.get(m) || [m];
       for (const t of lista) {
-        const r = await mandarPartiendo(token, chat, t, 0);
+        const r = await mandarPartiendo(token, chat, t, 0, etiqueta);
         if (r.partes.length) algunoOk = true;
         n += r.partes.length;
         r.partes.forEach(x => { mayor = Math.max(mayor, x.length); });
@@ -433,9 +472,24 @@ async function enviarTelegram(token, chats, mensajes) {
       }
     }
     // Solo tamanos (sin datos personales): sirve para conocer el limite real de Telegram
-    console.log('Chat', chat, ': ' + n + ' mensaje(s)' + (n ? ' · el mas largo aceptado: ' + mayor + ' caracteres con enlaces' : ''));
+    console.log('Envio ' + (etiqueta || 'mensajes') + ' · destino ' + (i + 1) + ' de ' + chats.length + ': ' + n + ' mensaje(s)'
+      + (n ? ' · el mas largo aceptado: ' + mayor + ' caracteres con enlaces' : ''));
   }
   return algunoOk;
+}
+
+// A quien le llega cada cosa. Puro: recibe la config de Firestore y las variables.
+function destinos(cfg, env) {
+  const e = env || {}, c = cfg || {};
+  const lista = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
+  const prueba = String(e.CHAT_PRUEBA || '').trim();
+  if (prueba) return { resumen: [prueba], preventiva: [prueba], critica: [prueba], prevPropio: false, critPropio: false, prueba: true };
+  const resumen = lista(e.TELEGRAM_CHAT_RESUMEN || e.TELEGRAM_CHAT_ID || '8571975984,1280343056');
+  const compartido = lista(e.TELEGRAM_CHAT_ID_AVISOS).length ? lista(e.TELEGRAM_CHAT_ID_AVISOS) : resumen;
+  const chat = v => /^-?\d{5,20}$/.test(String(v || '').trim()) ? String(v).trim() : '';
+  const prev = chat(c.chatPreventiva), crit = chat(c.chatCritica);
+  return { resumen, preventiva: prev ? [prev] : compartido, critica: crit ? [crit] : compartido,
+    prevPropio: !!prev, critPropio: !!crit, prueba: false };
 }
 
 async function main() {
@@ -445,8 +499,6 @@ async function main() {
   // como se ve, sin tocar a quien le llega el envio diario.
   const PRUEBA = String(process.env.CHAT_PRUEBA || '').trim();
   if (PRUEBA && !/^-?\d{5,20}$/.test(PRUEBA)) { console.error('CHAT_PRUEBA invalido'); process.exit(1); }
-  const CHATS = PRUEBA ? [PRUEBA] : (process.env.TELEGRAM_CHAT_ID_AVISOS || process.env.TELEGRAM_CHAT_ID || '8571975984,1280343056')
-    .split(',').map(s => s.trim()).filter(Boolean);
   if (PRUEBA) console.log('Envio de PRUEBA a un solo chat');
   if (!DRY && !TOKEN) { console.error('Falta el secreto TELEGRAM_TOKEN.'); process.exit(1); }
 
@@ -454,18 +506,23 @@ async function main() {
   const db = new Firestore({ projectId: 'pagasi-v2' });
   const hoyISO = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
 
-  const [credSnap, pagoSnap, cliSnap] = await Promise.all([
+  const [credSnap, pagoSnap, cliSnap, cfgSnap] = await Promise.all([
     db.collection('creditos').get(),
     db.collection('pagos').get(),
     db.collection('clientes').get(),
+    db.collection('config').doc('avisosTelegram').get(),   // los chats de las cobradoras (avisos-chats.js)
   ]);
+  const d = destinos(cfgSnap.exists ? cfgSnap.data() : {}, process.env);
   const creds = credSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   const pagos = pagoSnap.docs.map(d => d.data()).filter(p => p && !p.eliminado && (p.estado || 'confirmado') === 'confirmado');
   const clientes = cliSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
   const r = calcularAvisos(creds, pagos, clientes, hoyISO,
     { preventiva: process.env.COBRADORA_PREVENTIVA, critica: process.env.COBRADORA_CRITICA });
-  const mensajes = armarMensajes(r);
+  const nota = d.prueba ? '' : (d.prevPropio && d.critPropio ? 'Cada una recibió su lista con los WhatsApp listos en su chat.'
+    : (d.prevPropio || d.critPropio) ? 'La lista que falta va abajo: todavía no está el chat de esa cobradora.'
+    : 'Las listas van abajo: todavía no están los chats de las cobradoras.');
+  const porDestino = armarPorDestino(r, nota);
 
   // Log SIN datos personales (los logs de Actions son publicos): ni clientes ni nombres de cobradoras
   const ids = arr => arr.map(a => a.cred).join(', ');
@@ -478,13 +535,19 @@ async function main() {
   console.log('  recordatorios de clientes en mora (van a critica): ' + todos.filter(a => a.dias === 0 && a.clienteEnMora).length);
   console.log('  sin telefono util: ' + r.sinTelefono.length + '  (' + ids(r.sinTelefono) + ')');
   console.log('  lista preventiva: ' + todos.filter(a => !vaACritica(a)).length + ' avisos · lista critica: ' + todos.filter(vaACritica).length + ' avisos');
-  console.log('  mensajes de Telegram: ' + mensajes.length);
+  const donde = propio => d.prueba ? 'chat de prueba' : propio ? 'chat propio de la cobradora' : 'chats del resumen (falta el chat de la cobradora)';
+  console.log('  destino preventiva: ' + donde(d.prevPropio) + ' · destino critica: ' + donde(d.critPropio));
+  console.log('  mensajes de Telegram: 1 resumen + ' + porDestino.preventiva.length + ' preventiva + ' + porDestino.critica.length + ' critica (Telegram puede pedir partir mas)');
 
   const resumen = 'hoy=' + r.vencenHoy.length + ' en3=' + r.vencenEn3.length + ' atrasados=' + r.atrasados.length
     + ' criticos=' + r.criticos.length + ' sintel=' + r.sinTelefono.length;
   if (DRY) { console.log('\n(dry-run) no se envio nada'); console.log('RESULTADO dry=1 ' + resumen); return; }
-  const ok = await enviarTelegram(TOKEN, CHATS, mensajes);
-  console.log('RESULTADO dry=0 ' + resumen + ' enviado=' + (ok ? 1 : 0));
+  const okRes = await enviarTelegram(TOKEN, d.resumen, porDestino.resumen, 'resumen');
+  const okPrev = await enviarTelegram(TOKEN, d.preventiva, porDestino.preventiva, 'preventiva');
+  const okCrit = await enviarTelegram(TOKEN, d.critica, porDestino.critica, 'critica');
+  const ok = okPrev && okCrit;                 // las listas son lo que importa; el resumen solo informa
+  console.log('RESULTADO dry=0 ' + resumen + ' enviado=' + (ok ? 1 : 0) + ' resumen=' + (okRes ? 1 : 0)
+    + ' destinos=' + (d.prevPropio ? 'propio' : 'resumen') + '/' + (d.critPropio ? 'propio' : 'resumen'));
   if (!ok) process.exit(1);
 }
 
@@ -492,6 +555,6 @@ if (require.main === module) {
   main().catch(e => { console.error('ERROR', e.message); process.exit(1); });
 }
 
-module.exports = { calcularAvisos, armarMensajes, mensajeCliente, telWhatsapp, fechasDe, repartidor, claveCliente, duenas,
+module.exports = { calcularAvisos, armarMensajes, armarPorDestino, armarResumen, destinos, mensajeCliente, telWhatsapp, fechasDe, repartidor, claveCliente, duenas,
   textoVisible, entidades, partirEnDos, enviarTelegram, DIAS_AVISO, DIAS_CRITICO, TELEGRAM_MAX, TELEGRAM_MAX_ENTIDADES,
   PREVENTIVA_DEFECTO, CRITICA_DEFECTO, COBRADORAS_DEFECTO };
