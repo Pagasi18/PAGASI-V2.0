@@ -88,6 +88,48 @@ const PLAN2 = B.planFichas(['CRED-523'], INST, {}, 'T', '');
 ok('si esta vez no se pudo leer la posición, queda la última conocida', PLAN2.sets[0].data.lat === 10.1 && PLAN2.sets[0].data.ultimaSenal === '2026-09-14 10:00:00');
 ok('sin posición conocida: lat y lng nulos, no inventados', B.planFichas(['CRED-X'], [{ _id: 'GX', creditoId: 'CRED-X' }], {}, 'T', '').sets[0].data.lat === null);
 
+// ── Una vez al día a las 8 am de Venezuela + el botón (Adam, 14-sep-2026) ──
+const VE = (dia, h, m) => Date.UTC(2026, 8, dia, h + 4, m || 0);   // hora de Venezuela → ms
+const dec = (ultimo, ahora, extra) => B.decidirBarrido(Object.assign({ ultimoMs: ultimo, ahoraMs: ahora }, extra || {}));
+ok('las 8:00 am de Venezuela son las 12:00 UTC', B.HORA_BARRIDO_UTC === 12 && B.anclaDiaria(VE(15, 8, 1)) === VE(15, 8, 0));
+ok('antes de las 8 el ancla es la de ayer', B.anclaDiaria(VE(15, 7, 59)) === VE(14, 8, 0));
+ok('pasada la medianoche UTC (20:30 de Venezuela) sigue siendo la de hoy', B.anclaDiaria(VE(15, 20, 30)) === VE(15, 8, 0));
+ok('barrido de ayer 8:02 → hoy 8:01 toca el del día', dec(VE(14, 8, 2), VE(15, 8, 1)).motivo === 'diario');
+ok('botón ayer a las 20:00 → hoy 8:01 SÍ barre (la ventana de 20 h lo anulaba)', dec(VE(14, 20, 0), VE(15, 8, 1)).barrer === true);
+ok('botón ayer a las 12:05 → hoy 8:01 barre', dec(VE(14, 12, 5), VE(15, 8, 1)).barrer === true);
+ok('botón ayer a las 23:30 → hoy 8:01 barre', dec(VE(14, 23, 30), VE(15, 8, 1)).barrer === true);
+ok('barrido de las 8:02 → el respaldo de las 10:01 no repite', dec(VE(15, 8, 2), VE(15, 10, 1)).motivo === 'nada');
+ok('respaldo atrasado hasta las 13:00: tampoco repite', dec(VE(15, 8, 2), VE(15, 13, 0)).barrer === false);
+ok('si el de las 8 no corrió, el respaldo de las 10 recupera el día', dec(VE(14, 8, 2), VE(15, 10, 1)).motivo === 'diario');
+ok('un disparo suelto a las 3 am sin pedido no barre', dec(VE(14, 8, 2), VE(15, 3, 0)).barrer === false);
+ok('botón hoy a las 7:30 → a las 8:01 igual toca el del día', dec(VE(15, 7, 30), VE(15, 8, 1)).barrer === true);
+ok('botón hoy a las 9:00 → el respaldo de las 10 no repite', dec(VE(15, 9, 0), VE(15, 10, 1)).barrer === false);
+ok('nunca hubo barrido: barre', dec(0, VE(15, 3, 0)).barrer === true);
+ok('fechas dañadas: barre (mejor de más que de menos)', dec(NaN, VE(15, 3, 0)).barrer === true && B.decidirBarrido({ ultimoMs: VE(15, 8, 2) }).barrer === true);
+ok('botón del módulo: barre aunque haya barrido hace 5 min', dec(VE(15, 8, 2), VE(15, 8, 7), { refrescoPedido: true }).motivo === 'app');
+ok('botón de Mi cuenta: barre aunque haya barrido hace 5 min', dec(VE(15, 8, 2), VE(15, 8, 7), { pidioCliente: true }).motivo === 'cliente');
+ok('barrido fallido: MiCODUS no contestó ninguna posición', B.barridoFallido({ errores: 3, ok: 0, sinCambio: 0 }) === true);
+ok('si falla la mitad o más, tampoco cuenta como hecho', B.barridoFallido({ errores: 2, ok: 1, sinCambio: 0 }) === true && B.barridoFallido({ errores: 250, ok: 0, sinCambio: 250 }) === true);
+ok('con la mayoría bien, sí cuenta', B.barridoFallido({ errores: 1, ok: 2, sinCambio: 0 }) === false && B.barridoFallido({ errores: 1, ok: 0, sinCambio: 2 }) === false);
+ok('botón del módulo tocado MIENTRAS corría el barrido: la corrida que espera lo atiende', dec(VE(15, 8, 1), VE(15, 8, 3), { refrescoPedido: false, refrescoPedidoEnMs: VE(15, 8, 2) }).motivo === 'app');
+ok('botón tocado antes de que empezara el último barrido: ya quedó atendido', dec(VE(15, 8, 1), VE(15, 9, 0), { refrescoPedido: false, refrescoPedidoEnMs: VE(15, 7, 59) }).barrer === false);
+ok('sin errores no es fallido (aunque no haya posiciones nuevas)', B.barridoFallido({ errores: 0, ok: 0, sinCambio: 0 }) === false);
+const FS8 = require('fs'), PATH8 = require('path');
+const BOT8 = FS8.readFileSync(PATH8.join(__dirname, '..', 'bot', 'gps-micodus.js'), 'utf8');
+const TOML8 = FS8.readFileSync(PATH8.join(__dirname, '..', 'bot', 'wrangler.toml'), 'utf8');
+const YML8 = FS8.readFileSync(PATH8.join(__dirname, '..', '.github', 'workflows', 'gps-micodus.yml'), 'utf8');
+ok('el Worker dispara una vez al día a las 8:00 am de Venezuela (12:00 UTC)', /crons\s*=\s*\["0 12 \* \* \*"\]/.test(TOML8));
+ok('el respaldo de GitHub corre una vez al día, a las 10 am de Venezuela', /cron:\s*'0 14 \* \* \*'/.test(YML8) && !/\*\/6/.test(YML8));
+ok('un barrido a la vez (el que llega espera, no se cancela)', /concurrency:\s*\n\s*group:\s*gps-micodus\s*\n\s*cancel-in-progress:\s*false/.test(YML8));
+ok('ultimaSync guarda la hora de INICIO del barrido', /ultimaSync:\s*inicioBarrido/.test(BOT8));
+ok('la bandera del módulo se apaga al terminar bien, no al empezar', /refrescoPedido:\s*false/.test(BOT8.slice(BOT8.indexOf('barridoFallido({ errores'))) && !/refrescoPedido:\s*false,\s*\n\s*ultimoIntento/.test(BOT8));
+ok('si MiCODUS falla entero, sale antes de marcar el barrido y las fichas', BOT8.indexOf('process.exit(1)', BOT8.indexOf('barridoFallido({ errores')) < BOT8.indexOf('ultimaSync: inicioBarrido') && BOT8.indexOf('ultimaSync: inicioBarrido') < BOT8.indexOf("collection('ubicacion_cliente').get()"));
+
+ok('las fichas de Mi cuenta llevan la hora de INICIO como revisado', /planFichas\([^;]*inicioBarrido/.test(BOT8));
+ok('si falla el login de MiCODUS: se anota el error y sale en rojo', /No se pudo entrar a MiCODUS[\s\S]{0,120}process\.exit\(1\)/.test(BOT8));
+ok('el robot mira la hora del botón del módulo', /refrescoPedidoEnMs:\s*cfg\.refrescoPedidoEn/.test(BOT8));
+ok('en un barrido fallido se guardan las posiciones buenas antes de salir', /barridoFallido\(\{ errores, ok, sinCambio \}\)\) \{\s*\n\s*if \(ok\) await lote\.commit\(\);/.test(BOT8));
+
 console.log('');
 console.log(pass + ' pruebas OK, ' + fail + ' fallas');
 process.exit(fail ? 1 : 0);

@@ -1061,6 +1061,7 @@ function cargarPortal(){
    Nada automatico: la ubicacion cambia en pantalla solo cuando el cliente
    entra o toca el boton. */
 var GPS_ESPERA_MS = 60 * 60 * 1000;
+var GPS_MIRADAS = 60;          // hasta 5 minutos esperando al robot (una mirada cada 5 s)
 var LEAFLET_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/';
 var _gpsMapas = {};
 var _leafletPromesa = null;
@@ -1198,12 +1199,18 @@ function actualizarGps(credId){
       if(!f.workerUrl){
         // Sin el Worker el robot no se despierta al momento: toma el pedido en su proxima vuelta
         if(btn){ btn.textContent = 'Actualizar ubicación'; btn.disabled = true; }
-        if(nota) nota.textContent = 'Listo, pedimos la ubicación de tu moto. Se actualiza en las próximas horas: vuelve a mirar más tarde.';
+        if(nota) nota.textContent = 'Listo, tu pedido quedó anotado. La ubicación se revisa una vez al día en la mañana: vuelve a mirar mañana.';
         return;
       }
-      fetch(String(f.workerUrl).replace(/\/+$/, '') + '/gps-refresco', { method: 'POST' }).catch(function(){});
       if(nota) nota.textContent = 'Esto tarda más o menos un minuto. Deja esta página abierta.';
-      esperarGps(credId, S.gpsPedidoPorCred[credId]);
+      var sinRobot = function(){
+        // El Worker no pudo despertar al robot: se dice de una vez, sin hacer esperar
+        if(btn){ btn.textContent = 'Actualizar ubicación'; btn.disabled = true; }
+        if(nota) nota.textContent = 'No pudimos buscarla ahora. Tu pedido quedó anotado y se revisa en la próxima vuelta del GPS (cada mañana). ' + gpsNotaBoton(credId);
+      };
+      fetch(String(f.workerUrl).replace(/\/+$/, '') + '/gps-refresco', { method: 'POST' })
+        .then(function(r){ if(!r || !r.ok) throw new Error('worker'); esperarGps(credId, S.gpsPedidoPorCred[credId]); })
+        .catch(sinRobot);
     })
     .catch(function(e){
       var denegado = !!(e && (e.code === 'permission-denied' || /permission/i.test(e.message || '')));
@@ -1220,15 +1227,15 @@ function esperarGps(credId, desdeMs){
     db.collection('ubicacion_cliente').doc(String(credId)).get().then(function(d){
       var f = d.exists ? d.data() : null;
       var listo = !!(f && msDeFecha(f.revisado) >= desdeMs - 5000);
-      if(!listo && intentos < 36){ setTimeout(mirar, 5000); return; }
+      if(!listo && intentos < GPS_MIRADAS){ setTimeout(mirar, 5000); return; }
       if(f) S.gpsPorCred[credId] = f;
       var meta = $(id + '-meta'), btn = $(id + '-btn'), nota = $(id + '-nota');
       if(meta && f) meta.innerHTML = gpsMetaHTML(f);
       if(f) pintarMapaGps(credId);
       if(btn){ btn.textContent = 'Actualizar ubicación'; btn.disabled = true; }
-      if(nota) nota.textContent = (listo ? 'Listo, ubicación actualizada. ' : 'Tu GPS no respondió todavía; vuelve a mirar en unos minutos. ')
+      if(nota) nota.textContent = (listo ? 'Listo, ubicación actualizada. ' : 'No pudimos traer la ubicación esta vez. Se vuelve a revisar en la próxima vuelta del GPS (cada mañana). ')
         + gpsNotaBoton(credId);
-    }).catch(function(){ if(intentos < 36) setTimeout(mirar, 5000); });
+    }).catch(function(){ if(intentos < GPS_MIRADAS) setTimeout(mirar, 5000); });
   })();
 }
 

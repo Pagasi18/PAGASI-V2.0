@@ -5,7 +5,10 @@
    No lee la base: solo enciende Actions, por eso no necesita llave de Firebase.
 
    Secrets del Worker:
-     TELEGRAM_TOKEN, GITHUB_PAT, CHAT_ID
+     GITHUB_PAT       obligatorio: GPS (barrido de las 8 am y botones Actualizar)
+     TELEGRAM_TOKEN,  solo si se usan los botones de Telegram (webhook con
+     TG_SECRET,       secret_token = TG_SECRET). Sin ellos, lo que llegue a la
+     CHAT_ID          raiz se ignora.
    ══════════════════════════════════════════════════════════════════════════ */
 
 const REPO = 'Pagasi18/PAGASI-V2.0';
@@ -49,7 +52,8 @@ const ORIGENES = ['https://pagasi.io', 'https://www.pagasi.io'];
 export default {
   // Cloudflare si corre esto a la hora. GitHub retrasa sus workflows
   // programados horas enteras, asi que el barrido de GPS se dispara desde
-  // aqui en vez de confiar en el cron de GitHub.
+  // aqui en vez de confiar en el cron de GitHub. Corre una vez al dia a las
+  // 8:00 am de Venezuela (crons de wrangler.toml).
   async scheduled(event, env, ctx) {
     ctx.waitUntil(fetch(
       `https://api.github.com/repos/${REPO}/actions/workflows/gps-micodus.yml/dispatches`,
@@ -63,7 +67,11 @@ export default {
         },
         body: JSON.stringify({ ref: 'main' }),
       }
-    ));
+    ).then(r => {
+      // Si GitHub no acepta (token vencido o sin permiso), el cron sale FALLIDO
+      // en Cloudflare en vez de quedar en verde sin haber hecho nada.
+      if (!r.ok) throw new Error('GitHub no disparo el barrido: HTTP ' + r.status);
+    }));
   },
 
   async fetch(request, env) {
@@ -103,6 +111,15 @@ export default {
     }
 
     if (request.method !== 'POST') return new Response('Bot de Pagasi activo.');
+
+    // Solo Telegram puede escribir aqui: el webhook se registra con secret_token
+    // = TG_SECRET y Telegram lo manda en esta cabecera. Sin TELEGRAM_TOKEN o sin
+    // TG_SECRET, se ignora todo: nadie puede disparar reportes con un JSON
+    // inventado haciendose pasar por un chat permitido.
+    if (!env.TELEGRAM_TOKEN || !env.TG_SECRET
+        || request.headers.get('X-Telegram-Bot-Api-Secret-Token') !== env.TG_SECRET) {
+      return new Response('ok');
+    }
 
     let update;
     try { update = await request.json(); } catch (e) { return new Response('ok'); }

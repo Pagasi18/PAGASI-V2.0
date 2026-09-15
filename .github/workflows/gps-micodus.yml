@@ -2,15 +2,22 @@ name: Posiciones GPS (MiCODUS)
 
 on:
   schedule:
-    # Respaldo cada 6 horas. El disparo bueno viene del Worker de Cloudflare,
-    # que si respeta la hora: el cron de GitHub en repos publicos se retrasa
-    # horas enteras (pedimos cada 5 min y corria cada 4 h).
-    - cron: '0 */6 * * *'
+    # Respaldo una vez al dia (10:00 am Venezuela = 14:00 UTC). El disparo bueno
+    # viene del Worker de Cloudflare a las 8:00 am, que si respeta la hora (el
+    # cron de GitHub en repos publicos se retrasa horas enteras). Si el Worker ya
+    # barrio ese dia, el robot ve que no pasaron 20 horas y no hace nada.
+    - cron: '0 14 * * *'
   workflow_dispatch: {}
 
 permissions:
   contents: read
   id-token: write
+
+# Un barrido a la vez: un boton y el disparo de las 8 no barren en paralelo. La
+# corrida que llega mientras otra trabaja espera su turno (no se cancela).
+concurrency:
+  group: gps-micodus
+  cancel-in-progress: false
 
 jobs:
   posiciones:

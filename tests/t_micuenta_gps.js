@@ -45,7 +45,8 @@ const db = {
   }),
 };
 const firebase = { firestore: { FieldValue: { serverTimestamp: () => SERVER } } };
-const fetchF = (url, opt) => { fetches.push({ url, metodo: opt && opt.method }); return Promise.resolve({ ok: true }); };
+let workerOk = true;
+const fetchF = (url, opt) => { fetches.push({ url, metodo: opt && opt.method }); return Promise.resolve({ ok: workerOk, status: workerOk ? 200 : 502 }); };
 const setTimeoutF = fn => { timers.push(fn); return timers.length; };
 const L = {
   map: el => { const m = { el, centro: null, zoom: 16, setView(c, z) { this.centro = c; this.zoom = z; return this; }, getZoom() { return this.zoom; }, invalidateSize() {}, remove() {} }; mapas.push(m); return m; },
@@ -174,8 +175,8 @@ const correrTimers = async () => { const t = timers.splice(0); for (const fn of 
   ok('con Worker: avisa y espera la respuesta del robot', fetches.length === 1 && timers.length === 1);
   let vueltas = 0;
   while (timers.length && vueltas < 100) { vueltas++; await correrTimers(); }
-  ok('se rinde tras 36 miradas (unos 3 minutos)', lecturas.filter(k => k === 'ubicacion_cliente/CRED-523').length === 1 + 36);
-  ok('y lo dice sin asustar', $('gps-CRED-523-nota').textContent.indexOf('Tu GPS no respondió todavía') === 0 && $('gps-CRED-523-btn').textContent === 'Actualizar ubicación');
+  ok('se rinde tras 60 miradas (unos 5 minutos)', lecturas.filter(k => k === 'ubicacion_cliente/CRED-523').length === 1 + 60);
+  ok('y lo dice sin asustar', $('gps-CRED-523-nota').textContent.indexOf('No pudimos traer la ubicación esta vez') === 0 && $('gps-CRED-523-nota').textContent.indexOf('unos minutos') === -1 && $('gps-CRED-523-btn').textContent === 'Actualizar ubicación');
 
   // Sin dirección del Worker (el robot no se despierta al momento): no promete "un minuto"
   reiniciar();
@@ -185,8 +186,20 @@ const correrTimers = async () => { const t = timers.splice(0); for (const fn of 
   API.actualizarGps('CRED-523'); await vaciar();
   ok('sin Worker: el pedido igual queda guardado para el robot', escrituras.length === 1 && escrituras[0].ruta === 'pedidos_gps/CRED-523');
   ok('sin Worker: no llama a nada ni se queda esperando', fetches.length === 0 && timers.length === 0);
-  ok('sin Worker: dice la verdad (se actualiza en las próximas horas)', $('gps-CRED-523-nota').textContent.indexOf('próximas horas') > -1 && $('gps-CRED-523-nota').textContent.indexOf('minuto') === -1);
+  ok('sin Worker: dice la verdad (se revisa una vez al día en la mañana)', $('gps-CRED-523-nota').textContent.indexOf('vuelve a mirar mañana') > -1 && $('gps-CRED-523-nota').textContent.indexOf('minuto') === -1);
   ok('sin Worker: el botón vuelve a su texto, apagado por una hora', $('gps-CRED-523-btn').textContent === 'Actualizar ubicación' && $('gps-CRED-523-btn').disabled === true);
+
+  // Worker caído (responde 502): no se queda esperando y dice la verdad
+  reiniciar();
+  S.creditos = [{ id: 'CRED-523' }];
+  docs['ubicacion_cliente/CRED-523'] = { credId: 'CRED-523', lat: 10.48, lng: -66.9, ultimaSenal: '2026-09-14 15:00:00', revisado: new Date(AHORA - 2 * HORA).toISOString(), workerUrl: 'https://w.example' };
+  await API.cargarGpsCliente();
+  workerOk = false;
+  API.actualizarGps('CRED-523'); await vaciar();
+  workerOk = true;
+  ok('Worker caído: el pedido igual queda guardado', escrituras.length === 1 && escrituras[0].ruta === 'pedidos_gps/CRED-523');
+  ok('Worker caído: no se queda esperando', timers.length === 0);
+  ok('Worker caído: lo dice claro y sin culpar al GPS del cliente', $('gps-CRED-523-nota').textContent.indexOf('No pudimos buscarla ahora') === 0 && $('gps-CRED-523-btn').disabled === true);
 
   console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');
   if (fail) process.exitCode = 1;

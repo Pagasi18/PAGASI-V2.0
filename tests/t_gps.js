@@ -598,13 +598,26 @@ window._gpsConfig = {ultimaSync: minAtras(25)};
 ok('hace 25 minutos', API._gpsHtmlSync().indexOf('hace 25 min') > -1);
 window._gpsConfig = {ultimaSync: minAtras(150)};
 ok('hace 2 horas', API._gpsHtmlSync().indexOf('hace 2 h') > -1);
+// Pedido del botón: "Buscando..." solo 15 min; si el Worker no pudo despertar al robot, vuelve el botón
+window._gpsConfig = {ultimaSync: minAtras(60), refrescoPedido: true, refrescoPedidoEn: minAtras(2)};
+ok('pedido reciente: "Buscando posiciones nuevas..." y sin botón', API._gpsHtmlSync().indexOf('Buscando posiciones nuevas') > -1 && API._gpsHtmlSync().indexOf('_gpsPedirRefresco') === -1);
+window._gpsConfig = {ultimaSync: minAtras(60), refrescoPedido: true, refrescoPedidoEn: minAtras(20)};
+ok('pedido de hace 20 min sin barrido: vuelve el botón para reintentar', API._gpsHtmlSync().indexOf('_gpsPedirRefresco') > -1 && API._gpsHtmlSync().indexOf('Buscando') === -1);
+window._gpsConfig = {ultimaSync: minAtras(60), refrescoPedido: true};
+ok('pedido sin hora (de antes): se muestra el botón', API._gpsHtmlSync().indexOf('_gpsPedirRefresco') > -1);
+window._gpsConfig = {ultimaSync: minAtras(120), ultimoError: 'MiCODUS fallo en 3 de 3 equipos', ultimoErrorEn: minAtras(5)};
+ok('si el último intento falló después del último barrido bueno, lo dice', API._gpsHtmlSync().indexOf('Último intento falló: MiCODUS fallo en 3 de 3 equipos') > -1);
+window._gpsConfig = {ultimaSync: minAtras(5), ultimoError: 'viejo', ultimoErrorEn: minAtras(120)};
+ok('un error viejo, ya superado por un barrido bueno, no se muestra', API._gpsHtmlSync().indexOf('Último intento falló') === -1);
+window._gpsConfig = {ultimaSync: minAtras(120), ultimoError: '<b>x</b>', ultimoErrorEn: minAtras(5)};
+ok('el error se muestra escapado', API._gpsHtmlSync().indexOf('&lt;b&gt;x&lt;/b&gt;') > -1);
 window._gpsConfig = {ultimaSync: minAtras(60*50)};
 ok('hace 2 dias', API._gpsHtmlSync().indexOf('hace 2 d') > -1);
 ok('y avisa en ambar cuando lleva mucho', API._gpsHtmlSync().indexOf('var(--amber)') > -1);
 window._gpsConfig = {ultimaSync: minAtras(30)};
 ok('media hora todavia no alarma', API._gpsHtmlSync().indexOf('var(--amber)') === -1);
 
-window._gpsConfig = {ultimaSync: minAtras(5), refrescoPedido: true};
+window._gpsConfig = {ultimaSync: minAtras(5), refrescoPedido: true, refrescoPedidoEn: minAtras(1)};   // el botón siempre guarda la hora del pedido
 ok('con refresco pedido avisa que viene en camino',
    API._gpsHtmlSync().indexOf('Buscando posiciones nuevas') > -1);
 ok('y esconde el boton para no pedirlo dos veces',

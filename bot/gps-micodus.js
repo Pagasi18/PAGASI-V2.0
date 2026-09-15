@@ -29,10 +29,51 @@ const PASS = process.env.MICODUS_PASS || '';
 // Cuantas horas sin reportar antes de considerarlo caido
 const HORAS_CAIDO = 48;
 
-// Cada cuantos minutos se barren las posiciones. A 500 motos instaladas esto
-// cuesta unos 45 centavos al mes; el barrido diario ahorraba centavos y dejaba
-// el mapa con horas de atraso.
-const MINUTOS_BARRIDO = 60;
+// Barrido automatico (Adam, 14-sep-2026: "que se actualice una vez al dia a las
+// 8 am, y luego el boton"). Antes se barria cada hora (a 500 motos, unos 45
+// centavos al mes).
+//   - SIN pedido: toca el barrido del dia si el ultimo EMPEZO antes de las
+//     ultimas 8:00 am de Venezuela (12:00 UTC; Venezuela no cambia de hora).
+//     El Worker dispara a esa hora y el respaldo de GitHub a las 10: si el de
+//     las 8 ya barrio, el respaldo no repite. Un boton tocado ayer por la tarde
+//     NO cuenta como el de hoy (con una ventana de 20 h si lo anulaba).
+//   - CON pedido (boton del modulo GPS o de Mi cuenta): se barre al momento.
+const HORA_BARRIDO_UTC = 12;
+
+// Las 8:00 am de Venezuela mas recientes que ya pasaron
+function anclaDiaria(ahoraMs) {
+  const d = new Date(ahoraMs);
+  const hoy = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), HORA_BARRIDO_UTC);
+  return ahoraMs >= hoy ? hoy : hoy - 86400000;
+}
+
+// ¿Toca barrer? Puro, para las pruebas. Con fechas raras, barre (mejor de mas).
+function decidirBarrido(o) {
+  const ahora = Number(o && o.ahoraMs);
+  const ultimo = Number(o && o.ultimoMs) || 0;
+  // El boton del modulo cuenta como pedido si la bandera sigue en pie, o si se
+  // toco DESPUES de que empezo el ultimo barrido (lo tocaron mientras corria).
+  const pedidoApp = !!(o && (o.refrescoPedido || (Number(o.refrescoPedidoEnMs) || 0) > ultimo));
+  const pedido = pedidoApp || !!(o && o.pidioCliente);
+  const diario = !ultimo || !isFinite(ahora) || ultimo < anclaDiaria(ahora);
+  return { barrer: pedido || diario,
+    motivo: pedido ? (pedidoApp ? 'app' : 'cliente') : diario ? 'diario' : 'nada' };
+}
+
+// MiCODUS fallo en la mitad o mas de los equipos (p. ej. se le cayo la sesion a
+// mitad): ese barrido no cuenta como hecho.
+function barridoFallido(o) {
+  const errores = Number(o && o.errores) || 0;
+  return errores > 0 && errores >= (Number(o && o.ok) || 0) + (Number(o && o.sinCambio) || 0);
+}
+
+// Deja el error en config/gps para que el panel lo muestre (sin romper si no se puede)
+async function anotarError(db, texto) {
+  if (!db) return;
+  try {
+    await db.collection('config').doc('gps').set({ ultimoError: String(texto).slice(0, 300), ultimoErrorEn: new Date().toISOString() }, { merge: true });
+  } catch (e) { console.log('WARN no se pudo anotar el error: ' + e.message); }
+}
 
 // ── Sesion ────────────────────────────────────────────────────────
 // Su login es un GET con las credenciales en la URL. Guardamos las cookies
@@ -225,13 +266,13 @@ function planFichas(fichaIds, instalados, posiciones, ahoraISO, workerUrl) {
 }
 
 // Exportado para las pruebas; el job solo corre si se invoca directo.
-module.exports = { abrir, horasDesde, numero, HORAS_CAIDO, hayPedidoNuevo, planFichas, entrar, listarEquipos };
+module.exports = { abrir, horasDesde, numero, HORAS_CAIDO, hayPedidoNuevo, planFichas, entrar, listarEquipos, decidirBarrido, anclaDiaria, barridoFallido, HORA_BARRIDO_UTC };
 
 // ── Principal ─────────────────────────────────────────────────────
 if (require.main !== module) return;
 
 (async () => {
-  let db = null, instalados = [], workerUrl = '';
+  let db = null, instalados = [], workerUrl = '', inicioBarrido = '';
 
   if (!DRY) {
     const { Firestore } = require('@google-cloud/firestore');
@@ -256,23 +297,25 @@ if (require.main !== module) return;
       }), ultimo);
     } catch (e) { console.log('WARN pedidos de Mi cuenta: ' + e.message); }
 
-    const pidieron = !!cfg.refrescoPedido || pidioCliente;
-    const tocaBarrido = minutos >= MINUTOS_BARRIDO;
+    const decision = decidirBarrido({ refrescoPedido: cfg.refrescoPedido, refrescoPedidoEnMs: cfg.refrescoPedidoEn ? new Date(cfg.refrescoPedidoEn).getTime() : 0,
+      pidioCliente, ultimoMs: ultimo, ahoraMs: Date.now() });
+    const ultimoTxt = minutos >= 99999 ? 'no hay barridos anteriores'
+      : 'ultimo hace ' + (minutos < 120 ? minutos + ' min' : Math.round(minutos / 60) + ' h');
 
-    if (!pidieron && !tocaBarrido) {
-      console.log('Nada que hacer (ultimo barrido hace ' + minutos + ' min)');
+    if (!decision.barrer) {
+      console.log('Nada que hacer (' + ultimoTxt + '; sin pedido solo se barre una vez al dia, desde las 8 am)');
       return;
     }
-    console.log(pidieron ? (cfg.refrescoPedido ? 'Refresco pedido desde el app' : 'Refresco pedido por un cliente desde Mi cuenta')
-                         : 'Barrido horario (ultimo hace ' + minutos + ' min)');
+    console.log(decision.motivo === 'app' ? 'Refresco pedido desde el app'
+      : decision.motivo === 'cliente' ? 'Refresco pedido por un cliente desde Mi cuenta'
+      : 'Barrido del dia (' + ultimoTxt + ')');
 
-    // Se limpia la bandera de una: si el job falla mas adelante, el proximo
-    // barrido igual lo cubre, y asi un boton mal apretado no deja el job
-    // trabajando en cada corrida para siempre.
-    await cfgRef.set({
-      refrescoPedido: false,
-      ultimoIntento: new Date().toISOString(),
-    }, { merge: true });
+    // La bandera del boton del modulo se apaga al TERMINAR bien (abajo): si el
+    // barrido falla, el pedido sigue en pie y la proxima corrida lo atiende.
+    // ultimaSync guarda la hora de INICIO: un pedido hecho mientras corre queda
+    // mas nuevo que ultimaSync y la corrida que espera turno lo atiende.
+    inicioBarrido = new Date().toISOString();
+    await cfgRef.set({ ultimoIntento: inicioBarrido }, { merge: true });
     // Se piden SOLO los instalados. Leer la coleccion entera costaba 500
     // lecturas por corrida —36.000 al dia— para vigilar dos motos.
     const snap = await db.collection('gps').where('estado', '==', 'instalado').get();
@@ -289,15 +332,17 @@ if (require.main !== module) return;
   try {
     userID = await entrar();
   } catch (e) {
-    // Transitorio o clave mala: no reventar el workflow, el proximo cron reintenta.
-    console.log('WARN ' + e.message);
-    process.exit(0);
+    // Transitorio o clave mala. Se anota para que el panel lo muestre, y la corrida
+    // sale en rojo: con un barrido al dia, un fallo no debe pasar callado.
+    console.log('ERROR ' + e.message);
+    await anotarError(db, 'No se pudo entrar a MiCODUS: ' + e.message);
+    process.exit(1);
   }
   console.log('MiCODUS: entramos como UserID ' + userID);
 
   const equipos = await listarEquipos(userID);
   console.log('MiCODUS: ' + equipos.length + ' equipos en la cuenta');
-  if (!equipos.length) { console.log('WARN la cuenta no devolvio equipos'); process.exit(0); }
+  if (!equipos.length) { console.log('ERROR la cuenta no devolvio equipos'); await anotarError(db, 'MiCODUS no devolvio equipos'); process.exit(1); }
 
   const porSerial = {};
   equipos.forEach(e => { if (e.sn) porSerial[String(e.sn)] = e; });
@@ -315,7 +360,7 @@ if (require.main !== module) return;
     return;
   }
 
-  let ok = 0, sinPos = 0, noEstan = 0, caidos = 0, sinCambio = 0;
+  let ok = 0, sinPos = 0, noEstan = 0, caidos = 0, sinCambio = 0, errores = 0;
   const lote = db.batch();
   const posiciones = {};   // lo recien leido, para las fichas de Mi cuenta
 
@@ -325,7 +370,7 @@ if (require.main !== module) return;
 
     let p = null;
     try { p = await posicionDe(eq.id); }
-    catch (e) { console.log('  ' + g.idGps + ' error: ' + e.message); continue; }
+    catch (e) { errores++; console.log('  ' + g.idGps + ' error: ' + e.message); continue; }
     if (!p) { sinPos++; continue; }
 
     const lat = numero(p.latitude), lng = numero(p.longitude);
@@ -364,20 +409,35 @@ if (require.main !== module) return;
     ok++;
   }
 
+  const cfgFin = db.collection('config').doc('gps');
+  // Si MiCODUS fallo en la mitad o mas de los equipos, no se da el barrido por
+  // hecho: no se tocan ultimaSync ni las fichas de Mi cuenta (que dirian
+  // "ubicacion actualizada"), y la corrida sale en rojo para que el respaldo o un
+  // boton vuelvan a intentar. Las posiciones que si llegaron se guardan igual.
+  if (barridoFallido({ errores, ok, sinCambio })) {
+    if (ok) await lote.commit();
+    await anotarError(db, 'MiCODUS fallo en ' + errores + ' de ' + instalados.length + ' equipos');
+    console.log('ERROR MiCODUS fallo en ' + errores + ' de ' + instalados.length + ' equipos: el barrido no se marca como hecho');
+    process.exit(1);
+  }
+
   if (ok) await lote.commit();
-  await db.collection('config').doc('gps').set({
-    ultimaSync: new Date().toISOString(),
+  await cfgFin.set({
+    ultimaSync: inicioBarrido || new Date().toISOString(),
     ultimaSyncEquipos: ok,
     ultimaSyncSinCambio: sinCambio,
+    ultimoError: '',
+    refrescoPedido: false,
   }, { merge: true });
 
   // Fichas de Mi cuenta: posicion + hora de revision de cada credito al que un
   // admin le activo el GPS. "revisado" cambia en CADA barrido: la pagina del
-  // cliente lo usa para saber que su pedido ya se atendio.
+  // cliente lo usa para saber que su pedido ya se atendio. Lleva la hora de
+  // INICIO del barrido: un pedido hecho mientras corria no se da por atendido.
   try {
     const fichasSnap = await db.collection('ubicacion_cliente').get();
     if (!fichasSnap.empty) {
-      const plan = planFichas(fichasSnap.docs.map(d => d.id), instalados, posiciones, new Date().toISOString(), workerUrl);
+      const plan = planFichas(fichasSnap.docs.map(d => d.id), instalados, posiciones, inicioBarrido || new Date().toISOString(), workerUrl);
       let alDia = 0, quitadas = 0;
       for (const x of plan.sets) {
         // update y no set: si un admin la quito mientras corria el barrido, no se revive

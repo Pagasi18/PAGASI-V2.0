@@ -3,15 +3,22 @@
 # navegador.
 #
 # Para publicarlo:   cd bot && npx wrangler deploy
-# Secrets (una vez): npx wrangler secret put TELEGRAM_TOKEN
+# Secret obligatorio (GPS: barrido de las 8 am y botones Actualizar):
 #                    npx wrangler secret put GITHUB_PAT
-#                    npx wrangler secret put CHAT_ID
+# GITHUB_PAT = token fine-grained solo de PAGASI-V2.0 con Actions: Read and write,
+# SIN vencimiento (o con la fecha anotada): cuando vence, el barrido de las 8 y
+# los botones Actualizar dejan de funcionar.
+# Solo para los botones de Telegram (webhook con secret_token): TELEGRAM_TOKEN,
+# TG_SECRET y CHAT_ID. Sin ellos, lo que llegue a la raiz se ignora.
 
 name = "pagasi-bot"
 main = "telegram-worker.js"
 compatibility_date = "2026-01-01"
 
-# El barrido de posiciones de GPS. Cloudflare si respeta la hora; el cron de
-# GitHub Actions en repos publicos se retrasa horas enteras.
+# El barrido de posiciones de GPS: una vez al dia a las 8:00 am de Venezuela
+# (12:00 UTC: Cloudflare usa UTC). Adam, 14-sep-2026. Cloudflare si respeta la
+# hora; el cron de GitHub Actions en repos publicos se retrasa horas enteras.
+# Fuera de esa hora, el boton "Actualizar" (modulo GPS y Mi cuenta) dispara el
+# barrido al momento por /gps-refresco.
 [triggers]
-crons = ["0 * * * *"]
+crons = ["0 12 * * *"]

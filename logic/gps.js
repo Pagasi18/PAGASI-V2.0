@@ -733,7 +733,8 @@ function _gpsHtmlSims(lista){
 // ── Sincronizacion con MiCODUS ───────────────────────────────────
 // El navegador no puede llamar a MiCODUS (CORS) ni disparar el bot (haria
 // falta un token de GitHub en el JS, que es publico). Asi que el boton solo
-// deja una señal en Firebase; el bot la revisa cada 5 minutos y trabaja.
+// deja una señal en Firebase y el Worker despierta al robot al momento; sin
+// Worker, la atiende el barrido de las 8 am (Adam, 14-sep-2026).
 
 function _gpsCfg(){ return window._gpsConfig || {}; }
 
@@ -748,7 +749,10 @@ function _gpsCargarCfg(){
 
 function _gpsHtmlSync(){
   var c = _gpsCfg();
-  var pedido = !!c.refrescoPedido;
+  // "Buscando..." solo mientras el pedido es reciente: si en 15 min no llego el
+  // barrido (el Worker no pudo despertar al robot), vuelve el boton para reintentar.
+  var pedidoEn = _gpsParseFecha(c.refrescoPedidoEn);
+  var pedido = !!c.refrescoPedido && !!pedidoEn && (Date.now() - pedidoEn.getTime()) < 15 * 60000;
   var d = _gpsParseFecha(c.ultimaSync);
   var min = d ? Math.round((Date.now() - d.getTime()) / 60000) : null;
   var cuando = min === null ? 'nunca'
@@ -756,6 +760,10 @@ function _gpsHtmlSync(){
     : min < 60  ? 'hace ' + min + ' min'
     : min < 1440? 'hace ' + Math.floor(min/60) + ' h'
     : 'hace ' + Math.floor(min/1440) + ' d';
+  // Si el ultimo intento del robot fallo despues del ultimo barrido bueno, se dice
+  var errEn = _gpsParseFecha(c.ultimoErrorEn);
+  var conError = !!(c.ultimoError && errEn && (!d || errEn.getTime() > d.getTime()));
+  var escT = function(t){ return String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
 
   return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
     + '<span style="font-size:11.5px;color:var(--ink3)">'
@@ -763,6 +771,7 @@ function _gpsHtmlSync(){
     + cuando + '</b>'
     + (typeof c.ultimaSyncEquipos === 'number' ? ' · ' + c.ultimaSyncEquipos + ' equipos' : '')
     + '</span>'
+    + (conError ? '<span style="font-size:11.5px;color:var(--red);font-weight:700">Último intento falló: ' + escT(c.ultimoError) + '</span>' : '')
     + (pedido
         ? '<span style="font-size:11.5px;color:var(--p1);font-weight:700">Buscando posiciones nuevas...</span>'
         : '<button class="btn btn-p btn-xs" onclick="_gpsPedirRefresco()">↻ Actualizar ahora</button>')
@@ -777,6 +786,10 @@ function _gpsWorkerUrl(){
   return u ? u.replace(/\/+$/, '') + '/gps-refresco' : '';
 }
 
+function _gpsAvisoSinWorker(){
+  if(typeof toast === 'function') toast('No se pudo buscar ahora. Queda pedido y el botón vuelve en 15 minutos para reintentar.', 'error');
+}
+
 function _gpsPedirRefresco(){
   if(typeof db === 'undefined' || !db){ toast('Sin conexion con la base', 'error'); return; }
 
@@ -788,8 +801,8 @@ function _gpsPedirRefresco(){
   if(url){
     fetch(url, {method:'POST'})
       .then(function(r){ return r.json(); })
-      .then(function(j){ if(!j || !j.ok) console.warn('[gps] el Worker no pudo disparar el job', j); })
-      .catch(function(e){ console.warn('[gps] no se pudo avisar al Worker', e); });
+      .then(function(j){ if(!j || !j.ok){ console.warn('[gps] el Worker no pudo disparar el job', j); _gpsAvisoSinWorker(); } })
+      .catch(function(e){ console.warn('[gps] no se pudo avisar al Worker', e); _gpsAvisoSinWorker(); });
   }
 
   db.collection('config').doc('gps').set({
@@ -797,19 +810,38 @@ function _gpsPedirRefresco(){
     refrescoPedidoPor: (S.currentUser && S.currentUser.nombre) || 'Admin',
     refrescoPedidoEn: new Date().toISOString()
   }, {merge:true}).then(function(){
-    window._gpsConfig = Object.assign({}, _gpsCfg(), {refrescoPedido:true});
+    window._gpsConfig = Object.assign({}, _gpsCfg(), {refrescoPedido:true, refrescoPedidoEn:new Date().toISOString()});
     var el = document.getElementById('gps-sync');
     if(el) el.innerHTML = _gpsHtmlSync();
     toast(_gpsWorkerUrl() ? 'Buscando posiciones nuevas...'
-                          : 'Pedido anotado. Llega en el proximo barrido.', 'success');
+                          : 'Pedido anotado. Sin el Worker llega en la próxima corrida automática (puede ser mañana).', 'success');
     if(typeof logActividad === 'function') logActividad('gps_refresco','gps','',{});
     // Se vuelve a mirar solo, para que el usuario vea llegar la respuesta.
-    var n = 0;
+    var n = 0, pedidoEn = new Date().toISOString();
+    // Vuelve el boton (sin esperar los 15 min) y se repinta el estado
+    var soltar = function(c){
+      window._gpsConfig = Object.assign({}, c || _gpsCfg(), {refrescoPedido:false});
+      var el2 = document.getElementById('gps-sync');
+      if(el2) el2.innerHTML = _gpsHtmlSync();
+    };
     var reloj = setInterval(function(){
       n++;
-      if(n > 40 || S.page !== 'gps'){ clearInterval(reloj); return; }
+      if(S.page !== 'gps'){ clearInterval(reloj); return; }
+      if(n > 40){
+        // ~13 min sin respuesta: se avisa y vuelve el boton (antes se cortaba callado)
+        clearInterval(reloj);
+        soltar();
+        toast('No llegaron posiciones nuevas todavía. Puedes volver a intentar.', 'error');
+        return;
+      }
       db.collection('config').doc('gps').get().then(function(d){
         var c = (d && d.exists) ? d.data() : {};
+        if(c.ultimoError && c.ultimoErrorEn && String(c.ultimoErrorEn) > pedidoEn){
+          clearInterval(reloj);
+          soltar(c);
+          toast('No se pudieron traer posiciones: ' + c.ultimoError, 'error');
+          return;
+        }
         if(!c.refrescoPedido){
           clearInterval(reloj);
           window._gpsConfig = c;
