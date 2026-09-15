@@ -185,5 +185,44 @@ ok('día tranquilo: 2 mensajes con "Ninguna"/"Ninguno"', tgVacio.length === 2
   && tgVacio[0].includes('<b>0 avisos</b>') && tgVacio[1].includes('<b>0 en mora</b>')
   && tgVacio[0].includes('Ninguna 🎉') && tgVacio[1].includes('Ninguno 🎉') && !tgVacio[1].includes('escribirles a diario'));
 
-console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');
-if (fail) process.exitCode = 1;
+// ── Partir un mensaje en dos ──
+const dos = B.partirEnDos('<b>🔴 CRÍTICA — JOFANNY</b>\n\n<b>EN MORA (3)</b>\n• a\n• b\n• c');
+ok('partir: la segunda parte dice "(continúa)"', !!dos && dos[1].startsWith('<b>🔴 CRÍTICA — JOFANNY (continúa)</b>'));
+ok('partir: la primera parte no termina en un título solo', !!dos && !/<\/b>$/.test(dos[0].split('\n').pop()) && dos[0].split('\n').pop() !== '');
+ok('partir: no se pierde ninguna línea', !!dos && ['• a', '• b', '• c'].every(x => (dos[0] + '\n' + dos[1]).includes(x)));
+ok('partir: una continuación no repite "(continúa)"', B.partirEnDos('<b>X (continúa)</b>\n• a\n• b\n• c')[1].startsWith('<b>X (continúa)</b>\n'));
+ok('partir: con menos de 3 líneas no se puede', B.partirEnDos('<b>X</b>\n• a') === null);
+
+// ── Envío: si Telegram rechaza por largo, se parte y se reintenta sin perder a nadie ──
+(async () => {
+  const LIMITE = 3000;   // Telegram de mentira: rechaza lo que pase de 3000 caracteres con enlaces
+  const recibidos = [];
+  let llamadas = 0;
+  global.fetch = async (url, opt) => {
+    llamadas++;
+    const cuerpo = JSON.parse(opt.body);
+    if (cuerpo.text.length > LIMITE) return { json: async () => ({ ok: false, error_code: 400, description: 'Bad Request: ENTITIES_TOO_LONG' }) };
+    recibidos.push(cuerpo);
+    return { json: async () => ({ ok: true }) };
+  };
+  const pesados = B.armarMensajes(B.calcularAvisos(credsDia, [], cliDia, HOY));   // los 2 mensajes del día normal
+  const llegoAlgo = await B.enviarTelegram('TOKEN', ['111', '222'], pesados);
+  const deChat = c => recibidos.filter(x => x.chat_id === c).map(x => x.text);
+  const enlaces = arr => (arr.join('\n').match(/wa\.me\//g) || []).length;
+  ok('envío: Telegram rechazó por largo y aun así salió todo, partido', llegoAlgo === true && deChat('111').length > 2);
+  ok('envío: ninguna parte aceptada pasa el límite', recibidos.every(x => x.text.length <= LIMITE));
+  ok('envío: no se pierde ningún cliente (60 en cada chat)', enlaces(deChat('111')) === 60 && enlaces(deChat('222')) === 60);
+  ok('envío: primero la lista de Samantha y después la de Jofanny', deChat('111')[0].startsWith('<b>🟢 PREVENTIVA — SAMANTHA') && deChat('111').slice(-1)[0].startsWith('<b>🔴 CRÍTICA — JOFANNY'));
+  ok('envío: cada parte dice de quién es', deChat('111').every(x => /^<b>(🟢 PREVENTIVA — SAMANTHA|🔴 CRÍTICA — JOFANNY)/.test(x)));
+  ok('envío: el segundo chat recibe las mismas partes', JSON.stringify(deChat('111')) === JSON.stringify(deChat('222')));
+  const rechazos = llamadas - recibidos.length;
+  ok('envío: el segundo chat no vuelve a probar (los rechazos son solo del primero)', rechazos > 0 && llamadas === recibidos.length + rechazos && deChat('222').length === deChat('111').length);
+
+  recibidos.length = 0; llamadas = 0;
+  global.fetch = async () => { llamadas++; return { json: async () => ({ ok: false, error_code: 403, description: 'Forbidden: bot was blocked by the user' }) }; };
+  const bloqueado = await B.enviarTelegram('TOKEN', ['333'], ['<b>🟢 PREVENTIVA — SAMANTHA</b>\n• uno\n• dos\n• tres']);
+  ok('envío: si el chat bloqueó al bot no se insiste', bloqueado === false && llamadas === 1);
+
+  console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');
+  if (fail) process.exitCode = 1;
+})();

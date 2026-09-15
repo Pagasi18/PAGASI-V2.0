@@ -363,20 +363,77 @@ function armarMensajes(r) {
   return mensajes;
 }
 
+/* ── Envio: Telegram tambien limita lo que pesan los enlaces de un mensaje ──
+   Cada boton de WhatsApp lleva ADENTRO el mensaje entero para el cliente, y
+   Telegram rechaza un mensaje con demasiado peso en enlaces ("ENTITIES_TOO_LONG",
+   14-sep: 39 recordatorios no entraron en uno). Por eso se manda la lista
+   entera y, si Telegram la rechaza por larga, se parte en dos y se reintenta:
+   salen los MENOS mensajes posibles sin perder a nadie. El primer chat
+   encuentra las partes que Telegram acepta; a los demas se les mandan esas. */
+const DEMASIADO_LARGO = /ENTITIES_TOO_LONG|MESSAGE_TOO_LONG|message is too long/i;
+
+function partirEnDos(msg) {
+  const lineas = String(msg).split('\n');
+  if (lineas.length < 3) return null;
+  const esTitulo = l => l === '' || /^<b>.*<\/b>/.test(l);
+  const mitad = Math.ceil(lineas.length / 2);
+  // que la primera parte no termine en un titulo ni en una linea vacia
+  let corte = mitad;
+  while (corte < lineas.length - 1 && esTitulo(lineas[corte - 1])) corte++;
+  if (esTitulo(lineas[corte - 1])) { corte = mitad; while (corte > 2 && esTitulo(lineas[corte - 1])) corte--; }
+  if (corte <= 1 || esTitulo(lineas[corte - 1])) return null;
+  const primera = lineas[0];
+  const cabeza = primera.indexOf('(continúa)') > -1 ? primera : primera.replace(/<\/b>$/, ' (continúa)</b>');
+  return [lineas.slice(0, corte).join('\n'), cabeza + '\n' + lineas.slice(corte).join('\n')];
+}
+
+async function mandar(token, chat, texto) {
+  const res = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chat, text: texto, parse_mode: 'HTML', disable_web_page_preview: true })
+  });
+  return res.json();
+}
+
+// Devuelve las partes que Telegram SI acepto (en orden) y si salio todo
+async function mandarPartiendo(token, chat, texto, nivel) {
+  const body = await mandar(token, chat, texto);
+  if (body.ok) return { partes: [texto], completo: true };
+  const desc = String(body.description || '');
+  if (body.error_code === 429 && nivel < 8) {                    // demasiado rapido: esperar lo que pide y reintentar
+    await new Promise(r => setTimeout(r, (((body.parameters || {}).retry_after) || 2) * 1000));
+    return mandarPartiendo(token, chat, texto, nivel + 1);
+  }
+  if (DEMASIADO_LARGO.test(desc) && nivel < 8) {
+    const dos = partirEnDos(texto);
+    if (dos) {
+      const a = await mandarPartiendo(token, chat, dos[0], nivel + 1);
+      const b = await mandarPartiendo(token, chat, dos[1], nivel + 1);
+      return { partes: a.partes.concat(b.partes), completo: a.completo && b.completo };
+    }
+  }
+  console.error('Telegram', chat + ':', desc);
+  return { partes: [], completo: false };
+}
+
 async function enviarTelegram(token, chats, mensajes) {
   let algunoOk = false;
+  const probado = new Map();   // mensaje → partes que Telegram ya acepto enteras
   for (const chat of chats) {
+    let n = 0, mayor = 0;
     for (const m of mensajes) {
-      const res = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chat, text: m, parse_mode: 'HTML', disable_web_page_preview: true })
-      });
-      const body = await res.json();
-      if (body.ok) algunoOk = true;
-      else console.error('Telegram', chat + ':', body.description);
+      const lista = probado.get(m) || [m];
+      for (const t of lista) {
+        const r = await mandarPartiendo(token, chat, t, 0);
+        if (r.partes.length) algunoOk = true;
+        n += r.partes.length;
+        r.partes.forEach(x => { mayor = Math.max(mayor, x.length); });
+        if (!probado.has(m) && lista.length === 1 && r.completo) probado.set(m, r.partes);
+      }
     }
-    console.log('Chat', chat, ': ' + mensajes.length + ' mensaje(s)');
+    // Solo tamanos (sin datos personales): sirve para conocer el limite real de Telegram
+    console.log('Chat', chat, ': ' + n + ' mensaje(s)' + (n ? ' · el mas largo aceptado: ' + mayor + ' caracteres con enlaces' : ''));
   }
   return algunoOk;
 }
@@ -436,5 +493,5 @@ if (require.main === module) {
 }
 
 module.exports = { calcularAvisos, armarMensajes, mensajeCliente, telWhatsapp, fechasDe, repartidor, claveCliente, duenas,
-  textoVisible, entidades, DIAS_AVISO, DIAS_CRITICO, TELEGRAM_MAX, TELEGRAM_MAX_ENTIDADES,
+  textoVisible, entidades, partirEnDos, enviarTelegram, DIAS_AVISO, DIAS_CRITICO, TELEGRAM_MAX, TELEGRAM_MAX_ENTIDADES,
   PREVENTIVA_DEFECTO, CRITICA_DEFECTO, COBRADORAS_DEFECTO };
