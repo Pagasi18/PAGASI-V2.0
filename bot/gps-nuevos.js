@@ -12,7 +12,9 @@
      - Con GUARDAR=true (y el OK de Adam) crea en el modulo SOLO los equipos
        nuevos que reconocio sin dudas. No toca los que ya estan.
      - Tambien avisa de equipos que ya estan en el modulo sin credito pero cuyo
-       nombre en MiCODUS apunta a uno (esos se asignan a mano en el modulo).
+       nombre en MiCODUS apunta a uno. Con ASIGNAR=true (y el OK de Adam) les
+       pone ese credito y los marca instalados; con SOLO=true, solo al del
+       credito que se pidio revisar. No toca nada mas del equipo.
    Log publico: sin placas, seriales, nombres ni posiciones; solo cantidades y
    numeros de credito.
    ══════════════════════════════════════════════════════════════════════════ */
@@ -84,6 +86,12 @@ function planSinVincular(equipos, gpsApp, creds) {
   return res;
 }
 
+// Lo que se cambia en un equipo que ya estaba en el modulo sin credito: nada mas que esto
+function cambioAsignar(sv, ahoraISO) {
+  return { creditoId: sv.credId, estado: 'instalado', actualizado: ahoraISO,
+    asignadoPor: 'Robot MiCODUS (reconocido por ' + sv.por + ')' };
+}
+
 // El equipo que se crea en el modulo: lo que se sabe de MiCODUS, nada inventado
 function docNuevo(v, ahoraISO, n) {
   return {
@@ -97,6 +105,8 @@ function docNuevo(v, ahoraISO, n) {
 
 async function main() {
   const GUARDAR = process.env.GUARDAR === 'true';
+  const ASIGNAR = process.env.ASIGNAR === 'true';
+  const SOLO = process.env.SOLO === 'true';
   const OBJ = String(process.env.CREDITO || 'CRED-523').trim().toUpperCase();
   const micodus = require('./gps-micodus.js');
   const { Firestore } = require('@google-cloud/firestore');
@@ -131,25 +141,39 @@ async function main() {
     + ' · en MiCODUS: ' + (v ? 'equipo nuevo, se vincularia (por ' + v.por + ')' : k ? 'aparece, pero ' + k.motivo
       : s ? 'esta en el modulo sin credito (asignar a mano)' : 'ningun equipo trae su numero ni su placa'));
 
-  if (!GUARDAR) {
+  if (!GUARDAR && !ASIGNAR) {
     console.log('RESULTADO dry nuevos=' + plan.nuevos.length + ' vinculables=' + plan.vinculados.length + ' conflicto=' + plan.conflicto.length
       + ' sin=' + plan.sinCredito.length + ' sueltos=' + sueltos.length);
     return;
   }
   const ahora = new Date().toISOString();
-  let guardados = 0;
-  for (let i = 0; i < plan.vinculados.length; i += 400) {
+  let guardados = 0, asignados = 0;
+  for (let i = 0; GUARDAR && i < plan.vinculados.length; i += 400) {
     const parte = plan.vinculados.slice(i, i + 400);
     const lote = db.batch();
     parte.forEach((x, j) => { const doc = docNuevo(x, ahora, i + j + 1); lote.set(db.collection('gps').doc(doc.id), doc); });
     await lote.commit();
     guardados += parte.length;
   }
-  console.log('RESULTADO guardados=' + guardados + ' conflicto=' + plan.conflicto.length + ' sin=' + plan.sinCredito.length + ' sueltos=' + sueltos.length);
+  if (ASIGNAR) {
+    for (const sv of sueltos.filter(x => !SOLO || x.credId === OBJ)) {
+      const ref = db.collection('gps').doc(String(sv.gpsId));
+      const hecho = await db.runTransaction(async tx => {
+        const d = await tx.get(ref);
+        const g = d.exists ? d.data() : null;
+        if (!g || g.eliminado || g.creditoId) return false;      // alguien lo cambio mientras tanto: no se pisa
+        tx.update(ref, cambioAsignar(sv, ahora));
+        return true;
+      });
+      if (hecho) { asignados++; console.log('  asignado: ' + sv.credId); }
+    }
+  }
+  console.log('RESULTADO guardados=' + guardados + ' asignados=' + asignados + ' conflicto=' + plan.conflicto.length
+    + ' sin=' + plan.sinCredito.length + ' sueltos=' + sueltos.length);
 }
 
 if (require.main === module) {
   main().catch(e => { console.log('RESULTADO ERROR ' + e.message); process.exit(1); });
 }
 
-module.exports = { planNuevos, planSinVincular, docNuevo, placaNormal, forma, credIdDe };
+module.exports = { planNuevos, planSinVincular, cambioAsignar, docNuevo, placaNormal, forma, credIdDe };

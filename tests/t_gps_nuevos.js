@@ -59,6 +59,10 @@ const sueltos = G.planSinVincular(equipos, gpsApp, creds);
 ok('equipo en el módulo sin crédito cuyo nombre en MiCODUS apunta a CRED-900', sueltos.length === 1 && sueltos[0].gpsId === 'GPS-C' && sueltos[0].credId === 'CRED-900' && sueltos[0].por === 'placa');
 ok('los eliminados y los que ya tienen crédito no se tocan', !sueltos.some(s => s.gpsId === 'GPS-D' || s.gpsId === 'GPS-A'));
 
+const cambio = G.cambioAsignar(sueltos[0], '2026-09-15T01:00:00.000Z');
+ok('asignar: solo pone el crédito, lo marca instalado y deja constancia', Object.keys(cambio).sort().join() === 'actualizado,asignadoPor,creditoId,estado'
+  && cambio.creditoId === 'CRED-900' && cambio.estado === 'instalado' && cambio.asignadoPor.includes('placa'));
+
 // ── El equipo que se crearía ──
 const doc = G.docNuevo(plan.vinculados.find(v => v.credId === 'CRED-523'), '2026-09-15T01:00:00.000Z', 1);
 ok('id con el formato del módulo', /^GPS-\d+-1-[0-9a-z]+$/.test(doc.id));

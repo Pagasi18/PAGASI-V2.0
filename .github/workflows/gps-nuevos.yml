@@ -15,6 +15,14 @@ on:
         description: 'Credito a revisar en detalle'
         type: string
         default: 'CRED-523'
+      asignar:
+        description: 'Poner su credito a los equipos sin credito que MiCODUS reconoce (con OK de Adam)'
+        type: boolean
+        default: false
+      solo:
+        description: 'Con asignar: solo el equipo del credito de arriba'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -41,4 +49,6 @@ jobs:
           MICODUS_PASS: ${{ secrets.MICODUS_PASS }}
           GUARDAR: ${{ inputs.guardar }}
           CREDITO: ${{ inputs.credito }}
+          ASIGNAR: ${{ inputs.asignar }}
+          SOLO: ${{ inputs.solo }}
         run: node gps-nuevos.js
