@@ -225,7 +225,7 @@ function planFichas(fichaIds, instalados, posiciones, ahoraISO, workerUrl) {
 }
 
 // Exportado para las pruebas; el job solo corre si se invoca directo.
-module.exports = { abrir, horasDesde, numero, HORAS_CAIDO, hayPedidoNuevo, planFichas };
+module.exports = { abrir, horasDesde, numero, HORAS_CAIDO, hayPedidoNuevo, planFichas, entrar, listarEquipos };
 
 // ── Principal ─────────────────────────────────────────────────────
 if (require.main !== module) return;

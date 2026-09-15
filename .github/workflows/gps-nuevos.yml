@@ -1,0 +1,44 @@
+name: GPS (equipos nuevos de MiCODUS)
+
+# A mano. Entra a MiCODUS (solo lee), compara con el modulo GPS y dice que
+# equipos nuevos hay y a que credito pertenecen por su nombre en MiCODUS. Con
+# guardar=true (y el OK de Adam) crea en el modulo SOLO los que reconocio sin
+# dudas. Log sin placas, seriales, nombres ni posiciones.
+on:
+  workflow_dispatch:
+    inputs:
+      guardar:
+        description: 'Crear en el modulo los equipos reconocidos (con OK de Adam)'
+        type: boolean
+        default: false
+      credito:
+        description: 'Credito a revisar en detalle'
+        type: string
+        default: 'CRED-523'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  nuevos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: pagasi-v2
+          workload_identity_provider: projects/951911859002/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: firebase-adminsdk-fbsvc@pagasi-v2.iam.gserviceaccount.com
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - working-directory: bot
+        run: npm install --omit=dev
+      - working-directory: bot
+        env:
+          MICODUS_USER: ${{ secrets.MICODUS_USER }}
+          MICODUS_PASS: ${{ secrets.MICODUS_PASS }}
+          GUARDAR: ${{ inputs.guardar }}
+          CREDITO: ${{ inputs.credito }}
+        run: node gps-nuevos.js
