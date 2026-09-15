@@ -13,10 +13,11 @@
        sola lista, los de mas dias primero.
 
    Corre en GitHub Actions todas las mananas (7:46 am Venezuela). Lee Firestore
-   (SOLO lectura) y, con el MISMO motor de cuotas del admin, arma para Telegram:
-     1. un resumen del dia, y
-     2. la lista de cada cobradora, con un boton de WhatsApp por cliente (el
-        mensaje ya va escrito; la cobradora solo toca el enlace y le da enviar):
+   (SOLO lectura) y, con el MISMO motor de cuotas del admin, arma para Telegram
+   UN mensaje por cobradora ("mandame solo 2 mensajes, uno para Samantha y otro
+   para Jofanny"), con el dia y sus totales arriba y un boton de WhatsApp por
+   cliente (el mensaje ya va escrito; la cobradora solo toca el enlace y le da
+   enviar). Solo si una lista no cabe en un mensaje de Telegram se parte:
           🟢 PREVENTIVA · vence HOY o en 3 dias → plantilla "Recordatorio cuota"
           🔴 CRITICA    · en mora 1-30 dias     → plantilla "Aviso de mora"
                         · en mora +30 dias      → plantilla "Aviso urgente de mora"
@@ -51,7 +52,8 @@ const Ledger = require('../logic/credito-ledger.js');
 const DIAS_GRACIA = 5;
 const DIAS_AVISO = 3;                 // el aviso anticipado: 3 dias antes
 const DIAS_CRITICO = 30;              // mas de esto: aviso urgente (como en Cobranza)
-const TELEGRAM_MAX = 3500;            // margen bajo el limite real de 4096
+const TELEGRAM_MAX = 3800;            // letras VISIBLES por mensaje: Telegram corta en 4096 (las direcciones de los enlaces no cuentan)
+const TELEGRAM_MAX_ENTIDADES = 90;    // negritas, cursivas y enlaces por mensaje (Telegram admite hasta 100)
 const PREVENTIVA_DEFECTO = 'Samantha';
 const CRITICA_DEFECTO = 'Jofanny';
 const COBRADORAS_DEFECTO = ['Samantha', 'Jofanny'];   // del reparto anterior (ver repartidor)
@@ -70,6 +72,15 @@ function lindo(iso) {
   return d + '/' + m + '/' + y;
 }
 const plural = (n, uno, varios) => n + ' ' + (n === 1 ? uno : varios);
+
+// Lo que Telegram cuenta para su limite: el texto visible, sin etiquetas ni las
+// direcciones de los enlaces (que son largas: llevan el WhatsApp ya escrito)
+function textoVisible(html) {
+  return String(html).replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+}
+function entidades(html) {
+  return (String(html).match(/<(a|b|i)[\s>]/g) || []).length;
+}
 
 /* ── Telefono: mismo criterio que el admin (wa.me/58 + numero sin el 0) ── */
 function telWhatsapp(tel) {
@@ -260,7 +271,10 @@ function calcularAvisos(creds, pagos, clientes, hoyISO, opciones) {
   return { hoy, en3, duenas: quien, vencenHoy, vencenEn3, atrasados, criticos, critica, sinTelefono };
 }
 
-/* ── Los mensajes de Telegram (HTML): resumen + preventiva + critica ── */
+/* ── Los mensajes de Telegram (HTML): UNO por cobradora ── */
+// Adam (14-sep-2026): "mandame solo 2 mensajes, uno para Samantha y otro para
+// Jofanny". Cada mensaje trae arriba el dia y sus totales (ya no hay resumen
+// aparte). Solo si una lista no cabe en un mensaje de Telegram se parte.
 function armarMensajes(r) {
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const money = n => '$' + Math.round(Number(n) || 0).toLocaleString('es-VE');
@@ -273,6 +287,7 @@ function armarMensajes(r) {
     + ' · ' + enlace(a, a.tipo === 'critico' ? '🚨 Aviso urgente' : '📲 Enviar cobro');
   const etiquetaSinTel = a => a.tipo === 'hoy' ? ' (vence HOY)' : a.tipo === 'en3' ? ' (vence en ' + DIAS_AVISO + ' días)'
     : ' (' + plural(a.dias, 'día', 'días') + ' de atraso)';
+  const dia = lindo(r.hoy);
 
   // Cada aviso va en UNA lista: la de su tipo, salvo los recordatorios de clientes en mora
   const prevHoy = r.vencenHoy.filter(a => !a.clienteEnMora);
@@ -281,31 +296,16 @@ function armarMensajes(r) {
   const sinPrev = r.sinTelefono.filter(a => a.dias === 0 && !a.clienteEnMora);
   const sinCrit = r.sinTelefono.filter(a => a.dias > 0 || a.clienteEnMora);
   const nPrev = prevHoy.length + prevEn3.length + sinPrev.length;
-  const nCrit = critica.length + tambien.length + sinCrit.length;
   const urgentes = critica.filter(a => a.tipo === 'critico').length;
   const mensajes = [];
 
-  // 1) Resumen del dia
-  const res = [];
-  res.push('<b>📣 Cobranza del día — ' + lindo(r.hoy) + '</b>');
-  res.push('');
-  res.push('🟢 <b>PREVENTIVA</b> · ' + esc(quien.preventiva) + ': <b>' + nPrev + '</b> aviso' + (nPrev === 1 ? '' : 's') + ' · ' + money(total([...prevHoy, ...prevEn3])));
-  res.push('   Vencen HOY: <b>' + prevHoy.length + '</b> · Vencen el ' + lindo(r.en3) + ' (en ' + DIAS_AVISO + ' días): <b>' + prevEn3.length + '</b>');
-  res.push('🔴 <b>CRÍTICA</b> · ' + esc(quien.critica) + ': <b>' + critica.length + '</b> en mora · ' + money(total(critica)) + ' vencido'
-    + (urgentes ? ' · ' + urgentes + ' con +' + DIAS_CRITICO + ' días' : ''));
-  if (tambien.length) res.push('   + ' + plural(tambien.length, 'cuota que también vence', 'cuotas que también vencen') + ' a clientes en mora');
-  const sinTotal = sinPrev.length + sinCrit.length;
-  if (sinTotal) res.push('⚠ Sin teléfono útil: ' + sinTotal + ' (van al final de cada lista)');
-  res.push('');
-  res.push('<i>' + esc(quien.preventiva) + ' trabaja la preventiva y ' + esc(quien.critica) + ' la crítica. Un cliente en mora lo lleva solo ' + esc(quien.critica) + '.</i>');
-  mensajes.push(res.join('\n'));
-
-  // Troceo: ninguna parte pasa el limite y las continuaciones dicen de quien son
+  // Solo se parte una lista si no cabe en un mensaje de Telegram
   const trocear = (cabeza, lineas) => {
     let actual = '';
     lineas.forEach(x => {
       const cand = actual ? actual + '\n' + x : x;
-      if (cand.length > TELEGRAM_MAX && actual) {
+      const noCabe = textoVisible(cand).length > TELEGRAM_MAX || entidades(cand) > TELEGRAM_MAX_ENTIDADES;
+      if (noCabe && actual) {
         mensajes.push(actual);
         actual = cabeza + ' (continúa)</b>\n' + x;
       } else actual = cand;
@@ -313,9 +313,12 @@ function armarMensajes(r) {
     if (actual) mensajes.push(actual);
   };
 
-  // 2) PREVENTIVA
+  // 1) PREVENTIVA
   const cabP = '<b>🟢 PREVENTIVA — ' + esc(String(quien.preventiva).toUpperCase());
-  const bP = [cabP + ' — ' + plural(nPrev, 'aviso', 'avisos') + '</b>', ''];
+  const bP = [cabP + '</b>'];
+  bP.push('📣 Cobranza del ' + dia + ' · <b>' + plural(nPrev, 'aviso', 'avisos') + '</b> · ' + money(total([...prevHoy, ...prevEn3]))
+    + (sinPrev.length ? ' · ' + sinPrev.length + ' sin teléfono' : ''));
+  bP.push('');
   bP.push('<b>📅 VENCEN HOY (' + prevHoy.length + ')</b>');
   if (prevHoy.length) prevHoy.forEach(a => bP.push(lineaAviso(a))); else bP.push('— Ninguna 🎉');
   bP.push('');
@@ -330,9 +333,14 @@ function armarMensajes(r) {
   bP.push('<i>Toca el enlace: WhatsApp se abre con el mensaje listo, solo dale enviar.</i>');
   trocear(cabP, bP);
 
-  // 3) CRITICA
+  // 2) CRITICA
   const cabC = '<b>🔴 CRÍTICA — ' + esc(String(quien.critica).toUpperCase());
-  const bC = [cabC + ' — ' + plural(nCrit, 'aviso', 'avisos') + '</b>', ''];
+  const bC = [cabC + '</b>'];
+  bC.push('📣 Cobranza del ' + dia + ' · <b>' + critica.length + ' en mora</b> · ' + money(total(critica)) + ' vencido'
+    + (urgentes ? ' · ' + urgentes + ' con +' + DIAS_CRITICO + ' días' : '')
+    + (tambien.length ? ' · ' + plural(tambien.length, 'cuota más que vence', 'cuotas más que vencen') : '')
+    + (sinCrit.length ? ' · ' + sinCrit.length + ' sin teléfono' : ''));
+  bC.push('');
   bC.push('<b>EN MORA DESDE EL DÍA 1 (' + critica.length + ')</b> — los de más días primero');
   if (critica.length) critica.forEach(a => bC.push(lineaMora(a))); else bC.push('— Ninguno 🎉');
   if (tambien.length) {
@@ -428,4 +436,5 @@ if (require.main === module) {
 }
 
 module.exports = { calcularAvisos, armarMensajes, mensajeCliente, telWhatsapp, fechasDe, repartidor, claveCliente, duenas,
-  DIAS_AVISO, DIAS_CRITICO, TELEGRAM_MAX, PREVENTIVA_DEFECTO, CRITICA_DEFECTO, COBRADORAS_DEFECTO };
+  textoVisible, entidades, DIAS_AVISO, DIAS_CRITICO, TELEGRAM_MAX, TELEGRAM_MAX_ENTIDADES,
+  PREVENTIVA_DEFECTO, CRITICA_DEFECTO, COBRADORAS_DEFECTO };

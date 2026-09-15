@@ -1,9 +1,10 @@
 // Avisos de cobranza (bot/avisos-cuotas.js): a quién se avisa, con el motor de
 // cuotas real y las mismas reglas que la pantalla de Cobranza; el reparto por
 // TIPO (Adam, 14-sep-2026): PREVENTIVA (vence hoy / en 3 días) → Samantha y
-// CRÍTICA (en mora desde el día 1, una sola lista) → Jofanny; los teléfonos,
-// los textos del WhatsApp y el troceo de Telegram. Fechas FIJAS: el cálculo
-// recibe el "hoy" como dato.
+// CRÍTICA (en mora desde el día 1, una sola lista) → Jofanny; UN mensaje de
+// Telegram por cobradora ("mándame solo 2 mensajes"); los teléfonos, los textos
+// del WhatsApp y cuándo se parte una lista. Fechas FIJAS: el cálculo recibe el
+// "hoy" como dato.
 const path = require('path');
 const B = require(path.join(__dirname, '..', 'bot', 'avisos-cuotas.js'));
 let pass = 0, fail = 0;
@@ -97,7 +98,7 @@ const rNombres = B.calcularAvisos(creds, pagos, clientes, HOY, { preventiva: 'An
 ok('con otros nombres, el reparto los usa', rNombres.vencenHoy[0].cobradora === 'Ana' && rNombres.critica[0].cobradora === 'Bea');
 
 // ── El reparto anterior (par/impar por cliente) sigue disponible ──
-const dueno = B.repartidor(creds, ['Jofanny', 'Samantha']);
+const dueno = B.repartidor(creds, ['Samantha', 'Jofanny']);
 ok('anterior: un cliente con dos créditos, siempre la misma', dueno({ id: 'CRED-019', clienteId: 'C1' }) === dueno({ id: 'CRED-010', clienteId: 'C1' }));
 ok('anterior: sin clienteId se agrupa por nombre', B.repartidor([{ id: 'CRED-004', cli: 'Zoe' }, { id: 'CRED-007', cli: 'ZOE ' }], ['A', 'B'])({ id: 'CRED-007', cli: 'zoe' }) === 'A');
 
@@ -115,41 +116,48 @@ ok('mora: días, cuota, vehículo y monto vencido', mora.includes('2 días de at
 const grave = B.mensajeCliente(buscar('CRED-022'));
 ok('+30 días: plantilla "Aviso urgente de mora" con las 72 horas', grave.indexOf('PAGASI — AVISO URGENTE DE MORA') === 0 && grave.includes('72 horas') && grave.includes('40 días de atraso') && grave.includes('$150,00'));
 
-// ── Los mensajes de Telegram ──
+// ── Lo que cuenta Telegram: el texto visible (las direcciones de los enlaces no cuentan) ──
+ok('texto visible: sin etiquetas ni direcciones', B.textoVisible('<b>Hola</b> <a href="https://wa.me/58?text=xxxxxxxx">Enviar</a> &amp; más') === 'Hola Enviar & más');
+ok('cuenta negritas, cursivas y enlaces (no otras etiquetas)', B.entidades('<b>a</b><i>b</i><a href="x">c</a> <br>') === 3);
+
+// ── Los mensajes de Telegram: UNO por cobradora ──
 const partes = B.armarMensajes(r);
-const resumen = partes[0];
-const dePrev = partes.filter(p => p.startsWith('<b>🟢 PREVENTIVA — SAMANTHA')).join('\n');
-const deCrit = partes.filter(p => p.startsWith('<b>🔴 CRÍTICA — JOFANNY')).join('\n');
-ok('resumen primero y luego solo partes de preventiva o de crítica (la crítica puede venir troceada)', partes.length >= 3 && !!dePrev && !!deCrit
-  && partes.slice(1).every(p => p.startsWith('<b>🟢 PREVENTIVA — SAMANTHA') || p.startsWith('<b>🔴 CRÍTICA — JOFANNY')));
-ok('resumen: título del día', resumen.startsWith('<b>📣 Cobranza del día — 11/09/2026</b>'));
-ok('resumen: preventiva de Samantha con su total', resumen.includes('🟢 <b>PREVENTIVA</b> · Samantha: <b>4</b> avisos · $130')
-  && resumen.includes('Vencen HOY: <b>1</b> · Vencen el 14/09/2026 (en 3 días): <b>2</b>'));
-ok('resumen: crítica de Jofanny con lo vencido y los de +30', resumen.includes('🔴 <b>CRÍTICA</b> · Jofanny: <b>4</b> en mora · $300 vencido · 1 con +30 días'));
-ok('resumen: la cuota de HUGO que también vence', resumen.includes('+ 1 cuota que también vence a clientes en mora'));
-ok('resumen: sin teléfono y quién hace qué', resumen.includes('Sin teléfono útil: 2') && resumen.includes('Samantha trabaja la preventiva y Jofanny la crítica'));
-ok('preventiva: título con sus avisos', dePrev.startsWith('<b>🟢 PREVENTIVA — SAMANTHA — 4 avisos</b>'));
-ok('preventiva: ANA, LUIS, ROSA y MARIA; nadie en mora', ['ANA PRUEBA', 'LUIS PRUEBA', 'ROSA PRUEBA', 'MARIA PRUEBA'].every(n => dePrev.includes(n))
-  && !['JOSE PRUEBA', 'CARLOS PRUEBA', 'FELIX PRUEBA', 'HUGO PRUEBA', 'IRIS PRUEBA'].some(n => dePrev.includes(n)));
-ok('preventiva: secciones hoy y en 3 días', dePrev.includes('📅 VENCEN HOY (1)') && dePrev.includes('🗓 VENCEN EL 14/09/2026 (2)') && dePrev.includes('📲 Enviar aviso'));
-ok('preventiva: MARIA sin teléfono al final', dePrev.includes('SIN TELÉFONO ÚTIL (1)') && dePrev.includes('MARIA PRUEBA — CRED-012 (vence HOY)'));
-ok('crítica: título con sus avisos', deCrit.startsWith('<b>🔴 CRÍTICA — JOFANNY — 6 avisos</b>'));
-ok('crítica: CARLOS, HUGO, FELIX, JOSE e IRIS; nadie de preventiva', ['CARLOS PRUEBA', 'HUGO PRUEBA', 'FELIX PRUEBA', 'JOSE PRUEBA', 'IRIS PRUEBA'].every(n => deCrit.includes(n))
-  && !['ANA PRUEBA', 'LUIS PRUEBA', 'ROSA PRUEBA', 'MARIA PRUEBA'].some(n => deCrit.includes(n)));
-ok('crítica: una sola lista desde el día 1, los de más días primero', deCrit.includes('EN MORA DESDE EL DÍA 1 (4)')
-  && deCrit.indexOf('CARLOS PRUEBA') < deCrit.indexOf('HUGO PRUEBA — CRED-031') && deCrit.indexOf('HUGO PRUEBA — CRED-031') < deCrit.indexOf('FELIX PRUEBA') && deCrit.indexOf('FELIX PRUEBA') < deCrit.indexOf('JOSE PRUEBA'));
-ok('crítica: +30 días con aviso urgente; los demás con cobro', deCrit.includes('CARLOS PRUEBA — CRED-022 · 40 días · $150') && deCrit.includes('🚨 Aviso urgente')
-  && deCrit.includes('FELIX PRUEBA — CRED-027 · 3 días · $50') && deCrit.includes('📲 Enviar cobro'));
-ok('crítica: la otra cuota de HUGO, en su lista', deCrit.includes('📅 TAMBIÉN LES VENCE (1)') && deCrit.includes('HUGO PRUEBA — CRED-033 · $50') && deCrit.includes('(14/09/2026)'));
-ok('crítica: IRIS sin teléfono con sus días', deCrit.includes('SIN TELÉFONO ÚTIL (1)') && deCrit.includes('IRIS PRUEBA — CRED-035 (4 días de atraso)'));
-ok('aviso de que la mora se repite a diario, solo en crítica', deCrit.includes('no hace falta escribirles a diario') && !dePrev.includes('escribirles a diario'));
+const prev = partes[0] || '', crit = partes[1] || '';
+ok('solo 2 mensajes: uno para Samantha y otro para Jofanny', partes.length === 2 && prev.startsWith('<b>🟢 PREVENTIVA — SAMANTHA</b>') && crit.startsWith('<b>🔴 CRÍTICA — JOFANNY</b>'));
+ok('ya no hay mensaje de resumen aparte', !partes.some(p => p.includes('trabaja la preventiva')));
+ok('preventiva: el día, sus avisos y el total arriba', prev.includes('📣 Cobranza del 11/09/2026 · <b>4 avisos</b> · $130 · 1 sin teléfono'));
+ok('crítica: el día, los en mora, lo vencido y los de +30 arriba', crit.includes('📣 Cobranza del 11/09/2026 · <b>4 en mora</b> · $300 vencido · 1 con +30 días · 1 cuota más que vence · 1 sin teléfono'));
+ok('preventiva: ANA, LUIS, ROSA y MARIA; nadie en mora', ['ANA PRUEBA', 'LUIS PRUEBA', 'ROSA PRUEBA', 'MARIA PRUEBA'].every(n => prev.includes(n))
+  && !['JOSE PRUEBA', 'CARLOS PRUEBA', 'FELIX PRUEBA', 'HUGO PRUEBA', 'IRIS PRUEBA'].some(n => prev.includes(n)));
+ok('preventiva: secciones hoy y en 3 días', prev.includes('📅 VENCEN HOY (1)') && prev.includes('🗓 VENCEN EL 14/09/2026 (2)') && prev.includes('📲 Enviar aviso'));
+ok('preventiva: MARIA sin teléfono al final', prev.includes('SIN TELÉFONO ÚTIL (1)') && prev.includes('MARIA PRUEBA — CRED-012 (vence HOY)'));
+ok('crítica: CARLOS, HUGO, FELIX, JOSE e IRIS; nadie de preventiva', ['CARLOS PRUEBA', 'HUGO PRUEBA', 'FELIX PRUEBA', 'JOSE PRUEBA', 'IRIS PRUEBA'].every(n => crit.includes(n))
+  && !['ANA PRUEBA', 'LUIS PRUEBA', 'ROSA PRUEBA', 'MARIA PRUEBA'].some(n => crit.includes(n)));
+ok('crítica: una sola lista desde el día 1, los de más días primero', crit.includes('EN MORA DESDE EL DÍA 1 (4)')
+  && crit.indexOf('CARLOS PRUEBA') < crit.indexOf('HUGO PRUEBA — CRED-031') && crit.indexOf('HUGO PRUEBA — CRED-031') < crit.indexOf('FELIX PRUEBA') && crit.indexOf('FELIX PRUEBA') < crit.indexOf('JOSE PRUEBA'));
+ok('crítica: +30 días con aviso urgente; los demás con cobro', crit.includes('CARLOS PRUEBA — CRED-022 · 40 días · $150') && crit.includes('🚨 Aviso urgente')
+  && crit.includes('FELIX PRUEBA — CRED-027 · 3 días · $50') && crit.includes('📲 Enviar cobro'));
+ok('crítica: la otra cuota de HUGO, en su lista', crit.includes('📅 TAMBIÉN LES VENCE (1)') && crit.includes('HUGO PRUEBA — CRED-033 · $50') && crit.includes('(14/09/2026)'));
+ok('crítica: IRIS sin teléfono con sus días', crit.includes('SIN TELÉFONO ÚTIL (1)') && crit.includes('IRIS PRUEBA — CRED-035 (4 días de atraso)'));
+ok('aviso de que la mora se repite a diario, solo en crítica', crit.includes('no hace falta escribirles a diario') && !prev.includes('escribirles a diario'));
 ok('nadie con acuerdo ni ilocalizable en ninguna lista', !partes.join('\n').includes('DIANA PRUEBA') && !partes.join('\n').includes('ELENA PRUEBA'));
 ok('cada aviso sale UNA sola vez (8 enlaces)', (partes.join('\n').match(/wa\.me\//g) || []).length === 8);
-ok('cada cliente con su enlace de WhatsApp', dePrev.includes('https://wa.me/584141234567?text=') && dePrev.includes('https://wa.me/584241112233?text='));
-ok('el enlace de mora lleva el texto de mora', deCrit.includes('https://wa.me/584140000005?text=' + encodeURIComponent('PAGASI — AVISO DE MORA')));
-ok('instrucción para la cobradora', dePrev.includes('solo dale enviar') && deCrit.includes('solo dale enviar'));
+ok('cada cliente con su enlace de WhatsApp', prev.includes('https://wa.me/584141234567?text=') && prev.includes('https://wa.me/584241112233?text='));
+ok('el enlace de mora lleva el texto de mora', crit.includes('https://wa.me/584140000005?text=' + encodeURIComponent('PAGASI — AVISO DE MORA')));
+ok('instrucción para la cobradora', prev.includes('solo dale enviar') && crit.includes('solo dale enviar'));
 
-// ── 200 avisos: cada una su tipo, troceado, sin perder a nadie ──
+// ── Un día como los de ahora (40 preventiva y 20 en mora, nombres largos): 2 mensajes ──
+const credsDia = [], cliDia = [];
+for (let i = 0; i < 60; i++) {
+  cliDia.push({ id: 'N' + i, nombre: 'CLIENTE CON UN NOMBRE BIEN LARGO ' + i, tel: '0414' + String(2000000 + i) });
+  const d = i < 25 ? 0 : i < 40 ? 3 : -5;
+  credsDia.push(conVencimiento('CRED-' + (2000 + i), 'CLIENTE CON UN NOMBRE BIEN LARGO ' + i, 'N' + i, d, d < 0 ? { estado: 'mora' } : {}));
+}
+const partesDia = B.armarMensajes(B.calcularAvisos(credsDia, [], cliDia, HOY));
+ok('un día normal: exactamente 2 mensajes', partesDia.length === 2);
+ok('y cada uno cabe en Telegram (texto visible y formatos)', partesDia.every(p => B.textoVisible(p).length <= 4096 && B.entidades(p) <= 100));
+
+// ── Un día muy pesado (150 preventiva y 50 en mora): solo la lista que no cabe se parte ──
 const muchosCreds = [], muchosCli = [];
 for (let i = 0; i < 200; i++) {
   muchosCli.push({ id: 'M' + i, nombre: 'CLIENTE NUMERO ' + i, tel: '0414' + String(1000000 + i) });
@@ -160,10 +168,10 @@ const rGrande = B.calcularAvisos(muchosCreds, [], muchosCli, HOY);
 ok('200 avisos: 150 preventiva para Samantha y 50 crítica para Jofanny',
   [...rGrande.vencenHoy, ...rGrande.vencenEn3].filter(a => a.cobradora === 'Samantha').length === 150 && rGrande.critica.filter(a => a.cobradora === 'Jofanny').length === 50);
 const partesG = B.armarMensajes(rGrande);
-ok('se trocea en varios mensajes', partesG.length > 3);
-ok('ninguna parte pasa el límite de Telegram', partesG.every(p => p.length <= B.TELEGRAM_MAX));
-ok('las partes de continuación dicen de quién son', partesG.some(p => p.startsWith('<b>🟢 PREVENTIVA — SAMANTHA (continúa)</b>')) && partesG.some(p => p.startsWith('<b>🔴 CRÍTICA — JOFANNY (continúa)</b>')));
-ok('no se pierde ningún cliente al trocear', (partesG.join('\n').match(/wa\.me\//g) || []).length === 200);
+ok('la lista que no cabe se parte', partesG.length > 2);
+ok('ninguna parte pasa lo que admite Telegram', partesG.every(p => B.textoVisible(p).length <= B.TELEGRAM_MAX && B.entidades(p) <= B.TELEGRAM_MAX_ENTIDADES));
+ok('las partes de continuación dicen de quién son', partesG.some(p => p.startsWith('<b>🟢 PREVENTIVA — SAMANTHA (continúa)</b>')));
+ok('no se pierde ningún cliente al partir', (partesG.join('\n').match(/wa\.me\//g) || []).length === 200);
 const numeros = txt => (txt.match(/CLIENTE NUMERO (\d+)/g) || []).map(s => parseInt(s.split(' ').pop(), 10));
 const partesPrev = partesG.filter(p => /^<b>🟢 PREVENTIVA — SAMANTHA/.test(p)).join('\n');
 const partesCrit = partesG.filter(p => /^<b>🔴 CRÍTICA — JOFANNY/.test(p)).join('\n');
@@ -173,9 +181,9 @@ ok('en TODAS las partes de crítica solo hay clientes en mora', numeros(partesCr
 // ── Día sin avisos ──
 const rVacio = B.calcularAvisos([conVencimiento('CRED-030', 'ANA PRUEBA', 'C1', 7)], [], clientes, HOY);
 const tgVacio = B.armarMensajes(rVacio);
-ok('día tranquilo: resumen en cero y cada lista con "Ninguna"/"Ninguno"', tgVacio.length === 3
-  && tgVacio[0].includes('Samantha: <b>0</b> avisos') && tgVacio[0].includes('Jofanny: <b>0</b> en mora')
-  && tgVacio[1].includes('Ninguna 🎉') && tgVacio[2].includes('Ninguno 🎉') && !tgVacio[2].includes('escribirles a diario'));
+ok('día tranquilo: 2 mensajes con "Ninguna"/"Ninguno"', tgVacio.length === 2
+  && tgVacio[0].includes('<b>0 avisos</b>') && tgVacio[1].includes('<b>0 en mora</b>')
+  && tgVacio[0].includes('Ninguna 🎉') && tgVacio[1].includes('Ninguno 🎉') && !tgVacio[1].includes('escribirles a diario'));
 
 console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');
 if (fail) process.exitCode = 1;
