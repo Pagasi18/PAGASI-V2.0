@@ -668,27 +668,24 @@ function descargarAmortPDF(){
     if(!pagosPorCuota[h.cuota]) pagosPorCuota[h.cuota]=[];
     pagosPorCuota[h.cuota].push(h);
   });
-  var saldoPorCuota=[];
-  for(var qi=0;qi<totalCuotas;qi++){
-    var pagadoEnCuota = (pagosPorCuota[qi+1]||[]).reduce(function(a,h){return a+h.montoPagado;},0);
-    var sp = Math.max(0, parseFloat((cuota-pagadoEnCuota).toFixed(2)));
-    saldoPorCuota[qi] = sp<0.10 ? 0 : sp;
-  }
+  var _LA = saldosPorCuota(c);
+  var saldoPorCuota = _LA.saldos;
   var sal = c.fin||0;
   var amortRows = '';
   for(var i=1;i<=totalCuotas;i++){
     var intMontoRaw = sal*tQ;
     var capMonto = cuota - intMontoRaw;
     sal = sal - capMonto;
-    var pd = i<=cuotasPag;
+    var estA = _LA.estados[i-1] || 'pendiente';
+    var pd = estA==='pagada', parcialA = estA==='parcial', proxA = estA==='proxima';
     var fd = new Date(startDate.getTime()+(i*15*24*60*60*1000));
     var fechaStr = fd.toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'});
-    var estado = pd ? '✓ Pagada' : (i===cuotasPag+1 ? 'Próxima' : 'Pendiente');
-    amortRows += '<tr style="'+(pd?'opacity:.55;background:#fafafa':'')+'">'
+    var estado = pd ? '✓ Pagada' : parcialA ? 'Parcial' : (proxA ? 'Próxima' : 'Pendiente');
+    amortRows += '<tr style="'+(pd?'opacity:.55;background:#fafafa':parcialA?'background:#fff7ed':'')+'">'
       + '<td style="text-align:center;font-weight:700">'+i+'</td>'
       + '<td>'+fechaStr+'</td>'
-      + '<td style="font-weight:'+(pd?'600':'700')+';color:'+(pd?'#999':i===cuotasPag+1?'#2563EB':'#111')+'">'+estado+'</td>'
-      + '<td style="text-align:right;font-weight:700">'+fmt(cuota)+'</td>'
+      + '<td style="font-weight:'+(pd?'600':'700')+';color:'+(pd?'#999':parcialA?'#b45309':proxA?'#2563EB':'#111')+'">'+estado+'</td>'
+      + '<td style="text-align:right;font-weight:700;color:'+(parcialA?'#b45309':'inherit')+'">'+(parcialA?fmt(saldoPorCuota[i-1])+' pend.':fmt(cuota))+'</td>'
       + '<td style="text-align:right;color:#b78a14">'+fmt(Math.max(0,intMontoRaw))+'</td>'
       + '<td style="text-align:right">'+fmt(Math.max(0,capMonto))+'</td>'
       + '<td style="text-align:right;color:#666">'+fmt(Math.max(0,sal))+'</td>'
@@ -865,24 +862,21 @@ function descargarEstadoPDF(){
   var fechaInicio = c.fecha || '—';
   var startDate = new Date((c.fecha||hoyLocalISO())+'T12:00:00');
 
-  // Pagos por cuota (para columna Abonos)
-  var historial = c.pagosRegistrados||[];
-  var pagosPorCuota = {};
-  historial.forEach(function(h){
-    if(!pagosPorCuota[h.cuota]) pagosPorCuota[h.cuota]=[];
-    pagosPorCuota[h.cuota].push(h);
-  });
+  // La misma cuenta de la tabla de la pantalla: si la cuota tiene un abono,
+  // sale PARCIAL y con lo que falta, no con la cuota entera (Adam, 15-sep-2026).
+  var L = saldosPorCuota(c);
+  var pagosPorCuota = L.abonos;
 
   // Construir filas solo con #, Fecha, Estado, Abonos, Monto
   var rowsHTML = '';
   for(var i=1;i<=totalCuotas;i++){
-    var pd = i<=cuotasPag;
-    var esProx = i===cuotasPag+1;
+    var est = L.estados[i-1] || 'pendiente';
+    var pd = est==='pagada', parcial = est==='parcial', esProx = est==='proxima';
     var fd = new Date(startDate.getTime()+(i*15*24*60*60*1000));
     var fechaStr = fd.toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'});
 
-    var estadoTxt = pd ? '✓ Pagada' : (esProx ? 'Próxima' : 'Pendiente');
-    var estadoColor = pd ? '#0a7a3f' : (esProx ? '#2563EB' : '#888');
+    var estadoTxt = pd ? '✓ Pagada' : parcial ? 'Parcial' : (esProx ? 'Próxima' : 'Pendiente');
+    var estadoColor = pd ? '#0a7a3f' : parcial ? '#b45309' : (esProx ? '#2563EB' : '#888');
 
     var histCuota = pagosPorCuota[i]||[];
     var abonosTxt = '—';
@@ -891,13 +885,15 @@ function descargarEstadoPDF(){
         return '+'+fmt(h.montoPagado)+' · '+h.fecha;
       }).join('<br>');
     }
+    // Lo que el cliente debe por esa cuota hoy
+    var montoTxt = parcial ? fmt(L.saldos[i-1])+' pend.' : fmt(cuota);
 
-    rowsHTML += '<tr style="'+(pd?'opacity:.6;background:#fafafa':'')+'">'
+    rowsHTML += '<tr style="'+(pd?'opacity:.6;background:#fafafa':parcial?'background:#fff7ed':'')+'">'
       + '<td style="text-align:center;font-weight:700">'+i+'</td>'
       + '<td>'+fechaStr+'</td>'
       + '<td style="font-weight:700;color:'+estadoColor+'">'+estadoTxt+'</td>'
       + '<td style="font-size:10.5px;color:'+(histCuota.length>0?'#0a7a3f':'#999')+'">'+abonosTxt+'</td>'
-      + '<td style="text-align:right;font-weight:700;color:'+(pd?'#888':esProx?'#2563EB':'#111')+'">'+fmt(cuota)+'</td>'
+      + '<td style="text-align:right;font-weight:700;color:'+(pd?'#888':parcial?'#b45309':esProx?'#2563EB':'#111')+'">'+montoTxt+'</td>'
       + '</tr>';
   }
 
@@ -920,8 +916,11 @@ function descargarEstadoPDF(){
       <div style="text-align:right;font-size:11px;color:#666">
         <div><strong>Cuota:</strong> ${fmt(cuota)}</div>
         <div><strong>Progreso:</strong> ${cuotasPag} de ${totalCuotas}</div>
+        ${L.aviso?`<div style="color:#b45309;font-weight:700;margin-top:2px">Por pagar ahora: ${fmt(L.aviso.falta)}</div>`:''}
       </div>
     </div>
+
+    ${L.aviso?`<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:9px 12px;font-size:11.5px;color:#7c2d12;margin:10px 0">La cuota ${L.aviso.cuota} tiene un abono de <strong>${fmt(L.aviso.abonado)}</strong> — solo quedan <strong>${fmt(L.aviso.falta)}</strong> por pagar.</div>`:''}
 
     <!-- TABLA DE AMORTIZACIÓN -->
     <table>

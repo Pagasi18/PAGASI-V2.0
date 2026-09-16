@@ -285,6 +285,57 @@ function updPagoMonto(sel){
   }
 }
 
+// Saldo real de CADA cuota y los abonos que la tocaron. Es UNA sola cuenta para
+// los tres sitios que la necesitan: la tabla de la pantalla y los dos PDF (estado
+// de cuenta y amortizacion). Antes cada uno la hacia por su lado y el PDF le decia
+// al cliente "Proxima · $94,00" cuando en pantalla decia "Parcial · $54,00 pend."
+// (Adam, 15-sep-2026). Un pago que sobra se derrama a las cuotas siguientes.
+function saldosPorCuota(c){
+  var cuota = parseFloat((c && (c.cuotaQ || c.cuota)) || 0) || 0;
+  var n = (c && (c.totalCuotas || (c.plazo * 2))) || 0;
+  var historial = (c && c.pagosRegistrados) || [];
+  var saldos = [], abonos = {};
+  for(var qi = 0; qi < n; qi++) saldos[qi] = cuota;
+  // Los abonos tal como quedaron registrados (es lo que se le muestra al cliente)
+  historial.forEach(function(h){
+    if(!abonos[h.cuota]) abonos[h.cuota] = [];
+    abonos[h.cuota].push(h);
+  });
+  // Y ahora el reparto real, cuota por cuota
+  historial.forEach(function(h){
+    var montoRestante = parseFloat(h.montoPagado) || 0;
+    var inicio = Math.max(0, (parseInt(h.cuota, 10) || 1) - 1);
+    for(var qi = inicio; qi < n && montoRestante > 0.001; qi++){
+      var aplicar = parseFloat(Math.min(montoRestante, saldos[qi]).toFixed(2));
+      if(aplicar > 0.001){
+        saldos[qi] = parseFloat((saldos[qi] - aplicar).toFixed(2));
+        montoRestante = parseFloat((montoRestante - aplicar).toFixed(2));
+        var cuotaNum = qi + 1;
+        if(!abonos[cuotaNum]) abonos[cuotaNum] = [];
+        var yaExiste = abonos[cuotaNum].some(function(x){ return x.pagoId === h.pagoId && x.cuota === cuotaNum; });
+        if(!yaExiste) abonos[cuotaNum].push({cuota:cuotaNum, montoPagado:aplicar, fecha:h.fecha, pagoId:h.pagoId, tipo:h.tipo||'pago'});
+      }
+    }
+  });
+  for(var qj = 0; qj < n; qj++) saldos[qj] = saldos[qj] < 0.10 ? 0 : saldos[qj];
+  // El estado de cada cuota, con la misma regla de la pantalla: una cuota con
+  // abono es PARCIAL aunque sea la proxima que toca.
+  var pagadas = Math.max(0, Math.min((typeof getCreditoCuotasPagadas === 'function' ? getCreditoCuotasPagadas(c) : 0), n));
+  var estados = saldos.map(function(s, idx){
+    if(s <= 0.001) return 'pagada';
+    if(s < cuota - 0.001) return 'parcial';
+    return (idx + 1) === pagadas + 1 ? 'proxima' : 'pendiente';
+  });
+  // Aviso para el cliente: la primera cuota a medias
+  var iParcial = estados.indexOf('parcial');
+  var aviso = iParcial < 0 ? null : {
+    cuota: iParcial + 1,
+    abonado: parseFloat((cuota - saldos[iParcial]).toFixed(2)),
+    falta: saldos[iParcial]
+  };
+  return {cuota:cuota, n:n, saldos:saldos, abonos:abonos, estados:estados, pagadas:pagadas, aviso:aviso};
+}
+
 // AMORTIZACIÓN
 function openAmort(id){
   const c=S.creds.find(x=>x.id===id);if(!c)return;
@@ -299,38 +350,10 @@ function openAmort(id){
   const saldoProxCuota=(c.saldoProxCuota||0)<0.10?0:(c.saldoProxCuota||0);
   const infoLiquidacion=(c.tipoCierre==='liquidacion_anticipada') ? ('<div class="note" style="margin:8px 0 12px 0"><strong>Liquidación anticipada:</strong> saldo '+fmt(c.saldoOriginalLiquidacion||0)+' · descuento '+fmt(c.descuentoLiquidacion||0)+' · pago final '+fmt(c.montoLiquidado||0)+'</div>') : '';
 
-  // Construir mapa cuota→pagos realizados
-  var pagosPorCuota={};
-  historial.forEach(function(h){
-    if(!pagosPorCuota[h.cuota]) pagosPorCuota[h.cuota]=[];
-    pagosPorCuota[h.cuota].push(h);
-  });
-
-  // Calcular saldo pendiente por cuota — aplicando excedentes a cuotas siguientes
-  var saldoPorCuota=[];
-  for(var qi=0;qi<n;qi++) saldoPorCuota[qi]=cuota;
-  // Aplicar cada pago secuencialmente distribuido entre cuotas
-  // y registrar en pagosPorCuota los abonos reales por cuota
-  historial.forEach(function(h){
-    var montoRestante=parseFloat(h.montoPagado)||0;
-    var inicio=(h.cuota-1);
-    for(var qi=inicio;qi<n&&montoRestante>0.001;qi++){
-      var aplicar=Math.min(montoRestante,saldoPorCuota[qi]);
-      aplicar=parseFloat(aplicar.toFixed(2));
-      if(aplicar>0.001){
-        saldoPorCuota[qi]=parseFloat((saldoPorCuota[qi]-aplicar).toFixed(2));
-        montoRestante=parseFloat((montoRestante-aplicar).toFixed(2));
-        // Registrar abono en pagosPorCuota para mostrarlo en la tabla
-        var cuotaNum=qi+1;
-        if(!pagosPorCuota[cuotaNum]) pagosPorCuota[cuotaNum]=[];
-        // Solo agregar si no está ya registrado para esta cuota+pagoId
-        var yaExiste=pagosPorCuota[cuotaNum].some(function(x){return x.pagoId===h.pagoId&&x.cuota===cuotaNum;});
-        if(!yaExiste) pagosPorCuota[cuotaNum].push({cuota:cuotaNum,montoPagado:aplicar,fecha:h.fecha,pagoId:h.pagoId,tipo:h.tipo||'pago'});
-      }
-    }
-  });
-  // Redondear pequeños residuos
-  for(var qi=0;qi<n;qi++) saldoPorCuota[qi]=saldoPorCuota[qi]<0.10?0:saldoPorCuota[qi];
+  // La cuenta la hace saldosPorCuota(), la misma que usan los dos PDF
+  var _L=saldosPorCuota(c);
+  var pagosPorCuota=_L.abonos;
+  var saldoPorCuota=_L.saldos;
 
   let sal=c.fin,rows='';
   const cols='.3fr 1fr .9fr 1fr 1fr .8fr .8fr .8fr';
