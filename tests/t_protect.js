@@ -171,5 +171,15 @@ ok('sin c.creado: queda raya para boligrafo',   htmlSinHora.includes('siendo las
 S.creds[0].creado='no-es-fecha';
 ok('c.creado invalido no rompe el contrato',    API._htmlContratoProtect('CRED-900').length>20000);
 
+// ── Texto corrido, no a dos columnas (Adam, 15-sep-2026: "se descargan
+// divididos y no corridos"). El cuerpo iba con column-count:2 tipo periodico.
+S.creds[0].creado='2026-09-15T15:47:00';
+const htmlCorrido=API._htmlContratoProtect('CRED-900');
+ok('el cuerpo va corrido a lo ancho, sin columnas', !/column-count\s*:\s*[2-9]/.test(htmlCorrido));
+ok('la letra del cuerpo se queda en 8,1 px',       htmlCorrido.includes('font-size:8.1px'));
+ok('los anexos siguen enteros y en orden',         ['ANEXO “A”','ANEXO “B”','ANEXO “C”','ANEXO “D”'].every(function(a,i,arr){
+  return htmlCorrido.indexOf(a)>-1 && (i===0 || htmlCorrido.indexOf(arr[i-1])<htmlCorrido.indexOf(a)); }));
+ok('el Anexo D sigue arrancando en su propia hoja', /page-break-before:always[^>]*>\s*<div[^>]*>\s*<div[^>]*>ANEXO “D”/.test(htmlCorrido) || htmlCorrido.indexOf('page-break-before:always')>-1);
+
 console.log(''); console.log(pass+' pruebas OK, '+fail+' fallas');
 if(fail) process.exitCode=1;

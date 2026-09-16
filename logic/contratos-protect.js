@@ -426,7 +426,11 @@ function _protectEstilos(){
     p:'font-size:8.1px;line-height:1.36;color:#222;margin:0 0 3px;text-align:justify',
     sub:'font-size:8.1px;line-height:1.36;color:#222;margin:0 0 3px 8px;text-align:justify',
     def:'font-size:7.6px;line-height:1.3;color:#333;margin:0 0 2px 14px;text-align:justify',
-    cols:'column-count:2;column-gap:18px;column-fill:auto',
+    // Texto corrido a lo ancho (Adam, 15-sep-2026: "se descargan divididos y no
+    // corridos"). Antes iba a dos columnas tipo periodico para ahorrar hojas, pero
+    // el ahorro de verdad vino de la letra chica: corrido son 9 hojas en vez de 8.
+    // La letra se queda en 8,1 px, como la eligio el.
+    cols:'',
     // Los anexos fluyen uno tras otro (B y C caben juntos en una hoja). Lo
     // unico que no se parte son los bloques de firma, que ya lo traen puesto.
     anexo:'margin-top:12px'
