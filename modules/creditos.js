@@ -7,8 +7,12 @@ PG.creditos = function(){
   // ─── 1. MÉTRICAS CANÓNICAS ───
   const allCreds = _concFiltrar(S.creds||[]).filter(c=>!c.eliminado);
   const registradosCreds = allCreds.filter(c=>c.estado!=='cancelado');
-  const activos = allCreds.filter(c=>c.estado==='activo');
-  const enMora = allCreds.filter(c=>c.mora>0 && c.estado==='activo');
+  // Un credito en mora sigue siendo activo (no esta pagado): se cuenta igual que en el
+  // dashboard, Cobranza y Cuentas. El sistema le pone estado 'mora' al pasar los dias de
+  // gracia, y esta pantalla los dejaba fuera de Activos y de En mora (Adam, 14-sep-2026:
+  // aqui 524 activos y 26 en mora contra 556 y 58 en el dashboard).
+  const activos = allCreds.filter(c=>c.estado==='activo'||c.estado==='mora');
+  const enMora = activos.filter(c=>c.mora>0);
   const alDia = activos.filter(c=>!(c.mora>0));
   const completados= allCreds.filter(c=>c.estado==='completado');
   const recuperados= allCreds.filter(c=>c.estado==='recuperado'||c.estado==='recuperada');
@@ -122,7 +126,7 @@ PG.creditos = function(){
   if(tab==='archivados') filtered = archivados;
 
   // ─── 11b. Ordenamiento de tabla ───
-  var _cs = S.credSort || {col:'id', dir:'desc'};   // por defecto el credito mas nuevo arriba (Adam, 11-sep-2026)
+  var _cs = S.credSort || {col:'id', dir:'desc'};   // por defecto el credito mas nuevo arriba (Adam, 11-sep-2026); en "En mora", setCredTab pone el mas atrasado arriba
   filtered = filtered.slice().sort(function(a,b){
     var col=_cs.col, dir=_cs.dir==='asc'?1:-1;
     var va,vb;

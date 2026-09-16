@@ -1406,6 +1406,9 @@ function calcularMoraAuto(){
       DB.updateCred(c.id,{mora:c.mora,estado:c.estado,tuvoMoraHistorica:!!c.tuvoMoraHistorica});
     }
   });
+  // El globito de Cobranza se calculaba solo al armar el menu y se quedaba viejo
+  // (decia 60 con 58 en mora); se refresca cada vez que se recalcula la mora.
+  if(typeof actualizarBadgeMora==='function') actualizarBadgeMora(true);
 }
 
 // NOTA COBRANZA

@@ -2996,7 +2996,9 @@ function updateSidebarFooter(){
   actualizarBadgeMora();
 }
 
-function actualizarBadgeMora(){
+// soloNumero: desde calcularMoraAuto (al cargar, cada 5 min y al registrar pagos) solo se
+// refresca el numero; el aviso "entraron en mora hoy" sigue saliendo solo al armar el menu.
+function actualizarBadgeMora(soloNumero){
   try{
     var cob = document.getElementById('sb-badge-cob');
     if(!cob) return;
@@ -3022,7 +3024,7 @@ function actualizarBadgeMora(){
     }
     // Toast de alerta si hay créditos nuevos en mora (mora entre 1-3 días)
     var _moraKey = 'pagasi_mora_alert_'+hoyLocalISO();
-    if(enMora>0 && !sessionStorage.getItem(_moraKey)){
+    if(!soloNumero && enMora>0 && !sessionStorage.getItem(_moraKey)){
       var nuevosEnMora = _concFiltrar(S.creds||[]).filter(function(c){return !c.eliminado && c.mora>0 && c.mora<=3 && c.estado==='activo';});
       if(nuevosEnMora.length>0){
         sessionStorage.setItem(_moraKey,'1');
@@ -3312,7 +3314,8 @@ function showSkeleton(){
 
 // Helpers de pago/egreso para compra de motos movidos a logic/moto-pagos.js.
 
-function setCredTab(t){S.credTab=t;S.credFiltro='';window._pages={};nav('creditos');}
+// En la pestaña "En mora" el mas atrasado va arriba; al salir vuelve el mas nuevo arriba (Adam, 14-sep-2026)
+function setCredTab(t){S.credTab=t;S.credFiltro='';if(t==='mora')S.credSort={col:'mora',dir:'desc'};else if(S.credSort&&S.credSort.col==='mora')S.credSort={col:'id',dir:'desc'};window._pages={};nav('creditos');}
 function setCredSort(col){var cur=S.credSort||{col:'id',dir:'desc'};S.credSort={col:col,dir:(cur.col===col&&cur.dir==='asc')?'desc':'asc'};window._pages={};nav('creditos');}
 var _credSearchTimer=null;
 function liveSearchCred(q){
