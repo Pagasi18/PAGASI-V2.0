@@ -444,7 +444,8 @@ function _protectFirmas(D, incluirPagasi){
   if(D.hayFiador) f.push(['Por el Fiador', D.fiaNom, 'C.I. V-'+String(D.cli.fiador_ci||'________')]);
   if(incluirPagasi!==false) f.push(['Por Pagasi', '<strong>PAGASI 18 C.A.</strong>', 'RIF J-50829589-7']);
   var n = f.length;
-  return '<div style="display:flex;gap:24px;margin-top:12px;align-items:flex-start;page-break-inside:avoid">'
+  // break-before:avoid = la firma se va con el parrafo que la precede, nunca sola arriba de una hoja
+  return '<div style="display:flex;gap:24px;margin-top:12px;align-items:flex-start;page-break-inside:avoid;break-before:avoid;page-break-before:avoid">'
        + f.map(function(x){ return _draFirma(x[0], x[1], x[2], n); }).join('') + '</div>';
 }
 
@@ -593,8 +594,10 @@ function _htmlContratoProtect(credId){
     + anexo('<div style="'+S_.h1+'">ANEXO “A” — CRONOGRAMA DE PAGOS</div>'
       + '<p style="'+S_.p+'">El presente Anexo forma parte integrante del Contrato y refleja el calendario de vencimiento de las Cuotas Quincenales a cargo del Comprador, con el desglose de capital, Intereses Financieros y saldo insoluto.</p>'
       + _protectCronograma(D, S_)
-      + '<p style="'+S_.p+';margin-top:6px">El Comprador'+(D.hayFiador?' y el Fiador declaran':' declara')+' conocer y aceptar el presente cronograma de pagos.</p>'
-      + _protectFirmas(D, false))
+      + '<div style="break-inside:avoid;page-break-inside:avoid">'
+      +   '<p style="'+S_.p+';margin-top:6px">El Comprador'+(D.hayFiador?' y el Fiador declaran':' declara')+' conocer y aceptar el presente cronograma de pagos.</p>'
+      +   _protectFirmas(D, false)
+      + '</div>')
     + anexo(_protectAnexoB(D, S_))
     + anexo(_protectAnexoC(D, S_))
     // El Anexo D (recaudos y KYC) va entero en su propia hoja: es el que se

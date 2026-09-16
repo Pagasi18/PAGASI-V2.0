@@ -528,8 +528,8 @@ function _draFirma(rol, nombre, ci, n){
   // altura aunque un nombre ocupe dos lineas y otro una.
   return '<div style="flex:0 0 '+ancho+';font-size:9.8px">'
     + '<div style="height:24px;text-align:center;font-weight:900;color:#1D4ED8;font-size:10px;line-height:1.2">'+rol+'</div>'
-    + '<div style="height:34px"></div>'
-    + '<div style="border-top:1px solid #333;padding-top:4px;line-height:1.5;text-align:left">'
+    + '<div style="height:40px"></div>'
+    + '<div style="border-top:1px solid #333;padding-top:4px;line-height:1.5;text-align:center">'
     + '<div style="font-weight:800">'+nombre+'</div>'
     + (ci ? '<div>'+ci+'</div>' : '')
     + '<div>Fecha: __________</div></div></div>';
