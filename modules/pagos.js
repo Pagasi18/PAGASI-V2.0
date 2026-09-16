@@ -135,7 +135,11 @@ PG.pagos = function(){
       venceStr=fechaLocalISO(vf);
       if(!mora) mora=parseInt(c.mora||0,10)||0;
     }
-    return { cred:c, cuotaNum:cuotaNum, diff:diff, venceStr:venceStr, mora:mora, vencido:vencidoTotal, nVencidas:nVencidas, cuotaMonto:cuotaMonto, gam:gam };
+    // Lo que le falta a la proxima cuota: si el cliente ya abono algo, es MENOS que
+    // la cuota entera. Antes la lista le pedia los $94 completos a quien ya habia
+    // abonado $40 y su cuota todavia no vencia (Adam, 15-sep-2026).
+    var proxSaldo = (prox && Number(prox.saldo) > 0.001) ? Math.round(Number(prox.saldo)*100)/100 : cuotaMonto;
+    return { cred:c, cuotaNum:cuotaNum, diff:diff, venceStr:venceStr, mora:mora, vencido:vencidoTotal, nVencidas:nVencidas, cuotaMonto:cuotaMonto, proxSaldo:proxSaldo, gam:gam };
   }).filter(function(it){ return it.diff<=30 || it.mora>0; });
   // "Atrasado" = al menos 1 dia de atraso bajo CUALQUIERA de las definiciones del
   // sistema: proxima cuota ya vencida (diff<0, ledger vivo), saldo vencido real
@@ -180,9 +184,9 @@ PG.pagos = function(){
   // gestionan en su propia pestana; en Mora Total si aparecen (foto completa).
   var _critList = _morTotalList.filter(function(it){ return _diasMora(it)>30 && !it.cred.fechaCompromiso && !_esIloc(it); });
   var _ilocList = _ilocAll.filter(_cuMatchQ);
-  var _morTotMonto = _morTotalList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.cuotaMonto); },0);
-  var _critMonto = _critList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.cuotaMonto); },0);
-  var _ilocMonto = _ilocList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.cuotaMonto); },0);
+  var _morTotMonto = _morTotalList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.proxSaldo); },0);
+  var _critMonto = _critList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.proxSaldo); },0);
+  var _ilocMonto = _ilocList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.proxSaldo); },0);
   // Filtro rápido Todos / Atrasados / Al día — con contadores del contexto actual
   var _cuBase = proximasCuotas.slice();   // snapshot ANTES del filtro rapido
   var _cuAtras = _cuBase.filter(_esAtrasado).length;
@@ -207,16 +211,16 @@ PG.pagos = function(){
     if(col==='id'){var na=parseInt(String(a.cred.id).replace(/\D/g,''),10)||0,nb=parseInt(String(b.cred.id).replace(/\D/g,''),10)||0;return dir*(na<nb?-1:na>nb?1:0);}
     if(col==='cuota'){return dir*((a.cuotaNum||0)-(b.cuotaNum||0));}
     if(col==='estado'){return dir*((a.diff||0)-(b.diff||0));}
-    if(col==='monto'){var _ma=a.nVencidas>=1?a.vencido:a.cuotaMonto,_mb=b.nVencidas>=1?b.vencido:b.cuotaMonto;return dir*(_ma-_mb);}
+    if(col==='monto'){var _ma=a.nVencidas>=1?a.vencido:a.proxSaldo,_mb=b.nVencidas>=1?b.vencido:b.proxSaldo;return dir*(_ma-_mb);}
     return dir*((a.diff||0)-(b.diff||0)); // 'vence'
   });
 
   // ── Pestanas de cobranza: Quincenal / Acuerdos / Criticos / Mora Total ──
   _acuList = _acuList.slice().sort(function(a,b){ return String(a.cred.fechaCompromiso).localeCompare(String(b.cred.fechaCompromiso)); });
   var _acuRotos = _acuList.filter(function(it){ return it.cred.fechaCompromiso < _hoyISO; }).length;
-  var _acuMonto = _acuList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.cuotaMonto); },0);
+  var _acuMonto = _acuList.reduce(function(sm,it){ return sm + (it.nVencidas>=1?it.vencido:it.proxSaldo); },0);
   var _morCasos = _cuBase.filter(_esAtrasado).length;
-  var _morMonto = _cuBase.reduce(function(sm,it){ return sm + (_esAtrasado(it)?(it.nVencidas>=1?it.vencido:it.cuotaMonto):0); },0);
+  var _morMonto = _cuBase.reduce(function(sm,it){ return sm + (_esAtrasado(it)?(it.nVencidas>=1?it.vencido:it.proxSaldo):0); },0);
   var _moraDash = _concFiltrar(S.creds||[]).filter(function(c){ return c && !c.eliminado && (parseInt(c.mora,10)||0)>0; }).length;
   var _acuAtras = _acuList.filter(_esAtrasado).length;
   var _ilocAtras = _ilocList.filter(_esAtrasado).length;
@@ -265,7 +269,7 @@ PG.pagos = function(){
     var filas = _acuList.map(function(it){
       var c = it.cred;
       var sem = (typeof _acuerdoSemaforo==='function') ? _acuerdoSemaforo(c.fechaCompromiso, _hoyISO) : {nivel:'verde',label:c.fechaCompromiso};
-      var monto = it.nVencidas>=1 ? it.vencido : it.cuotaMonto;
+      var monto = it.nVencidas>=1 ? it.vencido : it.proxSaldo;
       var nCuo = it.nVencidas>=1 ? it.nVencidas : 1;
       var conc = ((c.concesionarioId && typeof _concGetById==='function') ? ((_concGetById(c.concesionarioId)||{}).nombre||'') : '') || c.sede || '\u2014';
       var fp = parseFechaLocal(c.fechaCompromiso);
@@ -386,7 +390,7 @@ PG.pagos = function(){
           <td class="tds">${item.cuotaNum}/${c.totalCuotas||c.plazo*2||24}</td>
           <td><span class="bdg ${bcls}" style="font-size:9px">${badge}</span></td>
           <td class="tds"><div style="color:${col};font-weight:700">${lbl}</div>${fechaFmt?`<div style="font-size:10px;color:var(--ink3);font-weight:600;margin-top:2px;text-transform:capitalize">${fechaFmt}</div>`:''}</td>
-          <td style="font-weight:800;font-family:var(--fd);color:${item.nVencidas>=1?'var(--red)':'var(--ink)'}">${item.nVencidas>=1?fmt(item.vencido):fmt(item.cuotaMonto)}${item.nVencidas>=2?`<div style="font-size:9.5px;font-weight:700;color:var(--ink3);margin-top:2px;white-space:nowrap">${item.nVencidas} cuotas vencidas · ${fmt(item.cuotaMonto)} c/u</div>`:(item.nVencidas===1?`<div style="font-size:9.5px;font-weight:600;color:var(--ink3);margin-top:2px;white-space:nowrap">1 cuota vencida</div>`:`<div style="font-size:9.5px;font-weight:600;color:var(--ink3);margin-top:2px;white-space:nowrap">próxima cuota</div>`)}</td>
+          <td style="font-weight:800;font-family:var(--fd);color:${item.nVencidas>=1?'var(--red)':'var(--ink)'}">${item.nVencidas>=1?fmt(item.vencido):fmt(item.proxSaldo)}${item.nVencidas>=2?`<div style="font-size:9.5px;font-weight:700;color:var(--ink3);margin-top:2px;white-space:nowrap">${item.nVencidas} cuotas vencidas · ${fmt(item.cuotaMonto)} c/u</div>`:(item.nVencidas===1?`<div style="font-size:9.5px;font-weight:600;color:var(--ink3);margin-top:2px;white-space:nowrap">1 cuota vencida</div>`:`<div style="font-size:9.5px;font-weight:600;color:var(--ink3);margin-top:2px;white-space:nowrap">${item.proxSaldo<item.cuotaMonto-0.01?`abonó ${fmt(item.cuotaMonto-item.proxSaldo)} de ${fmt(item.cuotaMonto)}`:'próxima cuota'}</div>`)}</td>
           <td class="tds" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${conc||''}">${conc||'—'}</td>
           <td>${_cuotaNotaSelect(c)}</td>
           <td>${_gestionCobroCell(c)}</td>
