@@ -435,7 +435,9 @@ function renderCredCobrosChart(){
   var ink3 = isDark ? '#6B6896' : '#9794BB';
   var green = isDark ? '#1fc47a' : '#00B876';
 
-  var activos = _concFiltrar(S.creds||[]).filter(function(c){ return !c.eliminado && c.estado==='activo' && c.fecha; });
+  // Incluye los de estado 'mora' (siguen debiendo cuotas): sin ellos la grafica proyectaba
+  // menos creditos que los que dice la tarjeta "Activos" de la misma pantalla (Adam, 14-sep-2026)
+  var activos = _concFiltrar(S.creds||[]).filter(function(c){ return !c.eliminado && (c.estado==='activo'||c.estado==='mora') && c.fecha; });
   var ahora = Date.now();
   var MS_DIA = 24*60*60*1000;
   var MS_QUINCENA = 15*MS_DIA;
@@ -541,7 +543,8 @@ function renderCredCobrosChart(){
 }
 // ── Cobros programados — DASHBOARD (reusa la lógica de buckets) ──
 function _cobrosProgramadosBuckets(periodo){
-  var activos = _concFiltrar(S.creds||[]).filter(function(c){ return !c.eliminado && c.estado==='activo' && c.fecha; });
+  // Mismo criterio que la grafica de Creditos y que las tarjetas: activo + mora
+  var activos = _concFiltrar(S.creds||[]).filter(function(c){ return !c.eliminado && (c.estado==='activo'||c.estado==='mora') && c.fecha; });
   var ahora = Date.now();
   var MS_DIA = 24*60*60*1000;
   var MS_QUINCENA = 15*MS_DIA;

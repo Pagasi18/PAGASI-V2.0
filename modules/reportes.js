@@ -12,8 +12,11 @@ PG.reportes = function(){
   // ══════════ CÁLCULOS COMPARTIDOS ══════════
   const pagosConf = _SPAGOS.filter(p=>!p.eliminado&&p.estado==='confirmado');
   const pagosPend = _SPAGOS.filter(p=>!p.eliminado&&p.estado==='pendiente');
-  const credsActivos= _SCREDS.filter(c=>!c.eliminado&&c.estado==='activo');
-  const credsMora = _SCREDS.filter(c=>!c.eliminado&&c.mora>0);
+  // Un credito en mora sigue siendo activo: se cuenta como en el dashboard y en Creditos.
+  // Antes credsActivos era solo estado 'activo' pero credsMora contaba a todos los atrasados,
+  // asi que la tasa de mora podia pasar de 100% (Adam, 14-sep-2026).
+  const credsActivos= _SCREDS.filter(c=>!c.eliminado&&(c.estado==='activo'||c.estado==='mora'));
+  const credsMora = credsActivos.filter(c=>c.mora>0);
   const credsComp = _SCREDS.filter(c=>!c.eliminado&&c.estado==='completado');
   const credsRec = _SCREDS.filter(c=>!c.eliminado&&(c.estado==='recuperada'||c.estado==='recuperado'));
   const totalCuotas= pagosConf.filter(p=>!p.esInicial&&p.tipoOperacion!=='inicial_credito').reduce((a,p)=>a+p.monto,0);
@@ -1308,7 +1311,8 @@ function _contGenerarCuerpo(){
   });
 
   var credsMoraList = (S.creds||[]).filter(function(c){
-    return !c.eliminado && c.mora > 0 && c.estado === 'activo';
+    // Tambien los de estado 'mora' (los mas atrasados): antes el reporte los dejaba fuera
+    return !c.eliminado && c.mora > 0 && (c.estado === 'activo' || c.estado === 'mora');
   }).sort(function(a,b){ return (b.mora||0)-(a.mora||0); });
 
   var motosAll = (S.motos||[]).filter(function(m){ return !m.eliminado; });

@@ -714,8 +714,10 @@ function renderTabPendientes(){
   var manualPagarKpi = (S.cuentasPendientes||[]).filter(function(p){return p.tipo==='pagar'&&!p.pagado&&!p.eliminado;});
   var totalManualCobrar = manualCobrarKpi.reduce(function(a,p){return a+(p.monto||0);},0);
   var totalManualPagar = manualPagarKpi.reduce(function(a,p){return a+(p.monto||0);},0);
-  var clientesMoraKpi = credActivosKpi.filter(function(c){return c.estado==='mora';}).length;
-  var clientesAlDiaKpi = credActivosKpi.filter(function(c){return c.estado==='activo';}).length;
+  // En mora = con dias de atraso, no solo los que pasaron los dias de gracia (estado 'mora'):
+  // asi cuadra con el dashboard y con Creditos (Adam, 14-sep-2026).
+  var clientesMoraKpi = credActivosKpi.filter(function(c){return (c.mora||0)>0;}).length;
+  var clientesAlDiaKpi = credActivosKpi.length - clientesMoraKpi;
 
   var kpisHTML = '<div class="sg" style="grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'
     +'<div class="stat">'
@@ -776,7 +778,7 @@ function renderCobrar(ocultarCero){
     if(!byCliente[c.cli]) byCliente[c.cli]={cli:c.cli,creds:[],total:0,pendCount:0,diasRest:null};
     var saldoPend=getCreditoSaldoPendiente(c);
     var cuotasRestantes=Math.max(0,getCreditoTotalCuotas(c)-getCreditoCuotasPagadas(c));
-    byCliente[c.cli].creds.push({id:c.id,saldoPend:saldoPend,cuotasRestantes:cuotasRestantes,fecha:c.fecha,estado:c.estado});
+    byCliente[c.cli].creds.push({id:c.id,saldoPend:saldoPend,cuotasRestantes:cuotasRestantes,fecha:c.fecha,estado:c.estado,mora:c.mora||0});
     byCliente[c.cli].total+=saldoPend;
     byCliente[c.cli].pendCount+=cuotasRestantes;
   });
@@ -802,7 +804,7 @@ function renderCobrar(ocultarCero){
   }).join('');
 
   var rows=grupos.map(function(g,idx){
-    var expired=g.creds.some(function(c){return c.estado==='mora';});
+    var expired=g.creds.some(function(c){return (c.mora||0)>0;});   // atrasado desde el dia 1, como el KPI de arriba
     var diasLabel=expired?'<span style="color:#e74c3c;font-weight:700">Expirado</span>':'<span style="color:var(--ink2)">—</span>';
     return '<tr>'
       +'<td><span style="cursor:pointer;font-size:11px;color:var(--p1)" onclick="toggleCobrarRow('+idx+')">▶</span> Cliente: '+g.cli+'</td>'
