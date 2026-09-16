@@ -689,7 +689,7 @@ function wtUserOptions(selected){
     users.forEach(function(u){
       var em=u.email||u.uid||''; var nm=u.nombre||u.displayName||em;
       var sel=selected&&(selected===em||selected===nm||selected.indexOf(nm)>=0||nm.indexOf(selected)>=0);
-      opts+='<option value="'+wtEsc(em)+'" '+(sel?'selected':'')+'>'+wtEsc(nm)+(u.rol?' · '+wtEsc(u.rol):'')+'</option>';
+      opts+='<option value="'+wtEsc(em)+'" '+(sel?'selected':'')+'>'+wtEsc(nm)+((u.cargo||u.rol)?' · '+wtEsc(u.cargo||u.rol):'')+'</option>';
     });
   }
   return opts;
@@ -781,7 +781,7 @@ function openWtTask(id){
     users.forEach(function(u){
       var em=u.email||u.uid||''; var nm=u.nombre||u.displayName||em;
       var sel=(selEmail&&em===selEmail)||(!selEmail&&(nm===selName||nm.indexOf(selName)>=0||selName.indexOf(nm)>=0));
-      userOpts+='<option value="'+wtEsc(em)+'" '+(sel?'selected':'')+'>'+wtEsc(nm)+(u.rol?' · '+wtEsc(u.rol):'')+'</option>';
+      userOpts+='<option value="'+wtEsc(em)+'" '+(sel?'selected':'')+'>'+wtEsc(nm)+((u.cargo||u.rol)?' · '+wtEsc(u.cargo||u.rol):'')+'</option>';
     });
   } else {
     userOpts+='<option value="'+wtEsc(selEmail||selName)+'" selected>'+wtEsc(selName)+'</option>';

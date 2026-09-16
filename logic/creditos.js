@@ -1036,7 +1036,7 @@ function _wzVendedorOpts(){
     .sort(function(a,b){ return String(a.nombre||a.email||'').localeCompare(String(b.nombre||b.email||'')); })
     .forEach(function(u){
       var nm = u.nombre || u.email || 'Usuario';
-      opts += '<option value="'+esc(u.uid)+'" data-nombre="'+esc(nm)+'"'+(String(u.uid)===String(sel)?' selected':'')+'>'+esc(nm)+(u.rol?' · '+esc(u.rol):'')+'</option>';
+      opts += '<option value="'+esc(u.uid)+'" data-nombre="'+esc(nm)+'"'+(String(u.uid)===String(sel)?' selected':'')+'>'+esc(nm)+((u.cargo||u.rol)?' · '+esc(u.cargo||u.rol):'')+'</option>';
     });
   return opts;
 }

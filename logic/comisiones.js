@@ -49,7 +49,7 @@ function _comConfigRapida(uid){
   var c = _comGetConfig(u) || { activo:false, venta:{tipo:'fijo',valor:5}, cobranza:{tipo:'fijo',valor:1} };
   setMicon('comision');
   $('mtt').textContent = 'Comisiones — ' + (u.nombre || u.email);
-  $('msb').textContent = (u.rol||'Usuario') + ' · configuración rápida';
+  $('msb').textContent = (u.cargo||u.rol||'Usuario') + ' · configuración rápida';
   $('modal-box').className = 'modal';
   $('mbd').innerHTML = ''
     + '<label style="display:flex;align-items:center;gap:9px;background:var(--gs);border-radius:10px;padding:11px 13px;cursor:pointer;margin-bottom:13px">'
@@ -390,7 +390,7 @@ function _comisionesRender(){
           + '<td><div style="display:flex;align-items:center;gap:9px">'
             + '<div style="width:30px;height:30px;border-radius:50%;background:'+(cfg?'var(--grad)':'var(--rim)')+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:'+(cfg?'#fff':'var(--ink3)')+';flex-shrink:0">'+inics+'</div>'
             + '<div style="min-width:0"><div class="tdm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px">'+nombre+'</div>'
-            + '<div style="font-size:10px;color:var(--ink3)">'+(u.rol?u.rol+' · ':'')+subLbl+'</div></div>'
+            + '<div style="font-size:10px;color:var(--ink3)">'+((u.cargo||u.rol)?(u.cargo||u.rol)+' · ':'')+subLbl+'</div></div>'
           + '</div></td>'
           + '<td class="tds" style="text-align:right;font-family:var(--fd)">'+s.nVentas+'</td>'
           + '<td class="tds" style="text-align:right;font-family:var(--fd)">'+s.nCobranzas+'</td>'

@@ -2784,8 +2784,10 @@ function _attachCurrentUserListener(uid){
       // Si nada cambió, salir
       if(prevRol === nuevoRol && prevPerms === newPermsKey){
         // Solo actualizar nombre si cambió
-        if(data.nombre && data.nombre !== S.currentUser.nombre){
-          S.currentUser.nombre = data.nombre;
+        var cargoNuevo = data.cargo || '';
+        if((data.nombre && data.nombre !== S.currentUser.nombre) || cargoNuevo !== (S.currentUser.cargo||'')){
+          if(data.nombre) S.currentUser.nombre = data.nombre;
+          S.currentUser.cargo = cargoNuevo;
           if(typeof updateSidebarFooter === 'function') updateSidebarFooter();
         }
         return;
@@ -2798,6 +2800,7 @@ function _attachCurrentUserListener(uid){
       }
       // Aplicar cambios al usuario en memoria
       S.currentUser.rol = nuevoRol;
+      S.currentUser.cargo = data.cargo || '';
       S.currentUser.permisos = nuevosPerms;
       if(data.nombre) S.currentUser.nombre = data.nombre;
       S.currentUser.concesionarios = data.concesionarios || [];
@@ -2970,10 +2973,12 @@ function renderSidebar(){
 function updateSidebarFooter(){
   if(!S.currentUser) return;
   var nombre = S.currentUser.nombre || S.currentUser.email || 'Usuario';
-  var rol = S.currentUser.rol || 'Usuario';
+  // Debajo del nombre va el CARGO (Archivologa, Gerente de Cobranzas...) y solo
+  // si no tiene, el rol, como antes. El color sigue saliendo del rol.
+  var rol = S.currentUser.cargo || S.currentUser.rol || 'Usuario';
   var inics = nombre.split(' ').slice(0,2).map(function(w){return w[0]||'';}).join('').toUpperCase()||'U';
   var rolColors = {Administrador:'var(--p1)',Gerente:'var(--p2)',Empleado:'var(--green)',Vendedor:'var(--green)',Cobrador:'var(--green)',Contador:'var(--ink3)'};
-  var rolColor = rolColors[rol] || 'var(--p1)';
+  var rolColor = rolColors[S.currentUser.rol] || 'var(--p1)';
 
   var sbUn = document.querySelector('.sb-un');
   var sbAv = document.querySelector('.sb-av');
@@ -3836,7 +3841,7 @@ function showAdminProfile() {
   var user = S.currentUser || {};
   var nombre = user.nombre || user.email || 'Usuario';
   var email = (auth && auth.currentUser) ? auth.currentUser.email : (user.email || '—');
-  var rol = user.rol || 'Administrador';
+  var rol = user.cargo || user.rol || 'Administrador';
   var inicial = nombre.charAt(0).toUpperCase();
 
   // ── Stats del usuario actual ──

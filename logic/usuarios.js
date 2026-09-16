@@ -332,8 +332,9 @@ function _usersRenderList(){
       // Stats fila
       +'<div style="display:flex;gap:10px;margin-bottom:10px;font-size:11px">'
         +'<div style="flex:1">'
-          +'<div style="color:var(--ink3);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Rol</div>'
-          +'<div style="font-weight:800;color:'+info.color+'">'+info.icon+' '+(u.rol||'—')+'</div>'
+          +'<div style="color:var(--ink3);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">'+(u.cargo?'Cargo':'Rol')+'</div>'
+          +'<div style="font-weight:800;color:'+info.color+'">'+info.icon+' '+String(u.cargo||u.rol||'—').replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div>'
+          +(u.cargo?'<div style="font-size:9.5px;color:var(--ink3);margin-top:1px">permisos: '+String(u.rol||'—').replace(/</g,'&lt;')+'</div>':'')
         +'</div>'
         +'<div style="flex:1;text-align:right">'
           +'<div style="color:var(--ink3);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Último acceso</div>'
@@ -1288,7 +1289,14 @@ function editarUsuario(uid){
       +'<div style="background:var(--surf2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px">'
       +'<div style="font-weight:800">'+( u.nombre||u.email)+'</div>'
       +'<div style="color:var(--ink3)">'+u.email+'</div></div>'
-      +'<div class="fg"><label>Rol</label><select class="fs" id="eu_rol">'
+      // Cargo: el nombre real del puesto. Es lo que ve el empleado debajo de su
+      // nombre; el rol de abajo es solo permisos (Adam, 15-sep-2026: "tengo
+      // empleados que no son ni vendedores ni gerentes... se me estan quejando
+      // los empleados por los nombres de los roles").
+      +'<div class="fg"><label>Cargo — es lo que ve el empleado debajo de su nombre</label>'
+      +'<input class="fi" id="eu_cargo" maxlength="40" placeholder="Archivologa, Gerente de Cobranzas, Analista de Contratos..." value="'+String(u.cargo||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'">'
+      +'<div style="font-size:10.5px;color:var(--ink3);margin-top:4px">Si lo dejas vacio se sigue viendo el rol, como hasta ahora.</div></div>'
+      +'<div class="fg"><label>Rol — manda en los permisos; no se lo mostramos a nadie mas</label><select class="fs" id="eu_rol">'
       +(function(){
         // Oferta de roles disponibles — incluimos el rol actual aunque sea legacy, para no perderlo por error
         var roles = ['Administrador','Gerente','Empleado','Contador','Vendedor Concesionario'];
@@ -1311,6 +1319,7 @@ function editarUsuario(uid){
       + comSection;
     S.saveFn=function(){
       var rol=($('eu_rol')&&$('eu_rol').value)||u.rol;
+      var cargo=String(($('eu_cargo')&&$('eu_cargo').value)||'').trim().slice(0,40);
       var permisos=[];
       // Solo recoger checkboxes de PERMISOS (no el de comisiones ni los de concesionarios)
       document.querySelectorAll('#mbd input[type=checkbox]').forEach(function(cb){
@@ -1340,7 +1349,7 @@ function editarUsuario(uid){
       // Antes se navegaba de inmediato (fire-and-forget) y usersReload() releía
       // Firestore ganándole la carrera a la escritura -> el rol "revertía" solo.
       // Además, si la escritura se rechaza (permisos/reglas), ya NO marcamos éxito.
-      DB.updateUsuario(uid,{rol:rol,permisos:permisos,comisiones:comNueva,concesionarios:concesAsig}).then(function(ok){
+      DB.updateUsuario(uid,{rol:rol,cargo:cargo,permisos:permisos,comisiones:comNueva,concesionarios:concesAsig}).then(function(ok){
         if(ok===false){
           toast('El rol NO se guardó (Firebase rechazó el cambio). Revisá el mensaje de error y avisá.','error');
           return;
@@ -1350,7 +1359,7 @@ function editarUsuario(uid){
         try{
           if(typeof _usersCache !== 'undefined' && Array.isArray(_usersCache)){
             var cached = _usersCache.find(function(x){ return x.uid === uid; });
-            if(cached){ cached.rol = rol; cached.permisos = permisos; cached.comisiones = comNueva; cached.concesionarios = concesAsig; }
+            if(cached){ cached.rol = rol; cached.cargo = cargo; cached.permisos = permisos; cached.comisiones = comNueva; cached.concesionarios = concesAsig; }
           }
         }catch(e){}
         // Si es el usuario actual, actualizar currentUser y re-render switcher
@@ -1358,10 +1367,12 @@ function editarUsuario(uid){
           if(S.currentUser && S.currentUser.uid === uid){
             S.currentUser.concesionarios = concesAsig;
             S.currentUser.rol = rol;
+            S.currentUser.cargo = cargo;
+            if(typeof updateSidebarFooter === 'function') updateSidebarFooter();
             if(typeof _renderConcSwitcher === 'function') _renderConcSwitcher();
           }
         }catch(e){}
-        closeM(); nav('users'); toast('Rol actualizado a '+rol+' ✓','success');
+        closeM(); nav('users'); toast((cargo ? cargo+' · permisos de '+rol : 'Rol actualizado a '+rol)+' ✓','success');
       });
       return true;
     };
