@@ -27,7 +27,15 @@ PG.contratos = function(){
   var cuotaProm = credsActivos.length ? credsActivos.reduce(function(a,c){return a+(parseFloat(c.cuotaM)||0);},0)/credsActivos.length : 0;
 
   // Clientes recientes
-  var credsRecientes = credsActivos.slice().sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');}).slice(0,6);
+  // Mas nuevo arriba, como en Creditos: fecha mas reciente primero y, dentro del
+  // mismo dia, el numero de credito mas alto (Adam, 17-sep-2026: el listado
+  // mostraba los 15 del dia en orden ascendente y "no se sabia que orden era").
+  var _ctrNum = function(c){ return parseInt(String(c.id||'').replace(/\D/g,''), 10) || 0; };
+  var _ctrOrden = function(a,b){
+    var f = String(b.fecha||'').localeCompare(String(a.fecha||''));
+    return f !== 0 ? f : (_ctrNum(b) - _ctrNum(a));
+  };
+  var credsRecientes = credsActivos.slice().sort(_ctrOrden).slice(0,6);
 
   // Distribución por estado
   var activos = credsActivos.filter(function(c){return c.estado==='activo' && (!c.mora||c.mora===0);}).length;
@@ -63,7 +71,7 @@ PG.contratos = function(){
       <thead><tr>
         <th>ID</th><th>Cliente</th><th>Modelo</th><th>Concesionario</th><th>Fecha</th><th style="white-space:nowrap">Total</th><th>Estado</th><th style="text-align:right">Acciones</th>
       </tr></thead>
-      <tbody id="ctr-tbody">${credsActivos.concat(credsArchivados).sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');}).map(function(c){
+      <tbody id="ctr-tbody">${credsActivos.concat(credsArchivados).sort(_ctrOrden).map(function(c){
         var estColor = c.mora>0 ? 'var(--red)' : (c.estado==='completado' ? 'var(--green)' : ((c.estado==='cancelado'||c.estado==='recuperado'||c.estado==='recuperada') ? '#6b7280' : 'var(--p1)'));
         var estLabel = c.mora>0 ? ('En mora '+c.mora+'d') : (c.estado==='completado' ? 'Completado' : (c.estado==='cancelado' ? 'Cancelado' : ((c.estado==='recuperado'||c.estado==='recuperada') ? 'Recuperado' : 'Activo')));
         var fechaFmt = c.fecha ? parseFechaLocal(c.fecha).toLocaleDateString('es-VE',{day:'2-digit',month:'short',year:'2-digit'}) : '—';
