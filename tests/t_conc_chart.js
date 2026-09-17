@@ -13,6 +13,11 @@ global.ok=(l,v)=>{ if(v){pass++;console.log('OK   '+l);} else {fail++;console.lo
 global.S={creds:[],concesionarios:[]};
 const auto=new Proxy({},{has:()=>true,get:(t,k)=>{if(k===Symbol.unscopables)return undefined;if(k in t)return t[k];if(k in global)return global[k];return function(){return 0;};},set:(t,k,v)=>{t[k]=v;return true;}});
 const SRC=fs.readFileSync(path.join(ROOT,'logic/concesionarios-chart.js'),'utf8');
+// El grafico por monto usa lo financiado, con la MISMA funcion del modulo (logic/concesionarios.js)
+const _SRC_CONC=fs.readFileSync(path.join(ROOT,'logic/concesionarios.js'),'utf8');
+const _mFin=_SRC_CONC.match(/function _concFinanciadoDe\(cr\)\{[\s\S]*?\n\}/);
+if(!_mFin) throw new Error('no encuentro _concFinanciadoDe en logic/concesionarios.js');
+global._concFinanciadoDe=eval('('+_mFin[0]+')');
 const API=eval('with(auto){'+SRC+'\n; ({_concChartBuckets,_concChartCorte,_concChartDatos,_concChartHtml,_concChartSetPeriodo,_concChartSetModo,_concChartDelta,_concChartFmt,_concChartToggleSede,_concChartVerTodas}) }');
 
 // ── Buckets ──
@@ -69,10 +74,14 @@ ok('C1 = 3000 en monto',                       D.totales.C1===3000);
 ok('C2 = 2300 en monto',                       D.totales.C2===2300);
 ok('en monto C1 sigue primero',                D.sedes[0].id==='C1');
 
-// precioBaseReal manda sobre precio
-S.creds.push({id:'K',fecha:iso(hoy),concesionarioId:'C2',precio:100,precioBaseReal:5000,estado:'activo'});
+// Lo financiado (precio − inicial) manda sobre el precio: es lo que Pagasi le manda a la sede
+S.creds.push({id:'K',fecha:iso(hoy),concesionarioId:'C2',precio:5000,precioBaseReal:5000,ini:4100,fin:900,estado:'activo'});
 D=API._concChartDatos();
-ok('usa precioBaseReal cuando existe',         D.totales.C2===7300);
+ok('en monto cuenta lo financiado (900), no el precio (5000)', D.totales.C2===3200);
+S.creds.pop();
+S.creds.push({id:'L',fecha:iso(hoy),concesionarioId:'C2',precio:5000,ini:4100,estado:'activo'});   // sin fin guardado
+D=API._concChartDatos();
+ok('sin fin guardado: precio − inicial (900)',   D.totales.C2===3200);
 S.creds.pop();
 
 // ── Dias y anos ──
