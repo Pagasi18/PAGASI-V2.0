@@ -17,7 +17,7 @@ global.ok=(l,v)=>{ if(v){pass++;console.log('OK   '+l);} else {fail++;console.lo
 
 const auto=new Proxy({},{has:()=>true,get:(t,k)=>{if(k===Symbol.unscopables)return undefined;if(k in t)return t[k];if(k in global)return global[k];return function(){return 0;};},set:(t,k,v)=>{t[k]=v;return true;}});
 const SRC=['logic/contratos.js','logic/contratos-dra.js','logic/contratos-protect.js'].map(f=>fs.readFileSync(path.join(ROOT,f),'utf8')).join('\n;\n');
-const API=eval('with(auto){'+SRC+'\n; ({_protectFinanzas,_protectDatos,_htmlContratoProtect,_contratoVersionDe,_CONTRATO_PROTECT_DESDE,_docsRecaudosLista}) }');
+const API=eval('with(auto){'+SRC+'\n; ({_protectFinanzas,_protectDatos,_htmlContratoProtect,_contratoVersionDe,_CONTRATO_PROTECT_DESDE,_docsRecaudosLista,_draCedulaTxt}) }');
 const F=API._protectFinanzas;
 const cerca=(a,b,tol)=>Math.abs(a-b)<=(tol==null?0.02:tol);
 
@@ -180,6 +180,26 @@ ok('la letra del cuerpo se queda en 8,1 px',       htmlCorrido.includes('font-si
 ok('los anexos siguen enteros y en orden',         ['ANEXO “A”','ANEXO “B”','ANEXO “C”','ANEXO “D”'].every(function(a,i,arr){
   return htmlCorrido.indexOf(a)>-1 && (i===0 || htmlCorrido.indexOf(arr[i-1])<htmlCorrido.indexOf(a)); }));
 ok('el Anexo D sigue arrancando en su propia hoja', /page-break-before:always[^>]*>\s*<div[^>]*>\s*<div[^>]*>ANEXO “D”/.test(htmlCorrido) || htmlCorrido.indexOf('page-break-before:always')>-1);
+
+// ── La V- no se repite aunque la ficha ya traiga la cedula con "V-" ──
+// (Adam, 16-sep-2026: "se me repite la V- en todos lados... no puede pasar")
+ok('cedula pelada: V-12345678',                 API._draCedulaTxt('12345678')==='V-12345678');
+ok('ya guardada con V-: queda UNA sola V',      API._draCedulaTxt('V-12345678')==='V-12345678');
+ok('hasta un V-V- guardado se limpia',          API._draCedulaTxt('V-V-12345678')==='V-12345678');
+ok('con puntos, espacios y minuscula',          API._draCedulaTxt('v- 22.032.047')==='V-22032047');
+ok('un extranjero conserva su E',               API._draCedulaTxt('E-84123456')==='E-84123456');
+ok('algo que no es cedula se deja tal cual',    API._draCedulaTxt('PASAPORTE AB123')==='PASAPORTE AB123');
+ok('vacio queda vacio (raya para boligrafo)',   API._draCedulaTxt('')==='' && API._draCedulaTxt(null)==='');
+const _cedAntes=S.clientes[0].cedula, _fiaAntes=S.clientes[0].fiador_ci;
+S.clientes[0].cedula='V-12345678'; S.clientes[0].fiador_ci='V-9876543';
+const htmlVV=API._htmlContratoProtect('CRED-900');
+ok('el contrato entero no dice V-V- por ningun lado', htmlVV.indexOf('V-V-')===-1);
+ok('preambulo: cedula del comprador con una sola V', htmlVV.includes('cédula de identidad venezolana N° <strong>V-12345678</strong>'));
+ok('preambulo: la del fiador tambien',          htmlVV.includes('N° <strong>V-9876543</strong>'));
+ok('firmas: C.I. V-12345678',                   htmlVV.includes('C.I. V-12345678'));
+S.clientes[0].cedula=_cedAntes; S.clientes[0].fiador_ci=_fiaAntes;
+const htmlSinV=API._htmlContratoProtect('CRED-900');
+ok('con la cedula guardada sin V- se imprime igual que antes', htmlSinV.indexOf('V-V-')===-1 && htmlSinV.includes('C.I. V-'+String(_cedAntes)));
 
 console.log(''); console.log(pass+' pruebas OK, '+fail+' fallas');
 if(fail) process.exitCode=1;
