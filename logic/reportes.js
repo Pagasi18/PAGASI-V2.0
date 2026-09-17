@@ -945,6 +945,18 @@ function descargarEstadoPDF(){
   _abrirVentanaImpresion('Estado de Cuenta '+c.id+' — '+c.cli, html);
 }
 
+// El nombre con el que el navegador propone guardar el PDF es el titulo de la
+// ventana de impresion. Adam (16-sep-2026): que salga "CRED-580 - MAIRENA
+// YOXMALI FERNANDEZ PEREZ - BR150 MILAN" (codigo - cliente - modelo) para no
+// renombrar cada archivo a mano. Sin letras prohibidas en nombres de archivo.
+function _tituloContrato(credId){
+  var c = (S.creds||[]).find(function(x){ return String(x.id)===String(credId); });
+  var partes = [String(credId||'Contrato')];
+  if(c && c.cli) partes.push(String(c.cli).trim());
+  if(c && c.modelo) partes.push(String(c.modelo).trim());
+  return partes.join(' - ').replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 120);
+}
+
 function descargarContratoPDF(){
   // Renderiza el contrato del crédito seleccionado en el módulo contratos
   renderContrato();
@@ -952,7 +964,7 @@ function descargarContratoPDF(){
     var cz = $('cz');
     if(!cz){ toast('Selecciona un crédito primero','error'); return; }
     var credId = ($('sel-cred')&&$('sel-cred').value)||'contrato';
-    _abrirVentanaImpresion('Contrato '+credId, cz.innerHTML, {sinHeader:true});
+    _abrirVentanaImpresion(_tituloContrato(credId), cz.innerHTML, {sinHeader:true});
   }, 200);
 }
 
@@ -979,7 +991,7 @@ function descargarContratoPDFById(credId){
     if(td && prevTd!==null) td.value = prevTd;
     var cz = $('cz');
     if(!cz){ toast('No se pudo generar el contrato','error'); return; }
-    _abrirVentanaImpresion('Contrato '+credId, cz.innerHTML, {sinHeader:true});
+    _abrirVentanaImpresion(_tituloContrato(credId), cz.innerHTML, {sinHeader:true});
     if(sel && prevSel!==null) sel.value = prevSel;
   }, 150);
 }
