@@ -372,7 +372,7 @@ function _concRender(){
       setTimeout(function(){ if(typeof _concChartPintar==='function') _concChartPintar(); }, 30);
     }
     html += '<div class="card">'
-      + '<div class="ch"><div><div class="ct">Concesionarios</div><div class="cs">Saldo = anticipos enviados − costo de las motos que salieron</div></div>'
+      + '<div class="ch"><div><div class="ct">Concesionarios</div><div class="cs">Saldo = anticipos enviados − lo financiado de las motos que salieron</div></div>'
       + '<button class="btn btn-p btn-sm" onclick="_concAbrirDetalleTotal()">Σ Detalle total</button></div>'
       + '<div class="tw"><table>'
       + '<thead><tr><th>Sede</th><th>Ciudad</th><th style="text-align:right">Motos</th><th style="text-align:right">Créditos</th><th style="text-align:right">Enviado</th><th style="text-align:right">Consumido</th><th style="text-align:right">Saldo</th><th style="text-align:right">Acciones</th></tr></thead>'
@@ -490,11 +490,11 @@ function _concAbrirDetalle(id){
   var antF = fin.anticipos.filter(function(a){ return _enRango(a.fecha); });
   var credsF = fin.creds.filter(function(cr){ return _enRango(cr.fecha); });
   var envP = antF.reduce(function(s,a){ return s+(parseFloat(a.monto)||0); },0);
-  var conP = credsF.reduce(function(s,cr){ return s+(parseFloat(cr.precioBaseReal||cr.precio)||0); },0);
+  var conP = credsF.reduce(function(s,cr){ return s+_concFinanciadoDe(cr); },0);
   // Créditos (motos que salieron) — más recientes primero
   var credsOrd = credsF.slice().sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); });
   var filasCreds = credsOrd.map(function(cr){
-    var costo = parseFloat(cr.precioBaseReal||cr.precio)||0;
+    var costo = _concFinanciadoDe(cr);
     return '<tr style="cursor:pointer" onclick="closeM();openAmort(\''+cr.id+'\')">'
       + '<td class="tds" style="font-family:var(--fd)">'+cr.id+'</td>'
       + '<td class="tds">'+(cr.fecha||'—')+'</td>'
@@ -524,7 +524,7 @@ function _concAbrirDetalle(id){
   var movsAll = fin.anticipos.map(function(a){
       return { fecha:a.fecha||'', det:'Anticipo · '+(a.metodo||'—')+(a.ref?' · '+a.ref:'')+(a.nota?' · '+a.nota:''), monto:parseFloat(a.monto)||0 };
     }).concat(fin.creds.map(function(cr){
-      return { fecha:cr.fecha||'', det:cr.id+' · '+(cr.cli||'')+' · '+(cr.modelo||''), monto:-(parseFloat(cr.precioBaseReal||cr.precio)||0), credId:cr.id };
+      return { fecha:cr.fecha||'', det:cr.id+' · '+(cr.cli||'')+' · '+(cr.modelo||''), monto:-_concFinanciadoDe(cr), credId:cr.id };
     })).sort(function(a,b){ return String(a.fecha).localeCompare(String(b.fecha)); });
   var _run = 0;
   movsAll.forEach(function(m){ _run += m.monto; m.saldo = _run; });
@@ -847,11 +847,23 @@ function _concAsignarUno(tipo, id, sedeId){
 // ╔══════════════════════════════════════════════════════════╗
 // ║  FINANZAS POR CONCESIONARIO — ANTICIPOS Y SALDO           ║
 // ║  Les mandamos dinero por adelantado (anticipos); cada     ║
-// ║  moto vendida descuenta su costo (precio base real).      ║
-// ║  Saldo = Σ anticipos − Σ costos de motos que salieron.    ║
+// ║  moto vendida descuenta lo financiado (precio − inicial). ║
+// ║  Saldo = Σ anticipos − Σ financiado de motos que salieron.║
 // ║  Los anticipos viven en el doc del concesionario          ║
 // ║  (c.anticipos[]) — no requiere reglas nuevas de Firestore.║
 // ╚══════════════════════════════════════════════════════════╝
+
+// Lo que Pagasi le manda a la sede por cada moto = LO FINANCIADO (precio − inicial):
+// el cliente paga la inicial en la tienda y la sede se la queda. Es la cuenta que
+// lleva la oficina en su Excel de saldos (Adam, 16-sep-2026); antes el modulo
+// descontaba el precio completo y decia "consumido" casi el doble de lo real.
+function _concFinanciadoDe(cr){
+  if(!cr) return 0;
+  var f = parseFloat(cr.fin);
+  if(isFinite(f) && f >= 0) return f;
+  var p = parseFloat(cr.precio)||0, i = parseFloat(cr.ini)||0;
+  return Math.max(0, p - i);
+}
 
 function _concFinanzasDe(cid){
   var c = _concGetById(cid) || {};
@@ -861,7 +873,7 @@ function _concFinanzasDe(cid){
   var creds = (S.creds||[]).filter(function(cr){
     return cr && !cr.eliminado && cr.concesionarioId === cid && cr.estado !== 'cancelado';
   });
-  var consumido = creds.reduce(function(s,cr){ return s + (parseFloat(cr.precioBaseReal||cr.precio)||0); }, 0);
+  var consumido = creds.reduce(function(s,cr){ return s + _concFinanciadoDe(cr); }, 0);
   return { anticipos: anticipos, creds: creds, enviado: enviado, consumido: consumido, saldo: enviado - consumido };
 }
 
@@ -918,7 +930,7 @@ function _concAbrirDetalleTotal(keep){
       movsAll.push({ fecha:a.fecha||'', sede:c.nombre||c.id, det:'Anticipo · '+(a.metodo||'—')+(a.ref?' · '+a.ref:''), monto:parseFloat(a.monto)||0 });
     });
     fin.creds.forEach(function(cr){
-      movsAll.push({ fecha:cr.fecha||'', sede:c.nombre||c.id, det:cr.id+' · '+(cr.cli||'')+' · '+(cr.modelo||''), monto:-(parseFloat(cr.precioBaseReal||cr.precio)||0), credId:cr.id });
+      movsAll.push({ fecha:cr.fecha||'', sede:c.nombre||c.id, det:cr.id+' · '+(cr.cli||'')+' · '+(cr.modelo||''), monto:-_concFinanciadoDe(cr), credId:cr.id });
     });
     var sc = fin.saldo > 0 ? 'var(--green)' : (fin.saldo < 0 ? 'var(--red)' : 'var(--ink3)');
     return '<tr style="cursor:pointer" onclick="_concAbrirDetalle(\''+c.id+'\')">'
@@ -1113,7 +1125,7 @@ function _concGenerarReporte(cid, formato){
     .sort(function(a,b){ return String(a.fecha||'').localeCompare(String(b.fecha||'')); });
   var antP = fin.anticipos.filter(function(a){ return enR(a.fecha); })
     .sort(function(a,b){ return String(a.fecha||'').localeCompare(String(b.fecha||'')); });
-  var costoP = credsP.reduce(function(s,cr){ return s + (parseFloat(cr.precioBaseReal||cr.precio)||0); }, 0);
+  var costoP = credsP.reduce(function(s,cr){ return s + _concFinanciadoDe(cr); }, 0);
   var ventaP = credsP.reduce(function(s,cr){ return s + (parseFloat(cr.precio)||0); }, 0);
   var antTotalP = antP.reduce(function(s,a){ return s + (parseFloat(a.monto)||0); }, 0);
   var cliDe = function(cr){
@@ -1128,7 +1140,7 @@ function _concGenerarReporte(cid, formato){
     aoa.push([]);
     aoa.push(['RESUMEN']);
     aoa.push(['Motos que salieron (período)', credsP.length]);
-    aoa.push(['Costo consumido (período)', n2(costoP)]);
+    aoa.push(['Financiado consumido (período)', n2(costoP)]);
     aoa.push(['Precio de venta total (período)', n2(ventaP)]);
     aoa.push(['Anticipos enviados (período)', n2(antTotalP)]);
     aoa.push(['— SALDO GLOBAL DE LA SEDE —', n2(fin.saldo)]);
@@ -1136,10 +1148,10 @@ function _concGenerarReporte(cid, formato){
     aoa.push(['Total consumido histórico', n2(fin.consumido)]);
     aoa.push([]);
     aoa.push(['MOTOS QUE SALIERON']);
-    aoa.push(['N° Crédito','Fecha','Cliente','Cédula','Teléfono','Modelo','Placa/Serial','Precio venta','Costo (deducción)','Estado']);
+    aoa.push(['N° Crédito','Fecha','Cliente','Cédula','Teléfono','Modelo','Placa/Serial','Precio venta','Financiado (se le manda a la sede)','Estado']);
     credsP.forEach(function(cr){
       var cl = cliDe(cr);
-      aoa.push([cr.id, cr.fecha||'', cr.cli||'', cl.cedula||'', cl.tel||'', cr.modelo||'', cr.placa||cr.serialMotor||'', n2(cr.precio), n2(cr.precioBaseReal||cr.precio), cr.estado||'']);
+      aoa.push([cr.id, cr.fecha||'', cr.cli||'', cl.cedula||'', cl.tel||'', cr.modelo||'', cr.placa||cr.serialMotor||'', n2(cr.precio), n2(_concFinanciadoDe(cr)), cr.estado||'']);
     });
     aoa.push([]);
     aoa.push(['ANTICIPOS ENVIADOS']);
@@ -1159,19 +1171,19 @@ function _concGenerarReporte(cid, formato){
     + '<div style="text-align:center;font-size:12px;margin-bottom:4px"><b>'+esc(c.nombre)+'</b>'+(c.ciudad?' · '+esc(c.ciudad):'')+'</div>'
     + '<div style="text-align:center;font-size:11px;color:#555;margin-bottom:16px">'+esc(r.lbl)+' · Generado: '+new Date().toLocaleString('es-VE')+'</div>'
     + '<h3>Resumen del período</h3>'
-    + '<table><tr><th>Motos que salieron</th><th>Costo consumido</th><th>Venta total</th><th>Anticipos enviados</th></tr>'
+    + '<table><tr><th>Motos que salieron</th><th>Financiado consumido</th><th>Venta total</th><th>Anticipos enviados</th></tr>'
     + '<tr><td>'+credsP.length+'</td><td>$'+costoP.toFixed(2)+'</td><td>$'+ventaP.toFixed(2)+'</td><td>$'+antTotalP.toFixed(2)+'</td></tr></table>'
     + '<h3>Saldo global de la sede</h3>'
     + '<table><tr><th>Total enviado</th><th>Total consumido</th><th>SALDO DISPONIBLE</th></tr>'
     + '<tr><td>$'+fin.enviado.toFixed(2)+'</td><td>−$'+fin.consumido.toFixed(2)+'</td><td style="font-weight:900;'+(fin.saldo<0?'color:#c0392b':'color:#0a7a4b')+'">$'+fin.saldo.toFixed(2)+'</td></tr></table>'
     + '<h3>Motos que salieron ('+credsP.length+')</h3>'
     + (credsP.length===0 ? '<div style="color:#777;font-size:11px">Sin ventas en el período.</div>'
-      : '<table><tr><th>Crédito</th><th>Fecha</th><th>Cliente</th><th>Cédula</th><th>Teléfono</th><th>Modelo</th><th>Placa/Serial</th><th>Costo</th><th>Estado</th></tr>'
+      : '<table><tr><th>Crédito</th><th>Fecha</th><th>Cliente</th><th>Cédula</th><th>Teléfono</th><th>Modelo</th><th>Placa/Serial</th><th>Financiado</th><th>Estado</th></tr>'
         + credsP.map(function(cr){
             var cl = cliDe(cr);
-            return '<tr><td>'+esc(cr.id)+'</td><td>'+esc(cr.fecha||'')+'</td><td>'+esc(cr.cli||'')+'</td><td>'+esc(cl.cedula||'')+'</td><td>'+esc(cl.tel||'')+'</td><td>'+esc(cr.modelo||'')+'</td><td>'+esc(cr.placa||cr.serialMotor||'')+'</td><td>−$'+(parseFloat(cr.precioBaseReal||cr.precio)||0).toFixed(2)+'</td><td>'+esc(cr.estado||'')+'</td></tr>';
+            return '<tr><td>'+esc(cr.id)+'</td><td>'+esc(cr.fecha||'')+'</td><td>'+esc(cr.cli||'')+'</td><td>'+esc(cl.cedula||'')+'</td><td>'+esc(cl.tel||'')+'</td><td>'+esc(cr.modelo||'')+'</td><td>'+esc(cr.placa||cr.serialMotor||'')+'</td><td>−$'+_concFinanciadoDe(cr).toFixed(2)+'</td><td>'+esc(cr.estado||'')+'</td></tr>';
           }).join('')
-        + '<tr><td colspan="7" style="text-align:right;font-weight:800">TOTAL COSTO</td><td style="font-weight:900">−$'+costoP.toFixed(2)+'</td><td></td></tr></table>')
+        + '<tr><td colspan="7" style="text-align:right;font-weight:800">TOTAL FINANCIADO</td><td style="font-weight:900">−$'+costoP.toFixed(2)+'</td><td></td></tr></table>')
     + '<h3>Anticipos enviados ('+antP.length+')</h3>'
     + (antP.length===0 ? '<div style="color:#777;font-size:11px">Sin anticipos en el período.</div>'
       : '<table><tr><th>Fecha</th><th>Monto</th><th>Método</th><th>Referencia</th><th>Nota</th><th>Registrado por</th></tr>'

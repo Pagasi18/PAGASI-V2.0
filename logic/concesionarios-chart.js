@@ -45,7 +45,7 @@ function _concChartCorte(periodo){ return periodo==='dia' ? 10 : (periodo==='ano
 
 function _concChartValor(c){
   return (_concChartModo === 'motos' || _concChartModo === 'parte')
-    ? 1 : (parseFloat(c.precioBaseReal||c.precio)||0);
+    ? 1 : _concFinanciadoDe(c);   // lo financiado, igual que el saldo de la sede
 }
 
 // Suma por sede y por bucket. desplazado=1 = periodo anterior.
