@@ -222,11 +222,26 @@ PG.pagos = function(){
   var _morCasos = _cuBase.filter(_esAtrasado).length;
   var _morMonto = _cuBase.reduce(function(sm,it){ return sm + (_esAtrasado(it)?(it.nVencidas>=1?it.vencido:it.proxSaldo):0); },0);
   var _moraDash = _concFiltrar(S.creds||[]).filter(function(c){ return c && !c.eliminado && (parseInt(c.mora,10)||0)>0; }).length;
+  // ── Porcentajes de las pestanas (Adam, 17-sep-2026: "ponme porcentajes tambien") ──
+  // Dos denominadores distintos, cada uno donde tiene sentido:
+  //   · % de la CARTERA  = sobre los creditos vigentes (activo + mora), la misma
+  //     regla del dashboard. Es la tasa de mora de verdad, la que se reporta.
+  //   · % de la MORA     = que parte de los atrasados cae en esa pestana.
+  var _carteraN = _concFiltrar(S.creds||[]).filter(function(c){
+    return c && !c.eliminado && (c.estado==='activo'||c.estado==='mora');
+  }).length;
+  var _pctTxt = function(n, tot, dec){
+    if(!tot || !n) return '';
+    var v = n*100/tot;
+    return (dec ? v.toFixed(1).replace('.',',') : String(Math.round(v))) + '%';
+  };
+  var _pctCartera = function(n){ var t=_pctTxt(n,_carteraN,true); return t ? ' <span style="opacity:.85">('+t+' de la cartera)</span>' : ''; };
+  var _pctMora    = function(n){ var t=_pctTxt(n,_moraDash,false);  return t ? ' <span style="opacity:.85">('+t+' de la mora)</span>' : ''; };
   var _acuAtras = _acuList.filter(_esAtrasado).length;
   var _ilocAtras = _ilocList.filter(_esAtrasado).length;
   var _moraOtros = Math.max(0, _moraDash - _cuAtras - _acuAtras - _critList.length - _ilocAtras);
   var _concilia = _moraDash>0
-    ? '<div style="font-size:10.5px;color:var(--ink3);margin:-4px 0 10px;font-weight:600">En mora total: <b>'+_moraDash+'</b> \u00b7 en Mora Regular: <b>'+_cuAtras+'</b> \u00b7 en Acuerdos Mensuales: <b>'+_acuAtras+'</b> \u00b7 en Cr\u00edticos: <b>'+_critList.length+'</b> \u00b7 en Ilocalizables: <b>'+_ilocAtras+'</b>'
+    ? '<div style="font-size:10.5px;color:var(--ink3);margin:-4px 0 10px;font-weight:600">En mora total: <b>'+_moraDash+'</b>'+(_pctTxt(_moraDash,_carteraN,true)?' (<b>'+_pctTxt(_moraDash,_carteraN,true)+'</b> de la cartera, '+_carteraN+' cr\u00e9ditos)':'')+' \u00b7 en Mora Regular: <b>'+_cuAtras+'</b> ('+(_pctTxt(_cuAtras,_moraDash,false)||'0%')+') \u00b7 en Acuerdos Mensuales: <b>'+_acuAtras+'</b> ('+(_pctTxt(_acuAtras,_moraDash,false)||'0%')+') \u00b7 en Cr\u00edticos: <b>'+_critList.length+'</b> ('+(_pctTxt(_critList.length,_moraDash,false)||'0%')+') \u00b7 en Ilocalizables: <b>'+_ilocAtras+'</b> ('+(_pctTxt(_ilocAtras,_moraDash,false)||'0%')+')'
       +(_moraOtros>0?' \u00b7 <span style="color:var(--amber)">fuera por filtros de fecha/b\u00fasqueda: <b>'+_moraOtros+'</b></span>':'')+'</div>'
     : '';
   var _cobBtn = function(k, linea1, linea2){
@@ -235,11 +250,11 @@ PG.pagos = function(){
       +'<span style="font-size:10px;opacity:.75;font-weight:700">'+linea2+'</span></button>';
   };
   var _cobTabs = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'
-    +_cobBtn('quincenal','\ud83d\udccb Mora Regular (Quincenal)', _morCasos+' en atraso \u00b7 '+fmt(_morMonto)+' vencido')
-    +_cobBtn('acuerdos','\ud83d\uddd3\ufe0f Acuerdos Mensuales'+(_acuRotos?' <span style="background:var(--red);color:#fff;border-radius:20px;padding:0 7px;font-size:9.5px;font-weight:900;margin-left:4px">'+_acuRotos+'</span>':''), _acuList.length+' acuerdo'+(_acuList.length!==1?'s':'')+' \u00b7 '+fmt(_acuMonto)+' acumulado')
-    +_cobBtn('criticos','\ud83d\udea8 Cr\u00edticos'+(_critList.length?' <span style="background:var(--red);color:#fff;border-radius:20px;padding:0 7px;font-size:9.5px;font-weight:900;margin-left:4px">'+_critList.length+'</span>':''), 'm\u00e1s de 30 d\u00edas de mora \u00b7 '+fmt(_critMonto)+' vencido')
-    +_cobBtn('iloc','\ud83d\udcf5 Ilocalizables', _ilocList.length+' marcado'+(_ilocList.length!==1?'s':'')+' \u00b7 '+fmt(_ilocMonto)+' vencido')
-    +_cobBtn('total','\ud83d\udcd5 Mora Total', _morTotalList.length+' en mora \u00b7 '+fmt(_morTotMonto)+' vencido')
+    +_cobBtn('quincenal','\ud83d\udccb Mora Regular (Quincenal)', _morCasos+' en atraso'+_pctMora(_morCasos)+' \u00b7 '+fmt(_morMonto)+' vencido')
+    +_cobBtn('acuerdos','\ud83d\uddd3\ufe0f Acuerdos Mensuales'+(_acuRotos?' <span style="background:var(--red);color:#fff;border-radius:20px;padding:0 7px;font-size:9.5px;font-weight:900;margin-left:4px">'+_acuRotos+'</span>':''), _acuList.length+' acuerdo'+(_acuList.length!==1?'s':'')+_pctCartera(_acuList.length)+' \u00b7 '+fmt(_acuMonto)+' acumulado')
+    +_cobBtn('criticos','\ud83d\udea8 Cr\u00edticos'+(_critList.length?' <span style="background:var(--red);color:#fff;border-radius:20px;padding:0 7px;font-size:9.5px;font-weight:900;margin-left:4px">'+_critList.length+'</span>':''), 'm\u00e1s de 30 d\u00edas de mora'+_pctMora(_critList.length)+' \u00b7 '+fmt(_critMonto)+' vencido')
+    +_cobBtn('iloc','\ud83d\udcf5 Ilocalizables', _ilocList.length+' marcado'+(_ilocList.length!==1?'s':'')+_pctMora(_ilocList.length)+' \u00b7 '+fmt(_ilocMonto)+' vencido')
+    +_cobBtn('total','\ud83d\udcd5 Mora Total', _morTotalList.length+' en mora'+_pctCartera(_morTotalList.length)+' \u00b7 '+fmt(_morTotMonto)+' vencido')
     +'<button class="btn btn-sm btn-g" onclick="cobExportAbrir()" title="Descargar reporte en Excel o PDF" style="margin-left:auto;align-self:center;display:flex;align-items:center;gap:6px;padding:9px 16px;color:var(--green);border-color:rgba(0,184,118,.4);font-weight:800">\u2b07 Descargar</button>'
     +'</div>'+_concilia;
   // Tasa de cumplimiento historica: sobre TODOS los creditos (tambien los que
