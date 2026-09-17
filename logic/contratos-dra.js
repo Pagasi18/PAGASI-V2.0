@@ -197,11 +197,28 @@ function _draSociedad(d){
   return out;
 }
 
+// La cedula como se imprime: UNA sola letra de tipo (V, E, J, G o P) y los
+// numeros. Muchas fichas ya traen la cedula guardada como "V-22032047" y los
+// contratos le pegaban otra "V-" delante: salia "V-V-22032047" en el preambulo,
+// el RIF y las firmas (Adam, 16-sep-2026: "se me repite la V- en todos lados...
+// no puede pasar"). Acepta "22032047", "V-22032047", "v 22.032.047" y hasta un
+// "V-V-" ya guardado; si no trae letra se asume V; algo que no parezca cedula
+// (un pasaporte, texto) se imprime tal cual.
+function _draCedulaTxt(v){
+  var s = String(v == null ? '' : v).trim().toUpperCase();
+  if(!s) return '';
+  var digitos = s.replace(/[^0-9]/g, '');
+  var resto = s.replace(/[VEJGP\s.\-]/g, '');
+  if(!digitos || resto !== digitos) return s;
+  var letra = (s.match(/[VEJGP]/) || ['V'])[0];
+  return letra + '-' + digitos;
+}
+
 // Representante de una sociedad: se omite entero si no hay nombre.
 function _draRepresentante(d){
   if(!_draTxt(d.rep)) return '';
   var t = ', representada en este acto por <strong>'+_draTxt(d.rep)+'</strong>';
-  if(_draTxt(d.repCi)) t += ', titular de la cédula de identidad venezolana número <strong>V-'+_draTxt(d.repCi)+'</strong>';
+  if(_draTxt(d.repCi)) t += ', titular de la cédula de identidad venezolana número <strong>'+_draCedulaTxt(_draTxt(d.repCi))+'</strong>';
   if(_draTxt(d.repCargo)) t += ', actuando en su carácter de <strong>'+_draTxt(d.repCargo)+'</strong>';
   if(_draTxt(d.repDoc)) t += ', según se desprende de <strong>'+_draTxt(d.repDoc)+'</strong>';
   return t;
@@ -210,7 +227,7 @@ function _draRepresentante(d){
 // Persona natural: nombre + cedula + RIF (el RIF solo si esta cargado).
 function _draPersona(nombre, ci, rif){
   var t = '<strong>'+_draTxt(nombre)+'</strong>, venezolano, mayor de edad';
-  if(_draTxt(ci))  t += ', titular de la cédula de identidad venezolana número <strong>V-'+_draTxt(ci)+'</strong>';
+  if(_draTxt(ci))  t += ', titular de la cédula de identidad venezolana número <strong>'+_draCedulaTxt(_draTxt(ci))+'</strong>';
   if(_draTxt(rif)) t += ' y con RIF número <strong>'+_draTxt(rif)+'</strong>';
   return t;
 }
@@ -339,9 +356,9 @@ function _draDatos(credId){
     empRmNum: V(emp.rmNum, 6), empRmTomo: V(emp.rmTomo, 6),
     empRepCargo: V(emp.repCargo, 14), empRepDoc: V(emp.repDoc, 18),
     cliNom:  V(cli.nombre || c.cli, 26),
-    cliCi:   V(cli.cedula || cli.ci, 12),
+    cliCi:   V(_draCedulaTxt(cli.cedula || cli.ci), 12),
     cliRif1: rifPart(cli.rif || cli.cedula || cli.ci, 0), cliRif2: rifPart(cli.rif, 1),
-    fiaNom:  V(cli.fiador_nom, 26), fiaCi: V(cli.fiador_ci, 12),
+    fiaNom:  V(cli.fiador_nom, 26), fiaCi: V(_draCedulaTxt(cli.fiador_ci), 12),
     fiaRif1: rifPart(cli.fiador_rif || cli.fiador_ci, 0), fiaRif2: rifPart(cli.fiador_rif, 1),
     fiaDir:  V(cli.fiador_dir, 30), fiaDir2: V(cli.fiador_dir, 24),
     fiaEmail:V(cli.fiador_email, 20), fiaTel: V(cli.fiador_tel, 14),
@@ -556,8 +573,8 @@ function _htmlCompraventaDRA(credId){
     +   (function(){
           var f = [], hayFiador = !!_draTxt(D.cli.fiador_nom);
           var n = hayFiador ? 4 : 3;
-          f.push(['Por el Comprador', D.cliNom, 'V-'+String(D.cli.cedula||D.cli.ci||'________')]);
-          if(hayFiador) f.push(['Por el Fiador', D.fiaNom, 'V-'+String(D.cli.fiador_ci||'________')]);
+          f.push(['Por el Comprador', D.cliNom, _draCedulaTxt(D.cli.cedula||D.cli.ci) || 'V-________']);
+          if(hayFiador) f.push(['Por el Fiador', D.fiaNom, _draCedulaTxt(D.cli.fiador_ci) || 'V-________']);
           f.push(['Por Pagasi', D.empNom, 'RIF ' + String(D.emp.rif || '________')]);
           f.push(['Por el Concesionario', D.concNom, '']);
           return '<div style="display:flex;gap:24px;margin-top:12px;align-items:flex-start">'
@@ -571,8 +588,8 @@ function _htmlCompraventaDRA(credId){
     +   _draCronograma(D, S_)
     +   '<p style="'+S_.p+';margin-top:12px">El Comprador y el Fiador declaran conocer y aceptar el presente cronograma de pagos.</p>'
     +   '<div style="display:flex;gap:24px;align-items:flex-start;margin-top:18px;page-break-inside:avoid">'
-    +     _draFirma('Por el Comprador', D.cliNom, 'V-'+String(D.cli.cedula||D.cli.ci||'________'), 2)
-    +     (_draTxt(D.cli.fiador_nom) ? _draFirma('Por el Fiador', D.fiaNom, 'V-'+String(D.cli.fiador_ci||'________'), 2) : '')
+    +     _draFirma('Por el Comprador', D.cliNom, _draCedulaTxt(D.cli.cedula||D.cli.ci) || 'V-________', 2)
+    +     (_draTxt(D.cli.fiador_nom) ? _draFirma('Por el Fiador', D.fiaNom, _draCedulaTxt(D.cli.fiador_ci) || 'V-________', 2) : '')
     +   '</div>'
     + '</div></div>';
 }

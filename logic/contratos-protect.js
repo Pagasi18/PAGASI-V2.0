@@ -170,13 +170,13 @@ function _protectDatos(credId){
     // Por decision de la empresa el representante NO se identifica en el
     // contrato: firma la compania, identificada por su RIF.
     // ── Comprador ──
-    cliNom: V(cli.nombre || c.cli, 28), cliCi: V(cli.cedula || cli.ci, 11),
-    cliRif: V(cli.rif || (cli.cedula||cli.ci ? 'V-'+(cli.cedula||cli.ci) : ''), 12),
+    cliNom: V(cli.nombre || c.cli, 28), cliCi: V(_draCedulaTxt(cli.cedula || cli.ci), 11),
+    cliRif: V(cli.rif || _draCedulaTxt(cli.cedula||cli.ci), 12),
     cliDir: V(cli.direccion, 40), cliCiudad: V(cli.ciudad, 14),
     cliEmail: V(cli.email, 22), cliTel: V(cli.tel || cli.wa, 14), cliProf: V(cli.trabajo || cli.profesion || cli.ocupacion, 16),
     // ── Fiador ──
     hayFiador: !!T(cli.fiador_nom),
-    fiaNom: V(cli.fiador_nom, 28), fiaCi: V(cli.fiador_ci, 11), fiaDir: V(cli.fiador_dir, 40),
+    fiaNom: V(cli.fiador_nom, 28), fiaCi: V(_draCedulaTxt(cli.fiador_ci), 11), fiaDir: V(cli.fiador_dir, 40),
     fiaEmail: V(cli.fiador_email, 22), fiaTel: V(cli.fiador_tel, 14), fiaProf: V(E(dc.fiadorProfesion), 16),
     // 'de profesion u oficio X, ' solo cuando se sabe: una raya en el encabezado se ve mal
     cliProfFrase: T(cli.trabajo || cli.profesion || cli.ocupacion) ? 'de profesión u oficio <strong>'+E(cli.trabajo || cli.profesion || cli.ocupacion)+'</strong>, ' : '',
@@ -233,8 +233,8 @@ var _PROTECT_CUERPO = [
   // ── Preambulo ──
   function(D){ return 'El presente CONTRATO DE FINANCIAMIENTO PARA LA ADQUISICIÓN DE VEHÍCULO AUTOMOTOR, CON GARANTÍAS, FIANZA Y PRESTACIÓN DE SERVICIOS «PAGASI PROTECT» (en lo sucesivo, el “Contrato”) se celebra el dia '+D.fechaLarga+', siendo las '+D.hora+' (la “Fecha de Celebración”), entre:'; },
   function(D){ return '(i) <strong>PAGASI 18 C.A.</strong>, sociedad mercantil domiciliada en Caracas, Distrito Capital, inscrita en el Registro Mercantil '+D.empRm+' de la Circunscripción Judicial '+D.empRmEstado+', bajo el N° '+D.empRmNum+', Tomo '+D.empRmTomo+', de fecha '+D.empRmFecha+', inscrita en el Registro de Información Fiscal (“RIF”) bajo el N° <strong>J-50829589-7</strong> (en adelante “Pagasi”, y en su condición de otorgante del financiamiento y acreedor, también el “Financista”); y'; },
-  function(D){ return '(ii) '+D.cliNom+', venezolano(a), mayor de edad, '+D.cliProfFrase+'domiciliado(a) en '+D.cliDir+', titular de la cédula de identidad venezolana N° V-'+D.cliCi+' y del RIF N° '+D.cliRif+' (el “Comprador” o “Deudor”, y conjuntamente con Pagasi, las “Partes” y cada una, una “Parte”).'; },
-  function(D){ return D.hayFiador ? 'Asimismo interviene en el presente Contrato (iii) '+D.fiaNom+', venezolano(a), mayor de edad, '+D.fiaProfFrase+'domiciliado(a) en '+D.fiaDir+', titular de la cédula de identidad venezolana N° V-'+D.fiaCi+', quien actúa en su carácter de fiador solidario y principal pagador del Comprador (el “Fiador”), quedando comprendido dentro de la definición de “Partes” para todos los efectos de este Contrato.' : ''; },
+  function(D){ return '(ii) '+D.cliNom+', venezolano(a), mayor de edad, '+D.cliProfFrase+'domiciliado(a) en '+D.cliDir+', titular de la cédula de identidad venezolana N° '+D.cliCi+' y del RIF N° '+D.cliRif+' (el “Comprador” o “Deudor”, y conjuntamente con Pagasi, las “Partes” y cada una, una “Parte”).'; },
+  function(D){ return D.hayFiador ? 'Asimismo interviene en el presente Contrato (iii) '+D.fiaNom+', venezolano(a), mayor de edad, '+D.fiaProfFrase+'domiciliado(a) en '+D.fiaDir+', titular de la cédula de identidad venezolana N° '+D.fiaCi+', quien actúa en su carácter de fiador solidario y principal pagador del Comprador (el “Fiador”), quedando comprendido dentro de la definición de “Partes” para todos los efectos de este Contrato.' : ''; },
   function(D){ return 'Todo ello de conformidad con lo previsto en los artículos 1.133, 1.159, 1.160, 1.167, 1.211, 1.215, 1.264, 1.266, 1.268, 1.269, 1.283, 1.296, 1.299, 1.300, 1.302, 1.735 y siguientes, y 1.804 y siguientes del Código Civil; el artículo 128 del Decreto con Rango, Valor y Fuerza de Ley del Banco Central de Venezuela; la Ley de Transporte Terrestre; y demás normativa aplicable, en base a los términos y condiciones siguientes:'; },
   function(D){ return 'CONSIDERANDO QUE '+D.concNom+', sociedad mercantil, RIF N° '+D.concRif+' (el “Concesionario”), es una agencia distribuidora de motocicletas en los términos previstos en el artículo 18(1) del Reglamento Parcial de la Ley de Transporte Terrestre sobre el Uso y Circulación de Motocicletas en la Red Vial Nacional y el Transporte Público de Personas en la Modalidad Individual Moto Taxis, contenido en el Decreto Presidencial N° 8.495, publicado en Gaceta Oficial N° 39.772 del 5 de octubre de 2011 (el “Reglamento LTT—Motos”).'; },
   function(D){ return 'CONSIDERANDO QUE el Comprador ha celebrado, o celebra en esta misma fecha, un contrato de compraventa con el Concesionario, en virtud del cual adquiere de éste, para sí, un vehículo automotor de la clase motocicleta identificado con las siguientes características: marca: '+D.marca+'; modelo: '+D.modelo+'; año: '+D.anio+'; clase: <strong>MOTO</strong>; tipo: '+D.tipo+'; color: '+D.color+'; placa: '+D.placa+'; serial de carrocería o chasis: '+D.chasis+'; serial de motor: '+D.motor+'; uso: '+D.uso+'; N° de certificado de origen: '+D.certOrigenNum+'; según factura N° '+D.facturaNum+' de fecha '+D.facturaFecha+' emitida por el Concesionario (el “Vehículo” y la “Compraventa”, respectivamente).'; },
@@ -440,8 +440,8 @@ function _protectEstilos(){
 // ── Bloque de firmas (2 o 3 segun haya fiador) ──────────────────────────
 function _protectFirmas(D, incluirPagasi){
   var f = [];
-  f.push(['Por el Comprador', D.cliNom, 'C.I. V-'+String(D.cli.cedula||D.cli.ci||'________')]);
-  if(D.hayFiador) f.push(['Por el Fiador', D.fiaNom, 'C.I. V-'+String(D.cli.fiador_ci||'________')]);
+  f.push(['Por el Comprador', D.cliNom, 'C.I. '+(_draCedulaTxt(D.cli.cedula||D.cli.ci) || 'V-________')]);
+  if(D.hayFiador) f.push(['Por el Fiador', D.fiaNom, 'C.I. '+(_draCedulaTxt(D.cli.fiador_ci) || 'V-________')]);
   if(incluirPagasi!==false) f.push(['Por Pagasi', '<strong>PAGASI 18 C.A.</strong>', 'RIF J-50829589-7']);
   var n = f.length;
   // break-before:avoid = la firma se va con el parrafo que la precede, nunca sola arriba de una hoja
@@ -500,7 +500,7 @@ function _protectAnexoB(D, S_){
     + sub('B.5 Declaración del Comprador')
     + p('El Comprador declara haber recibido, leído y comprendido las condiciones del Programa; haber sido informado de que su contratación es voluntaria y de que el Programa no constituye un contrato de seguro; y haber recibido los Dispositivos instalados y en funcionamiento a su entera satisfacción, o, en su defecto, conocer la fecha y lugar de su instalación.')
     + '<div style="display:flex;gap:24px;align-items:flex-start;margin-top:14px;page-break-inside:avoid">'
-    +   _draFirma('Por el Comprador', D.cliNom, 'C.I. V-'+String(D.cli.cedula||D.cli.ci||'________'), 2)
+    +   _draFirma('Por el Comprador', D.cliNom, 'C.I. '+(_draCedulaTxt(D.cli.cedula||D.cli.ci) || 'V-________'), 2)
     +   _draFirma('Por Pagasi', '<strong>PAGASI 18 C.A.</strong>', 'RIF J-50829589-7', 2)
     + '</div>';
 }
@@ -530,7 +530,7 @@ function _protectAnexoC(D, S_){
     + '</table>'
     + '<p style="'+S_.p+'">El Comprador declara que Pagasi no es vendedora del Vehículo y que no asume responsabilidad alguna por su estado, entrega, documentación o garantía, conforme a la Sección 1.5 del Contrato.</p>'
     + '<div style="display:flex;gap:24px;align-items:flex-start;margin-top:14px;page-break-inside:avoid">'
-    +   _draFirma('Por el Comprador', D.cliNom, 'C.I. V-'+String(D.cli.cedula||D.cli.ci||'________'), 2)
+    +   _draFirma('Por el Comprador', D.cliNom, 'C.I. '+(_draCedulaTxt(D.cli.cedula||D.cli.ci) || 'V-________'), 2)
     +   _draFirma('Recibido por Pagasi (a los solos efectos de constancia)', '<strong>PAGASI 18 C.A.</strong>', 'RIF J-50829589-7', 2)
     + '</div>';
 }
