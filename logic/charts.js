@@ -286,7 +286,7 @@ function getDashData(tipo, periodo){
   if(periodo === 'diario'){
     for(var i=29; i>=0; i--){
       var d = new Date(now.getFullYear(), now.getMonth(), now.getDate()-i);
-      buckets.push({ label: d.getDate()+'/'+(d.getMonth()+1), y:d.getFullYear(), m:d.getMonth(), day:d.getDate(), total:0, count:0 });
+      buckets.push({ label: d.getDate()+'/'+(d.getMonth()+1), y:d.getFullYear(), m:d.getMonth(), day:d.getDate(), total:0, count:0, gastos:0, motos:0, iniciales:0 });
     }
     matchFn = function(fecha, b){ 
       // Parse as local date to avoid UTC timezone shift
@@ -299,7 +299,7 @@ function getDashData(tipo, periodo){
     for(var i=0; i<16; i++){
       var d = new Date(now.getFullYear(), now.getMonth(), now.getDate()-(i*15));
       var qk = d.getFullYear()+'-'+(d.getMonth()+1)+'-'+(d.getDate()<=15?1:2);
-      if(!seen[qk]){ seen[qk]=true; buckets.unshift({ label:(d.getMonth()+1)+'/Q'+(d.getDate()<=15?1:2), y:d.getFullYear(), m:d.getMonth(), q:d.getDate()<=15?1:2, total:0, count:0 }); }
+      if(!seen[qk]){ seen[qk]=true; buckets.unshift({ label:(d.getMonth()+1)+'/Q'+(d.getDate()<=15?1:2), y:d.getFullYear(), m:d.getMonth(), q:d.getDate()<=15?1:2, total:0, count:0, gastos:0, motos:0, iniciales:0 }); }
       if(buckets.length>=8) break;
     }
     buckets = buckets.slice(-8);
@@ -307,7 +307,7 @@ function getDashData(tipo, periodo){
   } else {
     for(var i=11; i>=0; i--){
       var d = new Date(now.getFullYear(), now.getMonth()-i, 1);
-      buckets.push({ label: d.toLocaleDateString('es-VE',{month:'short'}), y:d.getFullYear(), m:d.getMonth(), total:0, count:0 });
+      buckets.push({ label: d.toLocaleDateString('es-VE',{month:'short'}), y:d.getFullYear(), m:d.getMonth(), total:0, count:0, gastos:0, motos:0, iniciales:0 });
     }
     matchFn = function(fecha, b){ 
       var parts = String(fecha).slice(0,10).split('-');
@@ -334,9 +334,20 @@ function getDashData(tipo, periodo){
   } else if(tipo === 'egresos'){
     var egrData = _concFiltrar(S.egresos||[]);
     if(!egrData.length) egrData = S.egresos||[];
+    // total = todo (no se toca, lo usan otros sitios); ademas, separado:
+    //   gastos    = lo que de verdad cuesta operar
+    //   motos     = compra de motos, SOLO lo que Pagasi financia
+    //   iniciales = la inicial del cliente (se muestra aparte, no suma)
+    var _idsIni = _egrIdsInicial();
     egrData.filter(function(e){ return !e.eliminado&&e.fecha; }).forEach(function(e){
       var f = toDateStr(e.fecha);
-      buckets.forEach(function(b){ if(f && matchFn(f,b)){ b.total+=parseFloat(e.monto)||0; b.count++; } });
+      var m = parseFloat(e.monto)||0;
+      var esMoto = e.origenAuto==='compra_moto';
+      var esIni = esMoto && _idsIni[String(e.id)];
+      buckets.forEach(function(b){ if(f && matchFn(f,b)){
+        b.total+=m; b.count++;
+        if(esIni) b.iniciales+=m; else if(esMoto) b.motos+=m; else b.gastos+=m;
+      } });
     });
   } else if(tipo === 'cuotas'){
     // Cuotas cobradas = pagos confirmados que NO son la inicial (mismo criterio que el KPI "Cobrado")
@@ -357,6 +368,40 @@ function getDashData(tipo, periodo){
     });
   }
   return buckets;
+}
+
+// ── Egresos: gastos de verdad vs compra de motos, y la inicial del cliente ──
+// Cuando se registra la compra de una moto quedan DOS egresos: uno por lo que
+// Pagasi transfiere (lo financiado) y otro por la inicial que paga el cliente.
+// Esa inicial entra tambien como ingreso, asi que la utilidad no se afecta, pero
+// inflaba el grafico: el 17-sep-2026 eran $10.780 de $24.943 (Adam: "separalo y
+// quita las iniciales en uno"). Devuelve los ids de los egresos que son la
+// inicial: por cada moto, UNO solo, el que coincide con el inicial del credito.
+function _egrIdsInicial(){
+  var porMoto = {};
+  (S.egresos||[]).forEach(function(e){
+    if(!e || e.eliminado || e.origenAuto!=='compra_moto' || e.motoIdRef==null) return;
+    (porMoto[String(e.motoIdRef)] = porMoto[String(e.motoIdRef)] || []).push(e);
+  });
+  var iniDeMoto = {};
+  (S.creds||[]).forEach(function(c){
+    if(!c || c.eliminado || c.estado==='cancelado' || c.motoId==null) return;
+    var ini = parseFloat(c.ini)||0;
+    if(ini>0) iniDeMoto[String(c.motoId)] = ini;
+  });
+  var ids = {};
+  Object.keys(porMoto).forEach(function(mid){
+    var ini = iniDeMoto[mid];
+    if(!ini) return;
+    var lista = porMoto[mid].slice().sort(function(a,b){
+      var f = String(a.fecha||'').localeCompare(String(b.fecha||''));
+      return f!==0 ? f : (String(a.id).localeCompare(String(b.id)));
+    });
+    for(var i=0;i<lista.length;i++){
+      if(Math.abs((parseFloat(lista[i].monto)||0) - ini) <= 1){ ids[String(lista[i].id)] = true; break; }
+    }
+  });
+  return ids;
 }
 
 function setDashPeriodo(tipo, periodo){
@@ -708,28 +753,48 @@ function renderDashEgrChart(){
   var wrapper = canvas.parentElement; if(wrapper) wrapper.style.height='160px';
   var periodo = _dashPeriodo.egresos || 'diario';
   var data = getDashData('egresos', periodo);
+  // Dos barras apiladas: lo que cuesta operar y lo que se coloca en motos. La
+  // inicial del cliente NO entra (Adam, 17-sep-2026); se avisa en el globito.
   var labels = data.map(function(x){ return x.label; });
-  var values = data.map(function(x){ return x.total; });
+  var gastos = data.map(function(x){ return x.gastos||0; });
+  var motos  = data.map(function(x){ return x.motos||0; });
+  var inis   = data.map(function(x){ return x.iniciales||0; });
   var isDark = document.documentElement.getAttribute('data-theme')==='dark';
-  var red  = isDark ? '#ff5577' : '#D93B5A';
-  var redt = isDark ? 'rgba(255,85,119,0.18)' : 'rgba(217,59,90,0.12)';
-  var ink3 = isDark ? '#6B6896' : '#9794BB';
+  var red   = isDark ? '#ff5577' : '#D93B5A';
+  var ambar = isDark ? '#F5A623' : '#E8980A';
+  var ink3  = isDark ? '#6B6896' : '#9794BB';
   var subLabels = {diario:'Últimos 30 días', quincenal:'Últimas 8 quincenas', mensual:'Últimos 7 meses'};
   var sub = document.getElementById('dash-egr-sub');
-  if(sub) sub.textContent = subLabels[periodo];
+  if(sub) sub.textContent = subLabels[periodo] + ' · gastos y compra de motos, sin las iniciales';
+  var _d = function(v){ return '$' + Math.round(v||0).toLocaleString('es-VE'); };
   if(_dashEgrChart){ _dashEgrChart.destroy(); _dashEgrChart=null; }
   _dashEgrChart = new Chart(canvas, {
     type: 'bar',
-    data: { labels: labels, datasets: [{ label: 'Egresos', data: values,
-      backgroundColor: values.map(function(v,i){ return i===values.length-1 ? red : redt; }),
-      borderColor: 'transparent', borderWidth: 0, borderRadius: 6, borderSkipped: false }] },
+    data: { labels: labels, datasets: [
+      { label: 'Gastos operativos', data: gastos, backgroundColor: red,
+        borderColor: 'transparent', borderWidth: 0, borderRadius: 4, borderSkipped: false },
+      { label: 'Compra de motos', data: motos, backgroundColor: ambar,
+        borderColor: 'transparent', borderWidth: 0, borderRadius: 4, borderSkipped: false }
+    ] },
     options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: false }, tooltip: { backgroundColor: isDark?'#252844':'#fff',
+      plugins: { legend: { display: true, position: 'bottom',
+          labels: { boxWidth: 9, boxHeight: 9, usePointStyle: true, pointStyle: 'circle', color: ink3, font: { size: 9.5 }, padding: 10 } },
+        tooltip: { backgroundColor: isDark?'#252844':'#fff',
         borderColor: isDark?'rgba(217,59,90,0.3)':'rgba(217,59,90,0.2)', borderWidth: 1,
         titleColor: isDark?'#E8E6FF':'#0B0B1E', bodyColor: isDark?'#B0ADDB':'#4A4870', padding: 10,
-        callbacks: { label: function(ctx){ return ' $' + (ctx.raw||0).toLocaleString('es-VE',{minimumFractionDigits:0,maximumFractionDigits:0}); } } } },
-      scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: ink3, font: { size: 9 } } },
-        y: { grid: { color: isDark?'rgba(217,59,90,0.08)':'rgba(217,59,90,0.06)', drawBorder: false },
+        callbacks: {
+          label: function(ctx){ return ' ' + ctx.dataset.label + ': ' + _d(ctx.raw); },
+          footer: function(items){
+            if(!items || !items.length) return '';
+            var i = items[0].dataIndex;
+            var suma = (gastos[i]||0) + (motos[i]||0);
+            var t = 'Total: ' + _d(suma);
+            if(inis[i] > 0) t += '\nNo incluye ' + _d(inis[i]) + ' de iniciales de clientes';
+            return t;
+          }
+        } } },
+      scales: { x: { stacked: true, grid: { display: false }, border: { display: false }, ticks: { color: ink3, font: { size: 9 } } },
+        y: { stacked: true, grid: { color: isDark?'rgba(217,59,90,0.08)':'rgba(217,59,90,0.06)', drawBorder: false },
           border: { display: false, dash: [4,4] },
           ticks: { color: ink3, font: { size: 9 }, callback: function(v){ return v>0 ? '$'+Math.round(v/1000)+'k' : '$0'; }, maxTicksLimit: 5 } } } }
   });

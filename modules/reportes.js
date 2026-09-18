@@ -380,6 +380,9 @@ PG.reportes = function(){
       <div id="fin2-egr-wrap" style="height:130px">
         ${(function(){
           var data=getDashData('egresos','diario');
+          // Mismo criterio que el dashboard: gastos + compra de motos, sin las
+          // iniciales de los clientes (Adam, 17-sep-2026)
+          data.forEach(function(b){ b.total = (b.gastos||0) + (b.motos||0); });
           var maxV=Math.max.apply(null,data.map(function(x){return x.total;}))||1;
           return '<div style="display:flex;align-items:flex-end;gap:3px;height:120px">'
             +data.map(function(b,i){
