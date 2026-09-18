@@ -1,0 +1,41 @@
+name: Egresos de un dia (solo lectura)
+
+# A mano. Muestra que hay dentro de los egresos de un dia o rango: por categoria,
+# por origen, y si los de compra de moto llevan el precio completo (con la inicial
+# del cliente) o solo lo financiado. Solo lectura; sin nombres en el log.
+on:
+  workflow_dispatch:
+    inputs:
+      desde:
+        description: 'Dia (AAAA-MM-DD)'
+        type: string
+        required: true
+      hasta:
+        description: 'Hasta (opcional, para un rango)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  egresos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: pagasi-v2
+          workload_identity_provider: projects/951911859002/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: firebase-adminsdk-fbsvc@pagasi-v2.iam.gserviceaccount.com
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - working-directory: bot
+        run: npm install --omit=dev
+      - working-directory: bot
+        env:
+          DESDE: ${{ inputs.desde }}
+          HASTA: ${{ inputs.hasta }}
+        run: node egresos-dia.js
