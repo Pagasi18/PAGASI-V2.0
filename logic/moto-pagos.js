@@ -228,40 +228,37 @@ function _mpagoReversarGastos(motoId, devolver, audit){
       afectados++;
     }
   });
-  // 2) Movimientos originales — marcar eliminados
-  (S.movimientos||[]).forEach(function(m){
-    if(!m.eliminado && String(m.motoIdRef)===String(motoId) && m.tipoOperacion==='compra_moto' && m.tipo==='retiro'){
-      m.eliminado = true;
-      m.eliminadoPor = quien;
-      m.eliminadoEn = fechaAudit;
-      m.eliminadoRazon = razon;
-      if(DB && DB.saveMovimiento) DB.saveMovimiento(m);
-    }
-  });
-  // 3) Si se devuelve, crear movimientos de reverso (depósito) por cada retiro
+  // 2) Movimientos de la compra: el retiro NO se anula. El saldo de una cuenta no
+  //    cuenta lo anulado, asi que anularlo ya devolvia el dinero; sumado al reverso,
+  //    volvia dos veces (y con "sin regresar" volvia igual). Punto 3, 18-sep-2026.
+  //    Ahora: regresar = un deposito de reverso por cada retiro; sin regresar = nada.
   if(devolver){
     var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false});
     (S.movimientos||[]).slice().forEach(function(m){
-      if(m.eliminado && String(m.motoIdRef)===String(motoId) && m.tipoOperacion==='compra_moto' && m.tipo==='retiro' && !m.reversoCreado){
-        var rev = {
-          id:'MOV-REV-MOTO-'+motoId+'-'+Date.now()+'-'+Math.floor(Math.random()*1000),
-          tipo:'deposito',
-          concepto:'Reverso compra de moto eliminada · '+(m.concepto||''),
-          monto: parseFloat(m.monto)||0,
-          cuentaOrigen:null,
-          cuentaDestino: m.cuentaOrigen,
-          fecha: hoyLocalISO(),
-          referencia:'Reverso por eliminación de moto #'+motoId,
-          realizadoPor: quien,
-          tasaBs: window._tasaBsGlobal||1,
-          hora: hora,
-          reversoDe:'compra_moto:'+motoId
-        };
-        m.reversoCreado = true;
-        if(DB && DB.saveMovimiento) DB.saveMovimiento(m);
-        if(S.movimientos) S.movimientos.push(rev);
-        if(DB && DB.saveMovimiento) DB.saveMovimiento(rev);
-      }
+      if(m.eliminado || String(m.motoIdRef)!==String(motoId) || m.tipoOperacion!=='compra_moto' || m.tipo!=='retiro' || m.reversoCreado) return;
+      // Si su gasto ya se borro en Finanzas regresando el dinero, ese dinero ya volvio
+      var yaVolvio = m.conceptoEgreso!=null && (S.movimientos||[]).some(function(x){
+        return !x.eliminado && x.reversoDe==='egreso:'+m.conceptoEgreso;
+      });
+      if(yaVolvio) return;
+      var rev = {
+        id:'MOV-REV-MOTO-'+motoId+'-'+Date.now()+'-'+Math.floor(Math.random()*1000),
+        tipo:'deposito',
+        concepto:'Reverso compra de moto eliminada · '+(m.concepto||''),
+        monto: parseFloat(m.monto)||0,
+        cuentaOrigen:null,
+        cuentaDestino: m.cuentaOrigen,
+        fecha: hoyLocalISO(),
+        referencia:'Reverso por eliminación de moto #'+motoId,
+        realizadoPor: quien,
+        tasaBs: window._tasaBsGlobal||1,
+        hora: hora,
+        reversoDe:'compra_moto:'+motoId
+      };
+      m.reversoCreado = true;
+      if(DB && DB.saveMovimiento) DB.saveMovimiento(m);
+      if(S.movimientos) S.movimientos.push(rev);
+      if(DB && DB.saveMovimiento) DB.saveMovimiento(rev);
     });
   }
   return afectados;

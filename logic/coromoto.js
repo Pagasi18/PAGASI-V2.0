@@ -185,7 +185,7 @@ function _coroAsientos(){
     // La pata de caja de los egresos sale de los registros de egreso (traen categoria)
     if(con.indexOf('Egreso · ')===0) return;
     // Pares reverso: netean a cero con su original, se omiten ambos
-    if(id.indexOf('MOV-REV-EG-')===0 || rev.indexOf('egreso:')===0 || rev.indexOf('compra_moto:')===0) return;
+    if(id.indexOf('MOV-REV-EG-')===0 || rev.indexOf('egreso:')===0 || rev.indexOf('compra_moto:')===0 || rev.indexOf('comision:')===0) return;
     if(con.indexOf('Reverso egreso eliminado')===0 || con.indexOf('Reverso compra de moto eliminada')===0) return;
     var monto=r2(m.monto); if(!(monto>0)) return;
     var f=String(m.fecha||'').slice(0,10); if(!f) return;

@@ -1038,6 +1038,8 @@ function _comConfirmarEliminarPago(egId, uid){
   eg.eliminadoEn = ahora;
   eg.eliminadoRazon = razon;
   eg.devolvioDinero = devolver;
+  // Coromoto lee esta marca: anulado sin regresar = el dinero salio igual
+  eg.eliminacionReversaCuenta = devolver;
   if(!devolver){
     // Si no se devuelve el dinero, "desasociar" del usuario para que no afecte su saldo
     // pero conservamos el egreso (el dinero ya salió de la caja)
@@ -1052,33 +1054,29 @@ function _comConfirmarEliminarPago(egId, uid){
   var mov = (S.movimientos||[]).find(function(m){
     return !m.eliminado && m.tipoOperacion === 'comision' && m.conceptoEgreso === egId;
   });
-  if(mov){
-    mov.eliminado = true;
-    mov.eliminadoPor = quien;
-    mov.eliminadoEn = ahora;
-    mov.eliminadoRazon = razon;
+  // El retiro NO se anula (anularlo ya devolvia el dinero y el reverso lo devolvia
+  // otra vez; punto 3, 18-sep-2026). Devolver = un deposito de reverso; no devolver = nada.
+  if(mov && devolver && !mov.reversoCreado){
+    var rev = {
+      id: 'MOV-COMREV-'+egId+'-'+Date.now(),
+      tipo: 'deposito',
+      tipoOperacion: 'comision_reverso',
+      concepto: 'Reverso · ' + (mov.concepto||''),
+      monto: parseFloat(eg.monto)||0,
+      cuentaOrigen: null,
+      cuentaDestino: mov.cuentaOrigen,
+      fecha: hoyLocalISO(),
+      referencia: 'Reverso por eliminación · ' + razon,
+      realizadoPor: quien,
+      tasaBs: window._tasaBsGlobal||1,
+      hora: new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
+      reversoDe: 'comision:'+egId,
+      usuarioComisionUid: uid
+    };
+    mov.reversoCreado = true;
     if(DB && DB.saveMovimiento) DB.saveMovimiento(mov);
-    if(devolver){
-      // Crear movimiento de reverso (depósito a la cuenta original)
-      var rev = {
-        id: 'MOV-COMREV-'+egId+'-'+Date.now(),
-        tipo: 'deposito',
-        tipoOperacion: 'comision_reverso',
-        concepto: 'Reverso · ' + (mov.concepto||''),
-        monto: parseFloat(eg.monto)||0,
-        cuentaOrigen: null,
-        cuentaDestino: mov.cuentaOrigen,
-        fecha: hoyLocalISO(),
-        referencia: 'Reverso por eliminación · ' + razon,
-        realizadoPor: quien,
-        tasaBs: window._tasaBsGlobal||1,
-        hora: new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false}),
-        reversoDe: 'comision:'+egId,
-        usuarioComisionUid: uid
-      };
-      if(S.movimientos) S.movimientos.push(rev);
-      if(DB && DB.saveMovimiento) DB.saveMovimiento(rev);
-    }
+    if(S.movimientos) S.movimientos.push(rev);
+    if(DB && DB.saveMovimiento) DB.saveMovimiento(rev);
   }
   closeM();
   toast(devolver ? 'Pago eliminado y dinero devuelto a la cuenta' : 'Pago eliminado (dinero no devuelto)', devolver?'success':'info');

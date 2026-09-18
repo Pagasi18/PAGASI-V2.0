@@ -619,12 +619,18 @@ function restaurarMoto(id){
     }
   });
   (S.movimientos||[]).forEach(function(mv){
-    if(mv.eliminado && String(mv.motoIdRef)===String(id) && mv.tipoOperacion==='compra_moto' && mv.tipo==='retiro'){
+    if(String(mv.motoIdRef)!==String(id) || mv.tipoOperacion!=='compra_moto' || mv.tipo!=='retiro') return;
+    if(mv.eliminado){
+      // motos borradas antes del 18-sep: el retiro quedaba anulado
       mv.eliminado=false;
       mv.eliminadoPor=null; mv.eliminadoEn=null; mv.eliminadoRazon=null;
       mv.reversoCreado=null;
       if(DB && DB.saveMovimiento) DB.saveMovimiento(mv);
       movRest++;
+    } else if(seDevolvioDinero && mv.reversoCreado){
+      // el reverso se anula abajo: el retiro queda listo para otro reverso si se vuelve a borrar
+      mv.reversoCreado=null;
+      if(DB && DB.saveMovimiento) DB.saveMovimiento(mv);
     }
   });
   // Si al eliminar se devolvió el dinero, ahora hay que anular esos reversos para que la cuenta vuelva a quedar con el gasto
