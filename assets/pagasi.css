@@ -2384,6 +2384,40 @@ tbody tr:hover td {
 .kx-stats small{display:block;font-size:11px;color:rgba(255,255,255,.78);font-weight:700;white-space:nowrap}
 .kx-stats b{font-family:var(--fd);font-weight:900;font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .kx-stats em{font-style:normal;font-size:11px;font-weight:800;opacity:.82;margin-left:4px}
+/* fila de operación y accesos rápidos con el mismo diseño (17-sep-2026) */
+.kx-ops .kx-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kx-list{display:flex;flex-direction:column;gap:8px}
+.kx-li{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink2);min-width:0}
+.kx-li b{font-weight:800;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
+.kx-list-m{margin-top:11px;gap:6px}
+.kx-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kx-bd{font-size:10px;font-weight:800;padding:3px 6px;border-radius:7px;white-space:nowrap;flex-shrink:0;min-width:32px;text-align:center}
+.kx-bd-r{background:rgba(229,57,91,.12);color:var(--red)}
+.kx-bd-a{background:rgba(245,166,35,.16);color:#B86E00}
+.kx-bd-g{background:rgba(0,168,112,.12);color:var(--green)}
+.kx-vacio{font-size:11.5px;color:var(--ink3);text-align:center;padding:8px 0}
+.kx-prom .kx-r{margin:0;padding:9px 0;border-top:1px solid var(--rim)}
+.kx-prom .kx-r:last-child{padding-bottom:0}
+.kx-mes{display:flex;align-items:flex-end;gap:6px;height:72px}
+.kx-mes>div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;min-width:0}
+.kx-mes em{font-style:normal;font-size:10px;font-weight:800;color:var(--ink2);font-variant-numeric:tabular-nums}
+.kx-mes i{display:block;width:100%;max-width:18px;border-radius:5px 5px 2px 2px;background:var(--red)}
+.kx-mes small{font-size:10px;color:var(--ink3);font-weight:700}
+.kx-quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.kx-q{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:18px;background:var(--surf);border:1px solid var(--rim);min-width:0;cursor:pointer;
+  box-shadow:0 1px 2px rgba(14,19,48,.04),0 10px 30px -12px rgba(37,99,235,.16);transition:transform .16s ease,box-shadow .16s ease}
+.kx-q:hover{transform:translateY(-2px);box-shadow:0 14px 34px -12px rgba(37,99,235,.26)}
+.kx-ico-l{width:42px;height:42px;border-radius:13px}
+.kx-ico-l svg{width:20px;height:20px}
+.kx-qt{flex:1;min-width:0}
+.kx-qt small{display:block;font-size:11.5px;font-weight:800;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kx-qt div{display:flex;align-items:baseline;gap:6px;margin-top:4px;min-width:0}
+.kx-qt b{font-family:var(--fd);font-weight:900;font-size:24px;letter-spacing:-.8px;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums}
+.kx-qt span{font-size:11.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.kx-qa{width:18px;height:18px;color:var(--ink3);flex-shrink:0;opacity:.55;transition:transform .16s,opacity .16s}
+.kx-q:hover .kx-qa{opacity:1;transform:translateX(2px)}
+@media (max-width:1100px){ .kx-quick{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:480px){ .kx-q{padding:14px;gap:11px} .kx-qt b{font-size:21px} .kx-qa{display:none} }
 /* entre 1381 y 1560 las tarjetas chicas son angostas: la pastilla del mes cortaba el titulo;
    el mes ya va en el texto de abajo */
 @media (min-width:1381px) and (max-width:1560px){ .kx-card .kx-chip{display:none} .kx-hero .kx-big{font-size:38px} .kx-ncred{margin-left:14px;padding-left:14px} }

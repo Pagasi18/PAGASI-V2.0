@@ -190,6 +190,24 @@ PG.dash = function(){
     return prox.length ? prox : _SCREDS.filter(c=>c.estado==='activo').slice(0,5);
   })();
 
+  // ── Fila de operación y accesos (diseño B): mismas cuentas de siempre, solo orden y presentación ──
+  const _escD = t => String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const _svgD = (d, col) => `<svg viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  // en mora: los mismos créditos vigentes que la tarjeta de arriba, los más atrasados primero
+  const _moraOrd = activosArr.filter(c=>c.mora>0).sort((a,b)=>(b.mora||0)-(a.mora||0));
+  // métodos de mayor a menor; si son más de 4, los más chicos van juntos en "Otros"
+  const _metOrd = Object.entries(metodoCounts).sort((a,b)=>b[1]-a[1]);
+  const _metVer = _metOrd.length > 4 ? _metOrd.slice(0,3).concat([['Otros', _metOrd.slice(3).reduce((a,e)=>a+e[1],0)]]) : _metOrd;
+  const _metCol = i => (_metOrd.length > 4 && i === 3) ? '#94A3B8' : ['#2563EB','#06B06A','#F59E0B','#8B5CF6'][i];
+  const _metPct = v => metodoTotalReal > 0 ? Math.round(v/metodoTotalReal*100) : 0;
+  // próximas cuotas: la más cercana primero (misma fecha estimada que ya usaba esta tarjeta)
+  const _diasProx = c => { if(!c.fecha) return 999; var st=parseFechaLocal(c.fecha); var v=new Date(st.getTime()+(((c.pagado||0)+1)*15*24*60*60*1000)); return Math.round((v-new Date())/(24*60*60*1000)); };
+  const _proxOrd = hoy.slice().sort((a,b)=>_diasProx(a)-_diasProx(b));
+  const _proxMonto = hoy.reduce((a,c)=>a+(parseFloat(c.cuotaQ||c.cuota)||0),0);
+  const _proxLbl = d => d < 0 ? (d === -1 ? 'ayer' : 'hace ' + (-d) + 'd') : d === 0 ? 'hoy' : d === 1 ? 'mañana' : 'en ' + d + 'd';
+  const _moraMeses = (function(){ try{ return (typeof getMoraMensual==='function') ? (getMoraMensual()||[]) : []; }catch(e){ return []; } })();
+  const _moraMax = Math.max(1, ..._moraMeses.map(x=>x.mora||0));
+
   // ── HTML ──
   // ─── TIPS LOCALES (sin emojis) — rotativos por día del año ───
   var TIPS_DEL_DIA = [
@@ -463,70 +481,75 @@ PG.dash = function(){
 
   </div>
 
-    <!-- ROW 2b: 5 cards de operación -->
-  <div class="dash-ops" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:18px">
+    <!-- ROW 2b: 5 tarjetas de operación (diseño B) -->
+  <div class="dash-ops kx-ops" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;margin-bottom:18px">
 
     <!-- 1 · Mora por mes -->
-    <div class="card dash-kpi" onclick="nav(&quot;cobranza&quot;)" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--red);font-family:var(--fm)">Mora por mes</span>
-        <span style="font-size:9px;background:var(--reds);color:var(--red);padding:2px 7px;border-radius:20px;font-weight:700">6 meses</span>
+    <div class="kx-card" onclick="nav(&quot;cobranza&quot;)">
+      <div class="kx-top">
+        <span class="kx-ico" style="background:rgba(229,57,91,.12)">${_svgD('<path d="M3 3v18h18"/><path d="M8 16v-4"/><path d="M13 16V8"/><path d="M18 16v-7"/>','var(--red)')}</span>
+        <span class="kx-tit">Mora por mes</span>
+        <span class="kx-chip" style="background:rgba(229,57,91,.12);color:var(--red)">6 meses</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:${mora>0?'var(--red)':'var(--green)'};margin-bottom:4px">${mora>0?mora:'✓'}</div>
-      <div style="font-size:11px;color:var(--ink3)">${mora>0?'Créditos con atraso':'Sin atrasos'}</div>
-      ${(function(){try{var d=(typeof getMoraMensual==='function')?getMoraMensual():[];if(!d||!d.length)return'';var mx=Math.max(1,...d.map(function(x){return x.mora||0;}));return'<div style="display:flex;align-items:flex-end;gap:4px;height:42px;margin-top:10px;padding-top:9px;border-top:1px solid var(--rim)">'+d.map(function(x){var h=Math.max(3,Math.round((x.mora||0)/mx*26));return'<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end"><div style="width:100%;max-width:13px;background:var(--red);opacity:.8;border-radius:3px 3px 0 0;height:'+h+'px"></div><span style="font-size:7px;color:var(--ink3);font-family:var(--fm)">'+x.label+'</span></div>';}).join('')+'</div>';}catch(e){return'';}})()}
+      <div class="kx-big" style="color:${moraEnCartera>0?'var(--red)':'var(--green)'}">${moraEnCartera>0?moraEnCartera:'✓'}</div>
+      <div class="kx-sub">${moraEnCartera>0?'créditos con atraso hoy':'sin atrasos'}</div>
+      ${_moraMeses.length?`<div class="kx-pie"><div class="kx-mes">${_moraMeses.map((x,i)=>`<div><em>${x.mora||0}</em><i style="height:${Math.max(3,Math.round((x.mora||0)/_moraMax*38))}px${i===_moraMeses.length-1?'':';opacity:.4'}"></i><small>${_escD(String(x.label).replace('.',''))}</small></div>`).join('')}</div></div>`:''}
     </div>
 
     <!-- 2 · Promedios de crédito (inicial y cuota) -->
-    <div class="card dash-kpi" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Promedios de crédito</span>
-        <span style="font-size:9px;background:var(--gs);color:var(--p1);padding:2px 7px;border-radius:20px;font-weight:700">${credsProm.length} créd.</span>
+    <div class="kx-card" onclick="nav(&quot;creditos&quot;)">
+      <div class="kx-top">
+        <span class="kx-ico" style="background:rgba(37,99,235,.12)">${_svgD('<path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>','var(--p1)')}</span>
+        <span class="kx-tit">Promedios</span>
+        <span class="kx-chip" style="background:rgba(37,99,235,.12);color:var(--p1)">${credsProm.length} créd.</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:var(--p1);margin-bottom:4px">${fmt(inicialProm)}</div>
-      <div style="font-size:11px;color:var(--ink3)">Inicial promedio</div>
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:6px">
-        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10.5px"><span style="color:var(--ink3)">Cuota promedio · quincena</span><span style="font-weight:800;color:var(--green);font-family:var(--fd)">${fmt(cuotaProm)}</span></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10.5px"><span style="color:var(--ink3)">Equivalente mensual</span><span style="font-weight:700;color:var(--ink);font-family:var(--fd)">${fmt(cuotaPromMes)}</span></div>
+      <div class="kx-big" style="color:var(--p1)">${fmt(inicialProm)}</div>
+      <div class="kx-sub">inicial promedio</div>
+      <div class="kx-pie kx-prom">
+        <div class="kx-r"><span>Cuota quincenal</span><b style="color:var(--green)">${fmt(cuotaProm)}</b></div>
+        <div class="kx-r"><span>Equivalente mensual</span><b>${fmt(cuotaPromMes)}</b></div>
       </div>
     </div>
 
     <!-- 3 · Pagos por método -->
-    <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Pagos por método</span>
-        <span style="font-size:9px;background:var(--gs);color:var(--p1);padding:2px 7px;border-radius:20px;font-weight:700">${metodoTotalReal} pagos</span>
+    <div class="kx-card" onclick="nav(&quot;pagos&quot;)">
+      <div class="kx-top">
+        <span class="kx-ico" style="background:rgba(37,99,235,.12)">${_svgD('<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19"/><path d="M6.5 15h4"/>','var(--p1)')}</span>
+        <span class="kx-tit">Pagos por método</span>
+        <span class="kx-chip" style="background:rgba(37,99,235,.12);color:var(--p1)">${_metOrd.length} métodos</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:var(--ink);margin-bottom:4px">${metodoEntries.length}</div>
-      <div style="font-size:11px;color:var(--ink3)">Métodos en uso</div>
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:6px">
-        ${metodoEntries.length>0?metodoEntries.slice(0,4).map(function(e,i){var pct=metodoTotal>0?Math.round(e[1]/metodoTotal*100):0;return '<div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:'+metodoColors[i%metodoColors.length]+';flex-shrink:0"></span><span style="font-size:9.5px;color:var(--ink3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e[0]+'</span><span style="font-size:10px;font-weight:700;color:var(--ink);font-family:var(--fm)">'+pct+'%</span></div>';}).join(''):'<div style="font-size:10px;color:var(--ink3);text-align:center;padding:6px 0">Sin pagos confirmados</div>'}
+      <div class="kx-big">${metodoTotalReal.toLocaleString('es-VE')}</div>
+      <div class="kx-sub">pagos confirmados</div>
+      <div class="kx-pie">
+        ${metodoTotalReal>0?`<div class="kx-split kx-split-s">${_metVer.map((e,i)=>`<i style="width:${(e[1]/metodoTotalReal*100).toFixed(2)}%;background:${_metCol(i)}"></i>`).join('')}</div>
+        <div class="kx-list kx-list-m">${_metVer.map((e,i)=>`<div class="kx-li"><i class="kx-pt" style="background:${_metCol(i)}"></i><span class="kx-nm">${_escD(e[0])}</span><b>${_metPct(e[1])}%</b></div>`).join('')}</div>`:'<div class="kx-vacio">Sin pagos confirmados</div>'}
       </div>
     </div>
 
     <!-- 4 · Alerta de cobranza -->
-    <div class="card dash-kpi" onclick="nav(&quot;cobranza&quot;)" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${mora>0?'var(--red)':'var(--green)'};font-family:var(--fm)">Alerta de cobranza</span>
-        <span style="font-size:9px;background:${mora>0?'var(--reds)':'var(--greens)'};color:${mora>0?'var(--red)':'var(--green)'};padding:2px 7px;border-radius:20px;font-weight:700">${mora>0?mora+' en mora':'Al día'}</span>
+    <div class="kx-card" onclick="nav(&quot;cobranza&quot;)">
+      <div class="kx-top">
+        <span class="kx-ico" style="background:${moraEnCartera>0?'rgba(229,57,91,.12)':'rgba(0,168,112,.12)'}">${_svgD('<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>', moraEnCartera>0?'var(--red)':'var(--green)')}</span>
+        <span class="kx-tit">Alerta de cobranza</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:${mora>0?'var(--red)':'var(--green)'};margin-bottom:4px">${mora>0?mora:'✓'}</div>
-      <div style="font-size:11px;color:var(--ink3)">${mora>0?'Requieren gestión':'Todos al día'}</div>
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:6px">
-        ${mora>0?_SCREDS.filter(function(c){return c.mora>0;}).slice(0,3).map(function(c){return '<div style="display:flex;align-items:center;gap:7px"><span style="font-size:8px;font-weight:900;color:var(--red);font-family:var(--fm);background:var(--reds);padding:2px 5px;border-radius:5px;flex-shrink:0">'+c.mora+'d</span><span style="font-size:10px;color:var(--ink2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.cli+'</span><span style="font-size:10px;font-weight:700;color:var(--red);font-family:var(--fd)">'+fmt(c.cuotaQ||c.cuota)+'</span></div>';}).join(''):'<div style="font-size:10px;color:var(--green);text-align:center;padding:6px 0">✓ Sin clientes en mora</div>'}
+      <div class="kx-big" style="color:${moraEnCartera>0?'var(--red)':'var(--green)'}">${moraEnCartera>0?moraEnCartera:'✓'}</div>
+      <div class="kx-sub">${moraEnCartera>0?'requieren gestión · los más atrasados':'todos al día'}</div>
+      <div class="kx-pie kx-list">
+        ${_moraOrd.length?_moraOrd.slice(0,3).map(c=>`<div class="kx-li"><span class="kx-bd kx-bd-r">${c.mora}d</span><span class="kx-nm">${_escD(c.cli)}</span><b style="color:var(--red)">${fmt(c.cuotaQ||c.cuota)}</b></div>`).join(''):'<div class="kx-vacio">Sin clientes en mora</div>'}
       </div>
     </div>
 
     <!-- 5 · Próximas cuotas -->
-    <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--amber);font-family:var(--fm)">Próximas cuotas</span>
-        <span style="font-size:9px;background:${hoy.length>0?'var(--ambers)':'var(--greens)'};color:${hoy.length>0?'var(--amber)':'var(--green)'};padding:2px 7px;border-radius:20px;font-weight:700">${hoy.length}</span>
+    <div class="kx-card" onclick="nav(&quot;pagos&quot;)">
+      <div class="kx-top">
+        <span class="kx-ico" style="background:rgba(245,166,35,.15)">${_svgD('<rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M16 2.5v4"/><path d="M8 2.5v4"/><path d="M3 10h18"/>','#E08E00')}</span>
+        <span class="kx-tit">Próximas cuotas</span>
+        <span class="kx-chip" style="background:rgba(245,166,35,.15);color:#B86E00">7 días</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:var(--ink);margin-bottom:4px">${hoy.length}</div>
-      <div style="font-size:11px;color:var(--ink3)">Por cobrar pronto</div>
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:6px">
-        ${hoy.length>0?hoy.slice(0,3).map(function(c){var start=parseFechaLocal(c.fecha);var cuotaNum=(c.pagado||0)+1;var vence=new Date(start.getTime()+(cuotaNum*15*24*60*60*1000));var diff=Math.round((vence-new Date())/(24*60*60*1000));var col=diff<0?'var(--red)':diff<=1?'var(--amber)':'var(--green)';var lbl=diff<0?Math.abs(diff)+'d':diff===0?'hoy':diff+'d';return '<div style="display:flex;align-items:center;gap:7px"><span style="font-size:8px;font-weight:900;font-family:var(--fm);color:'+col+';background:var(--gs);padding:2px 5px;border-radius:5px;flex-shrink:0">'+lbl+'</span><span style="font-size:10px;color:var(--ink2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.cli+'</span><span style="font-size:10px;font-weight:700;color:var(--ink);font-family:var(--fd)">'+fmt(c.cuotaQ||c.cuota)+'</span></div>';}).join(''):'<div style="font-size:10px;color:var(--ink3);text-align:center;padding:6px 0">Sin cuotas próximas</div>'}
+      <div class="kx-big">${hoy.length}</div>
+      <div class="kx-sub">${_pesos0(_proxMonto)} por cobrar</div>
+      <div class="kx-pie kx-list">
+        ${_proxOrd.length?_proxOrd.slice(0,3).map(c=>{const d=_diasProx(c);return `<div class="kx-li"><span class="kx-bd ${d<0?'kx-bd-r':d<=1?'kx-bd-a':'kx-bd-g'}">${_proxLbl(d)}</span><span class="kx-nm">${_escD(c.cli)}</span><b>${fmt(c.cuotaQ||c.cuota)}</b></div>`;}).join(''):'<div class="kx-vacio">Sin cuotas próximas</div>'}
       </div>
     </div>
 
@@ -549,20 +572,18 @@ PG.dash = function(){
     </div>
   </div>
 
-<!-- ROW 5: Quick access -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+<!-- ROW 5: accesos rápidos (diseño B) -->
+  <div class="kx-quick">
     ${[
-      ['CLI','var(--gs)','var(--p1)','rgba(37,99,235,0.15)','Clientes',_concFiltrarClientes(S.clientes||[]).length,'registrados',"nav('clientes')"],
-      ['MOT','var(--greens)','var(--green)','rgba(6,176,106,0.15)','Disponibles',dispMotos,'de '+_SMOTOS.filter(m=>!m.eliminado).length+' motos',"nav('motos');setTimeout(()=>setMTab('disponible'),100)"],
-      ['ACT','rgba(37,99,235,0.08)','var(--p1)','rgba(37,99,235,0.2)','Activos',activosEnCartera,'créditos activos',"nav('creditos')"],
-      ['PLN','var(--gs)','var(--p1)','var(--rim2)','Catálogo',CATALOGO.length,'modelos',"nav('plan')"],
-    ].map(([ic,bg,cl,br,label,val,sub,action])=>`
-    <div class="card" onclick="${action}" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:13px 15px;border-color:${br}" onmouseover="this.style.borderColor='rgba(37,99,235,0.3)'" onmouseout="this.style.borderColor='${br}'">
-      <div style="width:38px;height:38px;border-radius:10px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:${cl};font-family:var(--fm);flex-shrink:0">${ic}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-family:var(--fd);font-weight:700;font-size:22px;color:var(--ink);letter-spacing:-1.5px;line-height:1">${val}</div>
-        <div style="font-size:10px;color:var(--ink3);margin-top:2px;font-weight:500">${sub}</div>
-      </div>
+      ['Clientes',_concFiltrarClientes(S.clientes||[]).length,'registrados',"nav('clientes')",'var(--p1)','rgba(37,99,235,.12)','<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'],
+      ['Motos disponibles',dispMotos,'de '+_SMOTOS.filter(m=>!m.eliminado).length.toLocaleString('es-VE')+' motos',"nav('motos');setTimeout(()=>setMTab('disponible'),100)",'var(--green)','rgba(0,168,112,.12)','<circle cx="5.5" cy="16.5" r="3.5"/><circle cx="18.5" cy="16.5" r="3.5"/><path d="M5.5 16.5h6l3.5-7h3"/><path d="M15 9.5l3.5 7"/><path d="M8 9.5h4"/>'],
+      ['Créditos activos',activosEnCartera,'en cartera',"nav('creditos')",'#0E9488','rgba(14,148,136,.12)','<path d="M14 2.5H6.5a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8z"/><path d="M14 2.5V8h5.5"/><path d="M8.5 13h7"/><path d="M8.5 17h4.5"/>'],
+      ['Catálogo',CATALOGO.length,'modelos',"nav('plan')",'#8B5CF6','rgba(139,92,246,.12)','<rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/>'],
+    ].map(([tit,val,sub,action,col,bg,ico])=>`
+    <div class="kx-q" onclick="${action}">
+      <span class="kx-ico kx-ico-l" style="background:${bg}">${_svgD(ico,col)}</span>
+      <div class="kx-qt"><small>${tit}</small><div><b>${Number(val||0).toLocaleString('es-VE')}</b><span>${sub}</span></div></div>
+      <svg class="kx-qa" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </div>`).join('')}
   </div>
 </div>`;
