@@ -81,10 +81,10 @@ const h = String(ctx.PG.pagos());
 const bloque = h.slice(h.indexOf('Mora Regular'), h.indexOf('Mora Regular') + 4000);
 
 ok('la cartera son 20 créditos vigentes y 5 en mora', ctx.S.creds.length === 20);
-ok('Mora Total: "5 en mora (25,0% de la cartera)"', /5 en mora[^·]*\(25,0% de la cartera\)/.test(bloque));
-ok('Mora Regular: 2 en atraso con su % de la mora (40%)', /2 en atraso[^·]*\(40% de la mora\)/.test(bloque));
-ok('Críticos: los de +30 días con su % de la mora (40%)', /más de 30 días de mora[^·]*\(40% de la mora\)/.test(bloque));
-ok('Acuerdos: 1 acuerdo con su % de la cartera (5,0%)', /1 acuerdo[^·]*\(5,0% de la cartera\)/.test(bloque));
+ok('Mora Total: "5 en mora (25,0% de 20 créditos)"', /5 en mora[^·]*\(25,0% de 20 créditos\)/.test(bloque));
+ok('Mora Regular: 2 en atraso con su % de la mora (40%)', /2 en atraso[^·]*\(40% de los 5 atrasados\)/.test(bloque));
+ok('Críticos: los de +30 días con su % de la mora (40%)', /más de 30 días de mora[^·]*\(40% de los 5 atrasados\)/.test(bloque));
+ok('Acuerdos: 1 acuerdo con su % de la cartera (5,0%)', /1 acuerdo[^·]*\(5,0% de 20 créditos\)/.test(bloque));
 ok('Ilocalizables en cero NO dice "0%" (se queda limpio)', /0 marcados ·/.test(bloque));
 ok('la línea de abajo trae la tasa y el reparto',
   /En mora total: <b>5<\/b> \(<b>25,0%<\/b> de la cartera, 20 créditos\)/.test(h) && /en Críticos: <b>2<\/b> \(40%\)/.test(h));
@@ -94,7 +94,7 @@ ctx.S.creds = ctx.S.creds.filter(c => String(c.id).indexOf('CRED-1') === 0);
 ctx.S.pagos = [];
 const h2 = String(ctx.PG.pagos());
 ok('cartera sana: ni "de la mora" ni "de la cartera" en las pestañas',
-  h2.indexOf('de la mora)') === -1 && h2.indexOf('de la cartera)') === -1 && h2.indexOf('En mora total:') === -1);
+  h2.indexOf('atrasados)') === -1 && h2.indexOf('% de 20 créditos)') === -1 && h2.indexOf('En mora total:') === -1);
 
 console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');
 if (fail) process.exitCode = 1;

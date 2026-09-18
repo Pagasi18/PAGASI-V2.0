@@ -235,8 +235,10 @@ PG.pagos = function(){
     var v = n*100/tot;
     return (dec ? v.toFixed(1).replace('.',',') : String(Math.round(v))) + '%';
   };
-  var _pctCartera = function(n){ var t=_pctTxt(n,_carteraN,true); return t ? ' <span style="opacity:.85">('+t+' de la cartera)</span>' : ''; };
-  var _pctMora    = function(n){ var t=_pctTxt(n,_moraDash,false);  return t ? ' <span style="opacity:.85">('+t+' de la mora)</span>' : ''; };
+  // Con el denominador a la vista: "(4% de los 52 atrasados)" se entiende solo; "(4% de la
+  // mora)" no (Adam, 17-sep-2026: "si hay 2 clientes en mora como representa el 4%?").
+  var _pctCartera = function(n){ var t=_pctTxt(n,_carteraN,true); return t ? ' <span style="opacity:.85">('+t+' de '+_carteraN+' cr\u00e9ditos)</span>' : ''; };
+  var _pctMora    = function(n){ var t=_pctTxt(n,_moraDash,false);  return t ? ' <span style="opacity:.85">('+t+' de los '+_moraDash+' atrasados)</span>' : ''; };
   var _acuAtras = _acuList.filter(_esAtrasado).length;
   var _ilocAtras = _ilocList.filter(_esAtrasado).length;
   var _moraOtros = Math.max(0, _moraDash - _cuAtras - _acuAtras - _critList.length - _ilocAtras);

@@ -68,13 +68,13 @@ eval('with(auto){'+LEDGER+'\n'+L+'\n'+M+`
   var _iC=h.indexOf('🚨 Críticos'), _iT=h.indexOf('📕 Mora Total');
   var _badge1=h.indexOf('margin-left:4px">1</span>', _iC);
   ok('contador criticos = 1 (solo c45; el de acuerdo va en su pestana)', h.indexOf('más de 30 días de mora')>-1 && _badge1>_iC && _badge1<_iT);
-  // Desde el 17-sep la pestana lleva el % de la cartera: "4 en mora (80,0% de la cartera) · ..."
+  // Desde el 17-sep la pestana lleva el % de la cartera: "4 en mora (80,0% de 5 créditos) · ..."
   // (sin expresiones regulares: este arnes evalua las pruebas dentro de un template
   //  literal y ahi \d pierde la barra invertida)
   var _iMora = h.indexOf('4 en mora');
   ok('contador mora total = 4', _iMora>-1);
   ok('y ahora dice que parte de la cartera es (4 de 5 = 80,0%)',
-     _iMora>-1 && h.slice(_iMora, _iMora+90).indexOf('(80,0% de la cartera)')>-1);
+     _iMora>-1 && h.slice(_iMora, _iMora+90).indexOf('(80,0% de 5 créditos)')>-1);
 
   S.cobTab='criticos';
   var hC=PG.pagos();

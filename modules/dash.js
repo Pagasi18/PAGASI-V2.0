@@ -36,6 +36,16 @@ PG.dash = function(){
   const ingMesReal = cuotasCobradasMes + inicialesCobradasMes;
   const egMes = _SEGR.filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
   const utilidad = ingMes - egMes;
+  // ── Flujo de caja DEL MES (reemplaza la tarjeta "Utilidad") ──
+  // La tarjeta vieja restaba TODO lo historico, incluida la plata prestada en motos
+  // (que vuelve en cuotas, no es perdida), y ademas decia "sept." siendo historica.
+  // Ahora: cuotas cobradas del mes menos lo que salio del mes, sin la inicial del
+  // cliente en ninguno de los dos lados (igual que el grafico de Egresos).
+  const _idsIniDash = (typeof _egrIdsInicial==='function') ? _egrIdsInicial() : {};
+  const _egrMesDash = _SEGR.filter(e=>!e.eliminado && String(e.fecha||'').slice(0,10)>=_primerDiaMesDash && !_idsIniDash[String(e.id)]);
+  const prestadoMes = _egrMesDash.filter(e=>e.origenAuto==='compra_moto').reduce((a,e)=>a+(parseFloat(e.monto)||0),0);
+  const gastosMes = _egrMesDash.filter(e=>e.origenAuto!=='compra_moto').reduce((a,e)=>a+(parseFloat(e.monto)||0),0);
+  const flujoMes = cuotasCobradasMes - prestadoMes - gastosMes;
   const pendPagos = _SPAGOS.filter(p=>p.estado==='pendiente').length;
   const dispMotos = _SMOTOS.filter(m=>!m.eliminado&&m.estado==='disponible').length;
 
@@ -253,7 +263,7 @@ PG.dash = function(){
     .dash-tasa-card:hover{box-shadow:0 6px 18px rgba(0,0,0,.08)}
   </style>
   <!-- ROW 1: 6 KPI CARDS -->
-  <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;margin-bottom:18px">
+  <div class="dash-kpis" style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;margin-bottom:18px">
 
     <div class="card dash-kpi" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer;background:var(--p1);border:none">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
@@ -309,14 +319,15 @@ PG.dash = function(){
 
     <div class="card dash-kpi" onclick="nav(&quot;conta&quot;)" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p2);font-family:var(--fm)">Utilidad</span>
-        <span style="font-size:9px;background:rgba(91,141,239,0.1);color:var(--p2);padding:2px 7px;border-radius:20px;font-weight:700">${new Date().toLocaleDateString('es-VE',{month:'short'})}</span>
+        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p2);font-family:var(--fm)">Flujo de caja</span>
+        <span style="font-size:9px;background:rgba(91,141,239,0.1);color:var(--p2);padding:2px 7px;border-radius:20px;font-weight:700">${new Date().toLocaleDateString('es-VE',{month:'short'}).replace('.','')}</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:${utilidad>=0?'var(--p2)':'var(--red)'};margin-bottom:4px">${fmt(utilidad)}</div>
-      <div style="font-size:11px;color:var(--ink3)">Ingresos menos Egresos</div>
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;justify-content:space-between;font-size:10.5px">
-        <span style="color:var(--green)">↑ ${fmt(ingMes)}</span>
-        <span style="color:var(--red)">↓ ${fmt(egMes)}</span>
+      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:${flujoMes>=0?'var(--green)':'var(--red)'};margin-bottom:4px">${fmt(flujoMes)}</div>
+      <div style="font-size:11px;color:var(--ink3)">Cuotas cobradas menos lo que salió</div>
+      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Cuotas cobradas</span><span style="color:var(--green);font-weight:700;white-space:nowrap">+${fmt(cuotasCobradasMes)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Prestado en motos</span><span style="color:var(--amber);font-weight:700;white-space:nowrap">−${fmt(prestadoMes)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Otros gastos</span><span style="color:var(--red);font-weight:700;white-space:nowrap">−${fmt(gastosMes)}</span></div>
       </div>
     </div>
 
@@ -383,7 +394,7 @@ PG.dash = function(){
   </div>
 
   <!-- ROW 2: Analytics charts -->
-  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px">
+  <div class="dash-charts" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px">
 
     <!-- CRÉDITOS CHART — primero -->
     <div class="card">
@@ -456,7 +467,7 @@ PG.dash = function(){
   </div>
 
     <!-- ROW 2b: 5 cards de operación -->
-  <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:18px">
+  <div class="dash-ops" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:18px">
 
     <!-- 1 · Mora por mes -->
     <div class="card dash-kpi" onclick="nav(&quot;cobranza&quot;)" style="cursor:pointer">
