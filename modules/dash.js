@@ -46,6 +46,40 @@ PG.dash = function(){
   const prestadoMes = _egrMesDash.filter(e=>e.origenAuto==='compra_moto').reduce((a,e)=>a+(parseFloat(e.monto)||0),0);
   const gastosMes = _egrMesDash.filter(e=>e.origenAuto!=='compra_moto').reduce((a,e)=>a+(parseFloat(e.monto)||0),0);
   const flujoMes = cuotasCobradasMes - prestadoMes - gastosMes;
+  // ── Tarjetas de arriba (diseno B aprobado por Adam, 17-sep-2026) ──
+  const _mesCortoDash = new Date().toLocaleDateString('es-VE',{month:'short'}).replace('.','');
+  const _mesLargoDash = new Date().toLocaleDateString('es-VE',{month:'long'});
+  const _pesos0 = v => '$' + Math.round(v||0).toLocaleString('es-VE');
+  const _pesosSigno = v => ((v||0) < 0 ? '−' : '') + '$' + Math.round(Math.abs(v||0)).toLocaleString('es-VE');
+  const _pct1 = (n, t) => t > 0 ? (Math.round(n*1000/t)/10).toLocaleString('es-VE') + '%' : '0%';
+  const pctMoraCart = activosEnCartera > 0 ? moraEnCartera*100/activosEnCartera : 0;
+  const pctCuotasMes = ingMesReal > 0 ? cuotasCobradasMes*100/ingMesReal : 0;
+  const _maxFlujo = Math.max(cuotasCobradasMes, prestadoMes, gastosMes, 1);
+  // Mora: como la reparte Cobranza (acuerdos, ilocalizables, criticos +30 dias, regular) y
+  // el vencido con el mismo ledger: saldo de las cuotas ya vencidas o, si no hay, lo que
+  // falta de la proxima. Solo corre sobre los atrasados, no sobre toda la cartera.
+  let moraVencido = 0, moraReg = 0, moraAcu = 0, moraCrit = 0, moraIloc = 0;
+  const _hoyKx = hoyLocalISO();
+  const _graciaKx = (typeof PLAN!=='undefined' && PLAN.diasGracia!=null) ? PLAN.diasGracia : 5;
+  activosArr.forEach(function(c){
+    if(!(c.mora > 0)) return;
+    if(c.fechaCompromiso) moraAcu++;
+    else if(String(c.cobranzaStatus||'')==='ilocalizable') moraIloc++;
+    else if((parseInt(c.mora,10)||0) > 30) moraCrit++;
+    else moraReg++;
+    try{
+      if(typeof CreditoLedger==='undefined' || !CreditoLedger.generarEstadoCredito) throw 0;
+      const est = CreditoLedger.generarEstadoCredito(c, S.pagos, {diasGracia:_graciaKx});
+      let venc = 0, n = 0;
+      (est.cuotas||[]).forEach(function(q){ if(q && q.saldo>0.001 && q.fechaVence && q.fechaVence < _hoyKx){ venc += q.saldo; n++; } });
+      if(n) moraVencido += venc;
+      else { const prox = (est.cuotas||[])[est.cuotasPagadas]; moraVencido += prox ? (prox.saldo||0) : (parseFloat(c.cuotaQ||c.cuota)||0); }
+    }catch(e){ moraVencido += parseFloat(c.cuotaQ||c.cuota)||0; }
+  });
+  const _circKx = 2*Math.PI*26;
+  // Tasas: los valores iniciales; bcv-auto.js los refresca por id
+  const _tfKx = v => v > 1 ? v.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+  const _brKx = (a, b) => (a > 1 && b > 1) ? (((b-a)/a*100) >= 0 ? '+' : '') + ((b-a)/a*100).toFixed(1) + '%' : '—';
   const pendPagos = _SPAGOS.filter(p=>p.estado==='pendiente').length;
   const dispMotos = _SMOTOS.filter(m=>!m.eliminado&&m.estado==='disponible').length;
 
@@ -263,134 +297,89 @@ PG.dash = function(){
     .dash-tasa-card:hover{box-shadow:0 6px 18px rgba(0,0,0,.08)}
   </style>
   <!-- ROW 1: 6 KPI CARDS -->
-  <div class="dash-kpis" style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;margin-bottom:18px">
+  <div class="kx-row">
 
-    <div class="card dash-kpi" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer;background:var(--p1);border:none">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.85);font-family:var(--fm)">Cartera Activa</span>
-        <span style="font-size:9px;background:rgba(255,255,255,0.2);color:#fff;padding:2px 7px;border-radius:20px;font-weight:700">${activosEnCartera} créditos</span>
+    <!-- CARTERA ACTIVA (protagonista) -->
+    <div class="kx-hero" onclick="nav(&quot;creditos&quot;)">
+      <div class="kx-top">
+        <span class="kx-ico kx-ico-w"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="14" rx="3"/><path d="M16 13h2"/><path d="M5 6V5a2 2 0 0 1 2-2h9"/></svg></span>
+        <span class="kx-tit">Cartera activa</span>
+        <span class="kx-chip kx-chip-w"><span data-kpi="activos">${activosEnCartera}</span> créditos</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:#fff;margin-bottom:4px">${fmt(cartera)}</div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.8)">Saldo pendiente de cobro</div>
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,0.2);display:flex;justify-content:space-between;font-size:10.5px">
-        <span style="color:rgba(255,255,255,0.8)">${completados} completados</span>
-        <span style="color:#fff;font-weight:700">${totalCreds} total →</span>
+      <div class="kx-big">${fmt(cartera)}</div>
+      <div class="kx-sub">Saldo pendiente de cobro</div>
+      <div class="kx-split"><i style="width:${(100-pctMoraCart).toFixed(2)}%;background:#fff"></i><i style="width:${pctMoraCart.toFixed(2)}%;background:#FF8BA3"></i></div>
+      <div class="kx-stats">
+        <div><small>Al día</small><b data-kpi="aldia">${alDia}</b><em>${_pct1(alDia, activosEnCartera)}</em></div>
+        <div><small>En mora</small><b data-kpi="mora">${moraEnCartera}</b><em>${_pct1(moraEnCartera, activosEnCartera)}</em></div>
+        <div><small>Cobrado total</small><b>${_pesos0(ingMes)}</b></div>
       </div>
     </div>
 
-    <!-- Créditos Activos (estado de la cartera) -->
-    <div class="card dash-kpi" onclick="nav(&quot;creditos&quot;)" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Créditos Activos</span>
-        <span style="font-size:9px;background:var(--gs);color:var(--p1);padding:2px 7px;border-radius:20px;font-weight:700">${totalCreds} total</span>
+    <!-- COBRADO DEL MES -->
+    <div class="kx-card" onclick="nav(&quot;pagos&quot;)">
+      <div class="kx-top">
+        <span class="kx-ico" style="background:rgba(0,168,112,.12)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span>
+        <span class="kx-tit">Cobrado</span>
+        <span class="kx-chip" style="background:rgba(0,168,112,.12);color:var(--green)">${_mesCortoDash}</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:28px;letter-spacing:-1px;color:var(--p1);margin-bottom:4px">${activosEnCartera}</div>
-      <div style="font-size:11px;color:var(--ink3)">Créditos activos en cartera (incluye mora)</div>
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:6px">
-        ${[['Al día',cActivos,'#2563EB'],['En mora',cEnMora,'#E8335A'],['Completados',cCompletados,'#00B876']].map(function(b){var pct=cTotal>0?Math.round(b[1]/cTotal*100):0;return '<div><div style="display:flex;justify-content:space-between;font-size:9.5px;margin-bottom:3px"><span style="color:var(--ink3)">'+b[0]+'</span><span style="font-weight:700;color:var(--ink);font-family:var(--fm)">'+b[1]+'</span></div><div style="background:var(--gs);border-radius:3px;height:5px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+b[2]+';border-radius:3px"></div></div></div>';}).join('')}
-      </div>
-    </div>
-
-    <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);font-family:var(--fm)">Cobrado (Mes)</span>
-        <span style="font-size:9px;background:var(--greens);color:var(--green);padding:2px 7px;border-radius:20px;font-weight:700">${new Date().toLocaleDateString('es-VE',{month:'short'}).replace('.','')}</span>
-      </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:28px;letter-spacing:-1px;color:var(--green);margin-bottom:4px">${fmt(ingMesReal)}</div>
-      <div style="font-size:11px;color:var(--ink3)">Cobrado este mes</div>
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:4px">
-        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Cuotas recibidas</span><span style="color:var(--green);font-weight:700">${fmt(cuotasCobradasMes)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Iniciales recibidas</span><span style="color:var(--p1);font-weight:700">${fmt(inicialesCobradasMes)}</span></div>
+      <div class="kx-big" style="color:var(--green)" data-kpi="cobrado-mes">${_pesos0(ingMesReal)}</div>
+      <div class="kx-sub">en ${_mesLargoDash}</div>
+      <div class="kx-pie">
+        <div class="kx-split kx-split-s"><i style="width:${pctCuotasMes.toFixed(2)}%;background:var(--green)"></i><i style="width:${(100-pctCuotasMes).toFixed(2)}%;background:#7FD9B8"></i></div>
+        <div class="kx-ley"><span><i class="kx-pt" style="background:var(--green)"></i>Cuotas <b>${_pesos0(cuotasCobradasMes)}</b></span><span><i class="kx-pt" style="background:#7FD9B8"></i>Iniciales <b>${_pesos0(inicialesCobradasMes)}</b></span></div>
       </div>
     </div>
 
-    <div class="card dash-kpi" onclick="nav(&quot;pagos&quot;)" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);font-family:var(--fm)">Cobrado (Total)</span>
-        ${pendPagos>0?`<span style="font-size:9px;background:rgba(232,152,10,0.12);color:var(--amber);padding:2px 7px;border-radius:20px;font-weight:700">${pendPagos} pend.</span>`:'<span style="font-size:9px;background:var(--greens);color:var(--green);padding:2px 7px;border-radius:20px;font-weight:700">Al día</span>'}
+    <!-- FLUJO DE CAJA DEL MES -->
+    <div class="kx-card" onclick="nav(&quot;conta&quot;)">
+      <div class="kx-top">
+        <span class="kx-ico" style="background:rgba(229,57,91,.12)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16"/><path d="M3 8l4-4 4 4"/><path d="M17 20V4"/><path d="M21 16l-4 4-4-4"/></svg></span>
+        <span class="kx-tit">Flujo de caja</span>
+        <span class="kx-chip" style="background:rgba(229,57,91,.12);color:var(--red)">${_mesCortoDash}</span>
       </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:28px;letter-spacing:-1px;color:var(--green);margin-bottom:4px">${fmt(ingMes)}</div>
-      <div style="font-size:11px;color:var(--ink3)">Histórico total</div>
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:4px">
-        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Cuotas recibidas</span><span style="color:var(--green);font-weight:700">${fmt(cuotasCobradas)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Iniciales recibidas</span><span style="color:var(--p1);font-weight:700">${fmt(inicialesCobradas)}</span></div>
-      </div>
-    </div>
-
-    <div class="card dash-kpi" onclick="nav(&quot;conta&quot;)" style="cursor:pointer">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p2);font-family:var(--fm)">Flujo de caja</span>
-        <span style="font-size:9px;background:rgba(91,141,239,0.1);color:var(--p2);padding:2px 7px;border-radius:20px;font-weight:700">${new Date().toLocaleDateString('es-VE',{month:'short'}).replace('.','')}</span>
-      </div>
-      <div style="font-family:var(--fd);font-weight:900;font-size:26px;letter-spacing:-1px;color:${flujoMes>=0?'var(--green)':'var(--red)'};margin-bottom:4px">${fmt(flujoMes)}</div>
-      <div style="font-size:11px;color:var(--ink3)">Cuotas cobradas menos lo que salió</div>
-      <div style="margin-top:10px;padding-top:9px;border-top:1px solid var(--rim);display:flex;flex-direction:column;gap:4px">
-        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Cuotas cobradas</span><span style="color:var(--green);font-weight:700;white-space:nowrap">+${fmt(cuotasCobradasMes)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Prestado en motos</span><span style="color:var(--amber);font-weight:700;white-space:nowrap">−${fmt(prestadoMes)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:10.5px"><span style="color:var(--ink3)">Otros gastos</span><span style="color:var(--red);font-weight:700;white-space:nowrap">−${fmt(gastosMes)}</span></div>
+      <div class="kx-big" style="color:${flujoMes>=0?'var(--green)':'var(--red)'}" data-kpi="flujo">${_pesosSigno(flujoMes)}</div>
+      <div class="kx-sub">cobrado menos lo que salió en ${_mesLargoDash}</div>
+      <div class="kx-pie kx-cmp">
+        <div><div class="kx-r"><span>Cuotas cobradas</span><b style="color:var(--green)" data-kpi="flujo-cuotas">+${_pesos0(cuotasCobradasMes)}</b></div><div class="kx-t"><i style="width:${(cuotasCobradasMes*100/_maxFlujo).toFixed(2)}%;background:var(--green)"></i></div></div>
+        <div><div class="kx-r"><span>Prestado en motos</span><b style="color:var(--amber)" data-kpi="flujo-prestado">−${_pesos0(prestadoMes)}</b></div><div class="kx-t"><i style="width:${(prestadoMes*100/_maxFlujo).toFixed(2)}%;background:var(--amber)"></i></div></div>
+        ${gastosMes>0 ? `<div><div class="kx-r"><span>Otros gastos</span><b style="color:var(--red)" data-kpi="flujo-gastos">−${_pesos0(gastosMes)}</b></div><div class="kx-t"><i style="width:${(gastosMes*100/_maxFlujo).toFixed(2)}%;background:var(--red)"></i></div></div>` : ''}
       </div>
     </div>
 
-    <!-- KPI: TASA DEL DÍA (BCV + EUR + Binance) -->
-    <div class="card dash-kpi dash-tasa-card" id="dash-tasa-card" style="background:#fff;position:relative">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--p1);font-family:var(--fm)">Tasa del día</span>
-        <button class="dash-refresh" onclick="event.stopPropagation();bcvForzarActualizacion&&bcvForzarActualizacion()"
-                title="Actualizar tasas"
-                style="background:var(--surf2);border:1px solid var(--rim);color:var(--ink2);border-radius:50%;width:22px;height:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;line-height:1;padding:0;transition:transform .3s">↻</button>
+    <!-- EN MORA -->
+    <div class="kx-card" onclick="nav(&quot;cobranza&quot;)">
+      <div class="kx-top">
+        <span class="kx-ico" style="background:rgba(229,57,91,.12)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4"/><path d="M12 17.5v.01"/></svg></span>
+        <span class="kx-tit">En mora</span>
       </div>
-
-      <!-- BCV -->
-      <div style="display:flex;align-items:center;gap:9px;padding:7px 4px;border-bottom:1px solid var(--rim)">
-        <!-- Logo BCV: círculo con líneas estilo seal -->
-        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#1E40AF;flex-shrink:0">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 4v16M11 4v16M16 4v16M3 8h18M3 16h18" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>
-        </span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:10px;font-weight:800;color:var(--ink);letter-spacing:-.1px;line-height:1.2">BCV</div>
-          <div style="font-size:9px;color:var(--ink3);font-weight:600;line-height:1.2;margin-top:1px">Dólar oficial</div>
+      <div class="kx-mora">
+        <div class="kx-ring">
+          <svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="rgba(229,57,91,.14)" stroke-width="7"/><circle cx="32" cy="32" r="26" fill="none" stroke="var(--red)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(_circKx*pctMoraCart/100).toFixed(2)} ${_circKx.toFixed(2)}"/></svg>
+          <div class="kx-rv"><b>${_pct1(moraEnCartera, activosEnCartera)}</b><small>cartera</small></div>
         </div>
-        <span id="dash-tasa-bcv" style="font-family:var(--fd);font-weight:900;font-size:15px;color:var(--ink);letter-spacing:-.4px;white-space:nowrap">${(window._tasaBsGlobal||0)>1?(window._tasaBsGlobal).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
+        <div><div class="kx-big" style="margin:0;color:var(--red)">${moraEnCartera}</div><div class="kx-sub">créditos atrasados</div><div class="kx-sub kx-venc" data-kpi="mora-vencido">${_pesos0(moraVencido)} vencido</div></div>
       </div>
-
-      <!-- EUR -->
-      <div style="display:flex;align-items:center;gap:9px;padding:7px 4px;border-bottom:1px solid var(--rim)">
-        <!-- Logo Euro: círculo con € estilizado -->
-        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#003399;flex-shrink:0">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M16 6.5a6 6 0 0 0-9.5 4.5a6 6 0 0 0 9.5 4.5M4 10h7M4 13h7" stroke="#FFD700" stroke-width="2.4" stroke-linecap="round"/></svg>
-        </span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:10px;font-weight:800;color:var(--ink);letter-spacing:-.1px;line-height:1.2">Euro</div>
-          <div style="font-size:9px;color:var(--ink3);font-weight:600;line-height:1.2;margin-top:1px">EUR oficial</div>
-        </div>
-        <span id="dash-tasa-eur" style="font-family:var(--fd);font-weight:900;font-size:15px;color:var(--ink);letter-spacing:-.4px;white-space:nowrap">${(window._tasaEuro||0)>1?(window._tasaEuro).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
-      </div>
-
-      <!-- Binance -->
-      <div style="display:flex;align-items:center;gap:9px;padding:7px 4px">
-        <!-- Logo Binance: 4 rombos -->
-        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#0B0E11;flex-shrink:0">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="#F0B90B"><path d="M12 4l-2.5 2.5L12 9l2.5-2.5L12 4zM5.5 10.5L3 13l2.5 2.5L8 13l-2.5-2.5zm13 0L16 13l2.5 2.5L21 13l-2.5-2.5zM12 15l-2.5 2.5L12 20l2.5-2.5L12 15z"/></svg>
-        </span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:10px;font-weight:800;color:var(--ink);letter-spacing:-.1px;line-height:1.2">Binance</div>
-          <div style="font-size:9px;color:var(--ink3);font-weight:600;line-height:1.2;margin-top:1px">P2P paralelo</div>
-        </div>
-        <span id="dash-tasa-binance" style="font-family:var(--fd);font-weight:900;font-size:15px;color:var(--ink);letter-spacing:-.4px;white-space:nowrap">${(window._tasaBinance||0)>1?(window._tasaBinance).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</span>
-      </div>
-
-      <!-- Footer: Brechas (paralelo sobre oficial USD y sobre EUR oficial) -->
-      <div style="margin-top:10px;padding:7px 10px;background:var(--surf2);border-radius:8px;display:flex;flex-direction:column;gap:5px;font-size:10.5px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="color:var(--ink3);font-weight:700">Brecha oficial → paralelo</span>
-          <span id="dash-tasa-spread" style="color:var(--ink);font-weight:800;font-family:var(--fd)">${(window._tasaBinance>1&&window._tasaBsGlobal>1)?('+'+(((window._tasaBinance-window._tasaBsGlobal)/window._tasaBsGlobal*100).toFixed(1))+'%'):'—'}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--rim2);padding-top:5px">
-          <span style="color:var(--ink3);font-weight:700">Brecha EUR → paralelo</span>
-          <span id="dash-tasa-spread-eur" style="color:var(--ink);font-weight:800;font-family:var(--fd)">${(window._tasaBinance>1&&window._tasaEuro>1)?((((window._tasaBinance-window._tasaEuro)/window._tasaEuro*100)>=0?'+':'')+(((window._tasaBinance-window._tasaEuro)/window._tasaEuro*100).toFixed(1))+'%'):'—'}</span>
-        </div>
+      <div class="kx-pie kx-chips">
+        <span class="kx-c">Regular <b>${moraReg}</b></span><span class="kx-c">Acuerdos <b>${moraAcu}</b></span><span class="kx-c kx-c-r">Críticos <b>${moraCrit}</b></span>${moraIloc ? `<span class="kx-c">Ilocalizables <b>${moraIloc}</b></span>` : ''}
       </div>
     </div>
+
+    <!-- TASA DEL DIA (bcv-auto.js actualiza los numeros por id) -->
+    <div class="kx-card" id="dash-tasa-card">
+      <div class="kx-top">
+        <span class="kx-ico" style="background:rgba(232,148,10,.13)"><svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13"/><path d="M14 4l3 3-3 3"/><path d="M20 17H7"/><path d="M10 14l-3 3 3 3"/></svg></span>
+        <span class="kx-tit">Tasa del día</span>
+        <button class="kx-refresh" onclick="event.stopPropagation();bcvForzarActualizacion&&bcvForzarActualizacion()" title="Actualizar tasas">↻</button>
+      </div>
+      <div class="kx-tasas">
+        <div class="kx-tasa"><span class="kx-l" style="background:#1E3A8A">Bs</span>BCV dólar<b id="dash-tasa-bcv">${_tfKx(window._tasaBsGlobal||0)}</b></div>
+        <div class="kx-tasa"><span class="kx-l" style="background:#1D4ED8">€</span>BCV euro<b id="dash-tasa-eur">${_tfKx(window._tasaEuro||0)}</b></div>
+        <div class="kx-tasa"><span class="kx-l" style="background:#111;color:#F0B90B">◆</span>Binance<b id="dash-tasa-binance">${_tfKx(window._tasaBinance||0)}</b></div>
+      </div>
+      <div class="kx-pie kx-brecha"><span>Brecha paralelo</span><span><b id="dash-tasa-spread">${_brKx(window._tasaBsGlobal||0, window._tasaBinance||0)}</b> vs $ · <b id="dash-tasa-spread-eur">${_brKx(window._tasaEuro||0, window._tasaBinance||0)}</b> vs €</span></div>
+    </div>
+
   </div>
 
   <!-- ROW 2: Analytics charts -->

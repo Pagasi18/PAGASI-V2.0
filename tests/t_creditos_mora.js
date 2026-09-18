@@ -104,10 +104,10 @@ ok('la pestaña Todos lista los de estado mora y sigue con el más nuevo arriba'
 // ── El dashboard dice lo MISMO con los mismos datos (la queja de Adam) ──
 ctx.S.page = 'dash';
 const hd = String(ctx.PG.dash());
-const dash = (label) => { const m = hd.match(new RegExp(label + '<\\/span><span[^>]*>(\\d+)<\\/span>')); return m ? +m[1] : null; };
-const dashActivos = (hd.match(/>(\d+)<\/div>\s*<div[^>]*>Créditos activos en cartera/) || [])[1];
-ok('dashboard: 9 créditos activos en cartera · 10 total', dashActivos === '9' && /9 créditos<\/span>/.test(hd) && /10 total<\/span>/.test(hd));
-ok('dashboard: Al día 3 · En mora 6 · Completados 1, igual que Créditos', dash('Al día') === 3 && dash('En mora') === 6 && dash('Completados') === 1);
+// Desde el 17-sep las tarjetas de arriba marcan sus numeros con data-kpi (diseno nuevo)
+const dash = (k) => { const m = hd.match(new RegExp('data-kpi="' + k + '">(\\d+)<')); return m ? +m[1] : null; };
+ok('dashboard: 9 créditos activos en cartera', dash('activos') === 9);
+ok('dashboard: Al día 3 · En mora 6, igual que Créditos', dash('aldia') === 3 && dash('mora') === 6);
 ok('cartera activa del dashboard = cartera viva de Créditos', hd.indexOf('>' + ctx.fmt(saldo9) + '<') > -1);
 ctx.S.page = 'creditos';
 

@@ -75,19 +75,30 @@ ctx.S.egresos = [
 ctx.S.page = 'dash';
 const h = String(ctx.PG.dash());
 const i = h.indexOf('>Flujo de caja<');
-const card = i > -1 ? h.slice(i, i + 2200) : '';
+const card = i > -1 ? h.slice(i, i + 2600) : '';
+// Las tarjetas de arriba marcan sus numeros con data-kpi (diseno del 17-sep)
+const kpi = (txt, k) => { const m = txt.match(new RegExp('data-kpi="' + k + '">([^<]+)<')); return m ? m[1] : null; };
 ok('la tarjeta ahora se llama "Flujo de caja" (ya no "Utilidad")', i > -1 && h.indexOf('Ingresos menos Egresos') === -1);
-ok('flujo = 300 cobrado − 700 prestado − 100 gastos = −500', card.indexOf(ctx.fmt(-500)) > -1);
-ok('cuotas cobradas del mes: +300 (sin la inicial ni el mes pasado)', card.indexOf('+' + ctx.fmt(300)) > -1);
-ok('prestado en motos: 700 (sin los 500 de la inicial)', card.indexOf('−' + ctx.fmt(700)) > -1);
-ok('otros gastos: 100 (sin los 5.000 del mes pasado ni el borrado)', card.indexOf('−' + ctx.fmt(100)) > -1);
-ok('negativo en rojo', /color:var\(--red\);margin-bottom:4px">/.test(card));
+ok('flujo = 300 cobrado − 700 prestado − 100 gastos = −500', kpi(card, 'flujo') === '−$500');
+ok('cuotas cobradas del mes: +300 (sin la inicial ni el mes pasado)', kpi(card, 'flujo-cuotas') === '+$300');
+ok('prestado en motos: 700 (sin los 500 de la inicial)', kpi(card, 'flujo-prestado') === '−$700');
+ok('otros gastos: 100 (sin los 5.000 del mes pasado ni el borrado)', kpi(card, 'flujo-gastos') === '−$100');
+ok('negativo en rojo', card.indexOf('style="color:var(--red)" data-kpi="flujo"') > -1);
 
 // Un mes donde se cobra más de lo que se presta: sale en verde
 ctx.S.pagos.push({ id:'P4', cred:'CRED-1', fecha:diaDeEsteMes, monto:1000, estado:'confirmado' });
 const h2 = String(ctx.PG.dash());
-const c2 = h2.slice(h2.indexOf('>Flujo de caja<'), h2.indexOf('>Flujo de caja<') + 2200);
-ok('con 1.300 cobrados el flujo es +500 y sale en verde', c2.indexOf(ctx.fmt(500)) > -1 && /color:var\(--green\);margin-bottom:4px">/.test(c2));
+const c2 = h2.slice(h2.indexOf('>Flujo de caja<'), h2.indexOf('>Flujo de caja<') + 2600);
+ok('con 1.300 cobrados el flujo es +500 y sale en verde', kpi(c2, 'flujo') === '$500' && c2.indexOf('style="color:var(--green)" data-kpi="flujo"') > -1);
+
+// Sin gastos no aparece la fila de "Otros gastos" (la tarjeta queda limpia)
+ctx.S.egresos = ctx.S.egresos.filter(e => e.categoria !== 'sueldos');
+const h3 = String(ctx.PG.dash());
+const c3 = h3.slice(h3.indexOf('>Flujo de caja<'), h3.indexOf('>Flujo de caja<') + 2600);
+ok('sin gastos del mes, no se muestra la fila de otros gastos', kpi(c3, 'flujo-gastos') === null);
+
+// La tarjeta de mora: el vencido y el reparto, como Cobranza
+ok('la tarjeta de mora pinta el vencido', /data-kpi="mora-vencido">\$[\d.]+ vencido</.test(h3));
 
 console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');
 if (fail) process.exitCode = 1;

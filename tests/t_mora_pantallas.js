@@ -88,10 +88,10 @@ ok('Créditos: 9 activos · 6 en mora (67%) · 3 al día',
 // ── 2. Dashboard ──
 ctx.S.page = 'dash';
 const hd = String(ctx.PG.dash());
-const dashBarra = (label) => { const m = hd.match(new RegExp(label + '<\\/span><span[^>]*>(\\d+)<\\/span>')); return m ? +m[1] : null; };
+// Desde el 17-sep las tarjetas de arriba marcan sus numeros con data-kpi (diseno nuevo)
+const dashKpi = (k) => { const m = hd.match(new RegExp('data-kpi="' + k + '">(\\d+)<')); return m ? +m[1] : null; };
 ok('Dashboard: mismos 9 · 6 · 3 y la misma cartera',
-  new RegExp('>' + ACTIVOS + '<\\/div>\\s*<div[^>]*>Créditos activos en cartera').test(hd)
-  && dashBarra('En mora') === EN_MORA && dashBarra('Al día') === AL_DIA
+  dashKpi('activos') === ACTIVOS && dashKpi('mora') === EN_MORA && dashKpi('aldia') === AL_DIA
   && hd.indexOf('>' + ctx.fmt(CARTERA_VIVA) + '<') > -1);
 
 // ── 3. Reportes › Resumen ──
