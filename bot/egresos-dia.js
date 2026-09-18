@@ -58,5 +58,31 @@ function financiado(c) { const f = parseFloat(c.fin); if (isFinite(f) && f >= 0)
     console.log('  ' + e._f + ' · ' + money(e.monto) + ' · ' + (e.categoria || '—') + ' · ' + (e.origenAuto || 'manual') + ' · forma ' + (e.forma || '—') + extra);
   });
   if (conCredito) console.log('SUMA de los que tienen credito: precio ' + money(sumaPrecio) + ' · inicial ' + money(sumaIni) + ' · financiado ' + money(sumaFin));
+
+  // ── El otro lado: la inicial de esos mismos creditos, ¿entro como ingreso? ──
+  // Si el cliente le paga la inicial a Pagasi y Pagasi paga la moto completa, el
+  // egreso en efectivo tiene su ingreso y la cuenta cuadra. Si la inicial se la
+  // queda la tienda, ese ingreso NO existe y el egreso es de mentira.
+  const credsTocados = new Set();
+  enRango.forEach(e => { const c = credPorMoto[String(e.motoIdRef)]; if (c) credsTocados.add(c.id); });
+  if (credsTocados.size) {
+    const pagoSnap = await db.collection('pagos').get();
+    const porCred = {};
+    pagoSnap.forEach(d => {
+      const p = d.data() || {};
+      if (p.eliminado || (p.estado || 'confirmado') !== 'confirmado') return;
+      if (!credsTocados.has(String(p.cred))) return;
+      if (!(p.esInicial || p.tipoOperacion === 'inicial_credito')) return;
+      (porCred[String(p.cred)] = porCred[String(p.cred)] || []).push({ f: dia(p.fecha), m: n2(p.monto), forma: p.metodo || p.medio || '—' });
+    });
+    let conIni = 0, sumIni = 0, efectivo = 0;
+    console.log('INICIALES REGISTRADAS COMO INGRESO (de los ' + credsTocados.size + ' creditos de estos egresos):');
+    [...credsTocados].sort().forEach(id => {
+      const l = porCred[id] || [];
+      if (l.length) { conIni++; l.forEach(x => { sumIni += x.m; if (/efec/i.test(x.forma)) efectivo += x.m; }); }
+      console.log('  ' + id + ' · ' + (l.length ? l.map(x => money(x.m) + ' el ' + x.f + ' por ' + x.forma).join(' + ') : 'SIN INICIAL REGISTRADA'));
+    });
+    console.log('RESUMEN INICIALES: ' + conIni + ' de ' + credsTocados.size + ' creditos con inicial cobrada · total ' + money(sumIni) + ' · de eso en efectivo ' + money(efectivo));
+  }
   console.log('RESULTADO OK egresos=' + enRango.length + ' total=' + n2(total));
 })().catch(e => { console.error('ERROR', e.message); process.exit(1); });
