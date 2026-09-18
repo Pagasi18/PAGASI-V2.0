@@ -3566,7 +3566,9 @@ function recargarDesdeFirebase(){
           email: d.email || '',
           direccion: d.direccion || '',
           representante: d.representante || '',
-          repCI: d.repCI || ''
+          repCI: d.repCI || '',
+          repCargo: d.repCargo || '', repDoc: d.repDoc || '',
+          rm: d.rm || '', rmEstado: d.rmEstado || '', rmFecha: d.rmFecha || '', rmNum: d.rmNum || '', rmTomo: d.rmTomo || ''
         };
       }
     })

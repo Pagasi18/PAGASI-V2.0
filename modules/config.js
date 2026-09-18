@@ -110,13 +110,13 @@ PG.config = function(){
           <div style="margin-top:4px;padding-top:9px;border-top:1px dashed var(--rim2)">
             <div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin-bottom:7px">Datos registrales · salen en los contratos</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              <div class="fg"><label>Registro Mercantil</label><input class="fi" id="cfg_rm" placeholder="Segundo"></div>
-              <div class="fg"><label>Circunscripción del Estado</label><input class="fi" id="cfg_rm_estado" placeholder="Miranda"></div>
+              <div class="fg"><label>Registro Mercantil</label><input class="fi" id="cfg_rm" placeholder="Ej: Segundo"></div>
+              <div class="fg"><label>Circunscripción del Estado</label><input class="fi" id="cfg_rm_estado" placeholder="Ej: Miranda"></div>
             </div>
             <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:8px;margin-top:8px">
-              <div class="fg"><label>Fecha de inscripción</label><input class="fi" id="cfg_rm_fecha" placeholder="12/03/2024"></div>
-              <div class="fg"><label>N°</label><input class="fi" id="cfg_rm_num" placeholder="18"></div>
-              <div class="fg"><label>Tomo</label><input class="fi" id="cfg_rm_tomo" placeholder="145-A"></div>
+              <div class="fg"><label>Fecha de inscripción</label><input class="fi" id="cfg_rm_fecha" placeholder="Ej: 12/03/2024"></div>
+              <div class="fg"><label>N°</label><input class="fi" id="cfg_rm_num" placeholder="Ej: 18"></div>
+              <div class="fg"><label>Tomo</label><input class="fi" id="cfg_rm_tomo" placeholder="Ej: 145-A"></div>
             </div>
           </div>
           <div style="padding-top:8px;border-top:1px solid var(--rim2)">
@@ -131,9 +131,9 @@ PG.config = function(){
           <div class="fg"><label>Nombre completo *</label><input class="fi" id="cfg_representante" placeholder="Juan Pérez García"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <div class="fg"><label>Cédula de Identidad</label><input class="fi" id="cfg_rep_ci" placeholder="00.000.000"></div>
-            <div class="fg"><label>Cargo</label><input class="fi" id="cfg_rep_cargo" placeholder="Director"></div>
+            <div class="fg"><label>Cargo</label><input class="fi" id="cfg_rep_cargo" placeholder="Ej: Director"></div>
           </div>
-          <div class="fg"><label>Facultad según consta en</label><input class="fi" id="cfg_rep_doc" placeholder="Acta de Asamblea del 12/03/2024"></div>
+          <div class="fg"><label>Facultad según consta en</label><input class="fi" id="cfg_rep_doc" placeholder="Ej: Acta de Asamblea del 12/03/2024"></div>
           <div style="background:var(--gs);border-radius:9px;padding:11px 13px;font-size:11.5px;color:var(--ink2);line-height:1.55">
             <b style="color:var(--p1)">Tip:</b> Estos datos se insertan automáticamente en los contratos de venta en cuotas y documentos notariales.
           </div>
