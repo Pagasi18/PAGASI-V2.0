@@ -387,17 +387,16 @@ PG.dash = function(){
 
     <!-- CRÉDITOS CHART — primero -->
     <div class="card">
-      <div class="ch" style="margin-bottom:12px">
-        <div>
-          <div class="ct">Créditos otorgados</div>
-          <div class="cs" id="dash-cred-sub">Últimos 7 meses</div>
-        </div>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-xs btn-p" id="dash-cred-d"  onclick="setDashPeriodo('creditos','diario')"   style="font-size:10px;padding:4px 9px">Diario</button>
-          <button class="btn btn-xs" id="dash-cred-q"  onclick="setDashPeriodo('creditos','quincenal')" style="font-size:10px;padding:4px 9px">Quincenal</button>
-          <button class="btn btn-xs" id="dash-cred-m" onclick="setDashPeriodo('creditos','mensual')"   style="font-size:10px;padding:4px 9px">Mensual</button>
+      <div class="dash-head"><div class="dash-ch">
+        <div class="ct" style="color:var(--green)">Créditos</div>
+        <div class="dash-seg">
+          <button id="dash-cred-d" class="on" onclick="setDashPeriodo('creditos','diario')">Día</button>
+          <button id="dash-cred-q" onclick="setDashPeriodo('creditos','quincenal')">Quinc.</button>
+          <button id="dash-cred-m" onclick="setDashPeriodo('creditos','mensual')">Mes</button>
         </div>
       </div>
+      <div class="dash-big" id="dash-cred-big" style="color:var(--green)">—</div>
+      <div class="cs dash-cs"><span id="dash-cred-sub">Últimos 30 días</span><span id="dash-cred-avg"></span></div></div>
       <div style="position:relative;height:160px;min-height:160px">
         <canvas id="dash-cred-chart" style="width:100%;height:100%"></canvas>
       </div>
@@ -405,17 +404,16 @@ PG.dash = function(){
 
     <!-- CUOTAS COBRADAS CHART — segundo -->
     <div class="card">
-      <div class="ch" style="margin-bottom:12px;flex-wrap:wrap;row-gap:6px">
-        <div>
-          <div class="ct" style="color:#0E9488">Cuotas cobradas</div>
-          <div class="cs" id="dash-cuo-sub">Últimos 30 días</div>
-        </div>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-xs btn-p" id="dash-cuo-d"  onclick="setDashPeriodo('cuotas','diario')"    style="font-size:10px;padding:4px 9px">Diario</button>
-          <button class="btn btn-xs" id="dash-cuo-q"  onclick="setDashPeriodo('cuotas','quincenal')" style="font-size:10px;padding:4px 9px">Quincenal</button>
-          <button class="btn btn-xs" id="dash-cuo-m" onclick="setDashPeriodo('cuotas','mensual')"   style="font-size:10px;padding:4px 9px">Mensual</button>
+      <div class="dash-head"><div class="dash-ch">
+        <div class="ct" style="color:#0E9488">Cuotas cobradas</div>
+        <div class="dash-seg">
+          <button id="dash-cuo-d" class="on" onclick="setDashPeriodo('cuotas','diario')">Día</button>
+          <button id="dash-cuo-q" onclick="setDashPeriodo('cuotas','quincenal')">Quinc.</button>
+          <button id="dash-cuo-m" onclick="setDashPeriodo('cuotas','mensual')">Mes</button>
         </div>
       </div>
+      <div class="dash-big" id="dash-cuo-big" style="color:#0E9488">—</div>
+      <div class="cs dash-cs"><span id="dash-cuo-sub">Últimos 30 días</span><span id="dash-cuo-avg"></span></div></div>
       <div style="position:relative;height:160px;min-height:160px">
         <canvas id="dash-cuo-chart" style="width:100%;height:100%"></canvas>
       </div>
@@ -423,17 +421,16 @@ PG.dash = function(){
 
     <!-- INGRESOS CHART — tercero -->
     <div class="card">
-      <div class="ch" style="margin-bottom:12px">
-        <div>
-          <div class="ct">Ingresos</div>
-          <div class="cs" id="dash-ing-sub">Últimos 7 meses</div>
-        </div>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-xs btn-p" id="dash-ing-d"  onclick="setDashPeriodo('ingresos','diario')"  style="font-size:10px;padding:4px 9px">Diario</button>
-          <button class="btn btn-xs" id="dash-ing-q"  onclick="setDashPeriodo('ingresos','quincenal')" style="font-size:10px;padding:4px 9px">Quincenal</button>
-          <button class="btn btn-xs" id="dash-ing-m" onclick="setDashPeriodo('ingresos','mensual')"   style="font-size:10px;padding:4px 9px">Mensual</button>
+      <div class="dash-head"><div class="dash-ch">
+        <div class="ct" style="color:var(--p1)">Ingresos</div>
+        <div class="dash-seg">
+          <button id="dash-ing-d" class="on" onclick="setDashPeriodo('ingresos','diario')">Día</button>
+          <button id="dash-ing-q" onclick="setDashPeriodo('ingresos','quincenal')">Quinc.</button>
+          <button id="dash-ing-m" onclick="setDashPeriodo('ingresos','mensual')">Mes</button>
         </div>
       </div>
+      <div class="dash-big" id="dash-ing-big" style="color:var(--p1)">—</div>
+      <div class="cs dash-cs"><span id="dash-ing-sub">Últimos 30 días</span><span id="dash-ing-avg"></span></div></div>
       <div style="position:relative;height:160px;min-height:160px">
         <canvas id="dash-chart" style="width:100%;height:100%"></canvas>
       </div>
@@ -441,17 +438,16 @@ PG.dash = function(){
 
     <!-- EGRESOS CHART — cuarto -->
     <div class="card">
-      <div class="ch" style="margin-bottom:12px">
-        <div>
-          <div class="ct" style="color:var(--red)">Egresos</div>
-          <div class="cs" id="dash-egr-sub">Últimos 30 días</div>
-        </div>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-xs btn-p" id="dash-egr-d"  onclick="setDashPeriodo('egresos','diario')"   style="font-size:10px;padding:4px 9px">Diario</button>
-          <button class="btn btn-xs" id="dash-egr-q"  onclick="setDashPeriodo('egresos','quincenal')" style="font-size:10px;padding:4px 9px">Quincenal</button>
-          <button class="btn btn-xs" id="dash-egr-m" onclick="setDashPeriodo('egresos','mensual')"   style="font-size:10px;padding:4px 9px">Mensual</button>
+      <div class="dash-head"><div class="dash-ch">
+        <div class="ct" style="color:var(--red)">Egresos</div>
+        <div class="dash-seg">
+          <button id="dash-egr-d" class="on" onclick="setDashPeriodo('egresos','diario')">Día</button>
+          <button id="dash-egr-q" onclick="setDashPeriodo('egresos','quincenal')">Quinc.</button>
+          <button id="dash-egr-m" onclick="setDashPeriodo('egresos','mensual')">Mes</button>
         </div>
       </div>
+      <div class="dash-big" id="dash-egr-big" style="color:var(--red)">—</div>
+      <div class="cs dash-cs"><span id="dash-egr-sub">Últimos 30 días</span><span id="dash-egr-avg"></span></div></div>
       <div style="position:relative;height:160px;min-height:160px">
         <canvas id="dash-egr-chart" style="width:100%;height:100%"></canvas>
       </div>
@@ -530,17 +526,16 @@ PG.dash = function(){
 
   <!-- COBROS PROGRAMADOS (full width) — proyección de caja entrante -->
   <div class="card" style="margin-bottom:18px">
-    <div class="ch" style="margin-bottom:12px;flex-wrap:wrap;row-gap:6px">
-      <div>
-        <div class="ct">Cobros programados</div>
-        <div class="cs" id="dash-cobrosp-sub">Próximos 30 días</div>
-      </div>
-      <div style="display:flex;gap:4px">
-        <button class="btn btn-xs btn-p" id="dash-cobrosp-d" onclick="setDashCobrospPeriodo('diario')"    style="font-size:10px;padding:4px 9px">Diario</button>
-        <button class="btn btn-xs"       id="dash-cobrosp-q" onclick="setDashCobrospPeriodo('quincenal')" style="font-size:10px;padding:4px 9px">Quincenal</button>
-        <button class="btn btn-xs"       id="dash-cobrosp-m" onclick="setDashCobrospPeriodo('mensual')"   style="font-size:10px;padding:4px 9px">Mensual</button>
+    <div class="dash-ch">
+      <div class="ct" style="color:var(--p1)">Cobros programados</div>
+      <div class="dash-seg">
+        <button id="dash-cobrosp-d" class="on" onclick="setDashCobrospPeriodo('diario')">Día</button>
+        <button id="dash-cobrosp-q" onclick="setDashCobrospPeriodo('quincenal')">Quinc.</button>
+        <button id="dash-cobrosp-m" onclick="setDashCobrospPeriodo('mensual')">Mes</button>
       </div>
     </div>
+    <div class="dash-big" id="dash-cobrosp-big" style="color:var(--p1)">—</div>
+    <div class="cs dash-cs"><span id="dash-cobrosp-sub">Próximos 30 días</span><span id="dash-cobrosp-avg"></span></div>
     <div style="position:relative;height:200px;min-height:200px">
       <canvas id="dash-cobrosp-chart" style="width:100%;height:100%"></canvas>
     </div>

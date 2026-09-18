@@ -404,13 +404,55 @@ function _egrIdsInicial(){
   return ids;
 }
 
+// ── Estilo comun de los 4 graficos del dashboard (Adam, 17-sep-2026: "ponme el
+// dashboard mas bonito"): barras con degradado y la ultima resaltada, y en la
+// cabecera el total del periodo en grande con su promedio.
+function _dashBarras(fuerte, rgb, primera){
+  return function(context){
+    var chart = context.chart, a = chart.chartArea;
+    var ultima = primera ? context.dataIndex === 0 : context.dataIndex === context.dataset.data.length - 1;
+    if(!a) return ultima ? fuerte : 'rgba('+rgb+',0.18)';
+    var g = chart.ctx.createLinearGradient(0, a.top, 0, a.bottom);
+    if(ultima){ g.addColorStop(0, 'rgba('+rgb+',1)');    g.addColorStop(1, 'rgba('+rgb+',0.6)'); }
+    else      { g.addColorStop(0, 'rgba('+rgb+',0.34)'); g.addColorStop(1, 'rgba('+rgb+',0.08)'); }
+    return g;
+  };
+}
+// Etiqueta del eje en dinero: antes redondeaba a miles y salian repetidas
+// ("$1k, $1k, $2k, $2k"). Con un decimal debajo de 10k ya no se repiten.
+function _dashTick(v){
+  if(!v) return '$0';
+  if(Math.abs(v) < 1000) return '$' + Math.round(v);
+  if(Math.abs(v) < 10000) return '$' + (Math.round(v/100)/10).toString().replace('.', ',') + 'k';
+  return '$' + Math.round(v/1000) + 'k';
+}
+function _dashSub(pre, periodo, n, extra){
+  var el = document.getElementById('dash-'+pre+'-sub');
+  if(!el) return;
+  var t = periodo==='diario' ? 'Últimos '+n+' días' : periodo==='quincenal' ? 'Últimas '+n+' quincenas' : 'Últimos '+n+' meses';
+  el.textContent = t + (extra||'');
+}
+function _dashResumen(pre, valores, periodo, dinero){
+  var tot = valores.reduce(function(a,b){ return a + (+b||0); }, 0);
+  var n = valores.length || 1;
+  var fm = function(v){ return (dinero?'$':'') + Math.round(v).toLocaleString('es-VE'); };
+  var uni = periodo==='diario' ? 'día' : periodo==='quincenal' ? 'quincena' : 'mes';
+  var big = document.getElementById('dash-'+pre+'-big');
+  if(big) big.textContent = fm(tot) + (dinero ? '' : ' otorgados');
+  var avg = document.getElementById('dash-'+pre+'-avg');
+  if(avg){
+    var prom = dinero ? fm(tot/n) : (Math.round(tot/n*10)/10).toLocaleString('es-VE');
+    avg.textContent = tot>0 ? ' · prom. ' + prom + '/' + uni : '';
+  }
+}
+
 function setDashPeriodo(tipo, periodo){
   _dashPeriodo[tipo] = periodo;
   var pre = tipo==='ingresos'?'ing':tipo==='egresos'?'egr':tipo==='cuotas'?'cuo':'cred';
   ['d','q','m'].forEach(function(k){
     var p = k==='d'?'diario':k==='q'?'quincenal':'mensual';
     var btn = document.getElementById('dash-'+pre+'-'+k);
-    if(btn){ btn.className='btn btn-xs'+(p===periodo?' btn-p':''); btn.style.fontSize='10px'; btn.style.padding='4px 9px'; }
+    if(btn) btn.className = (p===periodo ? 'on' : '');
   });
   var subLabels={diario:'Últimos 30 días',quincenal:'Últimas 8 quincenas',mensual:'Últimos 7 meses'};
   if(tipo==='egresos'){
@@ -429,8 +471,7 @@ function renderCredChart(){
   var labels=data.map(function(x){return x.label;}), counts=data.map(function(x){return x.count;});
   var isDark = document.documentElement.getAttribute('data-theme')==='dark';
   var g=isDark?'#00D68F':'#00B876', gt=isDark?'rgba(0,214,143,0.18)':'rgba(0,184,118,0.12)', ink3=isDark?'#6B6896':'#9794BB';
-  var subLabels={diario:'Últimos 30 días',quincenal:'Últimas 8 quincenas',mensual:'Últimos 12 meses'};
-  var sub=document.getElementById('dash-cred-sub'); if(sub) sub.textContent=subLabels[periodo];
+  _dashSub('cred', periodo, data.length); _dashResumen('cred', counts, periodo, false);
   if(_credChart){_credChart.destroy();_credChart=null;}
   // Si no hay datos, mostrar placeholder
   var totalCounts = counts.reduce(function(a,b){return a+b;},0);
@@ -440,7 +481,7 @@ function renderCredChart(){
   if(placeholder) placeholder.style.display = totalCounts===0 ? 'flex' : 'none';
   canvas.style.display = totalCounts===0 ? 'none' : 'block';
   if(totalCounts===0) return;
-  _credChart=new Chart(canvas,{type:'bar',data:{labels:labels,datasets:[{label:'Créditos',data:counts,backgroundColor:counts.map(function(v,i){return i===counts.length-1?g:gt;}),borderColor:'transparent',borderWidth:0,borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:isDark?'#252844':'#fff',borderColor:isDark?'rgba(0,214,143,0.3)':'rgba(0,184,118,0.2)',borderWidth:1,titleColor:isDark?'#E8E6FF':'#0B0B1E',bodyColor:isDark?'#B0ADDB':'#4A4870',padding:10,callbacks:{label:function(ctx){return ' '+ctx.raw+' crédito'+(ctx.raw!==1?'s':'')+' otorgado'+(ctx.raw!==1?'s':'');}}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{color:ink3,font:{size:9}}},y:{grid:{color:isDark?'rgba(0,214,143,0.08)':'rgba(0,184,118,0.06)'},border:{display:false,dash:[4,4]},ticks:{color:ink3,font:{size:9},stepSize:1,maxTicksLimit:5}}}}});
+  _credChart=new Chart(canvas,{type:'bar',data:{labels:labels,datasets:[{label:'Créditos',data:counts,backgroundColor:_dashBarras(g, isDark?'0,214,143':'0,184,118'),borderColor:'transparent',borderWidth:0,borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:isDark?'#252844':'#fff',borderColor:isDark?'rgba(0,214,143,0.3)':'rgba(0,184,118,0.2)',borderWidth:1,titleColor:isDark?'#E8E6FF':'#0B0B1E',bodyColor:isDark?'#B0ADDB':'#4A4870',padding:10,callbacks:{label:function(ctx){return ' '+ctx.raw+' crédito'+(ctx.raw!==1?'s':'')+' otorgado'+(ctx.raw!==1?'s':'');}}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{color:ink3,font:{size:9}}},y:{grid:{color:isDark?'rgba(0,214,143,0.08)':'rgba(0,184,118,0.06)'},border:{display:false,dash:[4,4]},ticks:{color:ink3,font:{size:9},stepSize:1,maxTicksLimit:5}}}}});
 }
 function renderMoraChart(){
   var canvas=document.getElementById('mora-chart');
@@ -673,7 +714,7 @@ function setDashCobrospPeriodo(periodo){
   ['d','q','m'].forEach(function(k){
     var p = k==='d'?'diario':k==='q'?'quincenal':'mensual';
     var btn = document.getElementById('dash-cobrosp-'+k);
-    if(btn){ btn.className='btn btn-xs'+(p===periodo?' btn-p':''); btn.style.fontSize='10px'; btn.style.padding='4px 9px'; }
+    if(btn) btn.className = (p===periodo ? 'on' : '');
   });
   renderDashCobrospChart();
 }
@@ -691,13 +732,14 @@ function renderDashCobrospChart(){
   var labels = buckets.map(function(b){ return b.label; });
   var values = buckets.map(function(b){ return b.monto; });
   var counts = buckets.map(function(b){ return b.cuotas; });
+  _dashResumen('cobrosp', values, periodo, true);
   if(_dashCobrospChart){ _dashCobrospChart.destroy(); _dashCobrospChart=null; }
   _dashCobrospChart = new Chart(canvas, {
     type: 'bar',
     data: { labels: labels, datasets: [{
       label: 'Cobros',
       data: values,
-      backgroundColor: values.map(function(v,i){ return i===0 ? p1 : p1t; }),
+      backgroundColor: _dashBarras(p1, isDark?'59,130,246':'37,99,235', true),
       borderColor: 'transparent',
       borderWidth: 0, borderRadius: 4, borderSkipped: false,
       barPercentage: 0.6, categoryPercentage: 0.82, maxBarThickness: 18
@@ -709,7 +751,7 @@ function renderDashCobrospChart(){
         callbacks:{ label:function(ctx){ var i=ctx.dataIndex; return [' '+fmt(ctx.raw),' '+counts[i]+' cuota'+(counts[i]!==1?'s':'')]; } } } },
       scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:{color:ink3,font:{size:9}} },
         y:{ grid:{color:isDark?'rgba(37,99,235,0.08)':'rgba(37,99,235,0.06)'}, border:{display:false,dash:[4,4]},
-          ticks:{color:ink3, font:{size:9}, callback:function(v){ return v>0?'$'+Math.round(v/1000)+'k':'$0'; }, maxTicksLimit:5} } } }
+          ticks:{color:ink3, font:{size:9}, callback: _dashTick, maxTicksLimit:5} } } }
   });
 }
 function renderDashChart(){
@@ -724,14 +766,12 @@ function renderDashChart(){
   var p1 = isDark ? '#3B82F6' : '#2563EB';
   var p1t = isDark ? 'rgba(124,111,240,0.18)' : 'rgba(37,99,235,0.12)';
   var ink3 = isDark ? '#6B6896' : '#9794BB';
-  var subLabels = {diario:'Últimos 14 días', quincenal:'Últimas 8 quincenas', mensual:'Últimos 7 meses'};
-  var sub = document.getElementById('dash-ing-sub');
-  if(sub) sub.textContent = subLabels[periodo];
+  _dashSub('ing', periodo, data.length); _dashResumen('ing', values, periodo, true);
   if(_dashChart){ _dashChart.destroy(); _dashChart=null; }
   _dashChart = new Chart(canvas, {
     type: 'bar',
     data: { labels: labels, datasets: [{ label: 'Ingresos', data: values,
-      backgroundColor: values.map(function(v,i){ return i===values.length-1 ? p1 : p1t; }),
+      backgroundColor: _dashBarras(p1, isDark?'59,130,246':'37,99,235'),
       borderColor: values.map(function(v,i){ return i===values.length-1 ? p1 : 'transparent'; }),
       borderWidth: 0, borderRadius: 6, borderSkipped: false }] },
     options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
@@ -742,7 +782,7 @@ function renderDashChart(){
       scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: ink3, font: { size: 9 } } },
         y: { grid: { color: isDark?'rgba(37,99,235,0.08)':'rgba(37,99,235,0.06)', drawBorder: false },
           border: { display: false, dash: [4,4] },
-          ticks: { color: ink3, font: { size: 9 }, callback: function(v){ return v>0 ? '$'+Math.round(v/1000)+'k' : '$0'; }, maxTicksLimit: 5 } } } }
+          ticks: { color: ink3, font: { size: 9 }, callback: _dashTick, maxTicksLimit: 5 } } } }
   });
 }
 
@@ -753,50 +793,41 @@ function renderDashEgrChart(){
   var wrapper = canvas.parentElement; if(wrapper) wrapper.style.height='160px';
   var periodo = _dashPeriodo.egresos || 'diario';
   var data = getDashData('egresos', periodo);
-  // Dos barras apiladas: lo que cuesta operar y lo que se coloca en motos. La
-  // inicial del cliente NO entra (Adam, 17-sep-2026); se avisa en el globito.
+  // UNA barra: todo el dinero que sale, SIN la inicial del cliente (Adam,
+  // 17-sep-2026: "los gastos operativos siempre estan en cero porque no los
+  // cargan... quiero el dinero que sale sin las iniciales"). El globito avisa
+  // cuanto de inicial se aparto.
   var labels = data.map(function(x){ return x.label; });
-  var gastos = data.map(function(x){ return x.gastos||0; });
-  var motos  = data.map(function(x){ return x.motos||0; });
+  var values = data.map(function(x){ return (x.gastos||0) + (x.motos||0); });
   var inis   = data.map(function(x){ return x.iniciales||0; });
   var isDark = document.documentElement.getAttribute('data-theme')==='dark';
-  var red   = isDark ? '#ff5577' : '#D93B5A';
-  var ambar = isDark ? '#F5A623' : '#E8980A';
-  var ink3  = isDark ? '#6B6896' : '#9794BB';
-  var subLabels = {diario:'Últimos 30 días', quincenal:'Últimas 8 quincenas', mensual:'Últimos 7 meses'};
-  var sub = document.getElementById('dash-egr-sub');
-  if(sub) sub.textContent = subLabels[periodo] + ' · gastos y compra de motos, sin las iniciales';
+  var red  = isDark ? '#ff5577' : '#D93B5A';
+  var redt = isDark ? 'rgba(255,85,119,0.18)' : 'rgba(217,59,90,0.12)';
+  var ink3 = isDark ? '#6B6896' : '#9794BB';
+  _dashSub('egr', periodo, data.length, ' · sin iniciales'); _dashResumen('egr', values, periodo, true);
   var _d = function(v){ return '$' + Math.round(v||0).toLocaleString('es-VE'); };
   if(_dashEgrChart){ _dashEgrChart.destroy(); _dashEgrChart=null; }
   _dashEgrChart = new Chart(canvas, {
     type: 'bar',
-    data: { labels: labels, datasets: [
-      { label: 'Gastos operativos', data: gastos, backgroundColor: red,
-        borderColor: 'transparent', borderWidth: 0, borderRadius: 4, borderSkipped: false },
-      { label: 'Compra de motos', data: motos, backgroundColor: ambar,
-        borderColor: 'transparent', borderWidth: 0, borderRadius: 4, borderSkipped: false }
-    ] },
+    data: { labels: labels, datasets: [{ label: 'Egresos', data: values,
+      backgroundColor: _dashBarras(red, isDark?'255,85,119':'217,59,90'),
+      borderColor: 'transparent', borderWidth: 0, borderRadius: 6, borderSkipped: false }] },
     options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: true, position: 'bottom',
-          labels: { boxWidth: 9, boxHeight: 9, usePointStyle: true, pointStyle: 'circle', color: ink3, font: { size: 9.5 }, padding: 10 } },
-        tooltip: { backgroundColor: isDark?'#252844':'#fff',
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: isDark?'#252844':'#fff',
         borderColor: isDark?'rgba(217,59,90,0.3)':'rgba(217,59,90,0.2)', borderWidth: 1,
-        titleColor: isDark?'#E8E6FF':'#0B0B1E', bodyColor: isDark?'#B0ADDB':'#4A4870', padding: 10,
+        titleColor: isDark?'#E8E6FF':'#0B0B1E', bodyColor: isDark?'#B0ADDB':'#4A4870', footerColor: ink3, padding: 10,
         callbacks: {
-          label: function(ctx){ return ' ' + ctx.dataset.label + ': ' + _d(ctx.raw); },
+          label: function(ctx){ return ' ' + _d(ctx.raw); },
           footer: function(items){
             if(!items || !items.length) return '';
             var i = items[0].dataIndex;
-            var suma = (gastos[i]||0) + (motos[i]||0);
-            var t = 'Total: ' + _d(suma);
-            if(inis[i] > 0) t += '\nNo incluye ' + _d(inis[i]) + ' de iniciales de clientes';
-            return t;
+            return inis[i] > 0 ? 'No incluye ' + _d(inis[i]) + ' de iniciales' : '';
           }
         } } },
-      scales: { x: { stacked: true, grid: { display: false }, border: { display: false }, ticks: { color: ink3, font: { size: 9 } } },
-        y: { stacked: true, grid: { color: isDark?'rgba(217,59,90,0.08)':'rgba(217,59,90,0.06)', drawBorder: false },
+      scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: ink3, font: { size: 9 } } },
+        y: { grid: { color: isDark?'rgba(217,59,90,0.08)':'rgba(217,59,90,0.06)', drawBorder: false },
           border: { display: false, dash: [4,4] },
-          ticks: { color: ink3, font: { size: 9 }, callback: function(v){ return v>0 ? '$'+Math.round(v/1000)+'k' : '$0'; }, maxTicksLimit: 5 } } } }
+          ticks: { color: ink3, font: { size: 9 }, callback: _dashTick, maxTicksLimit: 5 } } } }
   });
 }
 
@@ -817,14 +848,12 @@ function renderDashCuotasChart(){
   var tl  = isDark ? '#2DD4BF' : '#14B8A6';
   var tlt = isDark ? 'rgba(45,212,191,0.18)' : 'rgba(20,184,166,0.12)';
   var ink3 = isDark ? '#6B6896' : '#9794BB';
-  var subLabels = {diario:'Últimos 30 días', quincenal:'Últimas 8 quincenas', mensual:'Últimos 7 meses'};
-  var sub = document.getElementById('dash-cuo-sub');
-  if(sub) sub.textContent = subLabels[periodo];
+  _dashSub('cuo', periodo, data.length); _dashResumen('cuo', montos, periodo, true);
   if(_dashCuotasChart){ _dashCuotasChart.destroy(); _dashCuotasChart=null; }
   _dashCuotasChart = new Chart(canvas, {
     type: 'bar',
     data: { labels: labels, datasets: [{ label: 'Cuotas cobradas', data: montos,
-      backgroundColor: montos.map(function(v,i){ return i===montos.length-1 ? tl : tlt; }),
+      backgroundColor: _dashBarras(tl, isDark?'45,212,191':'20,184,166'),
       borderColor: 'transparent', borderWidth: 0, borderRadius: 6, borderSkipped: false }] },
     options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: false }, tooltip: { backgroundColor: isDark?'#252844':'#fff',
@@ -834,7 +863,7 @@ function renderDashCuotasChart(){
       scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: ink3, font: { size: 9 } } },
         y: { grid: { color: isDark?'rgba(20,184,166,0.08)':'rgba(20,184,166,0.06)', drawBorder: false },
           border: { display: false, dash: [4,4] },
-          ticks: { color: ink3, font: { size: 9 }, callback: function(v){ return v>0 ? '$'+Math.round(v/1000)+'k' : '$0'; }, maxTicksLimit: 5 } } } }
+          ticks: { color: ink3, font: { size: 9 }, callback: _dashTick, maxTicksLimit: 5 } } } }
   });
 }
 
