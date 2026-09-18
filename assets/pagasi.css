@@ -2369,8 +2369,14 @@ tbody tr:hover td {
 .kx-hero .kx-tit{color:rgba(255,255,255,.9)}
 .kx-ico-w{background:rgba(255,255,255,.16)}
 .kx-chip-w{background:rgba(255,255,255,.16);color:#fff}
-.kx-hero .kx-big{font-size:44px;letter-spacing:-1.5px;margin:18px 0 5px}
-.kx-hero .kx-sub{color:rgba(255,255,255,.8);font-size:12.5px;margin-bottom:20px}
+.kx-nums{container-type:inline-size;display:flex;flex-wrap:wrap;align-items:flex-start;gap:12px 0;margin:18px 0 20px}
+.kx-nums>div{min-width:0}
+.kx-ncred{margin-left:16px;padding-left:16px;border-left:1px solid rgba(255,255,255,.24)}
+.kx-hero .kx-big{font-size:44px;letter-spacing:-.034em;margin:0 0 5px}
+/* los dos numeros grandes caben siempre: la letra baja segun el ancho de la tarjeta y los digitos (--kxk) */
+@supports (width:1cqi){ .kx-hero .kx-nums .kx-big{font-size:clamp(26px,calc((100cqi - 34px) / var(--kxk,6.6)),44px)} }
+.kx-hero .kx-big small{font-size:.5em;letter-spacing:-.3px;opacity:.85;margin-left:1px}
+.kx-hero .kx-sub{color:rgba(255,255,255,.8);font-size:12.5px}
 .kx-hero .kx-split{height:10px;margin-top:auto;background:rgba(255,255,255,.18)}
 .kx-stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:14px}
 .kx-stats div{padding:0 14px;border-left:1px solid rgba(255,255,255,.22);min-width:0}
@@ -2380,7 +2386,7 @@ tbody tr:hover td {
 .kx-stats em{font-style:normal;font-size:11px;font-weight:800;opacity:.82;margin-left:4px}
 /* entre 1381 y 1560 las tarjetas chicas son angostas: la pastilla del mes cortaba el titulo;
    el mes ya va en el texto de abajo */
-@media (min-width:1381px) and (max-width:1560px){ .kx-card .kx-chip{display:none} }
+@media (min-width:1381px) and (max-width:1560px){ .kx-card .kx-chip{display:none} .kx-hero .kx-big{font-size:38px} .kx-ncred{margin-left:14px;padding-left:14px} }
 @media (max-width:1380px){ .kx-row{grid-template-columns:repeat(4,minmax(0,1fr))} .kx-hero{grid-column:1/-1;min-height:0} }
 @media (max-width:1100px){ .kx-row{grid-template-columns:repeat(2,minmax(0,1fr))} }
 @media (max-width:600px){ .kx-row{grid-template-columns:1fr} .kx-hero .kx-big{font-size:36px} }

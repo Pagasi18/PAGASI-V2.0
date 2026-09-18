@@ -108,7 +108,8 @@ const hd = String(ctx.PG.dash());
 const dash = (k) => { const m = hd.match(new RegExp('data-kpi="' + k + '">(\\d+)<')); return m ? +m[1] : null; };
 ok('dashboard: 9 créditos activos en cartera', dash('activos') === 9);
 ok('dashboard: Al día 3 · En mora 6, igual que Créditos', dash('aldia') === 3 && dash('mora') === 6);
-ok('cartera activa del dashboard = cartera viva de Créditos', hd.indexOf('>' + ctx.fmt(saldo9) + '<') > -1);
+const carteraDash = ((hd.match(/data-kpi="cartera">(.*?)<\/div>/) || [])[1] || '').replace(/<[^>]+>/g, '');
+ok('cartera activa del dashboard = cartera viva de Créditos', carteraDash === ctx.fmt(saldo9));
 ctx.S.page = 'creditos';
 
 // ── El globito del menú cuenta lo mismo (6) y al armar el menú sí avisa de los nuevos en mora ──

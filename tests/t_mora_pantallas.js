@@ -92,7 +92,7 @@ const hd = String(ctx.PG.dash());
 const dashKpi = (k) => { const m = hd.match(new RegExp('data-kpi="' + k + '">(\\d+)<')); return m ? +m[1] : null; };
 ok('Dashboard: mismos 9 · 6 · 3 y la misma cartera',
   dashKpi('activos') === ACTIVOS && dashKpi('mora') === EN_MORA && dashKpi('aldia') === AL_DIA
-  && hd.indexOf('>' + ctx.fmt(CARTERA_VIVA) + '<') > -1);
+  && ((hd.match(/data-kpi="cartera">(.*?)<\/div>/) || [])[1] || '').replace(/<[^>]+>/g, '') === ctx.fmt(CARTERA_VIVA));
 
 // ── 3. Reportes › Resumen ──
 ctx.S.page = 'reportes'; ctx.S.reportesTab = 'resumen';

@@ -49,6 +49,13 @@ PG.dash = function(){
   // ── Tarjetas de arriba (diseno B aprobado por Adam, 17-sep-2026) ──
   const _mesCortoDash = new Date().toLocaleDateString('es-VE',{month:'short'}).replace('.','');
   const _mesLargoDash = new Date().toLocaleDateString('es-VE',{month:'long'});
+  // el monto grande sin los centimos del mismo tamano, para que quepa al lado el numero de creditos
+  const _cartTxt = fmt(cartera), _cartComa = _cartTxt.lastIndexOf(',');
+  const _cartEnt = _cartComa > 0 ? _cartTxt.slice(0, _cartComa) : _cartTxt;
+  const _cartCts = _cartComa > 0 ? _cartTxt.slice(_cartComa) : '';
+  // ancho aproximado de los dos numeros grandes (en em): el CSS achica la letra si la tarjeta es angosta
+  const _kxEm = t => [...String(t)].reduce((a, c) => a + (c === '.' || c === ',' ? 0.25 : 0.57), 0);
+  const _kxk = ((_kxEm(_cartEnt) + 0.7 + _kxEm(activosEnCartera)) * 1.03).toFixed(2);
   const _pesos0 = v => '$' + Math.round(v||0).toLocaleString('es-VE');
   const _pesosSigno = v => ((v||0) < 0 ? '−' : '') + '$' + Math.round(Math.abs(v||0)).toLocaleString('es-VE');
   const _pct1 = (n, t) => t > 0 ? (Math.round(n*1000/t)/10).toLocaleString('es-VE') + '%' : '0%';
@@ -304,10 +311,11 @@ PG.dash = function(){
       <div class="kx-top">
         <span class="kx-ico kx-ico-w"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="14" rx="3"/><path d="M16 13h2"/><path d="M5 6V5a2 2 0 0 1 2-2h9"/></svg></span>
         <span class="kx-tit">Cartera activa</span>
-        <span class="kx-chip kx-chip-w"><span data-kpi="activos">${activosEnCartera}</span> créditos</span>
       </div>
-      <div class="kx-big">${fmt(cartera)}</div>
-      <div class="kx-sub">Saldo pendiente de cobro</div>
+      <div class="kx-nums" style="--kxk:${_kxk}">
+        <div><div class="kx-big" data-kpi="cartera">${_cartEnt}<small>${_cartCts}</small></div><div class="kx-sub">Saldo pendiente de cobro</div></div>
+        <div class="kx-ncred"><div class="kx-big" data-kpi="activos">${activosEnCartera}</div><div class="kx-sub">créditos</div></div>
+      </div>
       <div class="kx-split"><i style="width:${(100-pctMoraCart).toFixed(2)}%;background:#fff"></i><i style="width:${pctMoraCart.toFixed(2)}%;background:#FF8BA3"></i></div>
       <div class="kx-stats">
         <div><small>Al día</small><b data-kpi="aldia">${alDia}</b><em>${_pct1(alDia, activosEnCartera)}</em></div>
