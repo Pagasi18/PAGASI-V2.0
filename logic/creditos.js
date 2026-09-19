@@ -1701,7 +1701,7 @@ function _wzRenderResultado(){
       +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Cobro de Inicial</div>'
       +'<div class="fgr">'
       +'<div class="fg"><label>Método de pago inicial *</label><select class="fs" id="wz_ini_metodo" onchange="WZ.iniMetodo=this.value">'
-      +(((_cuentasBanc&&_cuentasBanc.length?_cuentasBanc:[]).map(function(c){ return '<option value="'+c.nombre+'"'+(WZ.iniMetodo&&WZ.iniMetodo===c.nombre?' selected':'')+'>'+c.nombre+'</option>'; }).join('')) || '<option value="Efectivo USD">Efectivo USD</option>')
+      +_wzIniMetodoOpts()
       +'</select></div>'
       +'<div class="fg"><label>Referencia / Comprobante</label><input class="fi" id="wz_ini_ref" placeholder="N° de referencia (opcional)"></div>'
       +'</div>'
@@ -1814,6 +1814,23 @@ function _wzConfirmarCambios(difs, credId){
 }
 
 // ── Guardar solicitud ──
+// Cuentas para el cobro de la inicial: arranca en "— Elegir cuenta —" (antes venia
+// elegida la primera de la lista y la inicial quedaba anotada ahi; punto 8, 19-sep)
+function _wzIniMetodoOpts(){
+  var cuentas = (_cuentasBanc&&_cuentasBanc.length) ? _cuentasBanc : [];
+  if(!cuentas.length) return '<option value="Efectivo USD">Efectivo USD</option>';
+  var elegida = cuentas.some(function(c){ return WZ.iniMetodo && WZ.iniMetodo===c.nombre; });
+  return '<option value=""'+(elegida?'':' selected')+'>— Elegir cuenta —</option>'
+    + cuentas.map(function(c){ return '<option value="'+c.nombre+'"'+(WZ.iniMetodo&&WZ.iniMetodo===c.nombre?' selected':'')+'>'+c.nombre+'</option>'; }).join('');
+}
+// true si hay que registrar la inicial y nadie eligio la cuenta. Solo aplica al crear un
+// credito directo: las solicitudes de concesionario la registran al aprobarse y al editar
+// no se vuelve a cobrar.
+function _wzFaltaCuentaInicial(ini){
+  var sel = document.getElementById('wz_ini_metodo');
+  var esVendConc = (S.currentUser&&S.currentUser.rol)==='Vendedor Concesionario';
+  return !!(sel && !window._wzEditando && !esVendConc && (parseFloat(ini)||0)>0 && !sel.value);
+}
 function _wzGuardar(){
   _wzCollectVisibleValues();
   var btn = document.querySelector('#wz-overlay button[onclick="_wzGuardar()"]');
@@ -1851,6 +1868,12 @@ function _wzGuardar(){
 
   var _wizardDraft = _wzDraftSnapshot();
   var r = WZ.precio>0 ? getWzPlanConfig() : {mode:'global',precioBaseReal:0,ini:0,fin:0,total:0,cuotaQ:0,totalPagado:0,cuotaM:0,plazo:PLAN.plazo,totalCuotas:PLAN.plazo*2,factor:PLAN.factor,inicialPct:PLAN.inicial,tasaMensual:PLAN.tasaMensual,apy:PLAN.apy,sourcePlan:{plazo:PLAN.plazo, factor:PLAN.factor, inicial:PLAN.inicial, tasaMensual:PLAN.tasaMensual, apy:PLAN.apy}};
+  if(_wzFaltaCuentaInicial(r.ini)){
+    toast('Elige en qué cuenta entró la inicial','error');
+    var _selIni = document.getElementById('wz_ini_metodo'); if(_selIni && _selIni.focus) _selIni.focus();
+    if(btn){ btn.textContent='Guardar Solicitud'; btn.disabled=false; }
+    return;
+  }
 
   // Crear cliente
   nextClienteIdAsync().then(function(_nextCliId){

@@ -82,7 +82,9 @@ function _aprAprobar(credId){
   if(c.estado !== 'pendiente_revision'){ toast('Este crédito no está pendiente','error'); return; }
   var iniPlan = parseFloat(c.ini)||0;
   var cuentas = (typeof _cuentasBanc !== 'undefined' && _cuentasBanc && _cuentasBanc.length) ? _cuentasBanc : [];
-  var opts = '<option value="Efectivo USD">Efectivo USD</option>'
+  // Arranca en "— Elegir cuenta —": antes venia "Efectivo USD", que no es ninguna de
+  // las cuentas, y la inicial no aparecia en ningun saldo (punto 8, 19-sep)
+  var opts = (cuentas.length ? '<option value="" selected>— Elegir cuenta —</option>' : '<option value="Efectivo USD">Efectivo USD</option>')
     + cuentas.map(function(cu){ return '<option value="'+String(cu.nombre).replace(/"/g,'')+'">'+String(cu.nombre).replace(/[<>]/g,'')+'</option>'; }).join('');
   $('mic').textContent='OK';
   $('mtt').textContent='Aprobar crédito '+credId;
@@ -113,7 +115,8 @@ function _aprAprobarConfirm(credId){
   if(!c){ toast('Crédito no encontrado','error'); return; }
   if(c.estado !== 'pendiente_revision'){ toast('Este crédito ya no está pendiente','error'); closeM(); return; }
   var monto = parseFloat(($('apr_ini_monto')&&$('apr_ini_monto').value)||'0');
-  var metodo = ($('apr_ini_metodo')&&$('apr_ini_metodo').value) || 'Efectivo USD';
+  var metodo = ($('apr_ini_metodo')&&$('apr_ini_metodo').value) || '';
+  if(!metodo){ toast('Elige en qué cuenta entró la inicial','error'); return; }
   var ref = ($('apr_ini_ref')&&$('apr_ini_ref').value) || '';
   if(!(monto>0)){ toast('Indica la inicial recibida','error'); return; }
   var nombreUser = (S.currentUser&&S.currentUser.nombre)||'Admin';

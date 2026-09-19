@@ -1,7 +1,10 @@
 // Helpers de pago/egreso para compra de motos. Extraido mecanicamente de assets/pagasi-app.js.
+// La cuenta se elige a mano: antes venia elegida la primera de la lista y, si nadie la
+// cambiaba, la compra se anotaba ahi aunque el dinero saliera de otra (punto 8, 19-sep).
 function _mpagoMetodosOpts(){
   var opts = (_cuentasBanc&&_cuentasBanc.length)
-    ? _cuentasBanc.map(function(c){return '<option value="'+c.nombre+'">'+c.nombre+'</option>';}).join('')
+    ? '<option value="" selected>— Elegir cuenta —</option>'
+      + _cuentasBanc.map(function(c){return '<option value="'+c.nombre+'">'+c.nombre+'</option>';}).join('')
     : '<option value="Efectivo USD">Efectivo USD</option>';
   return opts;
 }
@@ -142,6 +145,13 @@ function _mpagoLeerPagos(prefix){
   return pagos;
 }
 function _mpagoValidarContraCosto(prefix, costo){
+  // Un monto sin cuenta elegida no se puede dar por bueno
+  var cont = document.getElementById((prefix||_MPAGO_PREFIX)+'-rows'), sinCuenta = 0;
+  if(cont) cont.querySelectorAll('.mpago-row').forEach(function(row){
+    var cSel = row.querySelector('.'+(prefix||_MPAGO_PREFIX)+'-cuenta'), mInp = row.querySelector('.'+(prefix||_MPAGO_PREFIX)+'-monto');
+    if((parseFloat(mInp&&mInp.value)||0)>0 && !(cSel&&cSel.value)) sinCuenta++;
+  });
+  if(sinCuenta && (parseFloat(costo)||0)>0) return {ok:false, error:'Elige de qué cuenta sale el dinero de la moto'};
   var pagos = _mpagoLeerPagos(prefix);
   var suma = pagos.reduce(function(a,p){return a+p.monto;},0);
   var costoNum = parseFloat(costo)||0;
