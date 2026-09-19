@@ -21,21 +21,38 @@ service cloud.firestore {
     }
     // == Lead del formulario publico (punto 1, 19-sep-2026) ==
     // Cualquiera en internet (sesion anonima) puede crear un lead, asi que aqui se
-    // fija EXACTAMENTE que trae: estos campos y ninguno mas, cada uno de su tipo, con
-    // largo maximo y SIN los caracteres con los que se mete codigo en el panel
+    // fija EXACTAMENTE que trae: estos campos y ninguno mas, textos y numeros de su
+    // tipo, y SIN los caracteres con los que se mete codigo en el panel
     // (< > " ' ` \ &). El formulario ya los quita; quien escriba directo en la base
     // con otra cosa queda rechazado. La lista sale de buildClientePayload()
     // (assets/public/request.js): si el formulario gana un campo, hay que sumarlo aqui.
-    function txt(v, max) {
-      return v is string && v.size() <= max && v.matches("[^<>\"'`&\\\\]*");
-    }
-    function refWebOk(r) {
-      return r is map && r.keys().hasOnly(['nom','ci','tel','rel','obs'])
-        && txt(r.get('nom', ''), 120) && txt(r.get('ci', ''), 40) && txt(r.get('tel', ''), 40)
-        && txt(r.get('rel', ''), 80) && txt(r.get('obs', ''), 300);
-    }
+    // Los textos se revisan JUNTOS (una sola cadena): uno por uno pasaba el limite de
+    // 1.000 expresiones por pedido de Firebase y rechazaba hasta el lead bueno.
     function esLeadWeb(id) {
       let d = request.resource.data;
+      let r1 = d.get('ref1', {});
+      let r2 = d.get('ref2', {});
+      let textos = d.nombre
+          + d.get('cedula', '') + d.get('rif', '') + d.get('nacionalidad', '') + d.get('tel', '') +
+          d.get('wa', '') + d.get('email', '') + d.get('ciudad', '') + d.get('estado_ubi', '') +
+          d.get('dir', '') + d.get('tiempo_dir', '') + d.get('vivienda', '') +
+          d.get('terremoto_afectado', '') + d.get('terremoto_danos', '') + d.get('trabajo', '') +
+          d.get('empresa', '') + d.get('cargo', '') + d.get('dir_trabajo', '') +
+          d.get('tel_trabajo', '') + d.get('antiguedad', '') + d.get('remesas', '') +
+          d.get('historial', '') + d.get('deudas', '') + d.get('banco_estado', '') +
+          d.get('banco_nombre', '') + d.get('banco_cobro', '') + d.get('cuenta_digitos', '') +
+          d.get('ahorro', '') + d.get('cashea', '') + d.get('cashea_nivel', '') +
+          d.get('cashea_pago', '') + d.get('cashea_estado', '') + d.get('cashea_deuda', '') +
+          d.get('cashea_ultimo_art', '') + d.get('cashea_ultima_fecha', '') +
+          d.get('cashea_total_compras', '') + d.get('cashea_obs', '') + d.get('fiador', '') +
+          d.get('fiador_nom', '') + d.get('fiador_tel', '') + d.get('fiador_ci', '') +
+          d.get('fiador_rif', '') + d.get('fiador_dir', '') + d.get('fiador_email', '') +
+          d.get('fiador_rel', '') + d.get('impresion', '') + d.get('notas', '') +
+          d.get('conocio', '') + d.get('moto_interes_modelo', '') +
+          d.get('moto_interes_sede', '') + d.get('creado', '') + d.get('editadoEn', '') +
+          d.get('editadoPor', '') + r1.get('nom', '') + r1.get('ci', '') + r1.get('tel', '') +
+          r1.get('rel', '') + r1.get('obs', '') + r2.get('nom', '') + r2.get('ci', '') +
+          r2.get('tel', '') + r2.get('rel', '') + r2.get('obs', '');
       return request.auth != null
         && d.estado == 'lead'
         && d.origen == 'web'
@@ -54,77 +71,20 @@ service cloud.firestore {
           'f5', 'moto_interes_id', 'moto_interes_modelo', 'moto_interes_precio',
           'moto_interes_sede', 'estado', 'origen', 'creado', 'editadoEn', 'editadoPor'
         ])
-        && txt(d.nombre, 120) && d.nombre.size() > 0
-        && txt(d.get('nombre', ''), 120)
-        && txt(d.get('cedula', ''), 200)
-        && txt(d.get('rif', ''), 200)
-        && txt(d.get('nacionalidad', ''), 200)
-        && txt(d.get('tel', ''), 200)
-        && txt(d.get('wa', ''), 200)
-        && txt(d.get('email', ''), 200)
-        && txt(d.get('ciudad', ''), 200)
-        && txt(d.get('estado_ubi', ''), 200)
-        && txt(d.get('dir', ''), 300)
-        && txt(d.get('tiempo_dir', ''), 200)
-        && txt(d.get('vivienda', ''), 200)
-        && txt(d.get('terremoto_afectado', ''), 200)
-        && txt(d.get('terremoto_danos', ''), 200)
-        && txt(d.get('trabajo', ''), 200)
-        && txt(d.get('empresa', ''), 200)
-        && txt(d.get('cargo', ''), 200)
-        && txt(d.get('dir_trabajo', ''), 200)
-        && txt(d.get('tel_trabajo', ''), 200)
-        && txt(d.get('antiguedad', ''), 200)
-        && d.get('ingreso', 0) is number
-        && d.get('ingreso_familiar', 0) is number
-        && txt(d.get('remesas', ''), 200)
-        && d.get('dependientes', 0) is number
-        && txt(d.get('historial', ''), 200)
-        && txt(d.get('deudas', ''), 200)
-        && txt(d.get('banco_estado', ''), 200)
-        && txt(d.get('banco_nombre', ''), 200)
-        && txt(d.get('banco_cobro', ''), 200)
-        && txt(d.get('cuenta_digitos', ''), 200)
-        && txt(d.get('ahorro', ''), 200)
-        && txt(d.get('cashea', ''), 200)
-        && txt(d.get('cashea_nivel', ''), 200)
-        && txt(d.get('cashea_pago', ''), 200)
-        && txt(d.get('cashea_estado', ''), 200)
-        && txt(d.get('cashea_deuda', ''), 200)
-        && d.get('cashea_monto', 0) is number
-        && d.get('cashea_cuotas_pend', 0) is number
-        && txt(d.get('cashea_ultimo_art', ''), 200)
-        && d.get('cashea_ultimo_monto', 0) is number
-        && txt(d.get('cashea_ultima_fecha', ''), 200)
-        && txt(d.get('cashea_total_compras', ''), 200)
-        && txt(d.get('cashea_obs', ''), 300)
-        && txt(d.get('fiador', ''), 200)
-        && txt(d.get('fiador_nom', ''), 200)
-        && txt(d.get('fiador_tel', ''), 200)
-        && txt(d.get('fiador_ci', ''), 200)
-        && txt(d.get('fiador_rif', ''), 200)
-        && txt(d.get('fiador_dir', ''), 300)
-        && txt(d.get('fiador_email', ''), 200)
-        && txt(d.get('fiador_rel', ''), 200)
-        && d.get('docs_count', 0) is number
-        && txt(d.get('impresion', ''), 200)
-        && txt(d.get('notas', ''), 300)
-        && txt(d.get('conocio', ''), 200)
-        && d.get('score_indexa', 0) is number
-        && d.get('f1', 0) is number
-        && d.get('f2', 0) is number
-        && d.get('f3', 0) is number
-        && d.get('f4', 0) is number
-        && d.get('f5', 0) is number
-        && txt(d.get('moto_interes_modelo', ''), 200)
+        && r1.keys().hasOnly(['nom','ci','tel','rel','obs'])
+        && r2.keys().hasOnly(['nom','ci','tel','rel','obs'])
+        && d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 120
+        && textos.size() <= 8000
+        && textos.matches("[^<>\"'`&\\\\]*")
+        && d.get('ingreso', 0) is number && d.get('ingreso_familiar', 0) is number &&
+        && d.get('dependientes', 0) is number && d.get('cashea_monto', 0) is number &&
+        && d.get('cashea_cuotas_pend', 0) is number && d.get('cashea_ultimo_monto', 0) is number &&
+        && d.get('docs_count', 0) is number && d.get('score_indexa', 0) is number &&
+        && d.get('f1', 0) is number && d.get('f2', 0) is number && d.get('f3', 0) is number &&
+        && d.get('f4', 0) is number && d.get('f5', 0) is number &&
         && d.get('moto_interes_precio', 0) is number
-        && txt(d.get('moto_interes_sede', ''), 200)
-        && txt(d.get('creado', ''), 40)
-        && txt(d.get('editadoEn', ''), 40)
-        && txt(d.get('editadoPor', ''), 200)
         && (d.get('moto_interes_id', null) == null || d.get('moto_interes_id', null) is int)
-        && refWebOk(d.get('ref1', {})) && refWebOk(d.get('ref2', {}))
-        && d.get('documentos', []) is list && d.get('documentos', []).size() == 0;
+        && d.get('documentos', []).size() == 0;
     }
 
     // == Identidad del CLIENTE (portal micuenta.html) ==
