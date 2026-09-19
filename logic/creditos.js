@@ -605,7 +605,9 @@ function _wzCliSearch(){
       return creds.length === 0;
     }
     dd.innerHTML = resultados.map(function(c){
-      var nombreEsc = (c.nombre||'(sin nombre)').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+      // Todo lo que viene del cliente (y un lead lo escribe cualquiera en la web) se limpia (punto 1, 19-sep)
+      var _e = function(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); };
+      var nombreEsc = _e(c.nombre||'(sin nombre)');
       var esLead = esCliLead(c);
       var esLeadWeb = c.origen === 'web';
       var bg = esLead ? 'background:rgba(37,99,235,.06);border-left:3px solid var(--p1)' : 'background:none';
@@ -620,7 +622,7 @@ function _wzCliSearch(){
         + 'style="display:block;width:100%;text-align:left;padding:9px 12px;'+bg+';border:none;border-bottom:1px solid var(--rim2);cursor:pointer;font-family:var(--f);transition:background .15s" '
         + 'onmouseover="this.style.background=\''+bgHoverIn+'\'" onmouseout="this.style.background=\''+bgHoverOut+'\'">'
         + '<div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:700;color:var(--ink)">'+nombreEsc+'</span>'+leadBadge+fechaTag+'</div>'
-        + '<div style="font-size:11px;color:var(--ink3);margin-top:2px">C.I.: '+(c.cedula||'—')+(c.tel?' · '+c.tel:'')+(c.ciudad?' · '+c.ciudad:'')+'</div>'
+        + '<div style="font-size:11px;color:var(--ink3);margin-top:2px">C.I.: '+_e(c.cedula||'—')+(c.tel?' · '+_e(c.tel):'')+(c.ciudad?' · '+_e(c.ciudad):'')+'</div>'
         + '</button>';
     }).join('');
   }

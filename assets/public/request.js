@@ -107,7 +107,9 @@ function calcCrediScore(){
   return {score:score,f1:Math.round(f1),f2:Math.round(f2),f3:Math.round(f3),f4:Math.round(f4),f5:Math.round(f5),ratio:ratio};
 }
 
-function _v(id){ var e=document.getElementById(id); return e ? String(e.value||'').replace(/[<>]/g,'').trim() : ''; }
+// Sin < > " ' ` \ y con & como "y": las Reglas de Firestore rechazan un lead con esos
+// caracteres (con ellos se puede meter codigo en el panel; punto 1, 19-sep).
+function _v(id){ var e=document.getElementById(id); return e ? String(e.value||'').replace(/&/g,' y ').replace(/[<>"'`\\]/g,'').replace(/\s+/g,' ').trim() : ''; }
 function _n(id){ var e=document.getElementById(id); return e ? (parseFloat(e.value)||0) : 0; }
 function _i(id){ var e=document.getElementById(id); return e ? (parseInt(e.value,10)||0) : 0; }
 

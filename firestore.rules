@@ -19,10 +19,112 @@ service cloud.firestore {
         && ( get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'Administrador'
           || get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin' );
     }
-    // Un lead del formulario publico: solo se permite CREAR con esta forma.
-    function esLeadWeb() {
-      return request.resource.data.estado == 'lead'
-        && request.resource.data.origen == 'web';
+    // == Lead del formulario publico (punto 1, 19-sep-2026) ==
+    // Cualquiera en internet (sesion anonima) puede crear un lead, asi que aqui se
+    // fija EXACTAMENTE que trae: estos campos y ninguno mas, cada uno de su tipo, con
+    // largo maximo y SIN los caracteres con los que se mete codigo en el panel
+    // (< > " ' ` \ &). El formulario ya los quita; quien escriba directo en la base
+    // con otra cosa queda rechazado. La lista sale de buildClientePayload()
+    // (assets/public/request.js): si el formulario gana un campo, hay que sumarlo aqui.
+    function txt(v, max) {
+      return v is string && v.size() <= max && v.matches("[^<>\"'`&\\\\]*");
+    }
+    function refWebOk(r) {
+      return r is map && r.keys().hasOnly(['nom','ci','tel','rel','obs'])
+        && txt(r.get('nom', ''), 120) && txt(r.get('ci', ''), 40) && txt(r.get('tel', ''), 40)
+        && txt(r.get('rel', ''), 80) && txt(r.get('obs', ''), 300);
+    }
+    function esLeadWeb(id) {
+      let d = request.resource.data;
+      return request.auth != null
+        && d.estado == 'lead'
+        && d.origen == 'web'
+        && id.matches('WEB-[0-9]{10,16}') && d.id == id
+        && d.keys().hasOnly([
+          'id', 'nombre', 'cedula', 'rif', 'nacionalidad', 'tel', 'wa', 'email', 'ciudad',
+          'estado_ubi', 'dir', 'tiempo_dir', 'vivienda', 'terremoto_afectado', 'terremoto_danos',
+          'trabajo', 'empresa', 'cargo', 'dir_trabajo', 'tel_trabajo', 'antiguedad', 'ingreso',
+          'ingreso_familiar', 'remesas', 'dependientes', 'historial', 'deudas', 'banco_estado',
+          'banco_nombre', 'banco_cobro', 'cuenta_digitos', 'ahorro', 'cashea', 'cashea_nivel',
+          'cashea_pago', 'cashea_estado', 'cashea_deuda', 'cashea_monto', 'cashea_cuotas_pend',
+          'cashea_ultimo_art', 'cashea_ultimo_monto', 'cashea_ultima_fecha',
+          'cashea_total_compras', 'cashea_obs', 'fiador', 'fiador_nom', 'fiador_tel', 'fiador_ci',
+          'fiador_rif', 'fiador_dir', 'fiador_email', 'fiador_rel', 'ref1', 'ref2', 'docs_count',
+          'documentos', 'impresion', 'notas', 'conocio', 'score_indexa', 'f1', 'f2', 'f3', 'f4',
+          'f5', 'moto_interes_id', 'moto_interes_modelo', 'moto_interes_precio',
+          'moto_interes_sede', 'estado', 'origen', 'creado', 'editadoEn', 'editadoPor'
+        ])
+        && txt(d.nombre, 120) && d.nombre.size() > 0
+        && txt(d.get('nombre', ''), 120)
+        && txt(d.get('cedula', ''), 200)
+        && txt(d.get('rif', ''), 200)
+        && txt(d.get('nacionalidad', ''), 200)
+        && txt(d.get('tel', ''), 200)
+        && txt(d.get('wa', ''), 200)
+        && txt(d.get('email', ''), 200)
+        && txt(d.get('ciudad', ''), 200)
+        && txt(d.get('estado_ubi', ''), 200)
+        && txt(d.get('dir', ''), 300)
+        && txt(d.get('tiempo_dir', ''), 200)
+        && txt(d.get('vivienda', ''), 200)
+        && txt(d.get('terremoto_afectado', ''), 200)
+        && txt(d.get('terremoto_danos', ''), 200)
+        && txt(d.get('trabajo', ''), 200)
+        && txt(d.get('empresa', ''), 200)
+        && txt(d.get('cargo', ''), 200)
+        && txt(d.get('dir_trabajo', ''), 200)
+        && txt(d.get('tel_trabajo', ''), 200)
+        && txt(d.get('antiguedad', ''), 200)
+        && d.get('ingreso', 0) is number
+        && d.get('ingreso_familiar', 0) is number
+        && txt(d.get('remesas', ''), 200)
+        && d.get('dependientes', 0) is number
+        && txt(d.get('historial', ''), 200)
+        && txt(d.get('deudas', ''), 200)
+        && txt(d.get('banco_estado', ''), 200)
+        && txt(d.get('banco_nombre', ''), 200)
+        && txt(d.get('banco_cobro', ''), 200)
+        && txt(d.get('cuenta_digitos', ''), 200)
+        && txt(d.get('ahorro', ''), 200)
+        && txt(d.get('cashea', ''), 200)
+        && txt(d.get('cashea_nivel', ''), 200)
+        && txt(d.get('cashea_pago', ''), 200)
+        && txt(d.get('cashea_estado', ''), 200)
+        && txt(d.get('cashea_deuda', ''), 200)
+        && d.get('cashea_monto', 0) is number
+        && d.get('cashea_cuotas_pend', 0) is number
+        && txt(d.get('cashea_ultimo_art', ''), 200)
+        && d.get('cashea_ultimo_monto', 0) is number
+        && txt(d.get('cashea_ultima_fecha', ''), 200)
+        && txt(d.get('cashea_total_compras', ''), 200)
+        && txt(d.get('cashea_obs', ''), 300)
+        && txt(d.get('fiador', ''), 200)
+        && txt(d.get('fiador_nom', ''), 200)
+        && txt(d.get('fiador_tel', ''), 200)
+        && txt(d.get('fiador_ci', ''), 200)
+        && txt(d.get('fiador_rif', ''), 200)
+        && txt(d.get('fiador_dir', ''), 300)
+        && txt(d.get('fiador_email', ''), 200)
+        && txt(d.get('fiador_rel', ''), 200)
+        && d.get('docs_count', 0) is number
+        && txt(d.get('impresion', ''), 200)
+        && txt(d.get('notas', ''), 300)
+        && txt(d.get('conocio', ''), 200)
+        && d.get('score_indexa', 0) is number
+        && d.get('f1', 0) is number
+        && d.get('f2', 0) is number
+        && d.get('f3', 0) is number
+        && d.get('f4', 0) is number
+        && d.get('f5', 0) is number
+        && txt(d.get('moto_interes_modelo', ''), 200)
+        && d.get('moto_interes_precio', 0) is number
+        && txt(d.get('moto_interes_sede', ''), 200)
+        && txt(d.get('creado', ''), 40)
+        && txt(d.get('editadoEn', ''), 40)
+        && txt(d.get('editadoPor', ''), 200)
+        && (d.get('moto_interes_id', null) == null || d.get('moto_interes_id', null) is int)
+        && refWebOk(d.get('ref1', {})) && refWebOk(d.get('ref2', {}))
+        && d.get('documentos', []) is list && d.get('documentos', []).size() == 0;
     }
 
     // == Identidad del CLIENTE (portal micuenta.html) ==
@@ -50,6 +152,10 @@ service cloud.firestore {
     }
 
     // == Usuarios ==
+    // Campos de la ficha que dan acceso o dinero: solo los pone un admin.
+    function camposDeAcceso() {
+      return ['rol','permisos','concesionarios','comisiones','suspendido','isDemo','demoExpira','demoHoras'];
+    }
     // Crear la ficha propia SOLO al aceptar una invitacion valida (el email del
     // doc debe coincidir con el de la cuenta, y debe existir una invitacion
     // para ese email). Asi, aunque el registro email/clave este abierto, nadie
@@ -65,12 +171,21 @@ service cloud.firestore {
              && request.resource.data.email.lower() == request.auth.token.email.lower()
              && request.resource.data.inviteToken is string
              && exists(/databases/$(database)/documents/invitaciones/$(request.resource.data.inviteToken))
-             && get(/databases/$(database)/documents/invitaciones/$(request.resource.data.inviteToken)).data.email.lower() == request.auth.token.email.lower() );
-      // Editar la ficha propia, pero SIN poder cambiarse el rol uno mismo.
+             && get(/databases/$(database)/documents/invitaciones/$(request.resource.data.inviteToken)).data.email.lower() == request.auth.token.email.lower()
+             // Punto 2 (19-sep-2026): la invitacion no puede estar usada (un exempleado
+             // con su link viejo ya no entra), y el rol y los permisos son los que puso
+             // el admin en la invitacion, no los que mande quien la acepta.
+             && get(/databases/$(database)/documents/invitaciones/$(request.resource.data.inviteToken)).data.get('usado', false) != true
+             && request.resource.data.rol == get(/databases/$(database)/documents/invitaciones/$(request.resource.data.inviteToken)).data.rol
+             && request.resource.data.permisos == get(/databases/$(database)/documents/invitaciones/$(request.resource.data.inviteToken)).data.get('permisos', [])
+             && !request.resource.data.keys().hasAny(camposDeAcceso().removeAll(['rol','permisos'])) );
+      // Editar la ficha propia (perfil, ultimo acceso), pero SIN tocar nada que dé
+      // acceso: antes solo el rol estaba protegido y cada uno podia darse permisos,
+      // sedes o comisiones, o quitarse la suspension (punto 2).
       allow update: if esAdmin()
         || ( noAnonimo()
              && request.auth.uid == uid
-             && request.resource.data.rol == resource.data.rol );
+             && !request.resource.data.diff(resource.data).affectedKeys().hasAny(camposDeAcceso()) );
       allow delete: if esAdmin();
     }
 
@@ -177,7 +292,7 @@ service cloud.firestore {
     match /clientes/{id} {
       allow get:    if esStaff() || esClienteDe(id);
       allow list:   if esStaff();
-      allow create: if esStaff() || (request.auth != null && esLeadWeb());
+      allow create: if esStaff() || esLeadWeb(id);
       allow update: if esStaff();
       allow delete: if esAdmin();
     }

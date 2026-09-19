@@ -440,18 +440,22 @@ function verCliente(id){
   $('modal-box').className='modal modal-lg';
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+  // HTML armado por este codigo: va marcado. Todo lo demas que llega a field() es un
+  // dato (del cliente, de la web) y se limpia. Antes bastaba con que el dato empezara
+  // por "<span" para pintarse tal cual (punto 1, 19-sep).
+  function H(html){ return {__h: html}; }
   function val(v, fallback){
-    if(v==null || v==='' || v==='0' || v===0) return '<span class="cf-field-v is-empty">'+(fallback||'—')+'</span>';
-    return '<span class="cf-field-v">'+esc(v)+'</span>';
+    if(v==null || v==='' || v==='0' || v===0) return H('<span class="cf-field-v is-empty">'+esc(fallback||'—')+'</span>');
+    return H('<span class="cf-field-v">'+esc(v)+'</span>');
   }
   function valMoney(v){
     var n = parseFloat(v||0);
-    if(!n) return '<span class="cf-field-v is-empty">—</span>';
-    return '<span class="cf-field-v is-em">'+fmt(n)+'</span>';
+    if(!n) return H('<span class="cf-field-v is-empty">—</span>');
+    return H('<span class="cf-field-v is-em">'+fmt(n)+'</span>');
   }
   function field(label, v, mono){
     return '<div class="cf-field"><div class="cf-field-l">'+esc(label)+'</div>'
-      + (typeof v==='string' && v.indexOf('<span')===0 ? v : '<div class="cf-field-v'+(mono?' is-mono':'')+'">'+(v||'<span class="cf-field-v is-empty">—</span>')+'</div>')
+      + (v && typeof v==='object' && v.__h!=null ? v.__h : '<div class="cf-field-v'+(mono?' is-mono':'')+'">'+(v?esc(v):'<span class="cf-field-v is-empty">—</span>')+'</div>')
       + '</div>';
   }
   function initials(name){
@@ -694,7 +698,7 @@ function verCliente(id){
     + '<div class="cf-grid-3">'
     + field('Ingreso mensual', valMoney(ingreso))
     + field('Ingreso familiar', valMoney(ingresoFam))
-    + field('Recibe remesas', c.remesas==='si'?'<span class="cf-field-v" style="color:var(--green)">✓ Sí</span>':'<span class="cf-field-v is-empty">No</span>')
+    + field('Recibe remesas', c.remesas==='si'?H('<span class="cf-field-v" style="color:var(--green)">✓ Sí</span>'):H('<span class="cf-field-v is-empty">No</span>'))
     + field('Dependientes', c.dependientes)
     + field('Deudas previas', c.deudas)
     + field('Historial crediticio', c.historial)
@@ -727,9 +731,9 @@ function verCliente(id){
     var casheaEstadoLbl = {al_dia:'Al día',mora_leve:'Mora leve (<30d)',mora_grave:'Mora grave (>30d)',completado:'Canceló todo'}[c.cashea_estado] || '—';
     var casheaEstadoCol = {al_dia:'var(--green)',mora_leve:'var(--amber)',mora_grave:'var(--red)',completado:'var(--p1)'}[c.cashea_estado] || 'var(--ink3)';
     html += '<div class="cf-grid-3">'
-      + field('Cliente Cashea', '<span class="cf-field-v" style="color:var(--green)">✓ Sí</span>')
+      + field('Cliente Cashea', H('<span class="cf-field-v" style="color:var(--green)">✓ Sí</span>'))
       + field('Nivel', c.cashea_nivel ? 'Nivel '+c.cashea_nivel : null)
-      + field('Estado actual', c.cashea_estado ? '<span class="cf-field-v" style="color:'+casheaEstadoCol+';font-weight:800">'+casheaEstadoLbl+'</span>' : null)
+      + field('Estado actual', c.cashea_estado ? H('<span class="cf-field-v" style="color:'+casheaEstadoCol+';font-weight:800">'+esc(casheaEstadoLbl)+'</span>') : null)
       + '</div>';
     // Deuda activa
     if(c.cashea_deuda==='si' || c.cashea_monto>0){

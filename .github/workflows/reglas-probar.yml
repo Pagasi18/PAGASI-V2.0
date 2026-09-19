@@ -25,3 +25,5 @@ jobs:
         run: npm install --no-save --no-audit --no-fund firebase-tools@13 @firebase/rules-unit-testing@3 firebase@10
       - name: Probar reglas del GPS en Mi cuenta
         run: npx firebase emulators:exec --config tests/reglas/firebase.json --only firestore --project demo-pagasi "node tests/reglas/t_reglas_gps_cliente.js"
+      - name: Probar reglas de seguridad (lead web e invitaciones)
+        run: npx firebase emulators:exec --config tests/reglas/firebase.json --only firestore --project demo-pagasi "node tests/reglas/t_reglas_seguridad.js"

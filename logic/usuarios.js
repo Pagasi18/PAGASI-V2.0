@@ -1455,7 +1455,9 @@ function copiarInvitacionUsuario(uid){
     var nuevoLink = _buildInviteLink(nuevoToken, data.email);
     // Buscar rol y permisos del usuario para guardarlos en la nueva invitación
     var rol = data.rol || 'Empleado';
-    var permisos = data.permisos || [];
+    // Nunca una invitacion sin permisos: al aceptarla se copian tal cual (punto 2)
+    var permisos = (Array.isArray(data.permisos) && data.permisos.length) ? data.permisos
+      : ((typeof ROL_PERMISOS!=='undefined' && ROL_PERMISOS[rol]) || ['dash']);
     var payload = { token: nuevoToken, email: data.email, nombre: data.nombre||data.email,
       rol: rol, permisos: permisos, creadoPor: (S.currentUser&&S.currentUser.nombre)||'Admin',
       creadoEn: new Date().toISOString(), usado: false, inviteLink: nuevoLink };
@@ -1623,9 +1625,11 @@ function aceptarInvitacion() {
           // Nunca escribir permisos vacíos: el listener de arranque rellena un
           // array vacío con el set COMPLETO (incluido users/config/perm_delete),
           // así que un [] aquí se convertiría en acceso total en el siguiente login.
-          permisos: (Array.isArray(pending.permisos) && pending.permisos.length)
-                      ? pending.permisos
-                      : ((typeof ROL_PERMISOS!=='undefined' && ROL_PERMISOS[pending.rol||'Empleado']) || ROL_PERMISOS.Empleado || ['dash']),
+          // Exactamente los de la invitacion: las Reglas de Firestore lo exigen (punto 2,
+          // 19-sep) para que nadie se ponga otros al aceptar. Las invitaciones siempre
+          // traen permisos (al crearlas y al regenerarlas); si una vieja no los trae, el
+          // admin se los asigna despues desde Usuarios.
+          permisos: Array.isArray(pending.permisos) ? pending.permisos : [],
           inviteStatus: 'aceptada',
           inviteAcceptedAt: new Date().toISOString(),
           debeActualizar: false
