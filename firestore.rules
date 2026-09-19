@@ -74,7 +74,7 @@ service cloud.firestore {
         && r1.keys().hasOnly(['nom','ci','tel','rel','obs'])
         && r2.keys().hasOnly(['nom','ci','tel','rel','obs'])
         && d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 120
-        && textos.size() <= 8000
+        && textos.size() <= 4000
         && textos.matches("[^<>\"'`&\\\\]*")
         && d.get('ingreso', 0) is number && d.get('ingreso_familiar', 0) is number
         && d.get('dependientes', 0) is number && d.get('cashea_monto', 0) is number
