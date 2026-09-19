@@ -76,12 +76,12 @@ service cloud.firestore {
         && d.nombre is string && d.nombre.size() > 0 && d.nombre.size() <= 120
         && textos.size() <= 8000
         && textos.matches("[^<>\"'`&\\\\]*")
-        && d.get('ingreso', 0) is number && d.get('ingreso_familiar', 0) is number &&
-        && d.get('dependientes', 0) is number && d.get('cashea_monto', 0) is number &&
-        && d.get('cashea_cuotas_pend', 0) is number && d.get('cashea_ultimo_monto', 0) is number &&
-        && d.get('docs_count', 0) is number && d.get('score_indexa', 0) is number &&
-        && d.get('f1', 0) is number && d.get('f2', 0) is number && d.get('f3', 0) is number &&
-        && d.get('f4', 0) is number && d.get('f5', 0) is number &&
+        && d.get('ingreso', 0) is number && d.get('ingreso_familiar', 0) is number
+        && d.get('dependientes', 0) is number && d.get('cashea_monto', 0) is number
+        && d.get('cashea_cuotas_pend', 0) is number && d.get('cashea_ultimo_monto', 0) is number
+        && d.get('docs_count', 0) is number && d.get('score_indexa', 0) is number
+        && d.get('f1', 0) is number && d.get('f2', 0) is number && d.get('f3', 0) is number
+        && d.get('f4', 0) is number && d.get('f5', 0) is number
         && d.get('moto_interes_precio', 0) is number
         && (d.get('moto_interes_id', null) == null || d.get('moto_interes_id', null) is int)
         && d.get('documentos', []).size() == 0;
