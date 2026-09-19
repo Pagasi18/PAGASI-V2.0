@@ -73,7 +73,7 @@ function medir(movs, egresos, motos) {
     const sobra = (devueltas - pedido) * n2(o.monto);
     if (devueltas === 0 && pedido === 0) return;
     eventos.push({ tipo, cuenta: String(o.cuentaOrigen || '(sin cuenta)'), monto: n2(o.monto), fecha: dia(o.fecha), cuando, porque,
-      eleccion, devueltas, pedido, sobra, retiroAnulado: !!o.eliminado, reversos: revs.length,
+      eleccion, devueltas, pedido, sobra, retiroAnulado: !!o.eliminado, reversos: revs.length, revKeys: revs.map(r => r._k),
       ref: tipo === 'compra_moto' ? 'moto #' + o.motoIdRef : 'egreso #' + o.conceptoEgreso });
   });
   return { eventos, sinEnlace };

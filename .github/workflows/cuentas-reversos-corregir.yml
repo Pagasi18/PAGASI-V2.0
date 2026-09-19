@@ -1,0 +1,45 @@
+name: Cuentas - anular reversos repetidos (punto 3, manual)
+
+# Correccion puntual del 18-sep-2026. Con dry (por defecto) no escribe nada.
+# Para escribir hay que decir cuantos movimientos y que total se esperan; si no
+# coincide con lo que encuentra, no toca nada. Respaldo en respaldos/.
+on:
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: 'Solo mostrar lo que haria, sin escribir'
+        type: boolean
+        default: true
+      esperado_n:
+        description: 'Cantidad de movimientos que se esperan (solo para escribir)'
+        type: string
+        default: ''
+      esperado_total:
+        description: 'Total que se espera, p.ej. 5270 (solo para escribir)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  corregir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: pagasi-v2
+          workload_identity_provider: projects/951911859002/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: firebase-adminsdk-fbsvc@pagasi-v2.iam.gserviceaccount.com
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - working-directory: bot
+        run: npm install --omit=dev
+      - working-directory: bot
+        env:
+          ESPERADO_N: ${{ inputs.esperado_n }}
+          ESPERADO_TOTAL: ${{ inputs.esperado_total }}
+        run: node cuentas-reversos-corregir.js ${{ inputs.dry && '--dry' || '' }}
