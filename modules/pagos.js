@@ -14,6 +14,22 @@ function _tipoPagoBdg(t){
 }
 function setPagosTipoF(t){ S.pagosTipoF=t; pgSet('pagos',1); nav('pagos'); }
 
+// Hora en que se registro el pago (Adam, 18-sep-2026). No hay campo aparte: sale del
+// numero del pago, que es el momento exacto de registro (PAG-1789736201484,
+// PAG-<ms>-<azar>, P-LIQ-<ms>). Pagos viejos con otro numero no muestran hora.
+function _pagoRegistro(p){
+  var m = String((p&&p.id)||'').match(/(\d{13})/); if(!m) return null;
+  var d = new Date(+m[1]), y = d.getFullYear();
+  return (isNaN(y) || y<2024 || y>2035) ? null : d;
+}
+// "8:56 a. m."; si se registro otro dia distinto a la fecha del pago, lo dice: "reg. 20/9 · 8:56 a. m."
+function _pagoHoraTxt(p){
+  var d = _pagoRegistro(p); if(!d) return '';
+  var h = d.toLocaleTimeString('es-VE',{hour:'numeric',minute:'2-digit'});
+  var dia = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  return dia === String(p.fecha||'').slice(0,10) ? h : 'reg. '+d.getDate()+'/'+(d.getMonth()+1)+' · '+h;
+}
+
 PG.pagos = function(){
   const allPagos = _concFiltrar(S.pagos||[]).filter(p=>!p.eliminado);
   const confs = allPagos.filter(p=>p.estado==='confirmado');
@@ -52,7 +68,12 @@ PG.pagos = function(){
   var _ps = S.pagosSort||{col:'fecha',dir:'desc'};
   filtered = filtered.slice().sort(function(a,b){
     var col=_ps.col, dir=_ps.dir==='asc'?1:-1;
-    if(col==='fecha'){return dir*((a.fecha||'').localeCompare(b.fecha||''));}
+    if(col==='fecha'){
+      // mismo dia: por la hora de registro, en el mismo sentido
+      var rf=(a.fecha||'').localeCompare(b.fecha||'');
+      if(rf===0){ var ta=_pagoRegistro(a), tb=_pagoRegistro(b); rf=(ta?ta.getTime():0)-(tb?tb.getTime():0); }
+      return dir*rf;
+    }
     if(col==='monto'){return dir*(parseFloat(a.monto||0)-parseFloat(b.monto||0));}
     if(col==='cli'){return dir*((a.cli||'').toLowerCase().localeCompare((b.cli||'').toLowerCase()));}
     if(col==='cred'){return dir*((a.cred||'').localeCompare(b.cred||''));}
@@ -534,7 +555,7 @@ PG.pagos = function(){
       <td class="tdm" style="font-family:var(--fd)">${p.id}</td>
       <td class="tdm">${p.cli}</td>
       <td class="tds">${p.cred}</td>
-      <td class="tds">${p.fecha}</td>
+      <td class="tds" style="white-space:nowrap">${p.fecha}${(function(){var h=_pagoHoraTxt(p);return h?`<div style="font-size:9.5px;opacity:.75">${h}</div>`:'';})()}</td>
       <td style="color:var(--green);font-weight:800;font-family:var(--fd)">${fmt(p.monto)}</td>
       <td>${_tipoPagoBdg(_tp)}</td>
       <td class="tds">${p.metodo}</td>
