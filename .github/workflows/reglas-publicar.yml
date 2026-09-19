@@ -18,6 +18,10 @@ on:
         description: 'Solo revisar, sin publicar'
         type: boolean
         default: true
+      lineas_cambiadas:
+        description: 'Solo si Adam autorizo un cambio que MODIFICA lineas: cuantas exactamente (vacio = solo se permite agregar)'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -42,6 +46,7 @@ jobs:
           TOKEN: ${{ steps.auth.outputs.access_token }}
           BASE: ${{ inputs.base }}
           DRY: ${{ inputs.dry }}
+          CAMBIADAS_OK: ${{ inputs.lineas_cambiadas }}
         run: |
           set -euo pipefail
           API=https://firebaserules.googleapis.com/v1
@@ -68,12 +73,20 @@ jobs:
           QUITADAS=$(diff base.rules firestore.rules | grep -c '^<' || true)
           AGREGADAS=$(diff base.rules firestore.rules | grep -c '^>' || true)
           if [ "$QUITADAS" != "0" ]; then
-            echo "RESULTADO ABORTADO: el cambio quita o modifica $QUITADAS linea(s). No se publica nada."
-            diff -u base.rules firestore.rules || true
-            exit 1
+            # Un cambio que modifica lineas solo pasa con el numero EXACTO autorizado
+            # (puntos 1 y 2 de seguridad, 19-sep-2026: 8 lineas). Cualquier otro numero aborta.
+            if [ -n "$CAMBIADAS_OK" ] && [ "$QUITADAS" = "$CAMBIADAS_OK" ]; then
+              echo "2/3 OK CON PERMISO: el cambio modifica exactamente $QUITADAS linea(s), las autorizadas, y agrega $AGREGADAS. Diferencia completa:"
+              diff -u base.rules firestore.rules || true
+            else
+              echo "RESULTADO ABORTADO: el cambio quita o modifica $QUITADAS linea(s) (autorizadas: ${CAMBIADAS_OK:-0}). No se publica nada."
+              diff -u base.rules firestore.rules || true
+              exit 1
+            fi
+          else
+            echo "2/3 OK: el cambio solo agrega $AGREGADAS lineas:"
+            diff base.rules firestore.rules | grep '^>' | cut -c3- || true
           fi
-          echo "2/3 OK: el cambio solo agrega $AGREGADAS lineas:"
-          diff base.rules firestore.rules | grep '^>' | cut -c3- || true
 
           # 3. Firebase compila las reglas nuevas
           python3 -c "import json;print(json.dumps({'source':{'files':[{'name':'firestore.rules','content':open('firestore.rules').read()}]}}))" > fuente.json
