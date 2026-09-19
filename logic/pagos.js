@@ -1387,11 +1387,15 @@ function confirmarPago(pagoId){
 }
 
 // ── MORA: CALCULAR DÍAS AUTOMÁTICAMENTE AL CARGAR ──
+var _MORA_NO_RECALCULA = ['completado','cancelado','recuperado','recuperada','pendiente_revision','rechazado','rechazada'];
 function calcularMoraAuto(){
   var hoy=new Date(); hoy.setHours(0,0,0,0);
   (S.creds||[]).forEach(function(c){
     if(!c || c.eliminado || !c.fecha) return;
-    if(c.estado==='completado' || c.estado==='cancelado'){
+    // Cerrados o fuera de la cartera: no deben dias de atraso y su estado NO se toca.
+    // Antes solo se saltaban completado y cancelado: un recuperado o una solicitud de
+    // concesionario pendiente volvian a "activo"/"mora" cada 5 minutos (punto 5, 18-sep).
+    if(_MORA_NO_RECALCULA.indexOf(String(c.estado||''))>-1){
       if(c.mora!==0){
         c.mora=0;
         DB.updateCred(c.id,{mora:0});

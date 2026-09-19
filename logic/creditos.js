@@ -136,11 +136,13 @@ function _wzRender(motoId){
     return String(a.modelo||'').localeCompare(String(b.modelo||''),'es',{numeric:true,sensitivity:'base'});
   });
   var catOptions = '<option value="__wz_new_cat__">＋ Agregar nueva moto al catálogo...</option>'
-    + _catOrdenado.map(function(c){
+    + _catOrdenado.map(function(c, i){
     var modelo = c.modelo || ('Modelo '+(c.id||'?'));
-    var precio = parseFloat(c.precio)||0;
     var sede = c.sede ? ' · '+c.sede : '';
-    return '<option value="'+precio+'" data-modelo="'+modelo+'">'+modelo+sede+'</option>';
+    // Valor unico por opcion. Antes era el precio: dos modelos del mismo precio
+    // compartian valor y al volver al paso 3 quedaba el primero (NEW HORSE 150 → LEÓN 200;
+    // punto 4, 18-sep). El precio ya no sale del catalogo: lo escribe el empleado.
+    return '<option value="cat-'+i+'" data-modelo="'+modelo+'">'+modelo+sede+'</option>';
   }).join('');
 
   var step2 = '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Modelo del catálogo</label>'
@@ -512,7 +514,7 @@ function _wzRender(motoId){
       if(catSel){
         var opts = Array.from(catSel.options);
         var match = opts.find(function(o){ return (o.getAttribute('data-modelo')||o.text.split(' —')[0].trim())===WZ.motoModelo; });
-        if(match){ catSel.value = match.value; _wzPickMotoCat(catSel); }
+        if(match){ catSel.selectedIndex = opts.indexOf(match); _wzPickMotoCat(catSel); }
         else {
           // Moto no está en catálogo — mostrar como entrada manual
           WZ.motoInvId = null;

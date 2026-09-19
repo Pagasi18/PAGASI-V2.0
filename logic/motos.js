@@ -78,7 +78,9 @@ function changeMotoStatus(id, newStatus){
 function esCreditoVigenteParaInventario(c){
   if(!c || c.eliminado) return false;
   var st = String(c.estado||'activo').toLowerCase();
-  return !['cancelado','liquidado','cerrado','anulado','archivado','eliminado'].includes(st);
+  // recuperado/rechazado: la moto volvio a Pagasi o nunca salio (antes la marcaba
+  // "financiada" con el cliente anterior cada vez que se abria Inventario; punto 6, 18-sep)
+  return !['cancelado','liquidado','cerrado','anulado','archivado','eliminado','recuperado','recuperada','rechazado','rechazada'].includes(st);
 }
 
 function sincronizarInventarioConCreditos(opts){
