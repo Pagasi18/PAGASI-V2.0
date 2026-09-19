@@ -124,6 +124,11 @@ ok('Cuentas: el que está al día no sale como Expirado', filaCliente('101') !==
 // ── 5. Cobros programados (gráfico de Créditos y del dashboard) ──
 // Los 9 créditos son iguales (misma fecha y misma cuota), así que el total tiene que ser
 // 9 veces el de uno solo: la etiqueta 'mora' no puede cambiar el cronograma.
+// Con fecha de AYER: el cronograma pone cada cuota al mediodia y la ventana de 8
+// quincenas empieza "ahora"; con fecha de hoy, antes del mediodia la octava cuota
+// caia justo fuera y la prueba fallaba solo en las mañanas (19-sep-2026).
+const CP = CARTERA.map(c => Object.assign({}, c, { fecha: dia(-1) }));
+ctx.S.creds = CP;
 const proy = (p) => { const b = ctx._cobrosProgramadosBuckets(p); return { cuotas: b.buckets.reduce((a, x) => a + x.cuotas, 0), monto: Math.round(b.buckets.reduce((a, x) => a + x.monto, 0)) }; };
 const conMora = { diario: proy('diario'), quincenal: proy('quincenal'), mensual: proy('mensual') };
 ok('Cobros programados: 8 quincenas × 9 créditos = 72 cuotas ($3.600), no solo las de 5',
@@ -131,16 +136,18 @@ ok('Cobros programados: 8 quincenas × 9 créditos = 72 cuotas ($3.600), no solo
 ok('cada crédito aporta lo mismo en los tres períodos (9 iguales)',
   conMora.diario.cuotas % ACTIVOS === 0 && conMora.mensual.cuotas % ACTIVOS === 0 && conMora.diario.cuotas > 0);
 // Si a los 4 de estado 'mora' se les pone estado 'activo', la proyección NO puede cambiar
-ctx.S.creds = CARTERA.map(c => c.estado === 'mora' && !c.eliminado ? Object.assign({}, c, { estado: 'activo' }) : c);
+ctx.S.creds = CP.map(c => c.estado === 'mora' && !c.eliminado ? Object.assign({}, c, { estado: 'activo' }) : c);
 const comoActivos = { diario: proy('diario'), quincenal: proy('quincenal'), mensual: proy('mensual') };
 ok('la proyección es la misma llamándolos "mora" o "activo"', JSON.stringify(conMora) === JSON.stringify(comoActivos));
 // Sin ellos tiene que bajar: es lo que pasaba antes del arreglo
-ctx.S.creds = CARTERA.filter(c => c.estado !== 'mora');
+ctx.S.creds = CP.filter(c => c.estado !== 'mora');
 const sinMora = proy('quincenal');
 ok('sin los de estado mora la proyección baja a 5 créditos (el error que se arregló)', sinMora.cuotas === 5 * 8);
-ctx.S.creds = CARTERA;
+ctx.S.creds = CP;
 ok('el completado, el cancelado y el borrado nunca entran en la proyección',
   proy('quincenal').cuotas === ACTIVOS * 8);
+
+ctx.S.creds = CARTERA;
 
 // ── 6. Reporte impreso de cobranza: no deja fuera a los peores ──
 const rep = ctx.generarReporteSemanal ? 'hay' : 'no';
