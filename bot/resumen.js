@@ -17,6 +17,7 @@
 
 const { Firestore } = require('@google-cloud/firestore');
 const Ledger = require('../logic/credito-ledger.js');   // mismo motor de cuotas que el admin
+const Mora = require('./mora-comun.js');                // misma definicion de "en mora" que el sistema
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
 // A quienes les llega el resumen: dueno + socio. Para sumar a alguien, agrega
@@ -111,11 +112,12 @@ async function main() {
   // Un solo recorrido con el motor de cuotas: cuanto esta realmente VENCIDO por
   // credito (cuotas ya pasadas sin pagar) y cuantas cuotas vencen manana.
   let vmCount = 0, vmMonto = 0;
-  const vencidoPorCred = {};
-  creds.filter(c => c.estado === 'activo' || c.estado === 'mora').forEach(c => {
+  const vencidoPorCred = {}, diasPorCred = {};
+  creds.filter(Mora.vigente).forEach(c => {
     let est;
     try { est = Ledger.generarEstadoCredito(c, pagosByCred[c.id] || [], { today: hoy, diasGracia: DIAS_GRACIA }); }
     catch (e) { return; }
+    diasPorCred[c.id] = Mora.diasAtraso(c, est, hoy);
     let venc = 0;
     (est.cuotas || []).forEach(q => {
       const saldo = Number(q.saldo) || 0;
@@ -126,10 +128,10 @@ async function main() {
     vencidoPorCred[c.id] = venc;
   });
 
-  // Mora: lo vencido (no el saldo total del credito) y los mas atrasados.
-  const moraCreds = creds.filter(c => c.estado === 'mora');
+  // Mora: misma cuenta que el sistema (vigente con al menos un dia de atraso; punto 26)
+  const moraCreds = creds.filter(c => Mora.vigente(c) && (diasPorCred[c.id] || 0) > 0);
   const moraMonto = moraCreds.reduce((a, c) => a + (vencidoPorCred[c.id] || 0), 0);
-  const moraTop = moraCreds.slice().sort((a, b) => (Number(b.mora) || 0) - (Number(a.mora) || 0)).slice(0, 3);
+  const moraTop = moraCreds.slice().sort((a, b) => (diasPorCred[b.id] || 0) - (diasPorCred[a.id] || 0)).slice(0, 3);
 
   // Mes acumulado
   const credMes = creds.filter(c => String(c.fecha || '').slice(0, 7) === mes && c.estado !== 'cancelado');

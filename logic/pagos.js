@@ -854,11 +854,23 @@ function getSaldoPendienteCredito(credId){
   var resultado=parseFloat((totalFinanciado-totalAbonado).toFixed(2));if(resultado<0.05)resultado=0;if(c.estado==='completado'||c.estado==='cancelado')resultado=0;return Math.max(0,resultado);
 }
 
+// Solo se cobra (y se liquida) lo que sigue vivo: activo o en mora. Un credito
+// completado, cancelado, recuperado o una solicitud sin aprobar NO se liquidan: antes
+// entraba dinero a caja y el credito quedaba "pagado" (punto 18, 21-sep-2026).
+var _LIQ_NO_SE_PUEDE = {
+  completado:'ya está pagado', cancelado:'está cancelado',
+  recuperado:'la unidad se recuperó', recuperada:'la unidad se recuperó',
+  pendiente_revision:'es una solicitud que todavía no se aprueba',
+  rechazado:'fue rechazado', rechazada:'fue rechazado'
+};
+function _liqMotivoNoSePuede(c){ return c ? (_LIQ_NO_SE_PUEDE[String(c.estado||'')] || '') : 'no existe'; }
+
 function openLiquidarAnticipado(credId){
   var c=S.creds.find(function(x){return x.id===credId;});
   if(!c) return;
-  if(c.estado==='completado' || c.estado==='cancelado'){
-    toast('Este crédito ya no se puede liquidar','info');
+  var _no=_liqMotivoNoSePuede(c);
+  if(_no){
+    toast('Este crédito no se puede liquidar: '+_no,'info');
     return;
   }
   var saldo=getSaldoPendienteCredito(credId);
@@ -882,11 +894,10 @@ function openLiquidarAnticipado(credId){
     + '<div class="fg"><label><input id="liq_obs" class="fi" placeholder="Observación interna del acuerdo"></label></div>'
     +'</div>'
     +'<div style="display:flex;gap:16px;margin-top:12px;padding:10px 12px;background:var(--surf2);border-radius:var(--r8)">'
-    + '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input id="liq_cerrar" type="checkbox" checked> Cerrar contrato</label>'
     + '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input id="liq_finiquito" type="checkbox" checked> Generar finiquito</label>'
     + '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input id="liq_moto_propia" type="checkbox" checked> Moto como propia</label>'
     +'</div>'
-    +'<div class="note" style="margin-top:10px">Se registrará el cobro real y, si aplica, un descuento de cierre anticipado con auditoría.</div>';
+    +'<div class="note" style="margin-top:10px">Se registrará el cobro real y, si aplica, un descuento de cierre anticipado con auditoría. Al liquidar, el crédito queda <b>cerrado (completado)</b>: la casilla "Cerrar contrato" se quitó porque no hacía nada (punto 18).</div>';
   window._liqCredId=credId;
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-s" onclick="ejecutarLiquidacionAnticipada()">Liquidar ahora</button>';
   $('ov').style.display='flex';
@@ -918,8 +929,9 @@ function ejecutarLiquidacionAnticipada(){
   var ci=S.creds.findIndex(function(x){return x.id===credId;});
   if(ci<0){ toast('Crédito no encontrado','error'); return; }
   var c=S.creds[ci];
-  if(c.estado==='completado' || c.estado==='cancelado'){
-    toast('Este crédito ya no se puede liquidar','info');
+  var _noLiq=_liqMotivoNoSePuede(c);
+  if(_noLiq){
+    toast('Este crédito no se puede liquidar: '+_noLiq,'info');
     return;
   }
   var saldo=getSaldoPendienteCredito(credId);

@@ -18,6 +18,7 @@
 
 const { Firestore } = require('@google-cloud/firestore');
 const Ledger = require('../logic/credito-ledger.js');
+const Mora = require('./mora-comun.js');   // misma definicion de "en mora" que el sistema
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
 // Si el Worker pasa un CHAT (boton a pedido) respondemos solo a quien pidio.
@@ -100,15 +101,17 @@ function cobranza(D) {
 
 /* ── MORA ── */
 function mora(D) {
-  const moraCreds = D.creds.filter(c => c.estado === 'mora');
-  const filas = moraCreds.map(c => {
-    let venc = 0;
+  // Misma cuenta que el sistema: vigente con al menos un dia de atraso (punto 26)
+  const filas = D.creds.filter(Mora.vigente).map(c => {
+    let venc = 0, dias = Number(c.mora) || 0;
     try {
       const est = Ledger.generarEstadoCredito(c, D.pagosByCred[c.id] || [], { today: hoy, diasGracia: DIAS_GRACIA });
       (est.cuotas || []).forEach(q => { if ((Number(q.saldo) || 0) > 0.01 && q.fechaVence <= hoy) venc += Number(q.saldo) || 0; });
+      dias = Mora.diasAtraso(c, est, hoy);
     } catch (e) { }
-    return { cli: c.cli, dias: Number(c.mora) || 0, venc, tel: D.telDe(c) };
-  }).sort((a, b) => b.dias - a.dias);
+    return { cli: c.cli, dias, venc, tel: D.telDe(c) };
+  }).filter(f => f.dias > 0).sort((a, b) => b.dias - a.dias);
+  const moraCreds = filas;
   const total = filas.reduce((a, f) => a + f.venc, 0);
   const L = [`<b>⚠️ En mora — ${moraCreds.length} · ${money(total)} vencido</b>`, ''];
   filas.slice(0, 20).forEach((f, i) => {
