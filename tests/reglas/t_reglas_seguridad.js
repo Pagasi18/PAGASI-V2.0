@@ -138,7 +138,8 @@ const lead = (id, cambios) => Object.assign({}, LEAD, { id }, cambios || {});
   // El catálogo y los planes los usa el vendedor desde el wizard
   await prueba('un vendedor puede agregar un modelo al catálogo', assertSucceeds(setDoc(doc(cobrador, 'config/catalogo'), { lista: [{ id: 1, modelo: 'NUEVA 150', precio: 1200 }] })));
   await prueba('...y guardar un plan nuevo', assertSucceeds(setDoc(doc(cobrador, 'config/planes'), { lista: [] })));
-  await prueba('pero NO el destino de los avisos de Telegram', assertFails(setDoc(doc(cobrador, 'config/telegram'), { chat: '123' })));
+  await prueba('pero NO el destino de los avisos de Telegram', assertFails(setDoc(doc(cobrador, 'config/avisosTelegram'), { chat: '123' })));
+  await prueba('...ni la configuración del GPS entera', assertFails(setDoc(doc(cobrador, 'config/gps'), { workerUrl: 'http://x' })));
   await prueba('una moto no se anula sin permiso de eliminar', assertFails(updateDoc(doc(gerente, 'motos/M-1'), { eliminado: true })));
 
   await env.cleanup();
