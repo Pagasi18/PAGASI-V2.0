@@ -268,9 +268,14 @@ function _wzRender(motoId){
     + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px" id="wz-fin-cells"></div>'
     + '</div>'
     // ── Bloque de pago de la moto (solo cuando se elige del catálogo, no del inventario) ──
-    + '<div id="wz-mpago-wrap" style="display:none;margin-top:14px">'
-    +   _mpagoBloqueHtml('wzmpago','Forma de pago de la moto (compra)','Esta moto se está agregando nueva al sistema desde el catálogo. Indica de cuál(es) cuenta(s) o efectivo sale el dinero del costo (precio base real). Puedes dividir el pago entre varias cuentas.')
-    + '</div>';
+    // Al EDITAR no se dibuja: la compra de esta moto ya se registro hace tiempo, y lo
+    // que el operario llenaba aqui se tiraba a la basura sin decir nada (el guardado de
+    // la edicion pone WZ._pagosMoto = null y nunca crea el gasto). Punto 13, 22-sep-2026.
+    // Los parentesis NO sobran: sin ellos la precedencia se come el paso entero.
+    + (window._wzEditando ? '' : (
+        '<div id="wz-mpago-wrap" style="display:none;margin-top:14px">'
+      +   _mpagoBloqueHtml('wzmpago','Forma de pago de la moto (compra)','Esta moto se está agregando nueva al sistema desde el catálogo. Indica de cuál(es) cuenta(s) o efectivo sale el dinero del costo (precio base real). Puedes dividir el pago entre varias cuentas.')
+      + '</div>'));
 
   // ── PASO 3: Perfil crediticio ──
   // helper para secciones
@@ -1779,16 +1784,21 @@ function _wzRenderResultado(){
         return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--rim2);font-size:12.5px"><span style="color:var(--ink3)">'+row[0]+'</span><span style="font-weight:700;color:'+col2color+'">'+row[1]+'</span></div>';
       }).join('')
       +'</div>'
-      +'<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:16px;margin-bottom:12px">'
-      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Cobro de Inicial</div>'
-      +'<div class="fgr">'
-      +'<div class="fg"><label>Método de pago inicial *</label><select class="fs" id="wz_ini_metodo" onchange="WZ.iniMetodo=this.value">'
-      +_wzIniMetodoOpts()
-      +'</select></div>'
-      +'<div class="fg"><label>Referencia / Comprobante</label><input class="fi" id="wz_ini_ref" placeholder="N° de referencia (opcional)"></div>'
-      +'</div>'
-      +'<div style="font-size:11px;color:var(--ink3);margin-top:6px">La inicial se acreditará a la cuenta seleccionada al guardar el crédito.</div>'
-      +'</div>'
+      + (window._wzEditando
+        // Editando: la inicial ya se cobro (o no) hace tiempo. Pedir cuenta y referencia
+        // aqui hacia creer que se corregia donde entro el dinero, y no se guardaba nada
+        // (punto 13, 22-sep-2026). Se muestra lo que hay, de solo lectura.
+        ? _wzInicialRealHTML(window._wzEditando)
+        : '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:16px;margin-bottom:12px">'
+        +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Cobro de Inicial</div>'
+        +'<div class="fgr">'
+        +'<div class="fg"><label>Método de pago inicial *</label><select class="fs" id="wz_ini_metodo" onchange="WZ.iniMetodo=this.value">'
+        +_wzIniMetodoOpts()
+        +'</select></div>'
+        +'<div class="fg"><label>Referencia / Comprobante</label><input class="fi" id="wz_ini_ref" placeholder="N° de referencia (opcional)"></div>'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--ink3);margin-top:6px">La inicial se acreditará a la cuenta seleccionada al guardar el crédito.</div>'
+        +'</div>')
     :'')
     // Selector de concesionario (siempre visible en el último paso, si hay concesionarios creados)
     + (function(){
@@ -1806,8 +1816,10 @@ function _wzRenderResultado(){
         if(!disponibles.length) return '';
         // Si tiene UNA sola sede asignada → input oculto (forzado a esa)
         if(disponibles.length === 1){
-          // Pre-asignar en WZ
-          WZ.concesionarioId = disponibles[0].id;
+          // Pre-asignar en WZ. Al EDITAR no se pisa la sede que traia el credito: se
+          // cambiaba sola a la de quien editaba, y eso mueve comisiones y cuadres por
+          // concesionario sin que nadie lo pida (punto 14, 22-sep-2026).
+          if(!(window._wzEditando && WZ.concesionarioId)) WZ.concesionarioId = disponibles[0].id;
           return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:14px 16px;margin-bottom:12px">'
             + '<div style="display:flex;justify-content:space-between;align-items:center">'
             + '<div><div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1)">Concesionario</div>'
@@ -1819,7 +1831,15 @@ function _wzRenderResultado(){
         }
         // Selector cuando puede elegir entre varias
         // Pre-seleccionado: el del switcher si está dentro de sus disponibles, sino el primero
-        var preSel = S.concesionarioActivo;
+        // Al EDITAR manda la sede del credito, no la del switcher de quien edita
+        // (punto 14, 22-sep-2026). Si esa sede no esta entre las suyas, se agrega a la
+        // lista para que se vea: si no, desaparecia de la pantalla y se guardaba otra.
+        var _editandoSede = !!(window._wzEditando && WZ.concesionarioId);
+        if(_editandoSede && !disponibles.find(function(c){return c.id===WZ.concesionarioId;})){
+          var _laDelCred = (typeof _concGetById==='function') ? _concGetById(WZ.concesionarioId) : null;
+          disponibles = disponibles.concat([{ id:WZ.concesionarioId, nombre:(_laDelCred&&_laDelCred.nombre)||('Sede '+WZ.concesionarioId), ciudad:(_laDelCred&&_laDelCred.ciudad)||'' }]);
+        }
+        var preSel = _editandoSede ? WZ.concesionarioId : S.concesionarioActivo;
         if(preSel && !disponibles.find(function(c){return c.id===preSel;})){ preSel = disponibles[0].id; }
         if(!preSel) preSel = disponibles[0].id;
         WZ.concesionarioId = preSel;
@@ -1854,8 +1874,16 @@ var _WZ_CAMPOS_SENSIBLES = [
   {k:'cuotaM',      et:'Cuota mensual',      num:true},
   {k:'plazo',       et:'Plazo (meses)',      num:true},
   {k:'totalCuotas', et:'Total de cuotas',    num:true},
-  {k:'planModo',    et:'Tipo de plan',       num:false}
+  {k:'planModo',    et:'Tipo de plan',       num:false},
+  // La sede cambiaba sola a la de quien editaba y el aviso no la mencionaba: mueve
+  // comisiones y los cuadres por concesionario (punto 14, 22-sep-2026)
+  {k:'concesionarioId', et:'Concesionario (sede)', num:false, nombre:true}
 ];
+
+// La sede que el guardado va a escribir, para poder avisarla antes de tocar nada.
+function _wzSedeEnEdicion(){
+  return (WZ && WZ.concesionarioId !== undefined) ? WZ.concesionarioId : undefined;
+}
 
 function _wzDiffSensible(actual, upd){
   var out = [];
@@ -1874,9 +1902,57 @@ function _wzDiffSensible(actual, upd){
       b = (b==null?'':String(b)).trim();
       iguales = (a === b);
     }
-    if(!iguales) out.push({etiqueta:c.et, antes:a, ahora:b, num:c.num});
+    if(!iguales){
+      // Un id de sede no le dice nada a nadie: se muestra su nombre
+      if(c.nombre && typeof _concGetById==='function'){
+        var _na = _concGetById(a), _nb = _concGetById(b);
+        if(_na && _na.nombre) a = _na.nombre;
+        if(_nb && _nb.nombre) b = _nb.nombre;
+      }
+      out.push({etiqueta:c.et, antes:a, ahora:b, num:c.num});
+    }
   });
   return out;
+}
+
+// La inicial que de verdad se cobro en este credito (misma condicion que usan Pagos,
+// la auditoria de iniciales y el arranque del app).
+function _wzInicialCobrada(credId){
+  var esIni = function(p){ return p.esInicial || p.tipoOperacion==='inicial_credito' || (p.concepto && String(p.concepto).indexOf('Inicial · ')===0); };
+  return (S.pagos||[]).filter(function(p){
+    return p && !p.eliminado && p.cred===credId && p.estado==='confirmado' && esIni(p);
+  }).reduce(function(a,p){ return a + (parseFloat(p.monto)||0); }, 0);
+}
+
+// Lo que de verdad se cobro de inicial en este credito, para mostrarlo al editar.
+// Misma condicion que Cobranza, la auditoria de iniciales y el arranque del app:
+// sin !eliminado un pago borrado saldria como bueno, y sin la clausula del concepto
+// los pagos viejos importados saldrian como "no hay inicial".
+function _wzInicialRealHTML(credId){
+  var cred = (S.creds||[]).find(function(x){ return x.id===credId; }) || {};
+  var esIni = function(p){ return p.esInicial || p.tipoOperacion==='inicial_credito' || (p.concepto && String(p.concepto).indexOf('Inicial · ')===0); };
+  var pagos = (S.pagos||[]).filter(function(p){
+    return p && !p.eliminado && p.cred===credId && p.estado==='confirmado' && esIni(p);
+  });
+  var E = function(v){ return (typeof esc==='function') ? esc(v) : String(v==null?'':v); };
+  var M = function(v){ return (typeof fmt==='function') ? fmt(v) : ('$'+(parseFloat(v)||0).toFixed(2)); };
+  var cuerpo;
+  if(pagos.length){
+    cuerpo = pagos.map(function(p){
+      return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--rim2);font-size:12.5px">'
+        + '<span style="color:var(--ink3)">' + E(p.fecha||'—') + ' · ' + E(p.metodo||p.cuenta||'sin cuenta') + '</span>'
+        + '<span style="font-weight:700">' + M(p.monto) + '</span></div>';
+    }).join('');
+  } else if(String(cred.estado||'')==='pendiente_revision'){
+    cuerpo = '<div style="font-size:12.5px;color:var(--ink3)">Se registrará al aprobar la solicitud.</div>';
+  } else {
+    cuerpo = '<div style="font-size:12.5px;color:var(--red);font-weight:700">No hay ninguna inicial registrada en este crédito.</div>';
+  }
+  return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:16px;margin-bottom:12px">'
+    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Inicial ya cobrada</div>'
+    + cuerpo
+    + '<div style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.5">Esto es lo que entró de verdad. Desde aquí no se toca: si hay que corregir el monto, la fecha o la cuenta, se hace en <b>Cobranza</b>, sobre ese pago.</div>'
+    + '</div>';
 }
 
 function _wzConfirmarCambios(difs, credId){
@@ -1888,6 +1964,19 @@ function _wzConfirmarCambios(difs, credId){
     L.push('      ahora:  ' + v(d.ahora));
     L.push('');
   });
+  // Si cambia la inicial del plan y ya hay una cobrada, hay que decirlo: ese dinero
+  // entro de verdad a una cuenta y NO se toca desde aqui (punto 15, 22-sep-2026).
+  var _cambiaIni = difs.some(function(d){ return d.etiqueta==='Inicial'; });
+  if(_cambiaIni){
+    var _cob = _wzInicialCobrada(credId);
+    if(_cob > 0){
+      L.push('OJO CON LA INICIAL:');
+      L.push('  ya hay ' + (typeof fmt==='function' ? fmt(_cob) : _cob) + ' cobrados y registrados en una cuenta.');
+      L.push('  Ese pago NO se va a mover: solo cambia la cifra del plan.');
+      L.push('  Si el dinero tambien esta mal, corrigelo en Cobranza → el pago inicial.');
+      L.push('');
+    }
+  }
   L.push('Si no cambiaste estos campos a proposito, cancela y avisa.');
   L.push('');
   L.push('Aceptar  = guardar con estos cambios');
@@ -1959,6 +2048,29 @@ function _wzGuardar(){
     var _selIni = document.getElementById('wz_ini_metodo'); if(_selIni && _selIni.focus) _selIni.focus();
     if(btn){ btn.textContent='Guardar Solicitud'; btn.disabled=false; }
     return;
+  }
+
+  // ── Aviso ANTES de escribir nada (punto 16, 22-sep-2026) ──────────────────
+  // Estaba al final, cuando el cliente y la moto YA se habian guardado: el operario
+  // le daba a Cancelar, creia que no habia guardado nada, y quedaban un cliente
+  // repetido y una moto renombrada. Ahora se pregunta primero: si cancela, no se
+  // escribio ni un campo.
+  if(window._wzEditando){
+    var _ediId = window._wzEditando;
+    var _ediCred = (S.creds||[]).find(function(x){ return x.id===_ediId; });
+    if(_ediCred){
+      var _ediUpd = _wzCredPlanFields(r, _ediCred);
+      _ediUpd.precio = WZ.precio || _ediCred.precio || 0;
+      // El modelo no entra aqui: tiene su propia pregunta, mas clara, mas abajo.
+      delete _ediUpd.modelo;
+      var _ediSede = _wzSedeEnEdicion();
+      if(_ediSede !== undefined) _ediUpd.concesionarioId = _ediSede;
+      var _ediDifs = _wzDiffSensible(_ediCred, _ediUpd);
+      if(_ediDifs.length && !_wzConfirmarCambios(_ediDifs, _ediId, _ediCred)){
+        if(btn){ btn.textContent=' Guardar Solicitud'; btn.disabled=false; }
+        return;
+      }
+    }
   }
 
   // Crear cliente
@@ -2117,6 +2229,9 @@ function _wzGuardar(){
       }
       var _upd = {
         cli: WZ.nom||(existing&&existing.nombre)||S.creds[_ei].cli||'',
+        // Sin esto, el cliente que se acababa de crear al editar quedaba suelto: el
+        // credito seguia apuntando al viejo (punto 16, 22-sep-2026).
+        clienteId: (existing && existing.id) || cliId || S.creds[_ei].clienteId || '',
         modelo: _modeloFinal,
         motoId: _newMotoId,
         // al enlazar la moto se quita la marca de "sin moto" (revisado el 22-sep-2026)
@@ -2212,14 +2327,8 @@ function _wzGuardar(){
         // del credito en Firestore (el lector acepta cualquiera de los dos)
         wizardDraft: _wizardDraft
       };
-      // ── Aviso antes de escribir: muestra que va a cambiar y deja cancelar ──
-      // No modifica _upd ni ningun calculo. Solo compara y pregunta.
-      var _difsSens = _wzDiffSensible(S.creds[_ei], _upd);
-      if(_difsSens.length && !_wzConfirmarCambios(_difsSens, _editId)){
-        window._wzEditando = _editId;
-        if(btn){ btn.textContent=' Guardar Solicitud'; btn.disabled=false; }
-        return;
-      }
+      // El aviso de cambios ya se pregunto al principio de _wzGuardar, ANTES de tocar
+      // el cliente y la moto (punto 16). Aqui ya no se pregunta: seria la segunda vez.
       // Actualizar cliente si hay datos nuevos
       if(existing && WZ.nom){
         var _cliUpd = {};
@@ -2929,9 +3038,22 @@ function confirmarContratoFirmado(credId){
 // ══════════════════════════════════════════════════════════════════
 // EDITAR CRÉDITO SIN FIRMA — abre el wizard con datos precargados
 // ══════════════════════════════════════════════════════════════════
+// Estados en los que un credito YA NO se toca: pagado, cancelado o con la moto
+// recuperada. Abrirlos en el asistente entero significaba recalcularles el plan
+// (inicial, financiado, total, cuota, plazo) al guardar, y hasta volver a reclamar
+// la moto para un credito cancelado (punto 14, 22-sep-2026).
+var _CRED_CERRADO = ['completado','cancelado','recuperado','recuperada'];
+
 function editarCredSinFirma(credId){
   var c = (S.creds||[]).find(function(x){ return x.id===credId; });
   if(!c){ toast('Crédito no encontrado','error'); return; }
+  if(_CRED_CERRADO.indexOf(String(c.estado||'')) > -1){
+    var _comoEsta = { completado:'ya está pagado', cancelado:'está cancelado',
+      recuperado:'tiene la moto recuperada', recuperada:'tiene la moto recuperada' }[String(c.estado)];
+    toast('Este crédito '+_comoEsta+': no se le cambia el plan. Puedes corregir estado, cobrador, fecha, GPS y notas.','info');
+    if(typeof openEditCred==='function') openEditCred(credId);
+    return;
+  }
 
   // Buscar cliente asociado
   var cli = (S.clientes||[]).find(function(x){ return String(x.id)===String(c.clienteId||c.cliId); });
@@ -3229,12 +3351,29 @@ function _wzTerremotoToggle(){
 // Casos que NO se auto-reparan (requieren decisión): moto con 2+ créditos activos,
 // y crédito activo que apunta a una moto inexistente.
 // ══════════════════════════════════════════
+// ¿El credito y la moto hablan de la MISMA unidad fisica? Se comparan los
+// identificadores que esten llenos en los dos lados. Si alguno difiere, la diferencia
+// de modelo no es un error de tipeo: es la senal de que el enlace esta mal, y pisarla
+// borra la unica evidencia (punto 25, 22-sep-2026).
+var _IDS_MOTO = [['serialChasis','serial de chasis'], ['serialMotor','serial de motor'], ['vin','VIN'], ['placa','placa']];
+function _idsQueNoCuadran(cred, moto){
+  var limpio = function(v){ return String(v==null?'':v).trim().toUpperCase().replace(/\s+/g,''); };
+  var vacio = function(v){ return !limpio(v) || (typeof _datoReal==='function' && !_datoReal(v)); };
+  var out = [];
+  _IDS_MOTO.forEach(function(par){
+    var a = cred[par[0]], b = moto[par[0]];
+    if(vacio(a) || vacio(b)) return;          // si falta en un lado, no se puede comparar
+    if(limpio(a) !== limpio(b)) out.push({ campo:par[1], credito:String(a).trim(), moto:String(b).trim() });
+  });
+  return out;
+}
+
 function _auditVinculosMoto(){
   var activos = (S.creds||[]).filter(function(c){ return c && !c.eliminado && (c.estado==='activo'||c.estado==='mora'); });
   var credByMoto = {};
   activos.forEach(function(c){ if(c.motoId!=null && String(c.motoId)!==''){ var k=String(c.motoId); (credByMoto[k]=credByMoto[k]||[]).push(c); } });
 
-  var huerfanas=[], relink=[], conflictos=[], sinMoto=[];
+  var huerfanas=[], relink=[], conflictos=[], sinMoto=[], sospechosos=[];
 
   (S.motos||[]).forEach(function(m){
     if(!m || m.eliminado) return;
@@ -3247,6 +3386,9 @@ function _auditVinculosMoto(){
       if(m.estado!=='financiada') cambios.push('estado');
       if(String(m.cliente||'')!==String(c.cli||'')) cambios.push('cliente');
       var modeloMal = (m.modelo && String(c.modelo||'')!==String(m.modelo));
+      // Si los seriales no cuadran, el enlace entero es dudoso: no se repara solo.
+      var _noCuadran = _idsQueNoCuadran(c, m);
+      if(_noCuadran.length){ sospechosos.push({moto:m, cred:c, difs:_noCuadran, modeloMal:modeloMal}); return; }
       if(cambios.length || modeloMal){
         relink.push({moto:m, cred:c, cambios:cambios, modeloMal:modeloMal, apply:function(){
           m.creditoId=c.id; m.estado='financiada'; m.cliente=c.cli||''; if(DB.saveMoto) DB.saveMoto(m);
@@ -3268,7 +3410,7 @@ function _auditVinculosMoto(){
     }
   });
 
-  return {huerfanas:huerfanas, relink:relink, conflictos:conflictos, sinMoto:sinMoto};
+  return {huerfanas:huerfanas, relink:relink, conflictos:conflictos, sinMoto:sinMoto, sospechosos:sospechosos};
 }
 
 function auditarVinculosMoto(){
@@ -3278,7 +3420,7 @@ function auditarVinculosMoto(){
   var totalFix = a.huerfanas.length + a.relink.length;
 
   var body;
-  if(totalFix===0 && a.conflictos.length===0 && a.sinMoto.length===0){
+  if(totalFix===0 && a.conflictos.length===0 && a.sinMoto.length===0 && a.sospechosos.length===0){
     body = '<div style="text-align:center;padding:26px 10px"><div style="font-size:34px;margin-bottom:10px">✓</div>'
       + '<div style="font-size:14px;font-weight:800">Todo consistente</div>'
       + '<div style="font-size:12px;color:var(--ink3);margin-top:6px">No hay motos huérfanas ni vínculos rotos entre créditos y motos.</div></div>';
@@ -3286,7 +3428,7 @@ function auditarVinculosMoto(){
     body = '<div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">'
       + '<div style="flex:1;min-width:120px;background:var(--ambers);border:1px solid rgba(244,180,44,.3);border-radius:10px;padding:9px 12px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--amber)">Motos huérfanas</div><div style="font-size:19px;font-weight:800;color:var(--amber)">'+a.huerfanas.length+'</div></div>'
       + '<div style="flex:1;min-width:120px;background:var(--gs);border:1px solid var(--rim2);border-radius:10px;padding:9px 12px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--ink3)">A re-vincular</div><div style="font-size:19px;font-weight:800">'+a.relink.length+'</div></div>'
-      + (a.conflictos.length||a.sinMoto.length?'<div style="flex:1;min-width:120px;background:var(--reds);border:1px solid rgba(217,59,90,.25);border-radius:10px;padding:9px 12px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--red)">Revisar a mano</div><div style="font-size:19px;font-weight:800;color:var(--red)">'+(a.conflictos.length+a.sinMoto.length)+'</div></div>':'')
+      + (a.conflictos.length||a.sinMoto.length||a.sospechosos.length?'<div style="flex:1;min-width:120px;background:var(--reds);border:1px solid rgba(217,59,90,.25);border-radius:10px;padding:9px 12px"><div style="font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--red)">Revisar a mano</div><div style="font-size:19px;font-weight:800;color:var(--red)">'+(a.conflictos.length+a.sinMoto.length+a.sospechosos.length)+'</div></div>':'')
       + '</div>';
 
     var rows='';
@@ -3299,6 +3441,13 @@ function auditarVinculosMoto(){
       rows += '<tr style="border-bottom:1px solid var(--rim)"><td style="padding:7px 8px"><span class="bdg b-b">Re-vincular</span></td>'
         + '<td style="padding:7px 8px"><b>'+esc(it.moto.modelo||'—')+'</b> <span style="color:var(--ink3);font-size:10.5px">#'+esc(it.moto.id)+'</span></td>'
         + '<td style="padding:7px 8px;font-size:11px;color:var(--ink2)">'+esc(it.cred.id)+' · '+esc(it.cred.cli||'')+' → corrige: '+esc(it.cambios.concat(it.modeloMal?['modelo del crédito']:[]).join(', '))+'</td></tr>';
+    });
+    a.sospechosos.forEach(function(it){
+      rows += '<tr style="border-bottom:1px solid var(--rim);background:var(--reds)"><td style="padding:7px 8px"><span class="bdg b-r">¿Otra moto?</span></td>'
+        + '<td style="padding:7px 8px"><b>'+esc(it.moto.modelo||'—')+'</b> <span style="color:var(--ink3);font-size:10.5px">#'+esc(it.moto.id)+'</span></td>'
+        + '<td style="padding:7px 8px;font-size:11px;color:var(--red)">'+esc(it.cred.id)+' · '+esc(it.cred.cli||'')+' — no coinciden: '
+        + it.difs.map(function(d){ return esc(d.campo)+' (crédito "'+esc(d.credito)+'" / moto "'+esc(d.moto)+'")'; }).join(' · ')
+        + '. No se repara solo: verificá cuál es la moto de este cliente.</td></tr>';
     });
     a.conflictos.forEach(function(it){
       rows += '<tr style="border-bottom:1px solid var(--rim);background:var(--reds)"><td style="padding:7px 8px"><span class="bdg b-r">Conflicto</span></td>'

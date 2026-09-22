@@ -115,7 +115,11 @@ function _wzCredPlanFields(r, fallback){
   var plazo = r.plazo || fallback.plazo || PLAN.plazo;
   return {
     precioBaseReal: precioBase,
-    ini: r.ini || fallback.ini || 0,
+    // Con `r.ini || fallback.ini` el CERO se trataba como vacio: poner la inicial en 0
+    // dejaba la vieja, mientras fin y total SI se recalculaban con el 0 — y entonces
+    // ini+fin dejaba de dar el precio (punto 15, 22-sep-2026). Los demas campos no
+    // sufren esto porque cuota, plazo y fin nunca valen 0 de verdad; la inicial si.
+    ini: (typeof r.ini === 'number' && isFinite(r.ini)) ? r.ini : (parseFloat(fallback.ini) || 0),
     fin: r.fin || fallback.fin || 0,
     total: r.total || fallback.total || 0,
     cuota: r.cuotaQ || fallback.cuota || 0,
