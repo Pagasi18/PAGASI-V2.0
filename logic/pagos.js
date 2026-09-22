@@ -897,7 +897,7 @@ function openLiquidarAnticipado(credId){
     + '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input id="liq_finiquito" type="checkbox" checked> Generar finiquito</label>'
     + '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer"><input id="liq_moto_propia" type="checkbox" checked> Moto como propia</label>'
     +'</div>'
-    +'<div class="note" style="margin-top:10px">Se registrará el cobro real y, si aplica, un descuento de cierre anticipado con auditoría. Al liquidar, el crédito queda <b>cerrado (completado)</b>: la casilla "Cerrar contrato" se quitó porque no hacía nada (punto 18).</div>';
+    +'<div class="note" style="margin-top:10px">Se registrará el cobro real y, si aplica, un descuento de cierre anticipado con auditoría. Al liquidar, el crédito queda <b>cerrado (completado)</b>.</div>';
   window._liqCredId=credId;
   $('mft').innerHTML='<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-s" onclick="ejecutarLiquidacionAnticipada()">Liquidar ahora</button>';
   $('ov').style.display='flex';

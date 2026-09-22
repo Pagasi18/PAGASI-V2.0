@@ -72,7 +72,8 @@ function intentar(estado){
 });
 
 ok('ya no aparece la casilla "Cerrar contrato" que no hacía nada',
-  String(form['mbd'].innerHTML || '').indexOf('liq_cerrar') === -1 && String(form['mbd'].innerHTML || '').indexOf('Cerrar contrato') > -1);
+  String(form['mbd'].innerHTML || '').indexOf('liq_cerrar') === -1
+  && String(form['mbd'].innerHTML || '').indexOf('Cerrar contrato') === -1);
 ok('...y dice claramente que el crédito queda cerrado',
   /queda <b>cerrado \(completado\)<\/b>/.test(String(form['mbd'].innerHTML || '')));
 
