@@ -234,6 +234,17 @@ ctx._wzPickMotoCat({ value:'cat-0', options:[{ value:'cat-0', text:'MOTO CAT', g
 ok('al pasar al catálogo se borran VIN, placa y seriales de la moto anterior',
   !ctx.WZ.vin && !ctx.WZ.placa && !ctx.WZ.serialMotor && form['wz_vin'].value === '');
 
+// ── Punto 19: borrar un crédito viejo no puede alcanzar a los de números parecidos ──
+(function(){
+  const mov = (id, concepto, extra) => Object.assign({ id, concepto, monto: 50, tipo:'deposito', eliminado:false }, extra||{});
+  const es = (m, cred) => ctx._movEsDelCredito(m, cred);
+  ok('CRED-14: su propio movimiento sí', es(mov('M1','Pago cuota · JOSE · CRED-14'), 'CRED-14'));
+  ok('CRED-140 NO es CRED-14', !es(mov('M2','Pago cuota · ANA · CRED-140'), 'CRED-14'));
+  ok('CRED-149 NO es CRED-14', !es(mov('M3','Inicial · LUIS · CRED-149 (MOTO)'), 'CRED-14'));
+  ok('el campo directo manda igual', es(mov('M4','Otra cosa', { creditoId:'CRED-14' }), 'CRED-14'));
+  ok('un movimiento de otro crédito no entra', !es(mov('M5','Pago cuota · CRED-15'), 'CRED-14'));
+})();
+
 console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');
 if (fail) process.exitCode = 1;
 })();

@@ -1620,13 +1620,31 @@ function getTotalInicialesCobradas(){
     return a + (parseFloat(m.monto)||0);
   }, 0);
 }
+// ¿Este movimiento es de ESTE credito? El texto se compara por palabras completas:
+// buscar "CRED-14" dentro del concepto tambien encontraba CRED-140 … CRED-149 y borraba
+// movimientos de otros creditos (punto 19, 22-sep-2026).
+function _movEsDelCredito(m, credId){
+  if(!m || !credId) return false;
+  if(m.creditoId===credId || m.conceptoCredito===credId || m.cred===credId) return true;
+  var txt = String(m.concepto||'');
+  if(!txt) return false;
+  var i = txt.indexOf(credId);
+  while(i > -1){
+    var sig = txt.charAt(i + String(credId).length);
+    if(!/[0-9A-Za-z-]/.test(sig)) return true;   // termina ahi: es el credito, no uno mas largo
+    i = txt.indexOf(credId, i + 1);
+  }
+  return false;
+}
+
 function marcarInicialCreditoEliminada(credId, motivo){
   if(!credId || !Array.isArray(S.movimientos)) return;
   var ahora = new Date().toISOString();
   var actor = (S.currentUser&&S.currentUser.nombre)||'Admin';
   S.movimientos.forEach(function(m){
     if(!m || m.eliminado) return;
-    var esDeEsteCredito = m.creditoId===credId || m.conceptoCredito===credId || ((m.concepto||'').indexOf('Inicial · ')===0 && (m.concepto||'').indexOf(credId)>=0);
+    var esDeEsteCredito = m.creditoId===credId || m.conceptoCredito===credId
+      || ((m.concepto||'').indexOf('Inicial · ')===0 && _movEsDelCredito(m, credId));
     if(!esDeEsteCredito) return;
     m.eliminado = true;
     m.eliminadoPor = actor;

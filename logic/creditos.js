@@ -2562,7 +2562,7 @@ function marcarPagosYCuentasCreditoEliminados(credId, motivo){
   });
   (S.movimientos||[]).forEach(function(m){
     if(!m || m.eliminado) return;
-    var mismoCredito = m.creditoId===credId || m.conceptoCredito===credId || m.cred===credId || (m.concepto&&m.concepto.indexOf(credId)>=0);
+    var mismoCredito = _movEsDelCredito(m, credId);   // por numero completo (punto 19)
     if(!mismoCredito) return;
     m.eliminado = true;
     m.eliminadoPor = actor;
@@ -2661,7 +2661,7 @@ function ejecutarRestaurarCred(credId){
   });
   (S.movimientos||[]).forEach(function(m){
     if(!m || !m.eliminado) return;
-    var mismoCredito = m.creditoId===credId || m.conceptoCredito===credId || m.cred===credId || (m.concepto&&m.concepto.indexOf(credId)>=0);
+    var mismoCredito = _movEsDelCredito(m, credId);   // por numero completo (punto 19)
     if(!mismoCredito) return;
     m.eliminado = false;
     m.restauradoPor = actor;
