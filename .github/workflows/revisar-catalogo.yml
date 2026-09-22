@@ -1,0 +1,29 @@
+name: Revisar el catalogo de modelos (solo lectura)
+
+# A mano. Mira config/catalogo: numeros (id) repetidos o que no son numero, modelos
+# con el mismo nombre y modelos con el mismo precio. Un id repetido hace que al darle
+# Editar a un modelo se abra otro. Solo lectura; el log no lleva datos de clientes.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: pagasi-v2
+          workload_identity_provider: projects/951911859002/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: firebase-adminsdk-fbsvc@pagasi-v2.iam.gserviceaccount.com
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - working-directory: bot
+        run: npm install --omit=dev
+      - working-directory: bot
+        run: node revisar-catalogo.js
