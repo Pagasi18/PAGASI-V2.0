@@ -21,7 +21,15 @@ PG.reportes = function(){
   const credsRec = _SCREDS.filter(c=>!c.eliminado&&(c.estado==='recuperada'||c.estado==='recuperado'));
   const totalCuotas= pagosConf.filter(p=>!p.esInicial&&p.tipoOperacion!=='inicial_credito').reduce((a,p)=>a+p.monto,0);
   const totalIniciales= getTotalInicialesCobradas();
-  const totalEgresos= _SEGR.filter(e=>!e.eliminado).reduce((a,e)=>a+(e.monto||0),0);
+  // La inicial que el cliente paga en la tienda queda registrada como un egreso de
+  // compra de moto, pero NO es plata que salio de Pagasi (entra tambien como ingreso).
+  // El dashboard ya la saca desde el 17-sep; Reportes seguia contandola (punto 17, 21-sep).
+  // Los egresos de la inicial se siguen viendo en el historial, marcados, pero no suman.
+  const _idsEgrIni = (typeof _egrIdsInicial==='function') ? _egrIdsInicial() : {};
+  const esEgrInicial = e => !!(e && _idsEgrIni[String(e.id)]);
+  const egresosTodos = _SEGR.filter(e=>!e.eliminado);
+  const totalEgresosIni = egresosTodos.filter(esEgrInicial).reduce((a,e)=>a+(e.monto||0),0);
+  const totalEgresos= egresosTodos.filter(e=>!esEgrInicial(e)).reduce((a,e)=>a+(e.monto||0),0);
   const totalIngresos=totalCuotas+totalIniciales;
   const utilidad = totalIngresos-totalEgresos;
   const margen = totalIngresos>0?Math.round(utilidad/totalIngresos*100):0;
@@ -54,7 +62,7 @@ PG.reportes = function(){
 
   // ══════════ SERIE 12 MESES (para proyecciones) ══════════
   const now = new Date();
-  const egresos = _SEGR.filter(e=>!e.eliminado);
+  const egresos = egresosTodos.filter(e=>!esEgrInicial(e));
   const serie = [];
   for(let i=11;i>=0;i--){
     const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
@@ -813,7 +821,7 @@ PG.reportes = function(){
     <div class="stat" style="">
       <div class="st-v" style="color:var(--red);font-size:22px">${fmt(totalEgresos)}</div>
       <div class="st-l">Total egresos</div>
-      <div style="font-size:10px;color:var(--ink3);margin-top:2px">${egresos.length} registros</div>
+      <div style="font-size:10px;color:var(--ink3);margin-top:2px">${egresos.length} registros${totalEgresosIni>0?` · sin ${fmt(totalEgresosIni)} de iniciales`:''}</div>
     </div>
     <div class="stat" style="">
       <div class="st-v" style="color:var(--amber);font-size:22px">${Object.keys(egresosCat).length}</div>
@@ -847,17 +855,17 @@ PG.reportes = function(){
 
     <div class="card">
       <div class="ch">
-        <div><div class="ct">Historial de egresos</div><div class="cs">${egresos.length} registro${egresos.length===1?'':'s'}</div></div>
+        <div><div class="ct">Historial de egresos</div><div class="cs">${egresosTodos.length} registro${egresosTodos.length===1?'':'s'}${totalEgresosIni>0?` · ${fmt(totalEgresosIni)} son iniciales de clientes y no cuentan como salida`:''}</div></div>
         <button class="btn btn-p btn-sm" onclick="openAddEgreso()">＋ Nuevo Egreso</button>
       </div>
       <div style="max-height:360px;overflow-y:auto;margin:0 -4px;padding:0 4px">
-        ${egresos.length?egresos.slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).map(e=>`
+        ${egresosTodos.length?egresosTodos.slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).map(e=>`
           <div style="display:flex;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid var(--rim2)">
             <div style="width:36px;height:36px;border-radius:8px;background:var(--reds);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--red);flex-shrink:0">${(e.categoria||'$').substring(0,3).toUpperCase()}</div>
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.concepto}</div>
               <div style="font-size:10.5px;color:var(--ink3);margin-top:2px">
-                <span style="padding:1px 6px;border-radius:4px;background:var(--surf2);margin-right:4px">${e.categoria||'Sin categoría'}</span>
+                <span style="padding:1px 6px;border-radius:4px;background:var(--surf2);margin-right:4px">${e.categoria||'Sin categoría'}</span>${esEgrInicial(e)?'<span style="padding:1px 6px;border-radius:4px;background:var(--gs);color:var(--p1);font-weight:700;margin-right:4px">inicial del cliente · no es salida</span>':''}
                 ${e.forma||'—'} · ${e.fecha||'—'}
               </div>
             </div>
@@ -870,8 +878,8 @@ PG.reportes = function(){
             <div style="font-size:11.5px">Haz clic en "Nuevo Egreso" para comenzar</div>
           </div>`}
       </div>
-      ${egresos.length?`<div style="margin-top:12px;background:var(--reds);border:1px solid rgba(217,59,90,.2);border-radius:10px;padding:11px 13px;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-weight:700;font-size:13px">Total egresos acumulados</span>
+      ${egresosTodos.length?`<div style="margin-top:12px;background:var(--reds);border:1px solid rgba(217,59,90,.2);border-radius:10px;padding:11px 13px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:700;font-size:13px">Total egresos acumulados${totalEgresosIni>0?' <span style="font-weight:500;font-size:11px;color:var(--ink3)">(sin las iniciales de clientes)</span>':''}</span>
         <span style="color:var(--red);font-weight:900;font-family:var(--fd);font-size:16px">-${fmt(totalEgresos)}</span>
       </div>`:''}
     </div>

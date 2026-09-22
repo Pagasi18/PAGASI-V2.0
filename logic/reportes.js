@@ -1245,11 +1245,22 @@ function generarReporte(tipo){
 
   } else if(tipo==='pyl'){
     titulo = 'Estado de Resultados (P&L)';
+    // Las iniciales se contaban DOS veces: una en getTotalInicialesCobradas (movimientos)
+    // y otra dentro de los pagos (la inicial tambien se guarda como pago). Aqui van las
+    // cuotas por un lado y las iniciales por el otro (punto 17, 21-sep-2026).
     var tIni = getTotalInicialesCobradas();
-    var tPagos = S.pagos.filter(function(p){return !p.eliminado&&p.estado==='confirmado';}).reduce(function(a,p){return a+p.monto;},0);
+    var tPagos = S.pagos.filter(function(p){
+      return !p.eliminado && p.estado==='confirmado' && !p.esInicial && p.tipoOperacion!=='inicial_credito';
+    }).reduce(function(a,p){return a+p.monto;},0);
     var tIngresos = tIni + tPagos;
-    var egresosActPyl = S.egresos.filter(function(e){return !e.eliminado;});
+    // La inicial que el cliente paga en la tienda queda como egreso de compra de moto,
+    // pero no es plata que salio de Pagasi: se muestra aparte y no suma (igual que el dashboard).
+    var _idsIniPyl = (typeof _egrIdsInicial==='function') ? _egrIdsInicial() : {};
+    var esIniPyl = function(e){ return !!(e && _idsIniPyl[String(e.id)]); };
+    var egresosActPyl = S.egresos.filter(function(e){return !e.eliminado && !esIniPyl(e);});
+    var egresosIniPyl = S.egresos.filter(function(e){return !e.eliminado && esIniPyl(e);});
     var egresosElimPyl = S.egresos.filter(function(e){return e.eliminado;});
+    var tEgresosIni = egresosIniPyl.reduce(function(a,e){return a+(e.monto||0);},0);
     var tEgresos = egresosActPyl.reduce(function(a,e){return a+(e.monto||0);},0);
     var utilidad = tIngresos - tEgresos;
     html_content = '<div class="stat-grid">'
@@ -1264,6 +1275,8 @@ function generarReporte(tipo){
       +'<tr class="total-row"><td>TOTAL INGRESOS</td><td>$'+tIngresos.toFixed(2)+'</td></tr>'
       +egresosActPyl.map(function(e){return '<tr><td>(-) '+e.concepto+'</td><td>$'+(e.monto||0).toFixed(2)+'</td></tr>';}).join('')
       +'<tr class="total-row"><td>TOTAL EGRESOS</td><td>$'+tEgresos.toFixed(2)+'</td></tr>'
+      +(egresosIniPyl.length?'<tr><td colspan="2" style="background:#eef2fb;color:#2563EB;font-weight:700;padding:6px 9px">Iniciales de clientes registradas como compra de moto — no son salida de Pagasi (ya estan arriba como ingreso): $'+tEgresosIni.toFixed(2)+'</td></tr>'
+        +egresosIniPyl.map(function(e){return '<tr style="opacity:.6"><td>'+e.concepto+'</td><td>$'+(e.monto||0).toFixed(2)+'</td></tr>';}).join(''):'')
       +'<tr class="total-row" style="background:#2563EB!important;color:#fff"><td>UTILIDAD NETA</td><td>$'+utilidad.toFixed(2)+'</td></tr>'
       +(egresosElimPyl.length?'<tr><td colspan="2" style="background:#fde8ec;color:#b5162d;font-weight:700;padding:6px 9px"> Egresos eliminados (no cuentan en totales)</td></tr>'
         +egresosElimPyl.map(function(e){return '<tr style="opacity:0.5;text-decoration:line-through;background:#fff5f5"><td>(-) '+e.concepto+' <em style="font-size:10px">['+( e.eliminadoRazon||'Eliminado')+']</em></td><td>$'+(e.monto||0).toFixed(2)+'</td></tr>';}).join(''):'')
