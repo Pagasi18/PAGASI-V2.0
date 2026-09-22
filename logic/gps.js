@@ -1554,8 +1554,12 @@ function _gpsImportarProcesar(){
     if((idGps && yaIdGps[idGps]) || (imei && yaImei[imei])){ saltados++; return; }
 
     var credRaw = get(7).toUpperCase().replace(/\s+/g,'');
-    if(credRaw && credRaw.indexOf('CRED') === 0 && credRaw.indexOf('-') === -1){
-      credRaw = credRaw.replace('CRED', 'CRED-');
+    // Ojo: no basta con mirar que credPrefijo exista. Se comprueba que devuelva un
+    // texto: si no, se usa CRED y no se arma un prefijo con cualquier cosa.
+    var _pre = 'CRED';
+    try { var _p = (typeof credPrefijo==='function') ? credPrefijo() : ''; if(typeof _p === 'string' && _p) _pre = _p; } catch(e){}
+    if(credRaw && credRaw.indexOf(_pre) === 0 && credRaw.indexOf('-') === -1){
+      credRaw = credRaw.replace(_pre, _pre + '-');
     }
     var credId = creds[credRaw] || '';
     if(credRaw && !credId) sinCred++;

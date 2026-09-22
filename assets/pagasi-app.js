@@ -13,6 +13,17 @@ var FIREBASE_CONFIG = {
   appId: '1:951911859002:web:1eb8f0af7bcbd508474603'
 };
 
+// ── COMO SE NUMERAN LOS CREDITOS ─────────────────────────────────────────────
+// Cada compania tiene su serie. PAGASI 18 lleva CRED-001 desde siempre y no se toca;
+// PAGASI 26 arranca su propia serie con otra letra (Adam, 22-sep-2026). Cambiar esto
+// en una base que YA tiene creditos parte la numeracion en dos: se pone al crear la
+// compania y no se vuelve a tocar.
+var CRED_PREFIJO = 'CRED';
+function credPrefijo(){ return String(CRED_PREFIJO || 'CRED'); }
+function credNum(n){ return credPrefijo() + '-' + String(n).padStart(3, '0'); }
+function credNumRe(){ return new RegExp('^' + credPrefijo() + '-(\\d+)$'); }
+window.credPrefijo = credPrefijo; window.credNum = credNum;
+
 // ══════════════════════════════════════════════════════════════════
 // LA MEMORIA DEL NAVEGADOR ES DE UNA SOLA COMPANIA
 // ══════════════════════════════════════════════════════════════════
@@ -1564,10 +1575,10 @@ function nextCredId(){
   var all = (S && Array.isArray(S.creds)) ? S.creds : [];
   all.forEach(function(c){
     if(!c || !c.id) return;
-    var m = String(c.id).match(/CRED-(\d+)/);
+    var m = String(c.id).match(credNumRe());
     if(m){ var n = parseInt(m[1], 10); if(!isNaN(n) && n > max) max = n; }
   });
-  return 'CRED-' + String(max + 1).padStart(3, '0');
+  return credNum(max + 1);
 }
 // ════════════════════════════════════════════════════════════════════
 // RESERVA ATOMICA DE NUMEROS
@@ -1637,15 +1648,15 @@ function nextCredIdAsync(){
   return db.collection('creditos').get().then(function(snap){
     var usados = {}, max = 0;
     snap.forEach(function(d){
-      var m = String((d.data && d.data().id) || d.id || '').match(/CRED-(\d+)/);
+      var m = String((d.data && d.data().id) || d.id || '').match(credNumRe());
       if(m){ var n = parseInt(m[1], 10); if(!isNaN(n)){ usados[n] = 1; if(n > max) max = n; } }
     });
     for(var g = 1; g <= max; g++){
-      if(!usados[g]) return 'CRED-' + String(g).padStart(3, '0');   // hueco mas bajo
+      if(!usados[g]) return credNum(g);   // hueco mas bajo
     }
     // Sin huecos: numero siguiente, reservado de forma atomica.
     return reservarNumero('creditos', max).then(function(n){
-      return 'CRED-' + String(n).padStart(3, '0');
+      return credNum(n);
     });
   });
 }
@@ -2757,16 +2768,15 @@ window.S = S;
 window.$ = $;
 window.fmt = fmt;
 
-// El numero de la moto, como se lee en pantalla y en los papeles: M-001.
-// Por dentro la moto sigue siendo el numero 1: esto es solo como se muestra, igual
-// que los creditos son CRED-001 (pedido de Adam, 22-sep-2026). Si algun dia un id no
-// es un numero, se muestra tal cual y no se inventa nada.
+// El numero de la moto, como se lee en pantalla y en los papeles: "#501".
+// El inventario no mostraba el numero por ningun lado (22-sep-2026). La letra M NO se
+// usa aqui: es la serie de los creditos de PAGASI 26, y dos cosas distintas con el
+// mismo nombre confunden mas de lo que ayudan.
 function motoNum(m){
   var id = (m && typeof m === 'object') ? m.id : m;
   var s = String(id == null ? '' : id).trim();
   if(!s) return '';
-  if(/^M-/i.test(s)) return s.toUpperCase();
-  return /^\d+$/.test(s) ? 'M-' + (s.length >= 3 ? s : ('000' + s).slice(-3)) : s;
+  return /^\d+$/.test(s) ? '#' + s : s;
 }
 window.motoNum = motoNum;
 
