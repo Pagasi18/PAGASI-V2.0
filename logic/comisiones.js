@@ -1024,6 +1024,8 @@ function _comAbrirEliminarPago(egId, uid){
 }
 
 function _comConfirmarEliminarPago(egId, uid){
+  // Anular un pago de comision mueve dinero: mismo permiso que borrar (punto 9)
+  if(typeof requireDeletePermission==='function' && !requireDeletePermission()) return;
   var idx = (S.egresos||[]).findIndex(function(x){return x.id === egId || x.id === Number(egId);});
   if(idx < 0){ toast('Egreso no encontrado','error'); return; }
   var razon = ($('cdel_razon')&&$('cdel_razon').value||'').trim();

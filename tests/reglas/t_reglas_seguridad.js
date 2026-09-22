@@ -96,6 +96,39 @@ const lead = (id, cambios) => Object.assign({}, LEAD, { id }, cambios || {});
   await prueba('el admin si cambia permisos, sedes y suspension',
     assertSucceeds(updateDoc(doc(admin, 'usuarios/emp1'), { permisos: ['dash', 'cobranza'], concesionarios: ['C2'], suspendido: true })));
 
+  // ── Punto 9: configuracion y anulaciones ──
+  await env.withSecurityRulesDisabled(async ctx => {
+    const db = ctx.firestore();
+    await setDoc(doc(db, 'usuarios/ger1'), { rol: 'Gerente', nombre: 'Gerente', email: 'ger1@x.com', permisos: ['dash','cobranza','reportes','cuentas'] });
+    await setDoc(doc(db, 'usuarios/cob1'), { rol: 'Cobrador', nombre: 'Cobrador', email: 'cob1@x.com', permisos: ['dash','cobranza','pagos'] });
+    await setDoc(doc(db, 'config/plan'), { factor: 1.9, diasGracia: 5 });
+    await setDoc(doc(db, 'config/tasa'), { tasaBs: 40 });
+    await setDoc(doc(db, 'config/cuentasBanc'), { lista: [{ nombre: 'Binance' }] });
+    await setDoc(doc(db, 'config/coromoto'), { ajustes: [] });
+    await setDoc(doc(db, 'egresos/EG-1'), { id: 'EG-1', concepto: 'Alquiler', monto: 100, eliminado: false });
+    await setDoc(doc(db, 'movimientos/MOV-1'), { id: 'MOV-1', tipo: 'retiro', monto: 100, cuentaOrigen: 'Binance', eliminado: false });
+    await setDoc(doc(db, 'pagos/PAG-1'), { id: 'PAG-1', cred: 'CRED-1', monto: 50, estado: 'confirmado', eliminado: false });
+  });
+  const gerente = env.authenticatedContext('ger1', { email: 'ger1@x.com' }).firestore();
+  const cobrador = env.authenticatedContext('cob1', { email: 'cob1@x.com' }).firestore();
+
+  await prueba('un cobrador NO cambia el plan (factor, días de gracia)', assertFails(updateDoc(doc(cobrador, 'config/plan'), { factor: 1.2 })));
+  await prueba('un gerente tampoco', assertFails(updateDoc(doc(gerente, 'config/plan'), { factor: 1.2 })));
+  await prueba('el admin sí', assertSucceeds(updateDoc(doc(admin, 'config/plan'), { factor: 1.95 })));
+  await prueba('un cobrador NO cambia las cuentas bancarias', assertFails(updateDoc(doc(cobrador, 'config/cuentasBanc'), { lista: [] })));
+  await prueba('la tasa del día la sigue actualizando cualquier empleado', assertSucceeds(updateDoc(doc(cobrador, 'config/tasa'), { tasaBs: 41 })));
+  await prueba('los ajustes contables los toca quien ve Reportes (gerente)', assertSucceeds(updateDoc(doc(gerente, 'config/coromoto'), { ajustes: [{ id: 'a1' }] })));
+  await prueba('...pero un cobrador no', assertFails(updateDoc(doc(cobrador, 'config/coromoto'), { ajustes: [] })));
+
+  await prueba('un empleado sin permiso de eliminar NO anula un gasto', assertFails(updateDoc(doc(gerente, 'egresos/EG-1'), { eliminado: true })));
+  await prueba('...ni un movimiento de cuenta', assertFails(updateDoc(doc(gerente, 'movimientos/MOV-1'), { eliminado: true })));
+  await prueba('...ni un pago', assertFails(updateDoc(doc(cobrador, 'pagos/PAG-1'), { eliminado: true })));
+  await prueba('pero sí puede editar un gasto sin anularlo', assertSucceeds(updateDoc(doc(gerente, 'egresos/EG-1'), { concepto: 'Alquiler oficina' })));
+  await prueba('y el admin sí anula', assertSucceeds(updateDoc(doc(admin, 'egresos/EG-1'), { eliminado: true, eliminadoPor: 'Admin' })));
+  await prueba('...y también revive lo anulado', assertSucceeds(updateDoc(doc(admin, 'egresos/EG-1'), { eliminado: false })));
+  await prueba('un empleado sin permiso tampoco revive lo anulado',
+    assertFails(updateDoc(doc(gerente, 'movimientos/MOV-1'), { eliminado: true })));
+
   await env.cleanup();
   console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');
   process.exit(fail ? 1 : 0);

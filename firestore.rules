@@ -170,8 +170,34 @@ service cloud.firestore {
              && request.resource.data.uid == request.auth.uid );
     }
 
+    // == Que puede hacer cada quien (punto 9, 21-sep-2026) ==
+    // Hasta ahora "solo el administrador" era un cartel de la pantalla: las Reglas
+    // dejaban a CUALQUIER empleado cambiar el plan, la tasa, las cuentas bancarias y
+    // anular gastos, movimientos y pagos. Aqui se pide el mismo permiso que muestra
+    // la app: 'config' para la configuracion y 'perm_delete' para anular.
+    function permisos() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.get('permisos', []);
+    }
+    function permiso(p) { return esStaff() && permisos().hasAny([p]); }
+    function puedeAnular() { return esAdmin() || permiso('perm_delete'); }
+    // true si esta escritura anula un registro o lo revive
+    function cambiaAnulacion() {
+      return request.resource.data.get('eliminado', false) != resource.data.get('eliminado', false);
+    }
+
     // == Configuracion ==
-    match /config/{id} { allow read, write: if esStaff(); }
+    // La tasa del dia la actualiza sola la pantalla (cualquier empleado). Los ajustes
+    // contables de Coromoto, quien ve Reportes. Lo demas (plan, factor, dias de gracia,
+    // cuentas bancarias, empresa, roles, catalogo), solo el modulo Configuracion.
+    match /config/{id} {
+      allow read: if esStaff();
+      allow write: if id == 'tasa' ? esStaff()
+        : ( id == 'coromoto' ? (esAdmin() || permiso('reportes'))
+        : ( (id == 'catalogo' || id == 'planes') ? (esAdmin() || permiso('config') || permiso('plan'))
+        : ( id in ['plan','cuentasBanc','empresa','rolesPermisos','score','cobradores']
+            ? (esAdmin() || permiso('config'))
+            : esStaff() ) ) );
+    }
 
     // == Portal del cliente: accesos y sesiones ==
     // accesos_cliente/{token}: lo crea un empleado desde la ficha del cliente.
@@ -263,13 +289,18 @@ service cloud.firestore {
     // creditos/pagos: el cliente puede LEER solo lo suyo (creditos con su
     // clienteId, y los pagos de esos creditos). Escribir: solo staff.
     match /creditos/{id}          { allow read: if esStaff() || esClienteDe(resource.data.clienteId); allow create, update: if esStaff(); allow delete: if esAdmin(); }
-    match /pagos/{id}             { allow read: if esStaff() || esMiCredito(resource.data.cred); allow create, update: if esStaff(); allow delete: if esAdmin(); }
+    match /pagos/{id}             { allow read: if esStaff() || esMiCredito(resource.data.cred); allow create: if esStaff();
+                                    allow update: if esStaff() && (!cambiaAnulacion() || puedeAnular()); allow delete: if esAdmin(); }
     match /motos/{id}             { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
     match /facturas/{id}          { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
     match /cuentas/{id}           { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
     match /cuentasPendientes/{id} { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
-    match /movimientos/{id}       { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
-    match /egresos/{id}           { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
+    // Anular (o revivir) un movimiento o un gasto mueve el saldo de una cuenta: pide el
+    // permiso de eliminar, el mismo que muestra la app (punto 9).
+    match /movimientos/{id}       { allow read, create: if esStaff();
+                                    allow update: if esStaff() && (!cambiaAnulacion() || puedeAnular()); allow delete: if esAdmin(); }
+    match /egresos/{id}           { allow read, create: if esStaff();
+                                    allow update: if esStaff() && (!cambiaAnulacion() || puedeAnular()); allow delete: if esAdmin(); }
     match /concesionarios/{id}    { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
     match /tareas/{id}            { allow read, create, update, delete: if esStaff(); }
     match /recursos/{id}          { allow read, create, update, delete: if esStaff(); }
