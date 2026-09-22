@@ -41,7 +41,7 @@ function motoRow(m){
   return `<tr id="mc-${motoEsc(m.id)}">
     <td>
       <div class="tdm">${motoEsc(m.modelo||'Sin modelo')}${m.anio?` <span style="font-size:10px;color:var(--ink3);font-weight:700">${motoEsc(m.anio)}</span>`:''}</div>
-      <div class="tds">VIN ${motoEsc(m.vin||'-')}${m.color?' - '+motoEsc(m.color):''}</div>
+      <div class="tds"><span style="font-weight:800;color:var(--ink2)">${motoEsc(motoNum(m))}</span> · VIN ${motoEsc(m.vin||'-')}${m.color?' - '+motoEsc(m.color):''}</div>
     </td>
     <td>${cred?`<button class="btn btn-g btn-xs" onclick="event.stopPropagation();openAmort(${credArg})">${motoEsc(cred.id||'Credito')}</button><div class="tds">${motoEsc(avance)}</div>`:'<span style="color:var(--ink3);font-size:11px">-</span>'}</td>
     <td>${cliente?`<span class="bdg b-p">${motoEsc(cliente)}</span>`:'<span style="color:var(--ink3);font-size:11px">-</span>'}</td>
@@ -154,7 +154,7 @@ function renderMotosEliminadasBloque(){
         return '<div style="display:flex;align-items:center;gap:10px;padding:7px 6px;border-bottom:1px solid var(--rim)">'
           +'<div style="flex:1">'
           + '<div style="font-size:12.5px;font-weight:700;opacity:.75;text-decoration:line-through">'+(m.modelo||'—')+'</div>'
-          + '<div style="font-size:10.5px;color:var(--ink3)">VIN: '+(m.vin||'—')+' · por '+(m.eliminadoPor||'Admin')+(fecha?' · '+fecha:'')+(m.eliminadoRazon?' · '+m.eliminadoRazon:'')+'</div>'
+          + '<div style="font-size:10.5px;color:var(--ink3)">'+motoNum(m)+' · VIN: '+(m.vin||'—')+' · por '+(m.eliminadoPor||'Admin')+(fecha?' · '+fecha:'')+(m.eliminadoRazon?' · '+m.eliminadoRazon:'')+'</div>'
           +'</div>'
           +'<button class="btn btn-s btn-xs" onclick="restaurarMoto(\''+m.id+'\')" title="Volver a activar esta moto">⟲ Restaurar</button>'
           +'</div>';

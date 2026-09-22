@@ -154,7 +154,7 @@ function _wzRender(motoId){
 
   // ── PASO 2: Moto ──
   var motoOptions = motosDisp.length
-    ? motosDisp.map(function(m){ return '<option value="'+m.id+'" data-precio="'+m.precio+'"'+(motoId===m.id?' selected':'')+'>'+m.modelo+' — $'+m.precio.toFixed(2)+'</option>'; }).join('')
+    ? motosDisp.map(function(m){ return '<option value="'+m.id+'" data-precio="'+m.precio+'"'+(motoId===m.id?' selected':'')+'>'+motoNum(m)+' · '+m.modelo+' — $'+m.precio.toFixed(2)+'</option>'; }).join('')
     : '<option value="">— No hay motos disponibles —</option>';
 
   // Catálogo COMPLETO del módulo Plan y Precios — TODAS las motos sin excepción (misma fuente: CATALOGO).
@@ -2091,11 +2091,11 @@ function _wzGuardar(){
       if(_motoRec && _modeloPedido && _modeloPedido !== String(_modeloFinal||'').trim()){
         var _puedeMotos = (typeof hasModuleAccess==='function') ? hasModuleAccess('motos') : true;
         var _ok = _puedeMotos && confirm(
-          'MOTO #'+_motoRec.id+' DE ESTE CRÉDITO\n\n'
+          'MOTO '+motoNum(_motoRec)+' DE ESTE CRÉDITO\n\n'
           + 'En el inventario está registrada como:\n   '+(_modeloFinal||'(sin modelo)')+'\n\n'
           + 'En la pantalla elegiste:\n   '+_modeloPedido+'\n\n'
           + '¿Esa misma unidad física es en realidad una "'+_modeloPedido+'"?\n\n'
-          + 'Aceptar  = corregir el modelo de la moto #'+_motoRec.id+' y del crédito\n'
+          + 'Aceptar  = corregir el modelo de la moto '+motoNum(_motoRec)+' y del crédito\n'
           + 'Cancelar = dejarlo como está (si el cliente se llevó otra moto, elige la\n'
           + '                  unidad correcta en "Moto del inventario")');
         if(_ok){
@@ -2108,11 +2108,11 @@ function _wzGuardar(){
           if(DB && DB.saveMoto) DB.saveMoto(_motoRec);
           if(typeof logActividad==='function') logActividad('moto_modelo_corregido','motos',String(_motoRec.id),{antes:_modeloAntes, ahora:_modeloPedido, credito:_editId});
           _modeloFinal = _modeloPedido;
-          toast('Moto #'+_motoRec.id+': '+(_modeloAntes||'(sin modelo)')+' → '+_modeloPedido,'success');
+          toast('Moto '+motoNum(_motoRec)+': '+(_modeloAntes||'(sin modelo)')+' → '+_modeloPedido,'success');
         } else {
           toast(!_puedeMotos
             ? 'No tienes permiso para corregir el modelo de una moto: el crédito sigue con "'+_modeloFinal+'"'
-            : 'El crédito sigue con "'+_modeloFinal+'", que es el modelo de la moto #'+_motoRec.id, 'info');
+            : 'El crédito sigue con "'+_modeloFinal+'", que es el modelo de la moto '+motoNum(_motoRec), 'info');
         }
       }
       var _upd = {
@@ -2712,7 +2712,7 @@ function ejecutarRestaurarCred(credId){
           && (x.estado==='activo' || x.estado==='mora' || x.estado==='pendiente_revision');
       });
       if(_otroDueno){
-        toast('La moto #'+c.motoId+' ya es del crédito '+_otroDueno.id+': el crédito se restauró sin moto','info');
+        toast('La moto '+motoNum(c.motoId)+' ya es del crédito '+_otroDueno.id+': el crédito se restauró sin moto','info');
         c.motoId = null; c.motoPendiente = true;
         DB.updateCred(credId, { motoId: null, motoPendiente: true });
       } else {
@@ -2732,7 +2732,7 @@ function ejecutarRestaurarCred(credId){
           S.motos[mi].creditoId = c.id;
           DB.saveMoto(S.motos[mi]);
         } else {
-          toast('La moto #'+c.motoId+' está eliminada por otra razón: revísala en Inventario','info');
+          toast('La moto '+motoNum(c.motoId)+' está eliminada por otra razón: revísala en Inventario','info');
         }
       }
     }

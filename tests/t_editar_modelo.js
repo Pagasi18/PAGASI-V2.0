@@ -72,14 +72,14 @@ function correr(respuesta, modeloElegido, modeloDeLaMoto, permisoMotos) {
 let r = correr(true, 'NEW HORSE 150', 'EK XPRESS 150');
 ok('pregunta antes de tocar nada', r.preguntas.length === 1);
 ok('la pregunta nombra la moto, el modelo viejo y el elegido',
-  /#501/.test(r.preguntas[0]) && /EK XPRESS 150/.test(r.preguntas[0]) && /NEW HORSE 150/.test(r.preguntas[0]));
+  /M-501/.test(r.preguntas[0]) && /EK XPRESS 150/.test(r.preguntas[0]) && /NEW HORSE 150/.test(r.preguntas[0]));
 ok('con el SI, el credito queda con el modelo elegido', r.resultado === 'NEW HORSE 150');
 ok('...y la moto del inventario tambien', r.moto.modelo === 'NEW HORSE 150');
 ok('...y queda guardada', r.guardadas.length === 1 && r.guardadas[0].id === 501);
 ok('...con auditoria de quien, cuando y desde que credito',
   r.moto.modeloAnterior === 'EK XPRESS 150' && r.moto.modeloCorregidoPor === 'Vendedora'
   && !!r.moto.modeloCorregidoEn && r.moto.modeloCorregidoDesde === 'CRED-501');
-ok('y se le dice lo que cambio', r.avisos.some(a => /#501/.test(a) && /NEW HORSE 150/.test(a)));
+ok('y se le dice lo que cambio', r.avisos.some(a => /M-501/.test(a) && /NEW HORSE 150/.test(a)));
 
 // ── 2. Dice que NO: el cliente se llevo otra moto ──────────────────────────────
 r = correr(false, 'NEW HORSE 150', 'EK XPRESS 150');
@@ -87,7 +87,7 @@ ok('con el NO no se renombra la moto', r.moto.modelo === 'EK XPRESS 150' && !r.m
 ok('...ni se guarda nada', r.guardadas.length === 0);
 ok('...el credito se queda con el modelo de su moto', r.resultado === 'EK XPRESS 150');
 ok('...y se le dice CLARO en que quedo (esto era lo que fallaba en silencio)',
-  r.avisos.some(a => /sigue con/.test(a) && /EK XPRESS 150/.test(a) && /#501/.test(a)));
+  r.avisos.some(a => /sigue con/.test(a) && /EK XPRESS 150/.test(a) && /M-501/.test(a)));
 
 // ── 3. Sin permiso de Motocicletas no se renombra una unidad ───────────────────
 r = correr(true, 'NEW HORSE 150', 'EK XPRESS 150', false);
@@ -107,6 +107,18 @@ ok('solo espacios: tampoco pregunta', r.preguntas.length === 0);
 // ── 6. Sin modelo elegido, no hace nada ────────────────────────────────────────
 r = correr(true, '', 'EK XPRESS 150');
 ok('sin modelo elegido no pregunta ni cambia', r.preguntas.length === 0 && r.moto.modelo === 'EK XPRESS 150');
+
+
+// ── 7. El numero de la moto se lee M-001, no "1" (pedido de Adam, 22-sep) ─────
+const num = ctx.motoNum;
+ok('la moto 1 se lee M-001', num({id:1}) === 'M-001');
+ok('la moto 23 se lee M-023', num({id:23}) === 'M-023');
+ok('la moto 501 se lee M-501', num({id:501}) === 'M-501');
+ok('la moto 1234 no se recorta', num({id:1234}) === 'M-1234');
+ok('acepta el id suelto, no solo la moto', num(7) === 'M-007');
+ok('si ya viene con M- no se duplica', num({id:'M-045'}) === 'M-045');
+ok('un id que no es numero se muestra tal cual', num({id:'ABC'}) === 'ABC');
+ok('sin moto, texto vacio', num(null) === '' && num({}) === '');
 
 console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');
 if (fail) process.exitCode = 1;

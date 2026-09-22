@@ -2680,6 +2680,19 @@ window.S = S;
 window.$ = $;
 window.fmt = fmt;
 
+// El numero de la moto, como se lee en pantalla y en los papeles: M-001.
+// Por dentro la moto sigue siendo el numero 1: esto es solo como se muestra, igual
+// que los creditos son CRED-001 (pedido de Adam, 22-sep-2026). Si algun dia un id no
+// es un numero, se muestra tal cual y no se inventa nada.
+function motoNum(m){
+  var id = (m && typeof m === 'object') ? m.id : m;
+  var s = String(id == null ? '' : id).trim();
+  if(!s) return '';
+  if(/^M-/i.test(s)) return s.toUpperCase();
+  return /^\d+$/.test(s) ? 'M-' + (s.length >= 3 ? s : ('000' + s).slice(-3)) : s;
+}
+window.motoNum = motoNum;
+
 // Formatea una fecha ISO o timestamp como "DD/MM/YYYY HH:MM"
 function fmtFechaHora(iso){
   if(!iso) return '';

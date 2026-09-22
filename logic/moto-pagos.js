@@ -172,7 +172,7 @@ function _mpagoCrearGastos(motoObj, pagos, opts){
   var fecha = opts.fecha || hoyLocalISO();
   var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false});
   var quien = (S.currentUser&&S.currentUser.nombre)||'Admin';
-  var conceptoBase = 'Compra de moto · '+(motoObj.modelo||'')+(motoObj.vin?' · VIN '+motoObj.vin:'')+' (Moto #'+motoObj.id+')';
+  var conceptoBase = 'Compra de moto · '+(motoObj.modelo||'')+(motoObj.vin?' · VIN '+motoObj.vin:'')+' ('+motoNum(motoObj)+')';
   var creados = [];
   pagos.forEach(function(p, idx){
     // 1) Egreso en Finanzas (categoría inventario)
@@ -266,7 +266,7 @@ function _mpagoReversarGastos(motoId, devolver, audit){
         cuentaOrigen:null,
         cuentaDestino: m.cuentaOrigen,
         fecha: hoyLocalISO(),
-        referencia:'Reverso por eliminación de moto #'+motoId,
+        referencia:'Reverso por eliminación de moto '+motoNum(motoId),
         realizadoPor: quien,
         tasaBs: window._tasaBsGlobal||1,
         hora: hora,
