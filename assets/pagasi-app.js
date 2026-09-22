@@ -2794,6 +2794,13 @@ function _attachCurrentUserListener(uid){
       if(!doc || !doc.exists) return;
       if(!S.currentUser || S.currentUser.uid !== uid) return;
       var data = doc.data() || {};
+      // Suspendido o eliminado: fuera, antes que cualquier otra cosa. Las Reglas ya no lo
+      // dejan tocar la base, asi que seguir en pantalla solo produce errores mudos.
+      if((data.suspendido === true || data.eliminado === true) && typeof auth !== 'undefined' && auth){
+        try{ toast(data.eliminado === true ? 'Tu cuenta fue eliminada' : 'Tu cuenta ha sido suspendida','error'); }catch(e){}
+        setTimeout(function(){ try{ auth.signOut(); }catch(e){} }, 1200);
+        return;
+      }
       var prevRol = S.currentUser.rol;
       var prevPerms = (S.currentUser.permisos||[]).slice().sort().join('|');
       var nuevoRol = data.rol || S.currentUser.rol;

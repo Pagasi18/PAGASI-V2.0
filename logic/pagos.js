@@ -990,6 +990,11 @@ function ejecutarLiquidacionAnticipada(){
       id:'MOV-'+Date.now(),
       tipo:'deposito',
       concepto:'Liquidación anticipada · '+c.cli+' · '+credId,
+      // enlaces para que Coromoto la concilie con su pago (antes salia como "pago
+      // confirmado sin movimiento en cuentas"; revisado el 22-sep-2026)
+      conceptoPago:pagoId,
+      creditoId:credId,
+      conceptoCredito:credId,
       monto:parseFloat(montoFinal.toFixed(2)),
       cuentaOrigen:null,
       cuentaDestino:cuenta,

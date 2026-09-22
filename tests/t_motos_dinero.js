@@ -151,6 +151,7 @@ ctx.openAddCredConMoto(11);
 ok('la moto elegida queda guardada en el wizard desde el paso 1', String(ctx.WZ.motoInvId) === '11');
 ctx.WZ.step = 3;
 let pedido = null;
+const _pickInvReal = ctx._wzPickMotoInv;   // se restaura más abajo
 ctx._wzPickMotoInv = function(sel){ pedido = sel.value; };
 ctx.setTimeout = function(fn){ try { fn(); } catch(e) {} return 0; };
 form['wz_moto_inv'] = el({ value:'', options:[], selectedIndex:0 });
@@ -244,6 +245,46 @@ ok('al pasar al catálogo se borran VIN, placa y seriales de la moto anterior',
   ok('el campo directo manda igual', es(mov('M4','Otra cosa', { creditoId:'CRED-14' }), 'CRED-14'));
   ok('un movimiento de otro crédito no entra', !es(mov('M5','Pago cuota · CRED-15'), 'CRED-14'));
 })();
+
+// ── Revisión 3: restaurar todo lo que tocó el rechazo ──
+S.movimientos = [{ id:'MOV-INI7', tipo:'deposito', concepto:'Aporte', monto:9000, cuentaDestino:'Binance', fecha:'2026-09-01' }];
+S.egresos = []; S.creds = [];
+const motoR = { id: 40, modelo:'MOTO R', precio:1000, estado:'financiada', creadaEnCredito:'CRED-940' };
+S.motos = [motoR];
+ctx._mpagoCrearGastos(motoR, [{ cuenta:'Binance', monto:1000 }], { fecha:'2026-09-03' });
+const saldoCompra = saldo('Binance');
+S.creds.push({ id:'CRED-940', cli:'CLIENTE R', motoId:40, estado:'pendiente_revision', ini:300, fecha:'2026-09-03',
+  precio:1000, cuotaQ:50, totalCuotas:24, pagado:0, motoCreadaEnSolicitud:true });
+ctx._aprRechazar('CRED-940');
+ok('rechazo: el dinero vuelve y la moto sale del inventario', saldo('Binance') === saldoCompra + 1000 && motoR.eliminado === true);
+form['ec_estado'] = el({ value:'' });
+ctx.ejecutarRestaurarCred('CRED-940');
+ok('restaurar el crédito vuelve a registrar la compra de la moto', saldo('Binance') === saldoCompra);
+ok('...la moto vuelve al inventario', motoR.eliminado === false);
+ok('...y la solicitud vuelve a la cola de aprobaciones, no a crédito activo',
+  S.creds.find(c => c.id === 'CRED-940').estado === 'pendiente_revision');
+
+// ── Revisión 3: "Restaurar todas" recupera también la compra ──
+S.movimientos = [{ id:'MOV-INI8', tipo:'deposito', concepto:'Aporte', monto:9000, cuentaDestino:'Binance', fecha:'2026-09-01' }];
+S.egresos = []; S.creds = [];
+const motoT = { id: 41, modelo:'MOTO T', precio:800, estado:'disponible' };
+S.motos = [motoT];
+ctx._mpagoCrearGastos(motoT, [{ cuenta:'Binance', monto:800 }], { fecha:'2026-09-03' });
+const saldoT = saldo('Binance');
+const auditT = { eliminado:true, eliminadoPor:'Prueba', eliminadoEn:'2026-09-12T12:00:00Z', eliminadoRazon:'Moto duplicada', eliminacionReversaCuenta:true };
+Object.assign(motoT, auditT);
+ctx._mpagoReversarGastos(41, true, auditT);
+ok('borrar devolviendo: el dinero vuelve', saldo('Binance') === saldoT + 800);
+ctx.restaurarTodasLasMotosEliminadas();
+ok('"Restaurar todas" vuelve a descontar la compra (antes quedaba la moto gratis)', saldo('Binance') === saldoT);
+ok('...y su gasto queda vivo otra vez', S.egresos.filter(e => e.motoIdRef === 41 && !e.eliminado).length === 1);
+
+// ── Revisión 3: soltar la moto del inventario no deja el modelo ni el VIN pegados ──
+ctx._wzPickMotoInv = _pickInvReal;   // vuelve la función de verdad
+ctx.WZ = Object.assign({}, ctx.WZ, { motoInvId:'41', motoModelo:'MOTO T', vin:'VIN-41', placa:'XY123' });
+['wz_vin','wz_placa','wz_serial_motor','wz_color','wz_anio','wz_marca','wz_serial_chasis','wz_gps_num'].forEach(id => { form[id] = el({ value:'X' }); });
+ctx._wzPickMotoInv({ value:'', options:[], selectedIndex:0 });
+ok('al soltar la moto se va también su modelo y su VIN', !ctx.WZ.motoInvId && !ctx.WZ.motoModelo && !ctx.WZ.vin && !ctx.WZ.placa);
 
 console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');
 if (fail) process.exitCode = 1;

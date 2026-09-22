@@ -124,14 +124,17 @@ service cloud.firestore {
     // == Usuarios ==
     // Campos de la ficha que dan acceso o dinero: solo los pone un admin.
     function camposDeAcceso() {
-      return ['rol','permisos','concesionarios','comisiones','suspendido','isDemo','demoExpira','demoHoras'];
+      return ['rol','permisos','concesionarios','comisiones','suspendido','eliminado','isDemo','demoExpira','demoHoras'];
     }
     // Crear la ficha propia SOLO al aceptar una invitacion valida (el email del
     // doc debe coincidir con el de la cuenta, y debe existir una invitacion
     // para ese email). Asi, aunque el registro email/clave este abierto, nadie
     // puede auto-asignarse acceso sin haber sido invitado por un admin.
     match /usuarios/{uid} {
-      allow read: if esStaff();
+      // Su propia ficha se lee siempre (aunque este suspendido): de ahi se entera la
+      // pantalla y lo saca. Antes el aviso se caia en silencio (revisado el 22-sep-2026).
+      allow get: if esStaff() || (noAnonimo() && request.auth.uid == uid);
+      allow list: if esStaff();
       // Comparaciones de email en minusculas: Firebase Auth normaliza el email
       // del token, pero la invitacion pudo guardarse con mayusculas. Sin .lower()
       // la creacion se denegaba y la cuenta quedaba en Auth sin ficha.
@@ -204,9 +207,16 @@ service cloud.firestore {
       // rotos y el error se traga (revisado el 22-sep-2026).
       allow write: if (id == 'tasa' || id == 'catalogo' || id == 'planes') ? esStaff()
         : ( id == 'coromoto' ? (esAdmin() || permiso('reportes'))
-        : ( id in ['plan','cuentasBanc','empresa','rolesPermisos','score','cobradores','gps','avisos','telegram']
+        : ( id == 'gps'
+            // config/gps lo escribe el boton "Actualizar ahora" de la pantalla GPS: quien
+            // tenga ese modulo puede tocar SOLO las banderas del pedido; el resto (workerUrl,
+            // horario) sigue siendo de Configuracion (revisado el 22-sep-2026).
+            ? ( esAdmin() || permiso('config')
+                || ( permiso('gps') && request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['pedidoRefresco','pedidoRefrescoEn','pedidoRefrescoPor']) ) )
+        : ( id in ['plan','cuentasBanc','empresa','rolesPermisos','score','cobradores','avisosTelegram','avisosChats']
             ? (esAdmin() || permiso('config'))
-            : esStaff() ) );
+            : esStaff() ) ) );
     }
 
     // == Portal del cliente: accesos y sesiones ==
@@ -235,7 +245,14 @@ service cloud.firestore {
     match /sesiones_cliente/{uid} {
       allow get: if request.auth != null && request.auth.uid == uid;
       allow list: if esStaff();
-      allow create: if request.auth != null
+      allow create, update: if sesionClienteValida(uid);
+      allow delete: if esStaff();
+    }
+    // Reabrir la sesion pasa por el MISMO candado que abrirla: Firebase da siempre el
+    // mismo uid para el mismo telefono, y el doc no se borra, asi que con "update: false"
+    // el cliente no podia volver a entrar (revisado el 22-sep-2026).
+    function sesionClienteValida(uid) {
+      return request.auth != null
         && request.auth.uid == uid
         && request.resource.data.clienteId is string
         && (
@@ -254,8 +271,6 @@ service cloud.firestore {
             && get(/databases/$(database)/documents/accesos_cliente/$(request.resource.data.token)).data.clienteId == request.resource.data.clienteId
             && get(/databases/$(database)/documents/accesos_cliente/$(request.resource.data.token)).data.cedulaNorm == request.resource.data.cedulaNorm )
         );
-      allow update: if false;   // una sesion no se puede mover a otro cliente
-      allow delete: if esStaff();
     }
 
     // == Comprobantes que sube el cliente ==

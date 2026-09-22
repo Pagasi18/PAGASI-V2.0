@@ -592,27 +592,25 @@ function restaurarTodasLasMotosEliminadas(){
   if(typeof requireDeletePermission==='function' && !requireDeletePermission()) return;
   var eliminadas = (S.motos||[]).filter(function(m){return m.eliminado;});
   if(eliminadas.length===0){ toast('No hay motos eliminadas','info'); return; }
+  var egTot=0, movTot=0;
   eliminadas.forEach(function(m){
-    m.eliminado = false;
-    m.eliminadoPor = null;
-    m.eliminadoEn = null;
-    m.eliminadoRazon = null;
-    m.eliminadoPorUid = null;
-    DB.saveMoto(m);
+    var r = _motoRestaurarConGastos(m);   // misma logica que "Restaurar" de a una
+    egTot += r.egRest; movTot += r.movRest;
   });
   nav('motos');
-  toast('✓ '+eliminadas.length+' moto(s) restaurada(s)','success');
+  toast('✓ '+eliminadas.length+' moto(s) restaurada(s)'+(egTot?' · '+egTot+' gasto(s) de compra revividos':''),'success');
 }
 
 // Restaura una sola moto por id
 
-function restaurarMoto(id){
-  // Restaurar revive el gasto de la compra y anula su reverso: mismo permiso que borrar
-  if(typeof requireDeletePermission==='function' && !requireDeletePermission()) return;
-  var m = S.motos.find(function(x){return String(x.id)===String(id);});
-  if(!m){ toast('Moto no encontrada','error'); return; }
+// Restaura una moto Y su compra: revive el gasto que anulo ESE borrado y anula el
+// reverso que devolvio el dinero. Sin pantalla: lo usan "Restaurar" y "Restaurar todas"
+// (antes "Restaurar todas" solo quitaba la marca y dejaba motos sin costo; 22-sep-2026).
+function _motoRestaurarConGastos(m){
+  if(!m) return {egRest:0, movRest:0};
+  var id = m.id;
   var seDevolvioDinero = !!m.eliminacionReversaCuenta;
-  var _elimEn = m.eliminadoEn;   // se limpia abajo; hace falta para saber que gastos anulo ESTE borrado
+  var _elimEn = m.eliminadoEn;
   m.eliminado = false;
   m.eliminadoPor = null;
   m.eliminadoEn = null;
@@ -620,7 +618,6 @@ function restaurarMoto(id){
   m.eliminadoPorUid = null;
   m.eliminacionReversaCuenta = null;
   DB.saveMoto(m);
-  // Restaurar egresos y movimientos de compra asociados
   var egRest=0, movRest=0;
   (S.egresos||[]).forEach(function(eg){
     if(!eg.eliminado || String(eg.motoIdRef)!==String(id) || eg.origenAuto!=='compra_moto') return;
@@ -662,6 +659,16 @@ function restaurarMoto(id){
       }
     });
   }
+  return {egRest:egRest, movRest:movRest};
+}
+
+function restaurarMoto(id){
+  // Restaurar revive el gasto de la compra y anula su reverso: mismo permiso que borrar
+  if(typeof requireDeletePermission==='function' && !requireDeletePermission()) return;
+  var m = S.motos.find(function(x){return String(x.id)===String(id);});
+  if(!m){ toast('Moto no encontrada','error'); return; }
+  var _r = _motoRestaurarConGastos(m);
+  var egRest = _r.egRest, movRest = _r.movRest;
   nav('motos');
   var detalle = (egRest||movRest) ? ' ('+egRest+' gasto(s) y '+movRest+' movimiento(s) restaurados)' : '';
   toast('✓ Moto "'+m.modelo+'" restaurada'+detalle,'success');

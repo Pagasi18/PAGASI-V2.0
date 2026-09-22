@@ -276,12 +276,14 @@ function _draPreambuloFiador(D){
 // Caracteristicas del vehiculo: solo las que tienen dato
 function _draVehiculo(D){
   var c = D.c || {}, m = D.moto || {};
-  var val = function(a, b){ return _draTxt(a) || _draTxt(b); };
+  // Cada candidato se limpia por separado: si el credito dice "NA" y la moto trae el
+  // dato real, gana el real (antes se perdia la linea entera; revisado el 22-sep-2026)
+  var val = function(){ for(var i=0;i<arguments.length;i++){ var t=_draTxt(arguments[i]); if(t) return t; } return ''; };
   var campos = [
     ['marca', val(c.marca, m.marca)], ['modelo', val(c.modelo, m.modelo)], ['año', val(c.anio, m.anio)],
     ['clase', 'MOTO'], ['tipo', val(m.tipo, '')],
     ['color', val(c.color==='—'?'':c.color, m.color)], ['placa', val(c.placa==='—'?'':c.placa, m.placa)],
-    ['serial de carrocería o chasis', val(c.serialChasis || c.vin, m.serialChasis || m.vin)],
+    ['serial de carrocería o chasis', val(c.serialChasis, c.vin, m.serialChasis, m.vin)],
     ['serial de motor', val(c.serialMotor, m.serialMotor)],
     ['uso', String(c.uso_moto||'PARTICULAR').toUpperCase()]
   ].filter(function(x){ return x[1]; })

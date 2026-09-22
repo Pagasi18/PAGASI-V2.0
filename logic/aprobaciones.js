@@ -196,6 +196,7 @@ function _aprRechazar(credId){
       // Esa unidad la trajo la solicitud y su compra se devolvio: no puede quedarse en el
       // stock como si Pagasi la hubiera pagado. Sale del inventario, auditada.
       _moto.eliminado = true;
+      _moto.estado = 'disponible';   // si alguien la restaura, vuelve al stock, no "financiada"
       _moto.eliminadoPor = c.rechazadoPor;
       _moto.eliminadoEn = c.rechazadoEn;
       _moto.eliminadoRazon = 'Solicitud rechazada · '+c.razonRechazo;

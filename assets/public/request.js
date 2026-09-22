@@ -248,15 +248,17 @@ async function submitF(){
     document.getElementById('okText').textContent='Tu solicitud llegó a Pagasi. Un asesor te contactará en menos de 24 horas para finalizar el proceso.';
   }catch(err){
     console.error('submitF:',err);
-    // La base rechaza crear una ficha que ya existe: es la misma persona mandando otra vez
-    var yaEsta = err && (err.code==='permission-denied' || /permission|insufficient/i.test(String(err.message||'')));
-    if(yaEsta){
+    // La base rechaza por dos motivos: la ficha ya existe (la misma persona mandando otra
+    // vez) o algun dato no paso la validacion. No se puede distinguir desde aqui, asi que
+    // el mensaje cubre los dos y ofrece WhatsApp (antes decia "recibida" siempre).
+    var rechazo = err && (err.code==='permission-denied' || /permission|insufficient/i.test(String(err.message||'')));
+    if(rechazo){
       var okEl=document.getElementById('fOK'), okTxt=document.getElementById('okText');
       var fs2=document.getElementById('fs2'), pd2=document.getElementById('pd2');
       if(fs2) fs2.classList.remove('on');
       if(pd2){ pd2.classList.remove('on'); pd2.classList.add('done'); }
       if(okEl) okEl.style.display='block';
-      if(okTxt) okTxt.textContent='Ya tenemos tu solicitud registrada con esa cédula. Un asesor te contactará en menos de 24 horas.';
+      if(okTxt) okTxt.textContent='Si ya nos enviaste tu solicitud antes, ya la tenemos y un asesor te contactará. Si es la primera vez, revisa que tu cédula y tus datos estén completos o escríbenos por WhatsApp.';
     } else {
       alert('Error: '+(err.message||err));
     }

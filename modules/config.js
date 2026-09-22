@@ -870,6 +870,8 @@ function _auditAccion(idx){
 function _auditEliminarPagoDirecto(pagoId){
   var p = (S.pagos||[]).find(function(x){ return x.id===pagoId; });
   if(!p) return;
+  // Anular un pago mueve dinero: mismo permiso que en Pagos (revisado el 22-sep-2026)
+  if(typeof requireDeletePermission==='function' && !requireDeletePermission()) return;
   if(!confirm('¿Eliminar el pago '+pagoId+' de '+fmt(p.monto)+' ('+( p.cli||'?')+')?\n\nEsta acción es permanente.')) return;
   var pi = (S.pagos||[]).findIndex(function(x){ return x.id===pagoId; });
   if(pi>=0){
