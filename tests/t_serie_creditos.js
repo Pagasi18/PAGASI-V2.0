@@ -19,14 +19,24 @@ function conPrefijo(prefijo, creds) {
   return G;
 }
 
-// ── PAGASI 18: lo de siempre, sin tocar ───────────────────────────────────────
+// ── La serie de ESTA compañía, sea cual sea ───────────────────────────────────
+// La prueba corre igual en los dos repositorios: lee el prefijo declarado en el
+// archivo en vez de darlo por sentado (PAGASI 18 es CRED, PAGASI 26 es M).
+const declarado = (app.match(/var CRED_PREFIJO = '([^']+)'/) || [])[1];
+ok('el prefijo de esta compañía está declarado', !!declarado);
 let G = conPrefijo(null, []);
-ok('18. sin configurar nada, el prefijo sigue siendo CRED', G.credPrefijo() === 'CRED');
-ok('18. el primer crédito es CRED-001', G.nextCredId() === 'CRED-001');
-G = conPrefijo(null, [{ id: 'CRED-001' }, { id: 'CRED-047' }]);
-ok('18. sigue por el más alto: CRED-048', G.nextCredId() === 'CRED-048');
-ok('18. tres cifras, para que ordenen bien', G.credNum(7) === 'CRED-007');
-ok('18. y no se recorta cuando pasa de 999', G.credNum(1042) === 'CRED-1042');
+ok('el sistema usa el prefijo declarado (' + declarado + ')', G.credPrefijo() === declarado);
+ok('el primer crédito es ' + declarado + '-001', G.nextCredId() === declarado + '-001');
+G = conPrefijo(null, [{ id: declarado + '-001' }, { id: declarado + '-047' }]);
+ok('sigue por el más alto: ' + declarado + '-048', G.nextCredId() === declarado + '-048');
+ok('tres cifras, para que ordenen bien', G.credNum(7) === declarado + '-007');
+ok('y no se recorta cuando pasa de 999', G.credNum(1042) === declarado + '-1042');
+
+// ── PAGASI 18: la serie de siempre ────────────────────────────────────────────
+G = conPrefijo('CRED', []);
+ok('18. con la serie CRED, el primer crédito es CRED-001', G.nextCredId() === 'CRED-001');
+G = conPrefijo('CRED', [{ id: 'CRED-047' }]);
+ok('18. y sigue CRED-048', G.nextCredId() === 'CRED-048');
 
 // ── PAGASI 26: su propia serie ────────────────────────────────────────────────
 G = conPrefijo('M', []);
@@ -37,7 +47,7 @@ ok('26. y sigue M-003', G.nextCredId() === 'M-003');
 // ── Que una serie no lea los números de la otra ───────────────────────────────
 G = conPrefijo('M', [{ id: 'CRED-580' }]);
 ok('26. un CRED-580 heredado NO arrastra la serie M al 581', G.nextCredId() === 'M-001');
-G = conPrefijo(null, [{ id: 'M-900' }]);
+G = conPrefijo('CRED', [{ id: 'M-900' }]);
 ok('18. y al revés tampoco', G.nextCredId() === 'CRED-001');
 
 // ── El prefijo está en un solo sitio ──────────────────────────────────────────
