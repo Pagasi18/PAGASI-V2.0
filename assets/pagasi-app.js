@@ -1735,23 +1735,6 @@ function _movEsDelCredito(m, credId){
   return false;
 }
 
-function marcarInicialCreditoEliminada(credId, motivo){
-  if(!credId || !Array.isArray(S.movimientos)) return;
-  var ahora = new Date().toISOString();
-  var actor = (S.currentUser&&S.currentUser.nombre)||'Admin';
-  S.movimientos.forEach(function(m){
-    if(!m || m.eliminado) return;
-    var esDeEsteCredito = m.creditoId===credId || m.conceptoCredito===credId
-      || ((m.concepto||'').indexOf('Inicial · ')===0 && _movEsDelCredito(m, credId));
-    if(!esDeEsteCredito) return;
-    m.eliminado = true;
-    m.eliminadoPor = actor;
-    m.eliminadoEn = ahora;
-    if(motivo) m.eliminadoRazon = motivo;
-    DB.saveMovimiento(m);
-  });
-}
-
 try {
   if(typeof firebase === 'undefined'){
     console.warn('SDK de Firebase no cargado');
@@ -1803,10 +1786,6 @@ var _rtUnsubs = [];
 var _rtTimer = null;
 var _rtStarted = false;
 var _rtRenderPending = false;
-
-function _docsArray(snap){
-  return snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
-}
 
 // Sanea el score_indexa de un cliente EN MEMORIA (sin escribir en la base).
 // Es la misma logica que vivia dentro de DB.load. Ojo: el tiempo real deja
@@ -3554,17 +3533,6 @@ function ejecutarEliminacionAuditada(){
   window._delAuditCallback = null;
 }
 
-function auditBadge(item){
-  if(!item||!item.eliminado) return '';
-  var por = item.eliminadoPor || 'Admin';
-  var razon = item.eliminadoRazon || '';
-  var fecha = item.eliminadoEn ? item.eliminadoEn.split('T')[0] : '';
-  return '<div style="background:var(--reds);border:1px solid rgba(240,75,106,0.3);border-radius:6px;padding:4px 9px;font-size:10px;display:flex;align-items:center;gap:6px;margin-top:4px">'
-    +'<span style="font-weight:900;color:var(--red)">Del ELIMINADO</span>'
-    +'<span style="color:var(--ink3)">por <strong>'+por+'</strong>'+(fecha?' · '+fecha:'')+(razon?' · '+razon:'')+'</span>'
-    +'</div>';
-}
-
 // CLIENTE CRUD
 // ══════════════════════════════════════════
 
@@ -3614,24 +3582,6 @@ function saveM(){
   else setTimeout(liberar, 1500);
   return ok;
 }
-function topAct(){
-  var p=S.page;
-  // Solicitud es el punto de entrada único para clientes + motos + financiamientos
-  if(p==='dash') openAddCred();
-  else if(p==='centro') openWtTask();
-  else if(p==='clientes') openAddCred();
-  else if(p==='creditos') openAddCred();
-  // Inventario de motos: sí se pueden agregar unidades sueltas al stock
-  else if(p==='motos') openAddMoto();
-  // Operaciones
-  else if(p==='pagos') openAddPago();
-  else if(p==='conta') openAddEgreso();
-  else if(p==='cuentas') openDeposito(null);
-  else if(p==='plan') openAddCatalogo();
-  else if(p==='cobranza') openAddPago();
-  else if(p==='contratos') openAddCred();
-}
-
 // Map pages to button labels (empty = hide button)
 var TOP_BTN_LABELS = {
   dash: 'Nueva Solicitud',

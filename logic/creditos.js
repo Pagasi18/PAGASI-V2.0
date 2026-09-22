@@ -579,13 +579,6 @@ function _wzFg(label, id, type, placeholder, extra, required){
     +'<input class="fi" id="'+id+'" type="'+type+'" placeholder="'+placeholder+'" value="'+val+'" '+(extra||'')+' '+(required?'required':'')+' style="width:100%"></div>';
 }
 
-function _wzClienteOptions(){
-  var list = (S.clientes||[]).filter(function(c){ return c && !c.eliminado; });
-  return '<option value="">Nuevo cliente</option>' + list.map(function(c){
-    return '<option value="'+c.id+'">'+(c.nombre||'Sin nombre')+' — C.I. '+(c.cedula||'—')+'</option>';
-  }).join('');
-}
-
 // ── Buscador de cliente (reemplaza el viejo select) ──
 // Filtra en vivo S.clientes por nombre o cédula y muestra dropdown
 function _wzCliSearch(){

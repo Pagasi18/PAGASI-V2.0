@@ -412,12 +412,6 @@ function _cliDocDelete(cliId, docId){
 
   _cliDocRefreshInModal(cliId);
 }
-function _cliDocUploadFromInput(input){
-  var clienteId=input&&input.getAttribute?input.getAttribute('data-cliente-id'):'';
-  var docId=input&&input.getAttribute?input.getAttribute('data-doc-id'):'';
-  return _cliDocUpload(input, clienteId, docId);
-}
-
 // Guardar documento en localStorage como fallback cuando no hay Storage
 function _cliDocSaveLocal(cliId, meta){
   try{

@@ -420,15 +420,7 @@ function wtMaybeNotify(){
   setTimeout(function(){ if(typeof toast==='function') toast('Tienes '+total+' tarea(s) pendientes en Centro de trabajo','info'); },350);
 }
 
-function wtPrioColor(p){ return {alta:'#e24b4a',media:'#ef9f27',baja:'#639922'}[p||'media']||'#ef9f27'; }
-function wtPrioBg(p){ return {alta:'rgba(226,75,74,.12)',media:'rgba(239,159,39,.12)',baja:'rgba(99,153,34,.12)'}[p||'media']; }
-function wtPrioText(p){ return {alta:'#a32d2d',media:'#854f0b',baja:'#3b6d11'}[p||'media']; }
 function wtPrioLabel(p){ return {alta:'Alta',media:'Media',baja:'Baja'}[p||'media']||'Media'; }
-function wtTypeStyle(tipo){
-  var map={'Seguimiento':'background:#eeedfe;color:#534ab7','Cobranza':'background:#faeeda;color:#854f0b','Documentos':'background:#e6f1fb;color:#185fa5','Entrega':'background:#eaf3de;color:#3b6d11','Interno':'background:#f1efe8;color:#5f5e5a','Operacional':'background:#eeedfe;color:#534ab7','Cliente':'background:#e6f1fb;color:#185fa5','Moto / crédito':'background:#eaf3de;color:#3b6d11'};
-  return map[tipo]||'background:#f1efe8;color:#5f5e5a';
-}
-
 function wtHTML(){
   wtInjectStyle(); wtLoadRemote(); wtLoadUsers(); wtMaybeNotify();
   var st=wtStats(); var today=wtToday();
@@ -658,8 +650,6 @@ function wtDeleteCompletadas(){
 }
 window.wtDeleteCompletadas = wtDeleteCompletadas;
 function wtSetFilter(k){ WT_FILTER=k; nav('centro'); }
-function wtResetDemo(){ S.tareas=wtDemoTasks(); wtSaveLocal(); updateBadge(); nav('centro'); toast('Data demo cargada','ok'); }
-
 function wtLoadUsers(){
   // Use existing _usersCache if available (populated by Configuracion > Usuarios)
   if(typeof _usersCache !== 'undefined' && _usersCache.length){
@@ -677,22 +667,6 @@ function wtLoadUsers(){
       }).catch(function(){});
     }
   }
-}
-
-function wtUserOptions(selected){
-  var opts='<option value="">— Sin asignar —</option>';
-  var users=S._wtUsers||[];
-  if(!users.length){
-    var me=wtUserName(); var meEmail=(S.currentUser&&S.currentUser.email)||me;
-    opts+='<option value="'+wtEsc(meEmail)+'" '+((!selected||selected===meEmail||selected===me)?'selected':'')+'>'+wtEsc(me)+'</option>';
-  } else {
-    users.forEach(function(u){
-      var em=u.email||u.uid||''; var nm=u.nombre||u.displayName||em;
-      var sel=selected&&(selected===em||selected===nm||selected.indexOf(nm)>=0||nm.indexOf(selected)>=0);
-      opts+='<option value="'+wtEsc(em)+'" '+(sel?'selected':'')+'>'+wtEsc(nm)+((u.cargo||u.rol)?' · '+wtEsc(u.cargo||u.rol):'')+'</option>';
-    });
-  }
-  return opts;
 }
 
 // ── Estilos inyectados una sola vez ──────────────────────────

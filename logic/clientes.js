@@ -973,27 +973,6 @@ function cfRenderCharts(cliId, monthsData, pagadas, totales){
 // ══════════════════════════════════════════
 // INGRESOS REALES POR MES
 // ══════════════════════════════════════════
-function getMonthlyIngresos(){
-  var now=new Date(),months=[],labels=[];
-  for(var i=6;i>=0;i--){
-    var d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    months.push({y:d.getFullYear(),m:d.getMonth(),label:d.toLocaleDateString('es-VE',{month:'short'})});
-  }
-  return months.map(function(m){
-    // Suma TODOS los pagos confirmados no-eliminados del mes (incluye iniciales e.cuotas).
-    // Los pagos iniciales se guardan en S.pagos con esInicial=true, así que NO se suma c.ini por separado
-    // para evitar doble conteo.
-    var total=S.pagos.filter(function(p){
-      if(p.eliminado) return false;
-      if(p.estado!=='confirmado') return false;
-      if(!p.fecha) return false;
-      var pd=new Date(p.fecha);
-      return pd.getFullYear()===m.y && pd.getMonth()===m.m;
-    }).reduce(function(a,p){return a+(parseFloat(p.monto)||0);},0);
-    return {label:m.label,total:total};
-  });
-}
-
 function getMoraMensual(){
   var now=new Date(), months=[];
   for(var i=5;i>=0;i--){

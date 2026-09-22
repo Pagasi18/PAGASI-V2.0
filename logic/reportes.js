@@ -1076,43 +1076,6 @@ function exportarCSV(tipo){
 // ══════════════════════════════════════════════════════════════
 // EXPORTAR CSV DE UNA CUENTA ESPECÍFICA
 // ══════════════════════════════════════════════════════════════
-function exportarCSVCuenta(nombre){
-  function esc(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }
-  function row(arr){ return arr.map(esc).join(','); }
-  var movs = (S.movimientos||[]).filter(function(m){
-    return m.cuentaOrigen===nombre || m.cuentaDestino===nombre;
-  }).sort(function(a,b){ return (b.fecha||'').localeCompare(a.fecha||'') || (b.hora||'').localeCompare(a.hora||''); });
-  if(!movs.length){ toast('No hay movimientos para exportar','info'); return; }
-  var rows = [];
-  rows.push(row(['ID','Fecha','Hora','Concepto','Tipo','Dirección','Contraparte','Monto','Referencia','Realizado por','Estado']));
-  movs.forEach(function(m){
-    var esIng = m.cuentaDestino === nombre;
-    var contraparte = esIng ? (m.cuentaOrigen||'Externo') : (m.cuentaDestino||'Externo');
-    var direccion = esIng ? 'Ingreso' : 'Egreso';
-    var estado = m.eliminado ? 'Anulado' : 'Activo';
-    rows.push(row([
-      m.id,
-      m.fecha||'',
-      m.hora||'',
-      m.concepto||m.descripcion||'',
-      m.tipo||'',
-      direccion,
-      contraparte,
-      (esIng ? 1 : -1) * (m.monto||0),
-      m.referencia||'',
-      m.realizadoPor||'',
-      estado
-    ]));
-  });
-  var slug = nombre.replace(/[^a-zA-Z0-9]/g,'-').toLowerCase();
-  var filename = 'cuenta-'+slug+'-'+hoyLocalISO()+'.csv';
-  var blob = new Blob(['\uFEFF'+rows.join('\r\n')],{type:'text/csv;charset=utf-8'});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a'); a.href=url; a.download=filename; a.click();
-  URL.revokeObjectURL(url);
-  toast('Exportado: '+filename,'success');
-}
-
 // ══════════════════════════════════════════════════════════════
 // BACKUP JSON COMPLETO
 // ══════════════════════════════════════════════════════════════

@@ -37,12 +37,6 @@ function movsCuenta(cid){
 }
 
 // ── Helpers ──
-function fmtMontoMov(m,cuenta){
-  var es=m.cuentaDestino===cuenta;
-  var color=es?'var(--green)':'var(--red)';
-  var signo=es?'+':'-';
-  return '<span style="font-weight:800;color:'+color+'">'+signo+fmt(m.monto)+'</span>';
-}
 function nombreMesEsp(yyyy_mm){
   var meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   var p=yyyy_mm.split('-'); return meses[parseInt(p[1])-1]+' '+p[0];

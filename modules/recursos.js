@@ -25,18 +25,6 @@ function _recTypeColor(nombre){
   if(['ppt','pptx'].indexOf(e)>=0) return '#F5A623';
   return '#64748B';
 }
-function _recTipoIcon(nombre){
-  var e = _recExt(nombre);
-  var c = '#64748B';
-  if(['pdf'].indexOf(e)>=0) c='#E8335A';
-  else if(['jpg','jpeg','png','webp','gif','heic'].indexOf(e)>=0) c='#7C3AED';
-  else if(['doc','docx'].indexOf(e)>=0) c='#2563EB';
-  else if(['xls','xlsx','csv'].indexOf(e)>=0) c='#00B876';
-  else if(['ppt','pptx'].indexOf(e)>=0) c='#F5A623';
-  var label = (e||'?').toUpperCase().slice(0,4);
-  return '<span style="display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:12px;background:'+c+'18;color:'+c+';font-family:var(--fm);font-size:10px;font-weight:900;letter-spacing:.5px;flex-shrink:0">'+label+'</span>';
-}
-
 PG.recursos = function(){
   var cat = window._recCat || 'todos';
   var q = (window._recQuery||'').toLowerCase();

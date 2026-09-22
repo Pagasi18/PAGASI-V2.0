@@ -33,27 +33,6 @@ function renderHistorialNotificaciones(){
   }).join('');
 }
 
-function setNotifDestQuick(dest){
-  var sel = $('notif-dest');
-  if(sel) sel.value = dest || 'leads';
-  var wrap = $('notif-dest-quick');
-  if(wrap){
-    Array.from(wrap.querySelectorAll('[data-dest]')).forEach(function(btn){
-      var active = btn.getAttribute('data-dest') === (dest || 'leads');
-      btn.classList.toggle('is-active', active);
-    });
-  }
-  // Cambiar de grupo → limpiar selección específica previa y refrescar autocomplete
-  nxAcUnpick(true);
-  _nxAcScope = 'group'; // por defecto: limitar búsqueda al grupo
-  nxAcUpdateHint();
-  // Repoblar lista con el nuevo scope
-  _nxAcResults = nxAcGetClientsForScope();
-  nxAcRender();
-  actualizarPreviewNotif();
-  actualizarContadoresNotif();
-}
-
 // Helper: desde el módulo de Pagos, abrir Notificaciones con el recordatorio de cuota preseleccionado
 // para un crédito/cliente específico.
 function avisarCuotaProxima(credId){
@@ -134,22 +113,6 @@ function setNotifTipo(tipo){
   }
   actualizarTipoDesc();
   actualizarPreviewNotif();
-}
-
-function setNxCat(cat){
-  var tabs = $('nx-cat-tabs');
-  if(tabs){
-    Array.from(tabs.querySelectorAll('[data-cat]')).forEach(function(b){
-      b.classList.toggle('is-active', b.getAttribute('data-cat')===cat);
-    });
-  }
-  var grid = $('nx-tpl-grid');
-  if(grid){
-    Array.from(grid.querySelectorAll('[data-cat]')).forEach(function(card){
-      var show = (cat==='all') || (card.getAttribute('data-cat')===cat);
-      card.style.display = show ? '' : 'none';
-    });
-  }
 }
 
 function actualizarTipoDesc(){

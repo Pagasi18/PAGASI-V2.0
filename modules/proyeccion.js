@@ -132,12 +132,6 @@ function _proyMes(d){
   if(!(d instanceof Date) || isNaN(d)) return '';
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
 }
-function _proyMesLabel(ym){
-  var parts = ym.split('-');
-  var meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  return meses[parseInt(parts[1],10)-1]+' '+parts[0];
-}
-
 function proyRender(){
   var creds  = (S.creds  || []).filter(function(c){ return c && !c.eliminado; });
   var motos  = (S.motos  || []).filter(function(m){ return m && !m.eliminado; });
