@@ -13,6 +13,58 @@ var FIREBASE_CONFIG = {
   appId: '1:951911859002:web:1eb8f0af7bcbd508474603'
 };
 
+// ══════════════════════════════════════════════════════════════════
+// LA MEMORIA DEL NAVEGADOR ES DE UNA SOLA COMPANIA
+// ══════════════════════════════════════════════════════════════════
+// El app guarda copias en la maquina de cada persona (motos, catalogo, plan de
+// pago, score, tareas) para abrir rapido y aguantar sin internet. Chrome guarda
+// esa libreta POR DOMINIO, y las llaves no dicen de que compania son.
+// Con dos companias eso mezcla datos, y en las motos la copia local le GANA a la
+// base (mergeMotosPreferLocal): el inventario de una aparece dentro de la otra.
+// Pasa igual cuando un dominio cambia de compania, aunque nunca convivan.
+// Por eso la libreta queda marcada con el proyecto de Firebase: si al abrir la
+// marca no es la de esta compania, se bota lo que es copia de la base. NO se
+// toca lo que es de la persona o del equipo: el tema claro/oscuro, los permisos
+// de notificaciones y los documentos que el empleado adjunto y todavia no subio.
+// (22-sep-2026, antes de que pagasi.io pase a PAGASI 26)
+var _MEM_MARCA = 'pagasi_empresa_memoria';
+var _MEM_BORRAR = ['pagasi_motos_cache_v1','motosCache','motosCacheV2','pagasi_catalogo_config',
+  'pagasi_catalogo_ver','pagasi_config_plan','pagasi_config_score','pagasi_planes_extra',
+  'pagasi_inv_oficina','concesionarioActivo','pagasi_workcenter_tasks_v3',
+  'pagasi_notif_historial_v1','libroSeniatCfg_v1'];
+var _MEM_BORRAR_PREFIJO = ['pagasi_mora_alert_','pgsDaily_','pgsPushLog_','_perfilNagDismissed_'];
+var _MEM_RESPETAR = ['pagasi_theme','pgsPushEnabled'];
+var _MEM_RESPETAR_PREFIJO = ['pagasi_cli_docs_'];
+function _memEsDeLaBase(k){
+  if(_MEM_RESPETAR.indexOf(k) > -1) return false;
+  for(var i=0;i<_MEM_RESPETAR_PREFIJO.length;i++){ if(k.indexOf(_MEM_RESPETAR_PREFIJO[i])===0) return false; }
+  if(_MEM_BORRAR.indexOf(k) > -1) return true;
+  for(var j=0;j<_MEM_BORRAR_PREFIJO.length;j++){ if(k.indexOf(_MEM_BORRAR_PREFIJO[j])===0) return true; }
+  return false;
+}
+var _memLimpiadaDe = null;
+(function _memoriaDeEstaEmpresa(){
+  try{
+    var proy = (FIREBASE_CONFIG && FIREBASE_CONFIG.projectId) || '';
+    if(!proy || typeof localStorage==='undefined') return;
+    var marca = localStorage.getItem(_MEM_MARCA);
+    if(marca === proy) return;
+    // Sin marca: la libreta es de antes de este cambio y no hay forma de saber de
+    // quien es. Se limpia igual, que son copias y se rehacen solas desde la base.
+    var llaves = [];
+    for(var i=0;i<localStorage.length;i++){ var k = localStorage.key(i); if(k && _memEsDeLaBase(k)) llaves.push(k); }
+    llaves.forEach(function(k){ try{ localStorage.removeItem(k); }catch(e){} });
+    localStorage.setItem(_MEM_MARCA, proy);
+    if(llaves.length) _memLimpiadaDe = { antes: marca || '(sin marca)', ahora: proy, llaves: llaves.length };
+  }catch(e){}
+})();
+// Que no pase callado: si esta computadora traia datos de otra compania, se dice.
+if(_memLimpiadaDe){
+  setTimeout(function(){
+    if(typeof toast==='function') toast('Esta computadora tenía guardados datos de otro sistema Pagasi. Se limpiaron y todo se está leyendo de la base.','info');
+  }, 3500);
+}
+
 // ════════════════════════════════════════════════════════════════
 // PUSH NOTIFICATIONS del navegador — recordatorios automáticos
 // ════════════════════════════════════════════════════════════════
