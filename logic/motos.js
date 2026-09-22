@@ -235,7 +235,7 @@ function openAddMoto(id=null){
             <option value="0.55" ${(m&&m.planModo==='apy'&&Math.abs((m.inicialPct||0)-0.55)<0.001)?'selected':''}>Inicial 55%</option>
             <option value="custom">Inicial personalizada</option>
           </select></div>
-          <button type="button" class="btn btn-g btn-sm" style="margin-top:8px" onclick="_mGuardarPlanApy()">Guardar como plan nuevo</button>
+          <button type="button" class="btn btn-g btn-sm" id="m_guardar_plan_apy" style="margin-top:8px" onclick="_mGuardarPlanApy()">Guardar como plan nuevo</button>
         </div>
         <div style="font-size:11px;color:var(--ink3);margin-top:6px">Indicas APY objetivo y plazo. El sistema calcula la cuota quincenal para iniciales de 45%, 50% y 55%.</div>
       </div>
@@ -279,6 +279,12 @@ function openAddMoto(id=null){
       <div class="fg"><label>Notas</label><textarea class="fta" id="m_notas">${(m&&m.notas)||''}</textarea></div>
     </div>
     ${ed ? '' : _mpagoBloqueHtml('mpago','Forma de pago de la moto','Indica de cuál(es) cuenta(s) o efectivo sale el dinero. Puedes dividir el pago entre varias cuentas. La suma debe coincidir con el precio base real (costo).')}`;
+  // "Guardar como plan nuevo" escribe en la configuracion: si el usuario no tiene ese
+  // permiso, el boton no se ofrece (antes decia "guardado" y la base lo rechazaba).
+  setTimeout(function(){
+    var _bp = document.getElementById('m_guardar_plan_apy');
+    if(_bp && typeof hasModuleAccess==='function' && !(hasModuleAccess('plan')||hasModuleAccess('config'))) _bp.style.display='none';
+  }, 30);
   if(ed) previewCalc();
   S.saveFn=()=>{
     const g=i=>{ var el=$(i); return el?el.value.trim():null; };
@@ -583,6 +589,7 @@ function resyncMotosConFirebase(){
 // Restaura todas las motos que tienen el flag eliminado:true (las reactiva)
 
 function restaurarTodasLasMotosEliminadas(){
+  if(typeof requireDeletePermission==='function' && !requireDeletePermission()) return;
   var eliminadas = (S.motos||[]).filter(function(m){return m.eliminado;});
   if(eliminadas.length===0){ toast('No hay motos eliminadas','info'); return; }
   eliminadas.forEach(function(m){
@@ -600,6 +607,8 @@ function restaurarTodasLasMotosEliminadas(){
 // Restaura una sola moto por id
 
 function restaurarMoto(id){
+  // Restaurar revive el gasto de la compra y anula su reverso: mismo permiso que borrar
+  if(typeof requireDeletePermission==='function' && !requireDeletePermission()) return;
   var m = S.motos.find(function(x){return String(x.id)===String(id);});
   if(!m){ toast('Moto no encontrada','error'); return; }
   var seDevolvioDinero = !!m.eliminacionReversaCuenta;

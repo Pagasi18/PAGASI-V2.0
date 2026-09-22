@@ -108,6 +108,8 @@ const lead = (id, cambios) => Object.assign({}, LEAD, { id }, cambios || {});
     await setDoc(doc(db, 'egresos/EG-1'), { id: 'EG-1', concepto: 'Alquiler', monto: 100, eliminado: false });
     await setDoc(doc(db, 'movimientos/MOV-1'), { id: 'MOV-1', tipo: 'retiro', monto: 100, cuentaOrigen: 'Binance', eliminado: false });
     await setDoc(doc(db, 'pagos/PAG-1'), { id: 'PAG-1', cred: 'CRED-1', monto: 50, estado: 'confirmado', eliminado: false });
+    await setDoc(doc(db, 'motos/M-1'), { id: 'M-1', modelo: 'MOTO', estado: 'disponible', eliminado: false });
+    await setDoc(doc(db, 'creditos/CRED-1'), { id: 'CRED-1', cli: 'X', estado: 'activo' });
   });
   const gerente = env.authenticatedContext('ger1', { email: 'ger1@x.com' }).firestore();
   const cobrador = env.authenticatedContext('cob1', { email: 'cob1@x.com' }).firestore();
@@ -126,8 +128,18 @@ const lead = (id, cambios) => Object.assign({}, LEAD, { id }, cambios || {});
   await prueba('pero sí puede editar un gasto sin anularlo', assertSucceeds(updateDoc(doc(gerente, 'egresos/EG-1'), { concepto: 'Alquiler oficina' })));
   await prueba('y el admin sí anula', assertSucceeds(updateDoc(doc(admin, 'egresos/EG-1'), { eliminado: true, eliminadoPor: 'Admin' })));
   await prueba('...y también revive lo anulado', assertSucceeds(updateDoc(doc(admin, 'egresos/EG-1'), { eliminado: false })));
+  await env.withSecurityRulesDisabled(async ctx => { await setDoc(doc(ctx.firestore(), 'movimientos/MOV-2'), { id: 'MOV-2', tipo: 'retiro', monto: 100, eliminado: true }); });
   await prueba('un empleado sin permiso tampoco revive lo anulado',
-    assertFails(updateDoc(doc(gerente, 'movimientos/MOV-1'), { eliminado: true })));
+    assertFails(updateDoc(doc(gerente, 'movimientos/MOV-2'), { eliminado: false })));
+  // Suspendido: la ficha existe pero ya no entra a nada
+  await env.withSecurityRulesDisabled(async ctx => { await setDoc(doc(ctx.firestore(), 'usuarios/susp1'), { rol: 'Empleado', nombre: 'Suspendido', email: 'susp1@x.com', permisos: ['dash'], suspendido: true }); });
+  await prueba('un usuario suspendido ya no lee la base', assertFails(getDoc(doc(suspendido, 'creditos/CRED-1'))));
+  await prueba('...ni escribe', assertFails(setDoc(doc(suspendido, 'clientes/CLI-99'), { id: 'CLI-99', nombre: 'X' })));
+  // El catálogo y los planes los usa el vendedor desde el wizard
+  await prueba('un vendedor puede agregar un modelo al catálogo', assertSucceeds(setDoc(doc(cobrador, 'config/catalogo'), { lista: [{ id: 1, modelo: 'NUEVA 150', precio: 1200 }] })));
+  await prueba('...y guardar un plan nuevo', assertSucceeds(setDoc(doc(cobrador, 'config/planes'), { lista: [] })));
+  await prueba('pero NO el destino de los avisos de Telegram', assertFails(setDoc(doc(cobrador, 'config/telegram'), { chat: '123' })));
+  await prueba('una moto no se anula sin permiso de eliminar', assertFails(updateDoc(doc(gerente, 'motos/M-1'), { eliminado: true })));
 
   await env.cleanup();
   console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');

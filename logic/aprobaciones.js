@@ -152,6 +152,14 @@ function _aprRechazar(credId){
   var c = (S.creds||[]).find(function(x){return x.id === credId;});
   if(!c){ toast('Crédito no encontrado','error'); return; }
   if(c.estado !== 'pendiente_revision'){ toast('Este crédito no está pendiente','error'); return; }
+  // Si la solicitud creo su propia moto, rechazarla ANULA su gasto de compra: eso pide el
+  // mismo permiso que anular en Finanzas, y hay que pedirlo ANTES de escribir nada, para
+  // no dejar el credito cancelado a medias (revisado el 22-sep-2026).
+  var _motoPrev = (S.motos||[]).find(function(m){ return String(m.id)===String(c.motoId); });
+  var _creoLaMoto = _motoPrev
+    ? (String(_motoPrev.creadaEnCredito||'') === String(credId) || String(_motoPrev.notas||'').indexOf('financiamiento '+credId) > -1)
+    : (c.motoCreadaEnSolicitud === true);
+  if(_creoLaMoto && typeof requireDeletePermission==='function' && !requireDeletePermission()) return;
   var razon = prompt('Razón para rechazar el crédito '+credId+':');
   if(!razon || !razon.trim()){
     if(razon !== null) toast('Debes indicar una razón','error');
@@ -166,13 +174,11 @@ function _aprRechazar(credId){
   // no salio: se devuelve y la moto vuelve a estar disponible (antes quedaba descontada
   // y la moto "financiada" con el nombre del cliente; punto 10, 21-sep-2026).
   var _devuelto = 0;
-  var _moto = (S.motos||[]).find(function(m){ return String(m.id)===String(c.motoId); });
-  // ¿La moto la creo ESTA solicitud? Solo entonces su compra se descuenta al enviarla y
-  // hay que devolverla. Si la moto ya estaba en inventario, su compra es real y anterior:
-  // devolverla inventaria dinero y deja una moto sin costo (revisado el 22-sep-2026).
-  var _laCreoEstaSolicitud = c.motoCreadaEnSolicitud === true
-    || (_moto && String(_moto.creadaEnCredito||'') === String(credId))
-    || (_moto && String(_moto.notas||'').indexOf('financiamiento '+credId) > -1);
+  var _moto = _motoPrev;
+  // ¿La moto la creo ESTA solicitud? Manda la marca de la MOTO: el campo del credito
+  // puede quedar viejo si alguien edito la solicitud y le cambio la moto, y entonces se
+  // devolvia la compra de otra unidad (revisado el 22-sep-2026).
+  var _laCreoEstaSolicitud = _creoLaMoto;
   if(c.motoId != null && c.motoId !== '' && _laCreoEstaSolicitud){
     var _audit = {
       eliminado:true,
@@ -185,15 +191,27 @@ function _aprRechazar(credId){
       try{ _devuelto = _mpagoReversarGastos(c.motoId, true, _audit) || 0; }catch(_e){ _devuelto = 0; }
     }
   }
-  // La moto vuelve al stock en los dos casos (la solicitud ya no la ocupa)
   if(_moto && !_moto.eliminado){
-    _moto.estado = 'disponible';
-    _moto.cliente = null;
-    _moto.creditoId = null;
+    if(_laCreoEstaSolicitud){
+      // Esa unidad la trajo la solicitud y su compra se devolvio: no puede quedarse en el
+      // stock como si Pagasi la hubiera pagado. Sale del inventario, auditada.
+      _moto.eliminado = true;
+      _moto.eliminadoPor = c.rechazadoPor;
+      _moto.eliminadoEn = c.rechazadoEn;
+      _moto.eliminadoRazon = 'Solicitud rechazada · '+c.razonRechazo;
+      _moto.eliminacionReversaCuenta = true;
+      _moto.cliente = null;
+      _moto.creditoId = null;
+    } else {
+      // Moto que ya estaba en inventario: solo se libera
+      _moto.estado = 'disponible';
+      _moto.cliente = null;
+      _moto.creditoId = null;
+    }
     if(DB && DB.saveMoto) DB.saveMoto(_moto);
   }
   if(typeof logActividad==='function') logActividad('credito_rechazado','creditos',credId,{razon:c.razonRechazo, gastosDevueltos:_devuelto});
-  toast('Crédito rechazado · '+credId+(_devuelto?' · se devolvió la compra de la moto y quedó disponible':''),'info');
+  toast('Crédito rechazado · '+credId+(_devuelto?' · se devolvió la compra y la moto salió del inventario':(_moto?' · la moto vuelve al stock':'')),'info');
   nav('aprobaciones');
 }
 

@@ -27,6 +27,8 @@ function openAddCred(motoId=null){
     var _mReal = (S.motos||[]).find(function(m){ return !m.eliminado && String(m.id)===String(motoId); });
     if(_mReal) WZ.motoInvId = String(motoId);
   }
+  // Los documentos subidos se quedaban en memoria y se pegaban al siguiente cliente
+  if(!window._wzPreload){ _wzDocsUp = {}; WZ.documentos = []; WZ.docsCount = 0; }
   // Si hay datos precargados desde editarCredSinFirma, restaurarlos después del reset
   if(window._wzPreload){
     Object.assign(WZ, window._wzPreload);
@@ -48,6 +50,13 @@ function _wzRender(motoId){
   sincronizarInventarioConCreditos({save:true});
   var ov = document.getElementById('wz-overlay');
   var motosDisp = S.motos.filter(function(m){ return !m.eliminado && m.estado==='disponible'; });
+  // Al editar, la moto del credito ya esta "financiada" y se caia de la lista: el selector
+  // quedaba en "Ninguna" y al guardar se creaba otra moto (revisado el 22-sep-2026).
+  var _yaElegida = motoId || WZ.motoInvId;
+  if(_yaElegida && !motosDisp.some(function(m){ return String(m.id)===String(_yaElegida); })){
+    var _mSel = S.motos.find(function(m){ return !m.eliminado && String(m.id)===String(_yaElegida); });
+    if(_mSel) motosDisp = motosDisp.concat([_mSel]);
+  }
 
   // ── Colores del score ──
   function scoreCol(s){ return s>=625?'var(--green)':s>=450?'var(--amber)':'var(--red)'; }
@@ -1092,6 +1101,17 @@ function _wzEnsureVendedores(){
 }
 
 // ── Selección de moto del catálogo ──
+// Borra los datos propios de una moto concreta (los que no se pueden heredar)
+function _wzLimpiarDatosMoto(){
+  ['vin','placa','color','anio','marca','serialMotor','serialChasis','gpsNum'].forEach(function(k){ WZ[k]=''; });
+  [['wz_vin','vin'],['wz_placa','placa'],['wz_color','color'],['wz_anio','anio'],['wz_marca','marca'],
+   ['wz_serial_motor','serialMotor'],['wz_serial_chasis','serialChasis'],['wz_gps_num','gpsNum']].forEach(function(par){
+    WZ[par[0]] = '';
+    var el = document.getElementById(par[0]);
+    if(el) el.value = '';
+  });
+}
+
 function _wzPickMotoCat(sel){
   var wrap = document.getElementById('wz-mpago-wrap');
   var newCatDiv = document.getElementById('wz_new_cat_div');
@@ -1103,14 +1123,22 @@ function _wzPickMotoCat(sel){
   if(sel.value === '__wz_new_cat__'){
     if(newCatDiv) newCatDiv.style.display='block';
     if(wrap) wrap.style.display='none';
+    // soltar tambien la moto del inventario que estuviera elegida (revisado el 22-sep)
+    var _invSelN = document.getElementById('wz_moto_inv');
+    if(_invSelN) _invSelN.value = '';
     WZ.motoInvId = null;
     WZ.motoModelo = '';
+    _wzLimpiarDatosMoto();
+    if(typeof _wzMpagoSync==='function') _wzMpagoSync();
     return;
   }
   if(newCatDiv) newCatDiv.style.display='none';
   var opt = sel.options[sel.selectedIndex];
   var invSel = document.getElementById('wz_moto_inv');
   if(invSel) invSel.value = '';
+  // VIN, seriales, placa, color y GPS son de CADA moto: si venian de una del inventario
+  // no pueden quedarse pegados al modelo nuevo del catalogo (revisado el 22-sep-2026).
+  if(WZ.motoInvId) _wzLimpiarDatosMoto();
   WZ.motoInvId = null;
   WZ.motoModelo = opt.getAttribute('data-modelo')||opt.text.split(' —')[0].trim();
   // ── Autocompletar los datos de la moto que SÍ vienen del catálogo ──
@@ -1512,6 +1540,16 @@ function _wzValidar(){
     var _vsel = document.getElementById('wz_vendedor');
     if(_vsel){ if(_vsel.value){ _wzSetVendedor(_vsel); } }
     if(!WZ.vendedorNombre && !_modoEdicion){ toast('Selecciona el vendedor de la moto','error'); return false; }
+    // Sin moto no hay solicitud: ni del inventario, ni del catalogo, ni una nueva que se
+    // este agregando. Antes se guardaba el credito con el modelo vacio y sin moto, y la
+    // forma de pago declarada se tiraba (revisado el 22-sep-2026).
+    var _catSelV = document.getElementById('wz_moto_cat');
+    var _catNueva = _catSelV && _catSelV.value === '__wz_new_cat__'
+      && ((document.getElementById('wz_cat_modelo')||{}).value||'').trim();
+    if(!_modoEdicion && !WZ.motoInvId && !WZ.motoModelo && !_catNueva){
+      toast('Elige la moto: una del inventario o un modelo del catálogo','error');
+      return false;
+    }
     var precio = parseFloat((document.getElementById('wz_precio')||{}).value)||0;
     if(precio<=0 && !_modoEdicion){ toast('Ingresa el precio base real de la moto','error'); return false; }
     if(precio<=0) precio = WZ.precio||0; // en edición usar precio guardado
@@ -2027,6 +2065,9 @@ function _wzGuardar(){
         motoId: _newMotoId,
         // al enlazar la moto se quita la marca de "sin moto" (revisado el 22-sep-2026)
         motoPendiente: _newMotoId ? false : (S.creds[_ei].motoPendiente||false),
+        // si la edicion cambia de moto, esta solicitud ya no creo la que queda apuntada
+        motoCreadaEnSolicitud: (String(_newMotoId||'') === String(_oldMotoId||''))
+          ? (S.creds[_ei].motoCreadaEnSolicitud || false) : false,
         marca: WZ.marca||S.creds[_ei].marca||'',
         vin: WZ.vin||S.creds[_ei].vin||'',
         color: WZ.color||S.creds[_ei].color||'',
@@ -2286,7 +2327,8 @@ function _wzGuardar(){
     if(!e || e.code !== 'ID_OCUPADO'){
       console.error('crear credito:', e && e.message);
       alert('No se pudo guardar el crédito (problema de conexión).\n\n👉 Dale a GUARDAR otra vez.');
-      if(typeof render==='function') render();
+      if(btn){ btn.textContent='Guardar Solicitud'; btn.disabled=false; }
+      if(typeof window!=='undefined') window._saveMEnCurso = false;
       return;
     }
     if(typeof logActividad==='function') logActividad('credito_colision','creditos',newCred.id,{cliente:newCred.cli});
@@ -2294,7 +2336,8 @@ function _wzGuardar(){
         + 'Otra persona guardó una venta al mismo tiempo y se cruzaron los números, '
         + 'así que esta todavía no se guardó.\n\n'
         + '👉 Dale a GUARDAR otra vez y listo — el sistema le pone un número nuevo solo.');
-    if(typeof render==='function') render();
+    if(btn){ btn.textContent='Guardar Solicitud'; btn.disabled=false; }
+    if(typeof window!=='undefined') window._saveMEnCurso = false;
   });
 
   // Todo lo que sigue solo se ejecuta si el credito se guardo (crearCred OK).
@@ -2350,6 +2393,7 @@ function _wzGuardar(){
         // Marca de quien la creo: solo si la creo ESTA solicitud se puede devolver su
         // compra al rechazarla (una moto que ya estaba en inventario se pago de verdad)
         creadaEnCredito: credId,
+        creditoId: credId,
         ini:r.ini,
         fin:r.fin,
         total:r.total,

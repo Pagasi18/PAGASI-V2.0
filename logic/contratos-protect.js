@@ -172,7 +172,7 @@ function _protectDatos(credId){
     // contrato: firma la compania, identificada por su RIF.
     // ── Comprador ──
     cliNom: V(cli.nombre || c.cli, 28), cliCi: V(_draCedulaTxt(cli.cedula || cli.ci), 11),
-    cliRif: V(cli.rif || _draCedulaTxt(cli.cedula||cli.ci), 12),
+    cliRif: V(T(cli.rif) || _draCedulaTxt(cli.cedula||cli.ci), 12),
     cliDir: V(cli.direccion, 40), cliCiudad: V(cli.ciudad, 14),
     cliEmail: V(cli.email, 22), cliTel: V(cli.tel || cli.wa, 14), cliProf: V(cli.trabajo || cli.profesion || cli.ocupacion, 16),
     // ── Fiador ──
@@ -185,11 +185,13 @@ function _protectDatos(credId){
     // ── Concesionario (no firma, pero se identifica en los considerandos) ──
     concNom: V(conc.nombre, 26), concRif: V(conc.rif, 12),
     // ── Vehiculo ──
-    marca:  V(c.marca || moto.marca, 12), modelo: V(c.modelo || moto.modelo, 16), anio: V(c.anio || moto.anio, 6),
-    tipo:   V(moto.tipo || 'PASEO', 10), color: V((c.color && c.color!=='—') ? c.color : moto.color, 10),
-    placa:  V((c.placa && c.placa!=='—') ? c.placa : moto.placa, 10),
-    chasis: V(c.serialChasis || moto.serialChasis || c.vin || moto.vin, 18),
-    motor:  V(c.serialMotor || moto.serialMotor, 18), uso: '<strong>'+uso+'</strong>',
+    // T() ya descarta "NA"/"S/N": se aplica a CADA candidato, no al resultado, para no
+    // perder el dato bueno de la moto cuando el credito trae basura (22-sep-2026).
+    marca:  V(T(c.marca) || T(moto.marca), 12), modelo: V(T(c.modelo) || T(moto.modelo), 16), anio: V(T(c.anio) || T(moto.anio), 6),
+    tipo:   V(T(moto.tipo) || 'PASEO', 10), color: V(T(c.color) || T(moto.color), 10),
+    placa:  V(T(c.placa) || T(moto.placa), 10),
+    chasis: V(T(c.serialChasis) || T(moto.serialChasis) || T(c.vin) || T(moto.vin), 18),
+    motor:  V(T(c.serialMotor) || T(moto.serialMotor), 18), uso: '<strong>'+uso+'</strong>',
     // ── GPS (del modulo GPS, si el equipo ya esta asignado al credito) ──
     gpsModelo: V(gps.idGps ? 'MiCODUS MV710G' : '', 14), gpsSerial: V(gps.idGps, 12), gpsImei: V(gps.imei, 16),
     gpsFecha: V(gps.fechaInstalacion ? fmt(new Date(gps.fechaInstalacion+'T12:00:00')) : '', 10),

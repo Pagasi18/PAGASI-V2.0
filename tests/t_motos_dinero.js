@@ -108,7 +108,8 @@ const credRech = S.creds[0];
 ok('la solicitud queda cancelada con su razón', credRech.estado === 'cancelado' && !!credRech.razonRechazo);
 ok('moto creada por la solicitud: el dinero vuelve a la cuenta', saldo('Binance') === saldoConSolicitud + 1000);
 ok('...y su gasto queda anulado', S.egresos.filter(e => e.motoIdRef === 8 && !e.eliminado).length === 0);
-ok('...y la moto vuelve a estar disponible y sin cliente', motoSol.estado === 'disponible' && !motoSol.cliente);
+ok('...y esa moto sale del inventario (nunca se pagó), auditada',
+  motoSol.eliminado === true && /Solicitud rechazada/.test(String(motoSol.eliminadoRazon||'')) && !motoSol.cliente);
 
 // (b) La moto YA estaba en inventario (comprada antes de verdad): rechazar NO devuelve
 //     ese dinero; solo libera la moto. Devolverlo inventaba plata (revisión 22-sep).
@@ -189,6 +190,49 @@ await new Promise(function(r){ setImmediate(r); });
 S.saveFn = function(){ corridas++; return true; };
 ctx.saveM();
 ok('cuando termina, el siguiente guardado sí entra', corridas === 2);
+
+// ── Revisión 2: la solicitud editada que cambia de moto ──
+S.movimientos = [{ id:'MOV-INI5', tipo:'deposito', concepto:'Aporte', monto:9000, cuentaDestino:'Binance', fecha:'2026-08-01' }];
+S.egresos = []; S.creds = [];
+const motoDeLaSolicitud = { id: 30, modelo:'MOTO CAT', precio:1200, estado:'financiada', creadaEnCredito:'CRED-930',
+  notas:'Creada automáticamente desde catálogo al registrar financiamiento CRED-930' };
+const motoComprada = { id: 31, modelo:'MOTO STOCK', precio:1000, estado:'disponible' };
+S.motos = [motoDeLaSolicitud, motoComprada];
+ctx._mpagoCrearGastos(motoDeLaSolicitud, [{ cuenta:'Binance', monto:1200 }], { fecha:'2026-09-03' });
+ctx._mpagoCrearGastos(motoComprada, [{ cuenta:'Binance', monto:1000 }], { fecha:'2026-06-10' });
+const saldoAntesEdit = saldo('Binance');
+// la solicitud se editó y ahora apunta a la moto comprada, pero conserva la marca vieja
+S.creds.push({ id:'CRED-930', cli:'CLIENTE EDIT', motoId:31, estado:'pendiente_revision', ini:300, fecha:'2026-09-03', motoCreadaEnSolicitud:true });
+ctx._aprRechazar('CRED-930');
+ok('solicitud editada: NO se devuelve la compra de la otra moto', saldo('Binance') === saldoAntesEdit);
+ok('...la compra real de esa moto sigue viva', S.egresos.filter(e => e.motoIdRef === 31 && !e.eliminado).length === 1);
+
+// ── Revisión 2: sin permiso de eliminar no se rechaza a medias ──
+S.egresos = []; S.creds = []; S.movimientos = [{ id:'MOV-INI6', tipo:'deposito', concepto:'Aporte', monto:9000, cuentaDestino:'Binance', fecha:'2026-08-01' }];
+const motoSol2 = { id: 32, modelo:'MOTO CAT2', precio:1000, estado:'financiada', creadaEnCredito:'CRED-931' };
+S.motos = [motoSol2];
+ctx._mpagoCrearGastos(motoSol2, [{ cuenta:'Binance', monto:1000 }], { fecha:'2026-09-03' });
+const saldoSinPermiso = saldo('Binance');
+S.creds.push({ id:'CRED-931', cli:'CLIENTE SIN PERMISO', motoId:32, estado:'pendiente_revision', ini:300, fecha:'2026-09-03' });
+ctx.requireDeletePermission = function(){ return false; };
+ctx._aprRechazar('CRED-931');
+ok('sin permiso de eliminar, el rechazo no escribe nada', S.creds.find(c => c.id === 'CRED-931').estado === 'pendiente_revision' && saldo('Binance') === saldoSinPermiso);
+ctx.requireDeletePermission = function(){ return true; };
+
+// ── Revisión 2: el wizard no guarda una solicitud sin moto ──
+form['wz_vendedor'] = el({ value:'' }); form['wz_precio'] = el({ value:'1500' });
+form['wz_moto_cat'] = el({ value:'' });
+ctx.WZ = Object.assign({}, ctx.WZ, { step:3, motoInvId:null, motoModelo:'', vendedorNombre:'Vendedor' });
+avisos.length = 0;
+const paso = ctx._wzValidar ? ctx._wzValidar() : null;
+ok('sin moto elegida no deja pasar del paso 3', paso === false && avisos.some(a => /Elige la moto/.test(a[1])));
+
+// ── Revisión 2: cambiar de moto de inventario al catálogo no arrastra VIN ni placa ──
+ctx.WZ.motoInvId = '31'; ctx.WZ.vin = 'VIN-VIEJO'; ctx.WZ.placa = 'AB123CD'; ctx.WZ.serialMotor = 'MOT-1';
+['wz_vin','wz_placa','wz_serial_motor','wz_color','wz_anio','wz_marca','wz_serial_chasis','wz_gps_num'].forEach(id => { form[id] = el({ value:'X' }); });
+ctx._wzPickMotoCat({ value:'cat-0', options:[{ value:'cat-0', text:'MOTO CAT', getAttribute: () => 'MOTO CAT' }], selectedIndex:0 });
+ok('al pasar al catálogo se borran VIN, placa y seriales de la moto anterior',
+  !ctx.WZ.vin && !ctx.WZ.placa && !ctx.WZ.serialMotor && form['wz_vin'].value === '');
 
 console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');
 if (fail) process.exitCode = 1;

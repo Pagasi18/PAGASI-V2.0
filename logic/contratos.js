@@ -112,12 +112,14 @@ function _docCtx(credIdOverride){
     : hoy;
   var V = function(x){ return (x!=null && String(x).trim()!=='') ? String(x).trim() : ''; };
   var Vm = function(n){ return (n!=null && !isNaN(parseFloat(n))) ? '$ '+parseFloat(n).toFixed(2) : ''; };
-  var mModelo = c.modelo || moto.modelo || '';
-  var mVin = c.vin || moto.vin || '';
-  var mColor = (c.color && c.color!=='—') ? c.color : (moto.color || '');
-  var mAnio = c.anio || moto.anio || '';
-  var mPlaca = (c.placa && c.placa!=='—') ? c.placa : (moto.placa || '');
-  var mMarca = c.marca || moto.marca || '';
+  // Cada dato se limpia ANTES de elegir: si el credito dice "NA" y la moto trae el dato
+  // real, gana el real. Si se limpia despues, se perdian los dos (revisado el 22-sep-2026).
+  var mModelo = _datoReal(c.modelo) || _datoReal(moto.modelo) || '';
+  var mVin = _datoReal(c.vin) || _datoReal(moto.vin) || '';
+  var mColor = _datoReal(c.color) || _datoReal(moto.color) || '';
+  var mAnio = _datoReal(c.anio) || _datoReal(moto.anio) || '';
+  var mPlaca = _datoReal(c.placa) || _datoReal(moto.placa) || '';
+  var mMarca = _datoReal(c.marca) || _datoReal(moto.marca) || '';
   var mSerialMotor = _datoReal(c.serialMotor) || _datoReal(moto.serialMotor) || '';
   var mSerialChasis = _datoReal(c.serialChasis) || _datoReal(moto.serialChasis) || _datoReal(c.vin) || _datoReal(moto.vin) || '';
   var mGpsNum = c.gpsNum || moto.gpsNum || moto.gps_id || '';

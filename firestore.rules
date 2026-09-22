@@ -10,9 +10,17 @@ service cloud.firestore {
       return request.auth != null
         && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
+    function fichaUsuario() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+    // Un empleado suspendido (o su ficha marcada como eliminada) deja de ser staff aqui
+    // mismo: antes suspender era solo un cartel de la pantalla y su sesion seguia
+    // entrando a toda la base (revisado el 22-sep-2026).
     function esStaff() {
       return noAnonimo()
-        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && fichaUsuario().get('suspendido', false) != true
+        && fichaUsuario().get('eliminado', false) != true;
     }
     function esAdmin() {
       return esStaff()
@@ -191,12 +199,14 @@ service cloud.firestore {
     // cuentas bancarias, empresa, roles, catalogo), solo el modulo Configuracion.
     match /config/{id} {
       allow read: if esStaff();
-      allow write: if id == 'tasa' ? esStaff()
+      // El catalogo de modelos y los planes guardados los usa el vendedor desde el wizard
+      // y desde Motocicletas: si se piden permisos de Configuracion, esos botones quedan
+      // rotos y el error se traga (revisado el 22-sep-2026).
+      allow write: if (id == 'tasa' || id == 'catalogo' || id == 'planes') ? esStaff()
         : ( id == 'coromoto' ? (esAdmin() || permiso('reportes'))
-        : ( (id == 'catalogo' || id == 'planes') ? (esAdmin() || permiso('config') || permiso('plan'))
-        : ( id in ['plan','cuentasBanc','empresa','rolesPermisos','score','cobradores']
+        : ( id in ['plan','cuentasBanc','empresa','rolesPermisos','score','cobradores','gps','avisos','telegram']
             ? (esAdmin() || permiso('config'))
-            : esStaff() ) ) );
+            : esStaff() ) );
     }
 
     // == Portal del cliente: accesos y sesiones ==
@@ -291,7 +301,9 @@ service cloud.firestore {
     match /creditos/{id}          { allow read: if esStaff() || esClienteDe(resource.data.clienteId); allow create, update: if esStaff(); allow delete: if esAdmin(); }
     match /pagos/{id}             { allow read: if esStaff() || esMiCredito(resource.data.cred); allow create: if esStaff();
                                     allow update: if esStaff() && (!cambiaAnulacion() || puedeAnular()); allow delete: if esAdmin(); }
-    match /motos/{id}             { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
+    // Borrar o restaurar una moto mueve su compra: mismo permiso que anular un gasto
+    match /motos/{id}             { allow read, create: if esStaff();
+                                    allow update: if esStaff() && (!cambiaAnulacion() || puedeAnular()); allow delete: if esAdmin(); }
     match /facturas/{id}          { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
     match /cuentas/{id}           { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }
     match /cuentasPendientes/{id} { allow read, create, update: if esStaff(); allow delete: if esAdmin(); }

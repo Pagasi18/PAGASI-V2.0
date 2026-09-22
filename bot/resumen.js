@@ -196,7 +196,7 @@ async function main() {
     });
   }
   moraTop.forEach(c => {
-    L.push(`   • ${esc(c.cli)} — ${Number(c.mora) || 0} días · ${money(vencidoPorCred[c.id] || 0)}`);
+    L.push(`   • ${esc(c.cli)} — ${diasPorCred[c.id] || 0} días · ${money(vencidoPorCred[c.id] || 0)}`);
   });
   L.push(`📅 Vencen mañana: <b>${vmCount}</b> ${vmCount === 1 ? 'cuota' : 'cuotas'} · ${money(vmMonto)}`);
 
