@@ -109,6 +109,12 @@ function calcCrediScore(){
 
 // Sin < > " ' ` \ y con & como "y": las Reglas de Firestore rechazan un lead con esos
 // caracteres (con ellos se puede meter codigo en el panel; punto 1, 19-sep).
+// "V-12.345.678" → "WEB-12345678". Sin digitos suficientes, vuelve al numero por hora.
+function _idLead(cedula){
+  var d = String(cedula||'').replace(/[^0-9]/g,'').replace(/^0+/,'');
+  return (d.length>=6 && d.length<=12) ? ('WEB-'+d) : ('WEB-'+Date.now());
+}
+
 function _v(id){ var e=document.getElementById(id); return e ? String(e.value||'').replace(/&/g,' y ').replace(/[<>"'`\\]/g,'').replace(/\s+/g,' ').trim() : ''; }
 function _n(id){ var e=document.getElementById(id); return e ? (parseFloat(e.value)||0) : 0; }
 function _i(id){ var e=document.getElementById(id); return e ? (parseInt(e.value,10)||0) : 0; }
@@ -121,7 +127,10 @@ function buildClientePayload(){
   var now = new Date().toISOString();
   return {
     // ──── Identificación ────────────────────────────────────────
-    id: 'WEB-'+Date.now(),
+    // El numero de la ficha sale de la CEDULA, no de la hora: asi la base misma impide
+    // que la misma persona quede registrada dos veces (el panel si revisaba la cedula,
+    // la web no; punto 21, 21-sep-2026). Sin cedula legible, se usa la hora como antes.
+    id: _idLead(_v('wz_ci')),
     nombre: _v('wz_nom'),
     cedula: _v('wz_ci'),
     rif: '',
@@ -239,7 +248,18 @@ async function submitF(){
     document.getElementById('okText').textContent='Tu solicitud llegó a Pagasi. Un asesor te contactará en menos de 24 horas para finalizar el proceso.';
   }catch(err){
     console.error('submitF:',err);
-    alert('Error: '+(err.message||err));
+    // La base rechaza crear una ficha que ya existe: es la misma persona mandando otra vez
+    var yaEsta = err && (err.code==='permission-denied' || /permission|insufficient/i.test(String(err.message||'')));
+    if(yaEsta){
+      var okEl=document.getElementById('fOK'), okTxt=document.getElementById('okText');
+      var fs2=document.getElementById('fs2'), pd2=document.getElementById('pd2');
+      if(fs2) fs2.classList.remove('on');
+      if(pd2){ pd2.classList.remove('on'); pd2.classList.add('done'); }
+      if(okEl) okEl.style.display='block';
+      if(okTxt) okTxt.textContent='Ya tenemos tu solicitud registrada con esa cédula. Un asesor te contactará en menos de 24 horas.';
+    } else {
+      alert('Error: '+(err.message||err));
+    }
   }finally{
     window.__submittingSolicitud = false;
     btns.forEach(function(b){b.disabled=false;});

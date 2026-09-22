@@ -1,5 +1,20 @@
 // Logica de contratos y documentos legales. Extraido mecanicamente de assets/pagasi-app.js.
 
+// ═══════════════════════════════════════
+// DATOS QUE PARECEN LLENOS PERO ESTAN VACIOS
+// ═══════════════════════════════════════
+// En las fichas hay seriales escritos "NA", "S/N" o "-" (31 creditos en la
+// auditoria de agosto). El contrato los imprimia LITERALES, como si fueran el
+// serial de la moto. Ahora se tratan como vacio: sale la raya para llenar a
+// boligrafo (punto 20, 21-sep-2026).
+var _CONTRATO_VACIOS = ['NA','N/A','N.A','N.A.','NO','NO APLICA','SN','S/N','SIN','SIN SERIAL','SIN DATO','NINGUNO','NONE','NULL','-','--','---','—','.','..','0','00','X','XX','XXX','?','N°','#'];
+function _datoReal(v){
+  var t = (v==null?'':String(v)).trim();
+  if(!t) return '';
+  var k = t.toUpperCase().replace(/\s+/g,' ');
+  return _CONTRATO_VACIOS.indexOf(k)>-1 ? '' : t;
+}
+
 // ══════════════════════════════════════════════════════════════════
 // QUE VERSION DE CONTRATO LE TOCA A CADA CREDITO
 // ══════════════════════════════════════════════════════════════════
@@ -36,7 +51,29 @@ function onCredContratoChange(){
   if(typeof _docsContratoPintar==='function') _docsContratoPintar();
   if(typeof renderContrato==='function') renderContrato();
 }
+// Avisa cuando el contrato NO esta tomando el serial del credito: o lo saco de la
+// ficha de la moto, o los dos no coinciden. Antes lo copiaba en negrita, como si
+// estuviera verificado, y nadie se enteraba (punto 20, 21-sep-2026).
+function _avisarSerialesContrato(credId){
+  try{
+    var id = credId || ($('sel-cred') && $('sel-cred').value);
+    var c = (S.creds||[]).find(function(x){ return String(x.id)===String(id); });
+    if(!c) return;
+    var m = (S.motos||[]).find(function(x){ return String(x.id)===String(c.motoId); }) || {};
+    var avisos = [];
+    [['serial de chasis', _datoReal(c.serialChasis) || _datoReal(c.vin), _datoReal(m.serialChasis) || _datoReal(m.vin)],
+     ['serial de motor', _datoReal(c.serialMotor), _datoReal(m.serialMotor)],
+     ['placa', _datoReal(c.placa), _datoReal(m.placa)]].forEach(function(x){
+      var enCred = x[1], enMoto = x[2];
+      if(!enCred && enMoto) avisos.push('el '+x[0]+' salió de la ficha de la moto');
+      else if(enCred && enMoto && enCred.toUpperCase()!==enMoto.toUpperCase()) avisos.push('el '+x[0]+' del crédito ('+enCred+') no coincide con el de la moto ('+enMoto+')');
+    });
+    if(avisos.length && typeof toast==='function') toast('Revisa el contrato: '+avisos.join(' · '),'info');
+  }catch(e){}
+}
+
 function renderContrato(){
+  _avisarSerialesContrato();
   // Predeterminado: los contratos aprobados por el asesor legal (compraventa con
   // reserva de dominio + cesion). Salen siempre en pareja: la cesion no tiene
   // sentido sin la venta que la origina.
@@ -81,8 +118,8 @@ function _docCtx(credIdOverride){
   var mAnio = c.anio || moto.anio || '';
   var mPlaca = (c.placa && c.placa!=='—') ? c.placa : (moto.placa || '');
   var mMarca = c.marca || moto.marca || '';
-  var mSerialMotor = c.serialMotor || moto.serialMotor || '';
-  var mSerialChasis = c.serialChasis || moto.serialChasis || c.vin || moto.vin || '';
+  var mSerialMotor = _datoReal(c.serialMotor) || _datoReal(moto.serialMotor) || '';
+  var mSerialChasis = _datoReal(c.serialChasis) || _datoReal(moto.serialChasis) || _datoReal(c.vin) || _datoReal(moto.vin) || '';
   var mGpsNum = c.gpsNum || moto.gpsNum || moto.gps_id || '';
   var mConcesionario = (c.concesionarioId && typeof _concGetById==='function') ? ((_concGetById(c.concesionarioId)||{}).nombre||'') : '';
   // Identidad Pagasi: azul de marca (las variables conservan el nombre 'purple'

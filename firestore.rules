@@ -56,7 +56,9 @@ service cloud.firestore {
       return request.auth != null
         && d.estado == 'lead'
         && d.origen == 'web'
-        && id.matches('WEB-[0-9]{10,16}') && d.id == id
+        // WEB-<cedula> (nuevo, para que la misma persona no quede dos veces) o
+        // WEB-<hora> (como venia). Punto 21, 21-sep-2026.
+        && id.matches('WEB-[0-9]{6,16}') && d.id == id
         && d.keys().hasOnly([
           'id', 'nombre', 'cedula', 'rif', 'nacionalidad', 'tel', 'wa', 'email', 'ciudad',
           'estado_ubi', 'dir', 'tiempo_dir', 'vivienda', 'terremoto_afectado', 'terremoto_danos',

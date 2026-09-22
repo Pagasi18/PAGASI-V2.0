@@ -174,7 +174,9 @@ var _DRA_CESION = [
 // ── Redaccion adaptativa: lo que no tiene dato NO se escribe ──────────────
 // En vez de dejar rayas en blanco, cada frase solo aparece si hay con que
 // llenarla. Asi el contrato sale limpio aunque falten datos registrales.
-function _draTxt(v){ var t = (v==null?'':String(v)).trim(); return t; }
+// "NA", "S/N" y compania se tratan como vacio: el contrato saca la raya en vez de
+// imprimirlos como si fueran el dato (punto 20, 21-sep-2026).
+function _draTxt(v){ var t = (v==null?'':String(v)).trim(); return (typeof _datoReal==='function') ? _datoReal(t) : t; }
 
 // Describe a una sociedad: nombre + registro mercantil + RIF + representante,
 // omitiendo cada tramo que no tenga informacion.

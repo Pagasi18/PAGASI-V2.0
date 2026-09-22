@@ -59,6 +59,10 @@ const lead = (id, cambios) => Object.assign({}, LEAD, { id }, cambios || {});
   id = nid(); await prueba('nombre de mas de 120 letras → rechazado', assertFails(setDoc(doc(anonimo, 'clientes/' + id), lead(id, { nombre: 'A'.repeat(121) }))));
   id = nid(); await prueba('lead que se dice "activo" → rechazado', assertFails(setDoc(doc(anonimo, 'clientes/' + id), lead(id, { estado: 'activo' }))));
   await prueba('lead con un numero de ficha que no es WEB-… → rechazado', assertFails(setDoc(doc(anonimo, 'clientes/CLI-1'), lead('CLI-1'))));
+  // Punto 21: la ficha de un lead nuevo se llama WEB-<cedula>, asi la base impide el duplicado
+  await prueba('lead con el numero de la cedula (WEB-12345678) → entra', assertSucceeds(setDoc(doc(anonimo, 'clientes/WEB-12345678'), lead('WEB-12345678'))));
+  await prueba('la MISMA cedula otra vez → rechazado (ya existe la ficha)', assertFails(setDoc(doc(anonimo, 'clientes/WEB-12345678'), lead('WEB-12345678', { nombre: 'OTRO NOMBRE' }))));
+  await prueba('un numero de ficha demasiado corto → rechazado', assertFails(setDoc(doc(anonimo, 'clientes/WEB-123'), lead('WEB-123'))));
   id = nid(); await prueba('el id de adentro distinto al de la ficha → rechazado', assertFails(setDoc(doc(anonimo, 'clientes/' + id), lead('WEB-1111111111111'))));
   id = nid(); await prueba('sin nombre → rechazado', assertFails(setDoc(doc(anonimo, 'clientes/' + id), lead(id, { nombre: '' }))));
   id = nid(); await prueba('sin sesion → rechazado', assertFails(setDoc(doc(nadie, 'clientes/' + id), lead(id))));

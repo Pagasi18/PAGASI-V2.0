@@ -138,9 +138,10 @@ function _protectDatos(credId){
   var num = function(x){ return (parseFloat(x)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); };
   var letras = function(x){ return (typeof _numALetras==='function') ? _numALetras(x) : num(x); };
   var b = function(len){ return '<span style="display:inline-block;border-bottom:1px solid #94a3b8;min-width:'+((len||10)*5.5)+'px">&nbsp;</span>'; };
-  var V = function(v, len){ var s=(v==null?'':String(v)).trim(); return s ? '<strong>'+s+'</strong>' : b(len||14); };
+  // "NA", "S/N" y compania valen como vacio: sale la raya, no el texto (punto 20)
+  var V = function(v, len){ var s=(typeof _datoReal==='function') ? _datoReal(v) : (v==null?'':String(v)).trim(); return s ? '<strong>'+s+'</strong>' : b(len||14); };
   var USD = function(x){ return '<strong>US$ '+num(x)+'</strong>'; };
-  var T = function(v){ return (v==null?'':String(v)).trim(); };
+  var T = function(v){ return (typeof _datoReal==='function') ? _datoReal(v) : (v==null?'':String(v)).trim(); };
 
   var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   var fc = c.fecha ? new Date(c.fecha+'T12:00:00') : new Date();
