@@ -234,6 +234,9 @@ function _mpagoReversarGastos(motoId, devolver, audit){
       eg.eliminadoEn = fechaAudit;
       eg.eliminadoRazon = razon;
       eg.eliminacionReversaCuenta = !!devolver;
+      // Marca para que "restaurar moto" reviva SOLO los gastos que anulo este borrado
+      // (antes revivia cualquier gasto anulado de esa moto; punto 12, 21-sep-2026)
+      eg.anuladoPorMoto = fechaAudit;
       if(DB && DB.saveEgreso) DB.saveEgreso(eg);
       afectados++;
     }

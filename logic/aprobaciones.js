@@ -162,7 +162,30 @@ function _aprRechazar(credId){
   c.rechazadoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
   c.razonRechazo = razon.trim();
   if(DB && DB.saveCred) DB.saveCred(c);
-  toast('Crédito rechazado · '+credId,'info');
+  // La compra de la moto se descuenta al ENVIAR la solicitud. Si se rechaza, ese dinero
+  // no salio: se devuelve y la moto vuelve a estar disponible (antes quedaba descontada
+  // y la moto "financiada" con el nombre del cliente; punto 10, 21-sep-2026).
+  var _devuelto = 0;
+  if(c.motoId != null && c.motoId !== ''){
+    var _audit = {
+      eliminado:true,
+      eliminadoPor:c.rechazadoPor,
+      eliminadoEn:c.rechazadoEn,
+      eliminadoRazon:'Solicitud rechazada · '+c.razonRechazo,
+      eliminacionReversaCuenta:true
+    };
+    if(typeof _mpagoReversarGastos==='function'){
+      try{ _devuelto = _mpagoReversarGastos(c.motoId, true, _audit) || 0; }catch(_e){ _devuelto = 0; }
+    }
+    var _mi = (S.motos||[]).findIndex(function(m){ return String(m.id)===String(c.motoId); });
+    if(_mi>=0 && !S.motos[_mi].eliminado){
+      S.motos[_mi].estado = 'disponible';
+      S.motos[_mi].cliente = null;
+      if(DB && DB.saveMoto) DB.saveMoto(S.motos[_mi]);
+    }
+  }
+  if(typeof logActividad==='function') logActividad('credito_rechazado','creditos',credId,{razon:c.razonRechazo, gastosDevueltos:_devuelto});
+  toast('Crédito rechazado · '+credId+(_devuelto?' · se devolvió la compra de la moto y quedó disponible':''),'info');
   nav('aprobaciones');
 }
 

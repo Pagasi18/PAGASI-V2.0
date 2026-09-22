@@ -342,6 +342,7 @@ PG.creditos = function(){
       <td onclick="event.stopPropagation()" style="white-space:nowrap">
         <div style="display:flex;gap:3px;align-items:center">
         <button class="btn btn-g btn-xs" onclick="openAmort('${c.id}')" title="Ver">Ver</button>
+        ${c.motoPendiente && c.estado!=='cancelado' ? `<span class="bdg b-r" title="El crédito se guardó pero la moto no se creó: enlázala desde Inventario y registra su compra" style="font-size:9.5px">sin moto</span>` : ''}
         ${!c.contratoFirmado && c.estado!=='cancelado' && c.estado!=='recuperado' && c.estado!=='recuperada' ? `<button class="btn btn-xs" onclick="confirmarContratoFirmado('${c.id}')" title="Confirmar contrato firmado" style="background:#d97706;color:#fff;border:1px solid #b45309;padding:4px 8px;font-weight:700;font-size:10.5px;border-radius:6px;cursor:pointer">Confirmar</button>` : ''}
         <button class="btn btn-p btn-xs" onclick="${!c.contratoFirmado ? `editarCredSinFirma('${c.id}')` : `openEditCred('${c.id}')`}" title="Editar">Editar</button>
         ${c.estado!=="completado"&&c.estado!=="cancelado"&&c.estado!=="recuperado"&&c.estado!=="recuperada"?`<button class="btn btn-s btn-xs" onclick="openLiquidarAnticipado('${c.id}')" title="Liquidar">Liq.</button><button class="btn btn-d btn-xs" onclick="cancelarCred('${c.id}')" title="Cancelar crédito" style="padding:4px 7px">✕</button>`:''}

@@ -92,7 +92,7 @@ const creds = ids.map(id => ({ id, cuotaQ: pick([50, 45.5, 0]), pagado: pick([0,
 
 ok('_dbSilent, nav y closeM rearman el indice',
   /function _dbSilent\(fn\)\{[\s\S]{0,200}_pagosIdxInvalidar\(\)/.test(app) &&
-  /function closeM\(\)\{\s*if\(typeof _pagosIdxInvalidar==='function'\) _pagosIdxInvalidar\(\);/.test(app) &&
+  /function closeM\(\)\{[\s\S]{0,160}if\(typeof _pagosIdxInvalidar==='function'\) _pagosIdxInvalidar\(\);/.test(app) &&
   /_pagosIdxInvalidar\(\);[^\n]*\n\s*S\.page=p;/.test(app));
 
 console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');

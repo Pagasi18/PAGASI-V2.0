@@ -17,6 +17,11 @@ function openAddCred(motoId=null){
     document.body.appendChild(overlay);
   }
   WZ = { step:1, totalSteps:4, score:0, f1:0,f2:0,f3:0,f4:0,f5:0, cuota:0,ratio:0,monto:0,precio:0,plazo:0,ini:0,ing:0 };
+  // La moto que se eligio en Inventario ("Solicitud") se guarda en WZ: antes solo
+  // viajaba como parametro del primer dibujo y al llegar al paso 3 se perdia, asi que
+  // el wizard creaba OTRA moto del catalogo y descontaba la compra de nuevo
+  // (punto 11, 21-sep-2026).
+  if(motoId != null && String(motoId) !== '') WZ.motoInvId = String(motoId);
   // Si hay datos precargados desde editarCredSinFirma, restaurarlos después del reset
   if(window._wzPreload){
     Object.assign(WZ, window._wzPreload);
@@ -499,11 +504,12 @@ function _wzRender(motoId){
   if(WZ.step===4){
     setTimeout(function(){ _wzRenderResultado(); }, 50);
   }
-  // Si hay moto preseleccionada en paso 3 (moto)
-  if(WZ.step===3 && motoId){
+  // Si hay moto preseleccionada en paso 3 (moto): la del parametro o la que quedo en WZ
+  var _motoPre = (motoId != null && String(motoId) !== '') ? motoId : WZ.motoInvId;
+  if(WZ.step===3 && _motoPre){
     setTimeout(function(){
       var sel = document.getElementById('wz_moto_inv');
-      if(sel) { sel.value = motoId; _wzPickMotoInv(sel); }
+      if(sel) { sel.value = _motoPre; _wzPickMotoInv(sel); }
     }, 60);
   }
   // Si la moto viene del catálogo (sin inventario), restaurar modelo
@@ -2302,9 +2308,10 @@ function _wzGuardar(){
     // Math.max local: dos ventas simultaneas tomaban el mismo numero y una
     // pisaba a la otra (asi desaparecio la moto de Bastidas). Con
     // nextMotoIdAsync + crearMoto (candado) eso ya no pasa.
-    nextMotoIdAsync().then(function(newMotoId){
-      var motoInvNueva = {
-        id:newMotoId,
+    // Los datos de la moto se copian AHORA, no dentro del .then: el numero de moto
+    // tarda, y si mientras tanto se abria otra solicitud, WZ ya era de la otra y la
+    // moto salia con datos mezclados (punto 23, 21-sep-2026).
+    var _mDatos = {
         modelo:WZ.motoModelo||'',
         precio:parseFloat(WZ.precio)||0,
         precioBaseReal:r.precioBaseReal||parseFloat(WZ.precio)||0,
@@ -2328,20 +2335,29 @@ function _wzGuardar(){
         cuotaM:r.cuotaM||r.cuotaQ*2,
         totalPagado:r.totalPagado||0,
         concesionarioId: newCred.concesionarioId || _concDefaultId()
-      };
+    };
+    var _mPagos = (WZ._pagosMoto && WZ._pagosMoto.length) ? WZ._pagosMoto.slice() : null;
+    var _mFecha = newCred.fecha;
+    var _mCredId = newCred.id;
+    nextMotoIdAsync().then(function(newMotoId){
+      var motoInvNueva = Object.assign({ id:newMotoId }, _mDatos);
       S.motos.push(motoInvNueva);
       return DB.crearMoto(motoInvNueva).then(function(){
         newCred.motoId = motoInvNueva.id;
-        DB.updateCred(newCred.id, { motoId: motoInvNueva.id });
+        DB.updateCred(_mCredId, { motoId: motoInvNueva.id, motoPendiente: false });
         // ── Crear egresos + movimientos por la compra de la moto (catálogo) ──
-        if(WZ._pagosMoto && WZ._pagosMoto.length){
-          _mpagoCrearGastos(motoInvNueva, WZ._pagosMoto, {fecha: newCred.fecha});
-        }
+        if(_mPagos) _mpagoCrearGastos(motoInvNueva, _mPagos, {fecha: _mFecha});
       });
     }).catch(function(e){
-      // El credito ya quedo guardado; si la moto no se pudo crear, se vincula
-      // luego desde Inventario. NO pedimos re-guardar (duplicaria el credito).
+      // El credito ya quedo guardado. Antes esto solo salia en la consola y nadie se
+      // enteraba: el credito quedaba sin moto y sin su gasto (punto 22, 21-sep-2026).
+      // Ahora se avisa, se deja marcado en el credito y se anota en la bitacora.
       console.error('crear moto catálogo:', e && (e.code||e.message));
+      try{ DB.updateCred(_mCredId, { motoPendiente: true }); }catch(_e){}
+      var _c = (S.creds||[]).find(function(x){ return x.id===_mCredId; });
+      if(_c) _c.motoPendiente = true;
+      if(typeof logActividad==='function') logActividad('credito_sin_moto','creditos',_mCredId,{error:String((e&&(e.code||e.message))||e)});
+      toast('El crédito '+_mCredId+' se guardó, pero la moto NO se pudo crear: enlázala desde Inventario y registra su compra','error');
     });
   }
 

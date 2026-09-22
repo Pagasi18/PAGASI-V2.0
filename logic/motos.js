@@ -603,6 +603,7 @@ function restaurarMoto(id){
   var m = S.motos.find(function(x){return String(x.id)===String(id);});
   if(!m){ toast('Moto no encontrada','error'); return; }
   var seDevolvioDinero = !!m.eliminacionReversaCuenta;
+  var _elimEn = m.eliminadoEn;   // se limpia abajo; hace falta para saber que gastos anulo ESTE borrado
   m.eliminado = false;
   m.eliminadoPor = null;
   m.eliminadoEn = null;
@@ -613,12 +614,17 @@ function restaurarMoto(id){
   // Restaurar egresos y movimientos de compra asociados
   var egRest=0, movRest=0;
   (S.egresos||[]).forEach(function(eg){
-    if(eg.eliminado && String(eg.motoIdRef)===String(id) && eg.origenAuto==='compra_moto'){
-      eg.eliminado=false;
-      eg.eliminadoPor=null; eg.eliminadoEn=null; eg.eliminadoRazon=null; eg.eliminacionReversaCuenta=null;
-      if(DB && DB.saveEgreso) DB.saveEgreso(eg);
-      egRest++;
-    }
+    if(!eg.eliminado || String(eg.motoIdRef)!==String(id) || eg.origenAuto!=='compra_moto') return;
+    // Solo los que anulo el borrado de ESTA moto: uno borrado aparte en Finanzas
+    // (o por una solicitud rechazada) se queda anulado (punto 12, 21-sep-2026).
+    var loAnuloEstaMoto = eg.anuladoPorMoto
+      ? (!_elimEn || eg.anuladoPorMoto===_elimEn)
+      : (!!eg.eliminadoEn && !!_elimEn && eg.eliminadoEn===_elimEn);
+    if(!loAnuloEstaMoto) return;
+    eg.eliminado=false;
+    eg.eliminadoPor=null; eg.eliminadoEn=null; eg.eliminadoRazon=null; eg.eliminacionReversaCuenta=null; eg.anuladoPorMoto=null;
+    if(DB && DB.saveEgreso) DB.saveEgreso(eg);
+    egRest++;
   });
   (S.movimientos||[]).forEach(function(mv){
     if(String(mv.motoIdRef)!==String(id) || mv.tipoOperacion!=='compra_moto' || mv.tipo!=='retiro') return;

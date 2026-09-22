@@ -3444,6 +3444,7 @@ function auditBadge(item){
 // Logica de comisiones movida a logic/comisiones.js.
 
 function closeM(){
+  window._saveMEnCurso = false;   // el candado del doble clic muere con el modal
   if(typeof _pagosIdxInvalidar==='function') _pagosIdxInvalidar();
   $('ov').style.display='none';
   $('modal-box').className='modal';
@@ -3452,7 +3453,26 @@ function closeM(){
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar</button>`;
   if(typeof flushRealtimeRender === 'function') flushRealtimeRender();
 }
-function saveM(){if(S.saveFn)S.saveFn();}
+// Un doble clic guardaba dos veces: se creaban dos motos con sus dos gastos
+// (punto 24, 21-sep-2026). El boton se bloquea mientras guarda; si lo que se
+// guarda no pasa la validacion (devuelve false), se libera enseguida.
+function saveM(){
+  if(window._saveMEnCurso) return;
+  if(!S.saveFn) return;
+  window._saveMEnCurso = true;
+  var btn = document.querySelector('#mft .btn-p') || document.querySelector('#mft .btn-d');
+  if(btn) btn.disabled = true;
+  var liberar = function(){
+    window._saveMEnCurso = false;
+    var b = document.querySelector('#mft .btn-p') || document.querySelector('#mft .btn-d');
+    if(b) b.disabled = false;
+  };
+  var ok;
+  try { ok = S.saveFn(); }
+  catch(e){ liberar(); throw e; }
+  if(ok === false) liberar(); else setTimeout(liberar, 1500);
+  return ok;
+}
 function topAct(){
   var p=S.page;
   // Solicitud es el punto de entrada único para clientes + motos + financiamientos

@@ -43,7 +43,16 @@ function comprar(id, pagos){ const m = { id, modelo:'MODELO '+id, precio:pagos.r
   pagos.forEach(p => esperado[p.cuenta] -= p.monto); return m; }
 function borrarMoto(m, devolver){ const audit = { eliminado:true, eliminadoPor:'Prueba', eliminadoEn:'2026-09-10T12:00:00Z', eliminadoRazon:'Moto duplicada', eliminacionReversaCuenta:devolver };
   Object.assign(m, audit); ctx._mpagoReversarGastos(m.id, devolver, audit); }
-function borrarEgresoFinanzas(egId, devolver){ radio = devolver ? 'si' : 'no'; els.eg_del_razon = Object.assign(elemento(), {value:'Error de captura'}); ctx.delEgreso(egId); S.saveFn(); }
+// Desde el 21-sep (punto 12) Finanzas NO deja borrar el gasto de una moto: no abre el
+// modal, asi que S.saveFn se queda sin asignar.
+function borrarEgresoFinanzas(egId, devolver){
+  radio = devolver ? 'si' : 'no';
+  els.eg_del_razon = Object.assign(elemento(), {value:'Error de captura'});
+  S.saveFn = null;
+  ctx.delEgreso(egId);
+  if(typeof S.saveFn === 'function'){ S.saveFn(); return true; }
+  return false;   // Finanzas lo rechazo
+}
 function pagarComision(egId, cuenta, monto){ S.egresos.push({id:egId,concepto:'Comision',monto,fecha:'2026-09-03',categoria:'comisiones',forma:cuenta,usuarioComisionUid:'u1',eliminado:false});
   S.movimientos.push({id:'MOV-COM-u1-'+egId,tipo:'retiro',tipoOperacion:'comision',concepto:'Egreso · Comision',monto,cuentaOrigen:cuenta,cuentaDestino:null,fecha:'2026-09-03',usuarioComisionUid:'u1',conceptoEgreso:egId});
   esperado[cuenta] -= monto; }
@@ -57,10 +66,13 @@ ok('regresar el dinero: vuelve una sola vez', saldo('Banesco') === esperado.Bane
 const m2 = comprar(2, [{cuenta:'Binance', monto:500},{cuenta:'Banesco', monto:300}]); borrarMoto(m2, false);
 ok('sin regresar: el dinero no vuelve (Binance y Banesco)', saldo('Binance') === esperado.Binance && saldo('Banesco') === esperado.Banesco);
 ok('sin regresar: el retiro sigue en el historial de la cuenta', S.movimientos.some(m => m.motoIdRef === 2 && m.tipo === 'retiro' && !m.eliminado));
-// 3) su gasto se borra primero en Finanzas (regresando) y despues la moto (regresando) → vuelve UNA vez
+// 3) Finanzas ya no deja borrar el gasto de una moto; se borra la moto (regresando) → vuelve UNA vez
 const m3 = comprar(3, [{cuenta:'CL', monto:600}]);
-const eg3 = S.egresos.find(e => e.motoIdRef === 3); borrarEgresoFinanzas(eg3.id, true); borrarMoto(m3, true); esperado.CL += 600;
-ok('gasto borrado en Finanzas y luego la moto: vuelve una sola vez', saldo('CL') === esperado.CL);
+const eg3 = S.egresos.find(e => e.motoIdRef === 3);
+ok('Finanzas no deja borrar el gasto de la compra de una moto',
+  borrarEgresoFinanzas(eg3.id, true) === false && !S.egresos.find(e => e.id === eg3.id).eliminado && saldo('CL') === esperado.CL);
+borrarMoto(m3, true); esperado.CL += 600;
+ok('al borrar la moto, el dinero vuelve una sola vez', saldo('CL') === esperado.CL);
 // 4) moto borrada regresando, restaurada, y borrada otra vez regresando
 const m4 = comprar(4, [{cuenta:'CL', monto:700}]); borrarMoto(m4, true); ctx.restaurarMoto(4);
 ok('restaurada: la compra vuelve a descontarse', saldo('CL') === esperado.CL);
@@ -75,8 +87,10 @@ ok('comision borrada devolviendo: vuelve una sola vez', saldo('Binance') === esp
 pagarComision(9002, 'Banesco', 150); borrarComision(9002, false);
 ok('comision borrada sin devolver: no vuelve', saldo('Banesco') === esperado.Banesco);
 ok('comision sin devolver queda marcada para Coromoto', S.egresos.find(e => e.id === 9002).eliminacionReversaCuenta === false);
-// 8) gasto de moto borrado solo en Finanzas (regresando), la moto sigue
-const m6 = comprar(6, [{cuenta:'Binance', monto:400}]); const eg6 = S.egresos.find(e => e.motoIdRef === 6); borrarEgresoFinanzas(eg6.id, true); esperado.Binance += 400;
+// 8) intentar borrar en Finanzas el gasto de una moto viva: se rechaza y nada cambia
+const m6 = comprar(6, [{cuenta:'Binance', monto:400}]); const eg6 = S.egresos.find(e => e.motoIdRef === 6);
+ok('el gasto de una moto viva tampoco se borra desde Finanzas',
+  borrarEgresoFinanzas(eg6.id, true) === false && saldo('Binance') === esperado.Binance);
 
 ['Banesco','Binance','CL'].forEach(c => ok(c + ': el saldo de Cuentas es el correcto (' + esperado[c] + ')', Math.abs(saldo(c) - esperado[c]) < 0.01));
 

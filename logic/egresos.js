@@ -64,6 +64,13 @@ function delEgreso(id){
   var i=S.egresos.findIndex(function(x){return x.id===id;});
   if(i<0) return;
   var eg=S.egresos[i];
+  // El gasto de la compra de una moto se maneja SOLO desde la moto: borrarlo por
+  // separado dejaba la moto sin su compra y, si despues se borraba la moto, el dinero
+  // volvia dos veces (punto 12, 21-sep-2026).
+  if(eg.origenAuto==='compra_moto'){
+    toast('Este gasto es la compra de una moto: bórralo desde Motocicletas (ahí se decide si el dinero vuelve a la cuenta)','error');
+    return;
+  }
   setMicon('eliminar');
   $('mtt').textContent='Eliminar Egreso';
   $('msb').textContent='El registro quedará auditado';
