@@ -2082,6 +2082,39 @@ function _wzGuardar(){
       // arrastrar un valor viejo). Así el "nombre de la moto" del crédito nunca se despega
       // de la moto real de inventario.
       var _modeloFinal = _motoRec ? (_motoRec.modelo||S.creds[_ei].modelo||'') : (S.creds[_ei].modelo||WZ.motoModelo||'');
+      // ...pero si en el paso 3 eligieron OTRO modelo, no se puede tirar el cambio a la
+      // basura en silencio: la pantalla lo aceptaba, el aviso decia "actualizado
+      // correctamente" y el credito se quedaba con el nombre viejo (le paso a una
+      // vendedora el 22-sep-2026). O la unidad se cargo mal al inventario y hay que
+      // corregirla, o no es esa moto: se pregunta y se dice en que quedo.
+      var _modeloPedido = String(WZ.motoModelo||'').trim();
+      if(_motoRec && _modeloPedido && _modeloPedido !== String(_modeloFinal||'').trim()){
+        var _puedeMotos = (typeof hasModuleAccess==='function') ? hasModuleAccess('motos') : true;
+        var _ok = _puedeMotos && confirm(
+          'MOTO #'+_motoRec.id+' DE ESTE CRÉDITO\n\n'
+          + 'En el inventario está registrada como:\n   '+(_modeloFinal||'(sin modelo)')+'\n\n'
+          + 'En la pantalla elegiste:\n   '+_modeloPedido+'\n\n'
+          + '¿Esa misma unidad física es en realidad una "'+_modeloPedido+'"?\n\n'
+          + 'Aceptar  = corregir el modelo de la moto #'+_motoRec.id+' y del crédito\n'
+          + 'Cancelar = dejarlo como está (si el cliente se llevó otra moto, elige la\n'
+          + '                  unidad correcta en "Moto del inventario")');
+        if(_ok){
+          var _modeloAntes = _motoRec.modelo||'';
+          _motoRec.modelo = _modeloPedido;
+          _motoRec.modeloAnterior = _modeloAntes;
+          _motoRec.modeloCorregidoPor = (S.currentUser&&S.currentUser.nombre)||'Admin';
+          _motoRec.modeloCorregidoEn = new Date().toISOString();
+          _motoRec.modeloCorregidoDesde = _editId;
+          if(DB && DB.saveMoto) DB.saveMoto(_motoRec);
+          if(typeof logActividad==='function') logActividad('moto_modelo_corregido','motos',String(_motoRec.id),{antes:_modeloAntes, ahora:_modeloPedido, credito:_editId});
+          _modeloFinal = _modeloPedido;
+          toast('Moto #'+_motoRec.id+': '+(_modeloAntes||'(sin modelo)')+' → '+_modeloPedido,'success');
+        } else {
+          toast(!_puedeMotos
+            ? 'No tienes permiso para corregir el modelo de una moto: el crédito sigue con "'+_modeloFinal+'"'
+            : 'El crédito sigue con "'+_modeloFinal+'", que es el modelo de la moto #'+_motoRec.id, 'info');
+        }
+      }
       var _upd = {
         cli: WZ.nom||(existing&&existing.nombre)||S.creds[_ei].cli||'',
         modelo: _modeloFinal,
