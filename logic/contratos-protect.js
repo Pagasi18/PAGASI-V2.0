@@ -389,7 +389,10 @@ var _PROTECT_CUERPO = [
   function(D){ return '13.3\tDirecciones. Las Partes escogen como destino válido para practicar las notificaciones, comunicaciones, citaciones y/o entregas bajo este Contrato, las siguientes:'; },
   function(D){ return '(a)\tAl Comprador: (i) E-Mail: '+D.cliEmail+'; (ii) Dirección: '+D.cliDir+'; (iii) Teléfono / WhatsApp: '+D.cliTel+'.'; },
   function(D){ return D.hayFiador ? '(b)\tAl Fiador: (i) E-Mail: '+D.fiaEmail+'; (ii) Dirección: '+D.fiaDir+'; (iii) Teléfono / WhatsApp: '+D.fiaTel+'.' : ''; },
-  function(D){ return '('+(D.hayFiador?'c':'b')+')\tA Pagasi: (i) E-Mail: <strong>info@pagasi.io</strong>; (ii) Dirección: <strong>Av. Los Chorros, Quinta Miramar, Urb. Sebucán, Caracas, Miranda, 1071</strong>; (iii) Teléfono / WhatsApp: <strong>0424-2177798</strong>.'; },
+  // El correo, el domicilio y el telefono de Pagasi salen de Configuracion -> Empresa:
+  // estaban escritos a mano y el contrato de la compania nueva mandaba al cliente a
+  // llamar a la vieja (revisado el 22-sep-2026).
+  function(D){ var _e=_empCtr(); return '('+(D.hayFiador?'c':'b')+')\tA Pagasi: (i) E-Mail: <strong>'+(_e.email||D.b(22))+'</strong>; (ii) Dirección: <strong>'+(_e.dir||D.b(40))+'</strong>; (iii) Teléfono / WhatsApp: <strong>'+(_e.tel||D.b(14))+'</strong>.'; },
   function(D){ return 'Cualquier modificación de estas direcciones físicas, de E-Mail y de datos de contacto telefónicos será comunicada entre las Partes de inmediato y por escrito. Mientras no medie dicha comunicación, las notificaciones practicadas en las direcciones aquí indicadas se reputarán válidas.'; },
 
   // ── 14 ── (solo si hay fiador)
@@ -502,7 +505,7 @@ function _protectAnexoB(D, S_){
     + sub('B.3 Condiciones y Exclusiones')
     + p('Los servicios de cambio de aceite y lavado no son acumulables, transferibles ni canjeables por dinero, y caducan al vencimiento del Período Protect. El Programa no incluye repuestos, piezas, insumos distintos de los indicados, reparaciones, grúa, asistencia vial, ni cobertura o indemnización alguna. El Programa NO es un contrato de seguro y no indemniza la pérdida, robo, hurto o daño del Vehículo, conforme a la Sección 2.3 del Contrato.')
     + sub('B.4 Canales de Atención')
-    + p('Solicitud de servicios y reporte de robo o hurto: (i) Teléfono / WhatsApp: <strong>+58 424-2177798</strong>; (ii) E-Mail: <strong>info@pagasi.io</strong>; (iii) Horario de atención: <strong>lunes a viernes, de 9:00 a.m. a 5:00 p.m.</strong> Tiempo objetivo de respuesta ante reporte de robo o hurto: <strong>entre una (1) y cinco (5) horas</strong>.')
+    + p('Solicitud de servicios y reporte de robo o hurto: (i) Teléfono / WhatsApp: <strong>'+(_empCtr().tel||b(14))+'</strong>; (ii) E-Mail: <strong>'+(_empCtr().email||b(22))+'</strong>; (iii) Horario de atención: <strong>lunes a viernes, de 9:00 a.m. a 5:00 p.m.</strong> Tiempo objetivo de respuesta ante reporte de robo o hurto: <strong>entre una (1) y cinco (5) horas</strong>.')
     + sub('B.5 Declaración del Comprador')
     + p('El Comprador declara haber recibido, leído y comprendido las condiciones del Programa; haber sido informado de que su contratación es voluntaria y de que el Programa no constituye un contrato de seguro; y haber recibido los Dispositivos instalados y en funcionamiento a su entera satisfacción, o, en su defecto, conocer la fecha y lugar de su instalación.')
     + '<div style="display:flex;gap:24px;align-items:flex-start;margin-top:14px;page-break-inside:avoid">'

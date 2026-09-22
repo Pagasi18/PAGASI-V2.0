@@ -23,6 +23,7 @@ PG.config = function(){
       if($('cfg_banco_usd')) $('cfg_banco_usd').value=d.bancoUsd||'';
       if($('cfg_cuenta_usd')) $('cfg_cuenta_usd').value=d.cuentaUsd||'';
       if($('cfg_billetera')) $('cfg_billetera').value=d.billetera||'';
+      if($('cfg_billetera_cuenta')) $('cfg_billetera_cuenta').value=d.billeteraCuenta||'';
     });
     db.collection('config').doc('plan').get().then(function(doc){
       if(!doc.exists) return;
@@ -126,6 +127,7 @@ PG.config = function(){
               <div class="fg"><label>Banco (dólares)</label><input class="fi" id="cfg_banco_usd" placeholder="Ej: 100% Banco Universal"></div>
               <div class="fg"><label>N° de cuenta</label><input class="fi" id="cfg_cuenta_usd" placeholder="Ej: 0156-0030-61-0301030586"></div>
               <div class="fg"><label>Billetera digital</label><input class="fi" id="cfg_billetera" placeholder="Ej: Binance (USDT)"></div>
+              <div class="fg"><label>Correo o usuario de la billetera</label><input class="fi" id="cfg_billetera_cuenta" placeholder="Ej: pagos@tuempresa.com"></div>
             </div>
           </div>
           <div style="padding-top:8px;border-top:1px solid var(--rim2)">

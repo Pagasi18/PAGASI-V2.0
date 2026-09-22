@@ -3685,7 +3685,7 @@ function recargarDesdeFirebase(){
           repCargo: d.repCargo || '', repDoc: d.repDoc || '',
           rm: d.rm || '', rmEstado: d.rmEstado || '', rmFecha: d.rmFecha || '', rmNum: d.rmNum || '', rmTomo: d.rmTomo || '',
           // cuentas que nombra el contrato (22-sep-2026)
-          bancoUsd: d.bancoUsd || '', cuentaUsd: d.cuentaUsd || '', billetera: d.billetera || ''
+          bancoUsd: d.bancoUsd || '', cuentaUsd: d.cuentaUsd || '', billetera: d.billetera || '', billeteraCuenta: d.billeteraCuenta || ''
         };
       }
     })

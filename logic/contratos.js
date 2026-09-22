@@ -33,7 +33,8 @@ var _EMP_18 = {
   direccion:'Avenida Los Chorros, Quinta Miramar, Urbanización Sebucán, Caracas, Estado Miranda, Zona Postal 1071',
   ciudad:'Caracas',
   bancoUsd:'100% Banco Universal', cuentaUsd:'0156-0030-61-0301030586', billetera:'Binance (USDT)',
-  tel:'+58 424-217-7798', email:'info@pagasi.io'
+  billeteraCuenta:'pagos@pagasi.io',
+  tel:'+58 424-2177798', email:'info@pagasi.io'
 };
 function _empTxt(v){ return String(v==null?'':v).trim(); }
 // RIF con puntos para el texto legal: J-50856275-5 -> J-50.856.275-5
@@ -42,28 +43,59 @@ function _empRifPuntos(rif){
   var m = s.match(/^([A-Z])(\d{8})(\d)$/);
   return m ? m[1]+'-'+m[2].slice(0,2)+'.'+m[2].slice(2,5)+'.'+m[2].slice(5,8)+'-'+m[3] : _empTxt(rif);
 }
+// ¿La ficha de la empresa esta SIN LLENAR? Lo esta cuando trae lo de fabrica
+// (nombre "Pagasi", RIF J-00000000-0) o nada.
 function _empSinLlenar(){
   var e = (typeof _empresa==='object' && _empresa) ? _empresa : {};
   var nom = _empTxt(e.nombre), rif = _empTxt(e.rif);
-  return (!nom || nom===_EMP_SIN_LLENAR.nombre) && (!rif || rif===_EMP_SIN_LLENAR.rif);
+  var nomPropio = nom && nom!==_EMP_SIN_LLENAR.nombre;
+  var rifPropio = rif && rif!==_EMP_SIN_LLENAR.rif;
+  return !nomPropio && !rifPropio;
 }
+// Los campos que el contrato imprime. Si falta alguno, el contrato sale cojo y
+// hay que decirlo ANTES de firmarlo.
+var _EMP_CAMPOS = [
+  ['nombre','el nombre de la empresa'], ['rif','el RIF'], ['direccion','el domicilio'],
+  ['tel','el teléfono'], ['email','el correo'], ['bancoUsd','el banco'],
+  ['cuentaUsd','el número de cuenta'], ['billetera','la billetera digital']
+];
+function _empFaltantes(){
+  if(_empSinLlenar()) return [];   // ese caso se avisa aparte
+  var e = (typeof _empresa==='object' && _empresa) ? _empresa : {};
+  return _EMP_CAMPOS.filter(function(c){ return !_empTxt(e[c[0]]); }).map(function(c){ return c[1]; });
+}
+// TODO O NADA. Antes se completaba campo por campo y una ficha a medias sacaba el
+// contrato de la compania nueva con el domicilio, el telefono y LA CUENTA BANCARIA
+// de PAGASI 18: el cliente pagaba a la cuenta equivocada (revisado el 22-sep-2026).
+// Ahora: ficha vacia = todo de PAGASI 18, como decia el codigo antes de que hubiera
+// dos companias. Ficha cargada = solo lo suyo, y lo que falte sale en blanco para
+// llenarlo a boligrafo, nunca con los datos de la otra.
 function _empCtr(){
   var e = (typeof _empresa==='object' && _empresa) ? _empresa : {};
+  var vacia = _empSinLlenar();
   var uno = function(k){
+    if(vacia) return _EMP_18[k] || '';
     var v = _empTxt(e[k]);
-    if(!v || (k==='nombre' && v===_EMP_SIN_LLENAR.nombre) || (k==='rif' && v===_EMP_SIN_LLENAR.rif)) return _EMP_18[k]||'';
+    if(k==='nombre' && v===_EMP_SIN_LLENAR.nombre) return '';
+    if(k==='rif' && v===_EMP_SIN_LLENAR.rif) return '';
     return v;
   };
   var rif = uno('rif');
   return { nom: uno('nombre'), rif: rif, rifPuntos: _empRifPuntos(rif),
     dir: uno('direccion'), ciudad: uno('ciudad'), tel: uno('tel'), email: uno('email'),
-    bancoUsd: uno('bancoUsd'), cuentaUsd: uno('cuentaUsd'), billetera: uno('billetera') };
+    bancoUsd: uno('bancoUsd'), cuentaUsd: uno('cuentaUsd'), billetera: uno('billetera'),
+    billeteraCuenta: uno('billeteraCuenta'), sinLlenar: vacia };
 }
-// Aviso al imprimir: si la ficha de la empresa esta vacia, el contrato sale con
-// los datos de PAGASI 18 y quien lo firme tiene que saberlo.
+// Aviso al imprimir: o la ficha esta vacia (sale PAGASI 18) o esta a medias (sale
+// con rayas). Las dos cosas hay que verlas antes de que alguien firme.
 function _avisarEmpresaContrato(){
-  if(!_empSinLlenar()) return;
-  if(typeof toast==='function') toast('Faltan los datos de la empresa en Configuración → Empresa: el contrato sale a nombre de '+_EMP_18.nombre,'error');
+  if(typeof toast!=='function') return;
+  if(_empSinLlenar()){
+    toast('Faltan los datos de la empresa en Configuración → Empresa: el contrato sale a nombre de '+_EMP_18.nombre,'error');
+    return;
+  }
+  var faltan = _empFaltantes();
+  if(faltan.length) toast('El contrato va a salir sin '+faltan.join(', ')+'. Cárgalos en Configuración → Empresa.','error');
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -375,7 +407,7 @@ function _renderContratoArrendamiento(){
     <p style="${sub}"><span style="${subN}">2.4 Intereses Moratorios.</span> Los montos vencidos e insolutos del Canon Mensual causarán intereses moratorios a una tasa de <strong>dos coma cinco por ciento (2,5%) mensual</strong>, calculada en forma simple y proporcional por cada día calendario de mora sobre el saldo vencido y pendiente de pago (la “Tasa de Intereses Moratorios”), sin exceder el máximo permitido por la legislación venezolana aplicable. No obstante, se concede al Arrendatario un <strong>período de gracia de cinco (5) días continuos</strong> siguientes al vencimiento de cada Canon Mensual: si el saldo insoluto es pagado íntegramente dentro de dicho período, no se causarán intereses moratorios; transcurrido el período de gracia sin pago íntegro, los intereses moratorios se causarán conforme a la Sección 2.2(b), calculados desde el primer Día Hábil siguiente al vencimiento.</p>
     <p style="${sub}"><span style="${subN}">2.5 Forma de Pago.</span> Todo pago a favor del Arrendador podrá efectuarse mediante cualquiera de los siguientes medios:</p>
     <table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0 8px">
-      <tr><td style="padding:6px 9px;border:1px solid #DBEAFE;background:${purpleLight};font-weight:700;width:26%">a) Binance</td><td style="padding:6px 9px;border:1px solid #DBEAFE">pagos@pagasi.io</td></tr>
+      <tr><td style="padding:6px 9px;border:1px solid #DBEAFE;background:${purpleLight};font-weight:700;width:26%">a) ${_empCtr().billetera}</td><td style="padding:6px 9px;border:1px solid #DBEAFE">${_empCtr().billeteraCuenta}</td></tr>
       <tr><td style="padding:6px 9px;border:1px solid #DBEAFE;background:${purpleLight};font-weight:700">b) Transferencia o depósito en dólares</td><td style="padding:6px 9px;border:1px solid #DBEAFE">${_empCtr().bancoUsd} · titular ${_empCtr().nom} · RIF ${_empCtr().rifPuntos} · cuenta N° ${_empCtr().cuentaUsd}</td></tr>
     </table>
     <p style="${sub}">El Arrendatario deberá enviar el comprobante de pago por WhatsApp al <strong>${_empCtr().tel}</strong>. Cuando un pago sea realizado en bolívares, se aplicará el tipo de cambio oficial publicado por el Banco Central de Venezuela vigente en la fecha de recepción efectiva del pago, salvo acuerdo escrito distinto.</p>

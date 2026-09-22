@@ -40,7 +40,7 @@ let e = ctx._empCtr();
 ok('ficha vacia: el contrato sigue saliendo como PAGASI 18', e.nom === 'PAGASI 18, C.A.' && e.rif === 'J-50829589-7');
 ok('...con su domicilio', /Sebucán/.test(e.dir));
 ok('...su banco y su cuenta', /100% Banco/.test(e.bancoUsd) && e.cuentaUsd === '0156-0030-61-0301030586');
-ok('...y su telefono y correo', /424-217-7798/.test(e.tel) && e.email === 'info@pagasi.io');
+ok('...y su telefono y correo', /424-2177798/.test(e.tel) && e.email === 'info@pagasi.io');
 avisos.length = 0; ctx._avisarEmpresaContrato();
 ok('...pero se avisa en pantalla que falta cargar la empresa',
   avisos.length === 1 && /Configuración → Empresa/.test(avisos[0]) && /PAGASI 18/.test(avisos[0]));
@@ -59,12 +59,28 @@ ok('...su domicilio, no el de la otra', /Las Mercedes/.test(e.dir) && !/Sebucán
 ok('...su banco y su cuenta, no los de la otra', e.bancoUsd === 'Banesco' && !/0156-0030/.test(e.cuentaUsd));
 avisos.length = 0; ctx._avisarEmpresaContrato();
 ok('...y no molesta con avisos', avisos.length === 0);
+ok('...y dice que la ficha no está vacía', ctx._empCtr().sinLlenar === false);
 
-// ── 3. Ficha a medias: lo que falta se completa, lo cargado manda ─────────────
-ctx._empresa = { nombre:'PAGASI 26, C.A.', rif:'', ciudad:'', direccion:'' };
+// ── 3. Ficha A MEDIAS: lo que falta sale EN BLANCO, nunca de la otra compañía ──
+// Esto era un hueco de verdad: se completaba campo por campo y el contrato de
+// PAGASI 26 salía con la CUENTA BANCARIA de PAGASI 18. El cliente pagaba a la
+// cuenta equivocada y no había ningún aviso (revisado el 22-sep-2026).
+ctx._empresa = { nombre:'PAGASI 26, C.A.', rif:'J-50856275-5', ciudad:'Caracas' };
 e = ctx._empCtr();
-ok('a medias: el nombre cargado manda', e.nom === 'PAGASI 26, C.A.');
-ok('...y lo que falta no queda en blanco', !!e.rif && !!e.dir);
+ok('a medias: el nombre y el RIF cargados mandan', e.nom === 'PAGASI 26, C.A.' && e.rif === 'J-50856275-5');
+ok('...la cuenta bancaria de PAGASI 18 NO aparece', !e.cuentaUsd && !e.bancoUsd);
+ok('...ni su domicilio, ni su teléfono, ni su correo', !e.dir && !e.tel && !e.email);
+ok('...ni su billetera', !e.billetera && !e.billeteraCuenta);
+avisos.length = 0; ctx._avisarEmpresaContrato();
+ok('...y se avisa qué campos van a salir en blanco',
+  avisos.length === 1 && /sin /.test(avisos[0]) && /cuenta/.test(avisos[0]) && /domicilio/.test(avisos[0]));
+
+// ── 3b. Ficha completa: no se avisa nada ─────────────────────────────────────
+ctx._empresa = { nombre:'PAGASI 26, C.A.', rif:'J-50856275-5', ciudad:'Caracas', direccion:'Las Mercedes',
+  tel:'0212-0000000', email:'info@pagasi26.io', bancoUsd:'Banesco', cuentaUsd:'0134-0000-00-0000000000',
+  billetera:'Binance (USDT)', billeteraCuenta:'pagos@pagasi26.io' };
+avisos.length = 0; ctx._avisarEmpresaContrato();
+ok('ficha completa: sin avisos', avisos.length === 0);
 
 // ── 4. El codigo ya no lleva a PAGASI 18 escrito dentro de los contratos ─────
 ['logic/contratos.js','logic/contratos-dra.js','logic/contratos-protect.js'].forEach(function(f){

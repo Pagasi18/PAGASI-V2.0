@@ -604,12 +604,30 @@ function diasHasta(iso){
 function showErr(id,msg){ var e=$(id); e.textContent=msg; e.classList.remove('hide'); }
 function hideErr(id){ $(id).classList.add('hide'); }
 
+/* Quien firma el portal sale de config/empresa, no del codigo: con dos companias,
+   el portal de una decia el nombre y el RIF de la otra (22-sep-2026). Mientras no
+   cargue, se usa lo de PAGASI 18, que es lo que decia antes. */
+var EMP_PORTAL = { nombre:'PAGASI 18, C.A.', rif:'J-50829589-7' };
+function cargarEmpresaPortal(){
+  if(!db) return;
+  db.collection('config').doc('empresa').get().then(function(d){
+    if(!d.exists) return;
+    var x = d.data()||{};
+    var nom = String(x.nombre||'').trim(), rif = String(x.rif||'').trim();
+    // "Pagasi" y J-00000000-0 son lo que trae el sistema de fabrica: no es una compania
+    if(nom && nom!=='Pagasi') EMP_PORTAL.nombre = nom;
+    if(rif && rif!=='J-00000000-0') EMP_PORTAL.rif = rif;
+    try{ document.querySelectorAll('.foot').forEach(function(el){ el.innerHTML = pieTexto(); }); }catch(e){}
+  }).catch(function(){});
+}
+
 function initFB(){
   try{
     if(typeof firebase==='undefined') return false;
     app = (firebase.apps && firebase.apps.length) ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
     auth = firebase.auth(app); db = firebase.firestore(app);
     try{ storage = firebase.storage(app); }catch(e){ storage=null; }
+    cargarEmpresaPortal();
     return true;
   }catch(e){ console.error('init:',e); return false; }
 }
@@ -1764,8 +1782,11 @@ function comprobantesHTML(){
   return h;
 }
 
+function pieTexto(){
+  return EMP_PORTAL.nombre + ' · RIF ' + EMP_PORTAL.rif + '<br>Esta información es referencial. Ante cualquier diferencia, prevalece tu contrato.';
+}
 function pieHTML(){
-  return '<div class="foot">PAGASI 18, C.A. · RIF J-50829589-7<br>Esta información es referencial. Ante cualquier diferencia, prevalece tu contrato.</div>';
+  return '<div class="foot">' + pieTexto() + '</div>';
 }
 
 /* ── Reportar pago ────────────────────────────────────────────────────── */
