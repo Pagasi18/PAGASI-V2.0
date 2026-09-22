@@ -1,0 +1,30 @@
+name: Revisar los 13 datos de la lista (solo lectura)
+
+# A mano. Mide de una pasada los 13 puntos de "Datos a revisar en la base" de la lista
+# del 18-sep: dinero devuelto dos veces, recuperados revividos, modelos que no coinciden,
+# creditos sin moto, VIN repetidos, clientes duplicados y motos sin su gasto de compra.
+# Solo lectura. El log es publico: salen numeros, nunca nombres ni cedulas ni saldos.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: pagasi-v2
+          workload_identity_provider: projects/951911859002/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: firebase-adminsdk-fbsvc@pagasi-v2.iam.gserviceaccount.com
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - working-directory: bot
+        run: npm install --omit=dev
+      - working-directory: bot
+        run: node revisar-datos-13.js
