@@ -1656,6 +1656,52 @@ function nextClienteIdAsync(){
     .then(function(max){ return reservarNumero('clientes', max); });
 }
 
+// ── EL VIN: avisar, no bloquear (punto 29, 22-sep-2026) ───────────────────────
+// El VIN entraba como texto libre en los dos sitios donde se escribe (el asistente de
+// creditos e Inventario): nadie revisaba largo ni caracteres, ni lo comparaba con el
+// de la moto elegida. Un 2 por una Z al copiar de una foto pasaba derecho.
+// Devuelve una lista de avisos. NO bloquea: a veces la moto de verdad trae un VIN raro
+// y el empleado tiene el papel delante.
+function vinAvisos(vin, vinMoto){
+  var v = String(vin==null?'':vin).trim().toUpperCase(), a = [];
+  if(!v) return a;
+  if(/[^A-Z0-9]/.test(v)) a.push('el VIN solo lleva letras y números, sin espacios ni guiones');
+  else if(/[IOQ]/.test(v)) a.push('el VIN nunca lleva I, O ni Q: fíjate si es 1 o 0');
+  if(v.length !== 17) a.push('tiene ' + v.length + ' caracteres y los de fábrica tienen 17');
+  var m = String(vinMoto==null?'':vinMoto).trim().toUpperCase();
+  if(m && m !== v) a.push('no coincide con el de la moto en Inventario (' + m + ')');
+  if(!m && typeof S!=='undefined' && S.motos){
+    var rep = S.motos.filter(function(x){ return x && !x.eliminado && String(x.vin||'').trim().toUpperCase()===v; });
+    if(rep.length) a.push('ya hay otra moto con este VIN (' + (typeof motoNum==='function' ? motoNum(rep[0]) : '#'+rep[0].id) + ')');
+  }
+  return a;
+}
+window.vinAvisos = vinAvisos;
+
+// El numero de un GASTO salia de Math.max sobre lo que hay en memoria, y DB.saveEgreso
+// escribe con set(): si dos personas registran un gasto casi a la vez, las dos sacan el
+// mismo numero y la segunda BORRA el de la primera sin avisar. Es lo mismo que se llevo
+// por delante los creditos 271 y 313, y por eso las motos y los creditos ya usan el
+// contador de Firestore. Ahora los gastos tambien (punto 30, 22-sep-2026).
+// Reserva N numeros seguidos de una sola vez: la compra de una moto crea varios gastos
+// (uno por cuenta) y pedirlos de uno en uno serian N transacciones.
+function nextEgresoIdsAsync(cuantos){
+  var n = Math.max(1, parseInt(cuantos,10) || 1);
+  var localBase = function(){
+    return (S && S.egresos && S.egresos.length)
+      ? Math.max.apply(null, S.egresos.map(function(x){ return parseInt(x.id,10)||0; })) : 0;
+  };
+  var seguidos = function(ultimo){
+    var out = []; for(var i=n-1; i>=0; i--) out.push(ultimo - i); return out;
+  };
+  if(!db) return Promise.resolve(seguidos(localBase() + n));
+  return _maxNumeroDe('egresos', null)
+    .then(function(max){ return reservarNumero('egresos', Math.max(max, localBase()) + (n-1)); })
+    .then(seguidos);
+}
+function nextEgresoIdAsync(){ return nextEgresoIdsAsync(1).then(function(a){ return a[0]; }); }
+window.nextEgresoIdsAsync = nextEgresoIdsAsync; window.nextEgresoIdAsync = nextEgresoIdAsync;
+
 function nextMotoIdAsync(){
   if(!db) return Promise.resolve((S&&S.motos&&S.motos.length)?Math.max.apply(null,S.motos.map(function(x){return parseInt(x.id,10)||0;}))+1:1);
   return _maxNumeroDe('motos', null)

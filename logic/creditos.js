@@ -1643,6 +1643,13 @@ function _wzValidar(){
     WZ.marca = g('wz_marca'); WZ.anio = g('wz_anio');
     WZ.serialMotor = g('wz_serial_motor'); WZ.serialChasis = g('wz_serial_chasis');
     WZ.gpsNum = g('wz_gps_num');
+    // El VIN no se revisaba nunca: se AVISA (no se bloquea, que a veces la moto trae de
+    // verdad un VIN raro y el empleado tiene el papel delante). Punto 29, 22-sep-2026.
+    if(WZ.vin && typeof vinAvisos==='function'){
+      var _motoSel = WZ.motoInvId ? (S.motos||[]).find(function(m){ return String(m.id)===String(WZ.motoInvId); }) : null;
+      var _avisosVin = vinAvisos(WZ.vin, _motoSel && _motoSel.vin);
+      if(_avisosVin.length && typeof toast==='function') toast('Revisa el VIN: ' + _avisosVin.join(' · '), 'info');
+    }
   }
   if(s===2){
     WZ.obs = g('wz_obs'); WZ.wz_obs = WZ.obs;
@@ -2515,7 +2522,10 @@ function _wzGuardar(){
     if(mi>=0){
       S.motos[mi].estado='financiada';
       S.motos[mi].cliente=((existing&&existing.nombre)||WZ.nom);
-      if(WZ.vin) S.motos[mi].vin=WZ.vin;
+      // El VIN de la moto del inventario NO se pisa con lo que se escribio en el
+      // asistente: un caracter mal tecleado borraba el VIN bueno sin dejar rastro.
+      // Solo se rellena si la moto no tiene uno de verdad (punto 29, 22-sep-2026).
+      if(WZ.vin && (typeof _datoReal==='function' ? !_datoReal(S.motos[mi].vin) : !S.motos[mi].vin)) S.motos[mi].vin=WZ.vin;
       if(WZ.color) S.motos[mi].color=WZ.color;
       if(WZ.placa) S.motos[mi].placa=WZ.placa;
       if(WZ.marca) S.motos[mi].marca=WZ.marca;
@@ -2582,7 +2592,12 @@ function _wzGuardar(){
         delete motoInvNueva._enCreacion;
         DB.updateCred(_mCredId, { motoId: motoInvNueva.id, motoPendiente: false, motoCreadaEnSolicitud: true });
         // ── Crear egresos + movimientos por la compra de la moto (catálogo) ──
-        if(_mPagos) _mpagoCrearGastos(motoInvNueva, _mPagos, {fecha: _mFecha});
+        if(_mPagos){
+          // Numeros de gasto reservados en el contador, no calculados en memoria (punto 30)
+          nextEgresoIdsAsync(_mPagos.length).then(function(_ids){
+            _mpagoCrearGastos(motoInvNueva, _mPagos, {fecha: _mFecha, ids: _ids});
+          }).catch(function(){ _mpagoCrearGastos(motoInvNueva, _mPagos, {fecha: _mFecha}); });
+        }
       });
     }).catch(function(e){
       // El credito ya quedo guardado. Antes esto solo salia en la consola y nadie se
@@ -3024,14 +3039,21 @@ function confirmarContratoFirmado(credId){
     return;
   }
 
-  if(!confirm('¿Confirmar que el contrato de ' + (c.cli||credId) + ' fue firmado?\n\nA partir de este momento el crédito contará contablemente.')) return;
+  // El aviso decia que el credito empieza a contar desde la firma, y no es verdad: las
+  // cuotas, la mora, la cartera y el libro arrancan en la fecha de creacion del credito
+  // (credito-ledger.js, pagos.js y coromoto.js leen c.fecha; ningun calculo mira
+  // contratoFirmado). Se cambian las palabras, no los numeros (punto 38, 22-sep-2026).
+  var _fCreado = (typeof fmtFecha==='function' && c.fecha) ? fmtFecha(c.fecha) : '';
+  if(!confirm('¿Confirmar que el contrato de ' + (c.cli||credId) + ' fue firmado?\n\n'
+    + 'Queda registrada la fecha de firma.\n'
+    + 'El crédito ya venía contando' + (_fCreado ? ' desde su fecha: ' + _fCreado : ' desde que se creó') + '.')) return;
 
   var ci = S.creds.findIndex(function(x){ return x.id===credId; });
   if(ci<0) return;
   S.creds[ci].contratoFirmado = true;
   S.creds[ci].fechaContratoFirmado = hoyLocalISO();
   DB.updateCred(credId, { contratoFirmado: true, fechaContratoFirmado: S.creds[ci].fechaContratoFirmado });
-  toast('Contrato confirmado. El crédito está activo contablemente.','success');
+  toast('Firma registrada en ' + (c.cli||credId),'success');
   nav('creditos');
 }
 

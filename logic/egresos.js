@@ -27,7 +27,9 @@ function openAddEgreso(){
     var conc=(($('eg_conc')&&$('eg_conc').value)||'').trim();
     var monto=parseFloat(($('eg_monto')&&$('eg_monto').value))||0;
     if(!conc||monto<=0){toast('Concepto y monto son obligatorios','error');return false;}
-    var newId=S.egresos.length?Math.max.apply(null,S.egresos.map(function(x){return x.id;}))+1:1;
+    // El numero lo da el contador de Firestore, no el maximo en memoria: con dos
+    // personas guardando a la vez, el segundo gasto borraba al primero (punto 30).
+    return nextEgresoIdAsync().then(function(newId){
     var newEg={id:newId,concepto:conc,monto:monto,fecha:($('eg_fecha')&&$('eg_fecha').value)||hoyLocalISO(),categoria:($('eg_cat')&&$('eg_cat').value)||'otros',forma:($('eg_forma')&&$('eg_forma').value)||'',notas:($('eg_notas')&&$('eg_notas').value)||'',eliminado:false};
     S.egresos.push(newEg);
     DB.saveEgreso(newEg);
@@ -55,6 +57,7 @@ function openAddEgreso(){
     }
 
     toast('Egreso registrado · '+fmt(monto),'success');closeM();nav('conta');return true;
+    });
   };
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar Egreso</button>`;
   $('ov').style.display='flex';

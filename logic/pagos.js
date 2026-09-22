@@ -1440,7 +1440,7 @@ function calcularMoraAuto(){
     fechaVence.setHours(0,0,0,0);
     // round y no floor: es el mismo caso del punto 35, y este es el numero que se GUARDA
     var diasAtraso=Math.round((hoy-fechaVence)/(24*60*60*1000));
-    var gracia=PLAN.diasGracia||5;
+    var gracia=(PLAN.diasGracia!=null?PLAN.diasGracia:5);   // 0||5 daba 5: el cero se convertia en cinco (punto 34)
     var nuevaMora=diasAtraso>0?diasAtraso:0;
     var nuevoEstado=diasAtraso>gracia?'mora':'activo';
     if(c.estado==='mora' || nuevaMora>0) c.tuvoMoraHistorica=true;

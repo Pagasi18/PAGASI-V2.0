@@ -397,9 +397,29 @@ function _egrIdsInicial(){
       var f = String(a.fecha||'').localeCompare(String(b.fecha||''));
       return f!==0 ? f : (String(a.id).localeCompare(String(b.id)));
     });
+    // 1) Una sola fila que cuadre con la inicial: es el caso normal.
+    var encontrado = false;
     for(var i=0;i<lista.length;i++){
-      if(Math.abs((parseFloat(lista[i].monto)||0) - ini) <= 1){ ids[String(lista[i].id)] = true; break; }
+      if(Math.abs((parseFloat(lista[i].monto)||0) - ini) <= 1){ ids[String(lista[i].id)] = true; encontrado = true; break; }
     }
+    if(encontrado) return;
+    // 2) Si la inicial se pago en VARIAS filas (300+200 para una inicial de 500), o se
+    // corrigio despues, ninguna sola coincidia: no se apartaba nada y esos dolares se
+    // contaban como plata prestada por Pagasi, asi que el flujo de caja del mes salia
+    // mas bajo de lo real (punto 27, 22-sep-2026). Se busca la combinacion que sume la
+    // inicial. Con mas de 8 filas no se intenta: son 2^8 = 256 sumas como mucho.
+    if(lista.length < 2 || lista.length > 8) return;
+    var montos = lista.map(function(e){ return parseFloat(e.monto)||0; });
+    var mejor = null;
+    for(var mask=1; mask < (1<<lista.length); mask++){
+      var suma = 0, cuantos = 0;
+      for(var b=0;b<lista.length;b++) if(mask & (1<<b)){ suma += montos[b]; cuantos++; }
+      if(cuantos < 2) continue;                    // una sola ya se intento arriba
+      if(Math.abs(suma - ini) > 0.01) continue;    // aqui si se exige exactitud
+      // Ante dos combinaciones que suman igual, la de menos filas
+      if(mejor === null || cuantos < mejor.cuantos) mejor = {mask:mask, cuantos:cuantos};
+    }
+    if(mejor) for(var k=0;k<lista.length;k++) if(mejor.mask & (1<<k)) ids[String(lista[k].id)] = true;
   });
   return ids;
 }

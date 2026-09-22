@@ -176,11 +176,19 @@ function _mpagoCrearGastos(motoObj, pagos, opts){
   var creados = [];
   pagos.forEach(function(p, idx){
     // 1) Egreso en Finanzas (categoría inventario)
-    var newEgId = (S.egresos&&S.egresos.length)
-      ? Math.max.apply(null, S.egresos.map(function(x){return x.id;}))+1
-      : 1;
-    // Asegurar que sea único si se crean varios en el mismo tick
-    newEgId += idx;
+    // El numero lo da el contador de Firestore, no el maximo en memoria: con dos
+    // personas guardando a la vez las dos sacaban el mismo y la segunda borraba el
+    // gasto de la primera (punto 30, 22-sep-2026). Quien llama reserva los numeros
+    // antes; si no los trae, se cae al calculo de siempre para no romper nada.
+    var newEgId;
+    if(Array.isArray(opts.ids) && opts.ids[idx] != null){
+      newEgId = opts.ids[idx];
+    } else {
+      newEgId = (S.egresos&&S.egresos.length)
+        ? Math.max.apply(null, S.egresos.map(function(x){return x.id;}))+1
+        : 1;
+      newEgId += idx;
+    }
     var newEg = {
       id: newEgId,
       concepto: conceptoBase + (pagos.length>1 ? ' (parte '+(idx+1)+'/'+pagos.length+')' : ''),

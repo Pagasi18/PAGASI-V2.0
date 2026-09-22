@@ -329,7 +329,13 @@ function openAddMoto(id=null){
     } else {
       calc=Object.assign({precioBaseReal:precioBaseReal, planModo:'global', plazo:PLAN.plazo, totalCuotas:PLAN.plazo*2}, calcMoto(precioBaseReal));
     }
-    return nextMotoIdAsync().then(function(_nextMotoId){
+    // Se reservan de una vez el numero de la moto Y los de sus gastos de compra: con
+    // dos personas guardando a la vez, el numero de gasto calculado en memoria hacia
+    // que el segundo borrara el gasto del primero (punto 30, 22-sep-2026).
+    var _nGastos = (!ed && _pagosMoto && _pagosMoto.length) ? _pagosMoto.length : 0;
+    return Promise.all([nextMotoIdAsync(), _nGastos ? nextEgresoIdsAsync(_nGastos) : Promise.resolve(null)])
+      .then(function(_res){
+    var _nextMotoId = _res[0], _idsGasto = _res[1];
     const obj={id:(m&&m.id)||_nextMotoId,modelo:_modeloFinal,precio,precioBaseReal:calc.precioBaseReal||precioBaseReal,planModo:planMode,marca:g('m_marca')||'',color:g('m_color')||'',anio:(parseInt(g('m_anio'),10)||null),vin:g('m_vin')||'',placa:g('m_placa')||'',serialMotor:g('m_serial_motor')||'',serialChasis:g('m_serial_chasis')||'',gpsNum:g('m_gps_num')||'',estado:($('m_est')&&$('m_est').value)||'disponible',cliente:g('m_cli')||null,gps:($('m_gps')&&$('m_gps').classList).contains('on')||false,notas:g('m_notas')||'',plazo:calc.plazo||PLAN.plazo,totalCuotas:calc.totalCuotas||(PLAN.plazo*2),...calc};
     // Asignar concesionario: si está editando preserva el existente, si es nuevo usa el activo o el default
     if(ed && m && m.concesionarioId){
@@ -350,10 +356,10 @@ function openAddMoto(id=null){
     DB.saveMoto(obj);
     // ── Crear egresos + movimientos por la compra de la moto (solo nueva) ──
     if(!ed && _pagosMoto && _pagosMoto.length){
-      _mpagoCrearGastos(obj, _pagosMoto, {fecha: hoyLocalISO()});
+      _mpagoCrearGastos(obj, _pagosMoto, {fecha: hoyLocalISO(), ids: _idsGasto});
     }
     closeM();nav('motos');toast(ed?'Moto actualizada':'✓ Moto agregada','success');return true;
-    }); // end nextMotoIdAsync
+    }); // end Promise.all(nextMotoIdAsync, nextEgresoIdsAsync)
   };
   $('mft').innerHTML=`<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" onclick="saveM()">Guardar</button>`;
   $('ov').style.display='flex';
@@ -532,7 +538,7 @@ function _mGuardarPlanApy(){
   if(!(precio>0)||!(apy>0)||!(plazo>0)){ if(typeof toast==='function') toast('Completa precio, APY y plazo','error'); return; }
   const r=calcApyPlan(precio,iniSel,apy,plazo);
   const nombre='APY '+apy.toFixed(1)+'% · '+plazo+'m · Ini '+(iniSel*100).toFixed(0)+'%';
-  const newPlan={nombre:nombre, plazo:plazo, factor:parseFloat(r.factor.toFixed(4)), inicial:iniSel, tasaMensual:parseFloat(r.tasaMensual.toFixed(2)), apy:apy, moraPct:(PLAN.moraPct||2.5), diasGracia:(PLAN.diasGracia||5), origen:'apy'};
+  const newPlan={nombre:nombre, plazo:plazo, factor:parseFloat(r.factor.toFixed(4)), inicial:iniSel, tasaMensual:parseFloat(r.tasaMensual.toFixed(2)), apy:apy, moraPct:(PLAN.moraPct||2.5), diasGracia:(PLAN.diasGracia!=null?PLAN.diasGracia:5), origen:'apy'};
   if(!window._planesExtra) window._planesExtra=[];
   window._planesExtra.push(newPlan);
   try{ localStorage.setItem('pagasi_planes_extra', JSON.stringify(window._planesExtra)); }catch(_e){}

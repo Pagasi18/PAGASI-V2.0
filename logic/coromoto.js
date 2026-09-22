@@ -143,7 +143,14 @@ function _coroAsientos(){
   var L=[];
   var avisos={aportes:0, aportesMonto:0, retiros:0, retirosMonto:0, anulados:0, credsSinPlan:0, pagosSinMov:0, pagosSinMovMonto:0};
 
-  // 1) Creditos otorgados — un asiento por mes (como el RESUMEN de la contadora)
+  // 1) Creditos otorgados — un asiento por mes (como el RESUMEN de la contadora).
+  // Si el periodo NO empieza el dia 1, el mes del corte se parte en dos o tres tramos:
+  // antes de 'desde', dentro, y despues de 'hasta'. Antes todo el mes iba a un solo
+  // asiento fechado a fin de mes, asi que un corte a mitad de mes se llevaba el mes
+  // entero de un lado: con un periodo que empieza el 15, el estado de resultados sumaba
+  // tambien lo otorgado del 1 al 14 (punto 36, 22-sep-2026). Con meses completos no
+  // cambia ni un numero: el asiento sigue siendo uno por mes.
+  var pDesde=String(S.coroDesde||''), pHasta=String(S.coroHasta||'');
   var porMes={};
   (S.creds||[]).forEach(function(c){
     if(!c||c.eliminado) return;
@@ -155,18 +162,31 @@ function _coroAsientos(){
     var total=r2(c.total), fin=r2(c.fin);
     if(!(total>0)){ avisos.credsSinPlan++; return; }
     if(!(fin>0)) fin=total;
-    var mes=String(c.fecha||'').slice(0,7);
+    var fch=String(c.fecha||'').slice(0,10);
+    var mes=fch.slice(0,7);
     if(!mes) return;
-    if(!porMes[mes]) porMes[mes]={total:0,fin:0,carga:0};
-    porMes[mes].total+=total; porMes[mes].fin+=fin; porMes[mes].carga+=Math.max(0,total-fin);
+    // 'a' = antes del periodo, 'd' = dentro, 'z' = despues
+    var tramo = (pDesde && fch < pDesde) ? 'a' : ((pHasta && fch > pHasta) ? 'z' : 'd');
+    var clave = mes+'|'+tramo;
+    if(!porMes[clave]) porMes[clave]={total:0,fin:0,carga:0,mes:mes,tramo:tramo};
+    porMes[clave].total+=total; porMes[clave].fin+=fin; porMes[clave].carga+=Math.max(0,total-fin);
   });
-  Object.keys(porMes).forEach(function(mes){
-    var g=porMes[mes];
+  Object.keys(porMes).forEach(function(clave){
+    var g=porMes[clave], mes=g.mes;
     // ultimo dia real del mes; para el mes en curso, hoy (nunca fechas futuras)
     var pp=mes.split('-'); var ult=new Date(parseInt(pp[0],10), parseInt(pp[1],10), 0).getDate();
     var f=mes+'-'+String(ult).padStart(2,'0');
     var hoy=hoyLocalISO();
     if(f>hoy && mes===hoy.slice(0,7)) f=hoy;
+    // Cada tramo se fecha de su propio lado del corte, o el asiento caeria en el
+    // periodo equivocado: el de 'antes' como mucho el dia anterior a 'desde', y el
+    // de 'dentro' como mucho el dia de 'hasta'.
+    if(g.tramo==='a' && pDesde){
+      var _ant=new Date(pDesde+'T12:00:00'); _ant.setDate(_ant.getDate()-1);
+      var _antISO=_ant.getFullYear()+'-'+String(_ant.getMonth()+1).padStart(2,'0')+'-'+String(_ant.getDate()).padStart(2,'0');
+      if(f>_antISO) f=_antISO;
+    } else if(g.tramo==='d' && pHasta && f>pHasta){ f=pHasta; }
+    else if(g.tramo==='z' && pHasta){ var _dia1=mes+'-01'; if(f<_dia1) f=_dia1; }
     var doc='CRED/'+mes.replace('-','/');
     L.push({f:f,doc:doc,co:'PRÉSTAMOS OTORGADOS',cod:'1122001',debe:r2(g.total),haber:0});
     L.push({f:f,doc:doc,co:'PRÉSTAMOS OTORGADOS',cod:'1129001',debe:0,haber:r2(g.fin)});

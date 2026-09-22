@@ -145,7 +145,7 @@ function guardarPlan(){
   var inicial = Number.isFinite(inicialIn) ? (inicialIn/100) : PLAN.inicial;
   var tasa = Number.isFinite(tasaIn) ? tasaIn : PLAN.tasaMensual;
   var plazo = Number.isFinite(plazoIn) ? plazoIn : PLAN.plazo;
-  var gracia = Number.isFinite(graciaIn) ? graciaIn : (PLAN.diasGracia||5);
+  var gracia = Number.isFinite(graciaIn) ? graciaIn : (PLAN.diasGracia!=null?PLAN.diasGracia:5);   // punto 34: el 0 es un valor valido
   var mora = Number.isFinite(moraIn) ? moraIn : (PLAN.moraPct||2.5);
   PLAN.factor = factor;
   PLAN.inicial = inicial;

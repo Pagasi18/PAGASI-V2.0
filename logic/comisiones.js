@@ -824,10 +824,11 @@ function _comGuardarPago(uid){
   if(monto > s.saldo + 0.001){ toast('El monto excede lo adeudado ($'+s.saldo.toFixed(2)+')','error'); return; }
   var hora = new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit',hour12:false});
   var quien = (S.currentUser&&S.currentUser.nombre)||'Admin';
-  // 1) Crear egreso
-  var newEgId = (S.egresos&&S.egresos.length)
-    ? Math.max.apply(null, S.egresos.map(function(x){return parseInt(x.id)||0;}))+1
-    : 1;
+  // 1) Crear egreso. El numero lo da el contador de Firestore: calculado en memoria,
+  // dos pagos casi a la vez sacaban el mismo y el segundo borraba al primero (punto 30).
+  var _btnCom = document.getElementById('comp_btn_save');
+  if(_btnCom) _btnCom.disabled = true;
+  nextEgresoIdAsync().then(function(newEgId){
   var concepto = 'Pago de comisión · '+(u.nombre||u.email);
   var newEg = {
     id: newEgId,
@@ -869,6 +870,10 @@ function _comGuardarPago(uid){
   closeM();
   toast('Comisión pagada · $'+monto.toFixed(2),'success');
   if(S.page === 'comisiones') nav('comisiones');
+  }).catch(function(e){
+    if(_btnCom) _btnCom.disabled = false;
+    toast('No se pudo reservar el número del gasto: ' + (e && e.message || e), 'error');
+  });
 }
 
 // ════════ MODAL: DETALLE ════════
