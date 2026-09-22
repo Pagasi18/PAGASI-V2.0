@@ -20,6 +20,9 @@ PG.config = function(){
       if($('cfg_rm_fecha')) $('cfg_rm_fecha').value=d.rmFecha||'';
       if($('cfg_rm_num')) $('cfg_rm_num').value=d.rmNum||'';
       if($('cfg_rm_tomo')) $('cfg_rm_tomo').value=d.rmTomo||'';
+      if($('cfg_banco_usd')) $('cfg_banco_usd').value=d.bancoUsd||'';
+      if($('cfg_cuenta_usd')) $('cfg_cuenta_usd').value=d.cuentaUsd||'';
+      if($('cfg_billetera')) $('cfg_billetera').value=d.billetera||'';
     });
     db.collection('config').doc('plan').get().then(function(doc){
       if(!doc.exists) return;
@@ -117,6 +120,12 @@ PG.config = function(){
               <div class="fg"><label>Fecha de inscripción</label><input class="fi" id="cfg_rm_fecha" placeholder="Ej: 12/03/2024"></div>
               <div class="fg"><label>N°</label><input class="fi" id="cfg_rm_num" placeholder="Ej: 18"></div>
               <div class="fg"><label>Tomo</label><input class="fi" id="cfg_rm_tomo" placeholder="Ej: 145-A"></div>
+            </div>
+            <div style="font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3);margin:12px 0 7px">Cuentas que salen en el contrato</div>
+            <div style="display:grid;grid-template-columns:1.2fr 1.2fr 1fr;gap:8px">
+              <div class="fg"><label>Banco (dólares)</label><input class="fi" id="cfg_banco_usd" placeholder="Ej: 100% Banco Universal"></div>
+              <div class="fg"><label>N° de cuenta</label><input class="fi" id="cfg_cuenta_usd" placeholder="Ej: 0156-0030-61-0301030586"></div>
+              <div class="fg"><label>Billetera digital</label><input class="fi" id="cfg_billetera" placeholder="Ej: Binance (USDT)"></div>
             </div>
           </div>
           <div style="padding-top:8px;border-top:1px solid var(--rim2)">

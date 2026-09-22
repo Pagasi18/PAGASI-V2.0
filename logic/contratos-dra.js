@@ -242,7 +242,7 @@ function _draDatosPartes(D){
             rep: conc.representante || '', repCi: conc.repCI || '', repCargo: conc.repCargo || '', repDoc: conc.repDoc || '' },
     // Por decision de la empresa el representante de Pagasi no se identifica en
     // el contrato: firma la compañia, identificada por su RIF.
-    emp:  { nombre: emp.nombre || 'PAGASI 18, C.A.', rif: emp.rif || '', rm: emp.rm || '', rmEstado: emp.rmEstado || '',
+    emp:  { nombre: _empCtr().nom, rif: _empCtr().rif, rm: emp.rm || '', rmEstado: emp.rmEstado || '',
             rmFecha: emp.rmFecha || '', rmNum: emp.rmNum || '', rmTomo: emp.rmTomo || '', rep: '' },
     cli:  { nombre: cli.nombre || c.cli || '', ci: cli.cedula || cli.ci || '', rif: cli.rif || '' },
     fia:  { nombre: cli.fiador_nom || '', ci: cli.fiador_ci || '', rif: cli.fiador_rif || '', dir: cli.fiador_dir || '' }
@@ -332,7 +332,7 @@ function _draDatos(credId){
   // Linea en blanco para completar a mano
   var b = function(len){ return '<span style="display:inline-block;border-bottom:1px solid #94a3b8;min-width:'+((len||10)*5.5)+'px">&nbsp;</span>'; };
   var V = function(v, len){ var s=(v==null?'':String(v)).trim(); return s ? '<strong>'+s+'</strong>' : b(len||14); };
-  // Parte un RIF "J-50829589-7" en sus dos tramos para encajar en "J-[●]-[●]"
+  // Parte un RIF "J-12345678-9" en sus dos tramos para encajar en "J-[●]-[●]"
   var rifPart = function(rif, i){
     var s = String(rif||'').replace(/^[JVEGP]-?/i,'').trim();
     var p = s.split('-');
@@ -351,7 +351,7 @@ function _draDatos(credId){
   return {
     c:c, cli:cli, moto:moto, emp:emp, conc:conc, F:F, b:b, num:num,
     concNom: V(conc.nombre, 26),
-    empNom:  V(emp.nombre || 'PAGASI 18, C.A.', 22),
+    empNom:  V(_empCtr().nom, 22),
     empRif1: rifPart(emp.rif, 0), empRif2: rifPart(emp.rif, 1),
     // Por decision de la empresa, el contrato NO lleva el nombre ni la cedula del
     // representante legal: van como linea en blanco, se completan al firmar.

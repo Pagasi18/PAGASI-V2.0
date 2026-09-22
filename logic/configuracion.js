@@ -17,7 +17,9 @@ function cargarEmpresa(){
         repCI: d.repCI || '',
         // registrales: el contrato los imprime (antes no se cargaban y salian en blanco)
         repCargo: d.repCargo || '', repDoc: d.repDoc || '',
-        rm: d.rm || '', rmEstado: d.rmEstado || '', rmFecha: d.rmFecha || '', rmNum: d.rmNum || '', rmTomo: d.rmTomo || ''
+        rm: d.rm || '', rmEstado: d.rmEstado || '', rmFecha: d.rmFecha || '', rmNum: d.rmNum || '', rmTomo: d.rmTomo || '',
+        // cuentas que nombra el contrato (22-sep-2026)
+        bancoUsd: d.bancoUsd || '', cuentaUsd: d.cuentaUsd || '', billetera: d.billetera || ''
       };
     }
   }).catch(function(){});
@@ -108,13 +110,20 @@ function guardarEmpresa(){
   var rmFecha = (($('cfg_rm_fecha')&&$('cfg_rm_fecha').value)||'').trim();
   var rmNum = (($('cfg_rm_num')&&$('cfg_rm_num').value)||'').trim();
   var rmTomo = (($('cfg_rm_tomo')&&$('cfg_rm_tomo').value)||'').trim();
+  // Cuentas que nombra el contrato: con dos companias, las de una no pueden salir
+  // en el contrato de la otra (22-sep-2026)
+  var bancoUsd = (($('cfg_banco_usd')&&$('cfg_banco_usd').value)||'').trim();
+  var cuentaUsd = (($('cfg_cuenta_usd')&&$('cfg_cuenta_usd').value)||'').trim();
+  var billetera = (($('cfg_billetera')&&$('cfg_billetera').value)||'').trim();
   if(!nombre){ toast('Escribe el nombre de la empresa','error'); return; }
   // Actualizar la variable global también (para que contratos/reportes la lean aun sin estar en Config)
   _empresa = { nombre:nombre, rif:rif, ciudad:ciudad, tel:tel, email:email, direccion:direccion,
                representante:representante, repCI:repCI, repCargo:repCargo, repDoc:repDoc,
-               rm:rm, rmEstado:rmEstado, rmFecha:rmFecha, rmNum:rmNum, rmTomo:rmTomo };
+               rm:rm, rmEstado:rmEstado, rmFecha:rmFecha, rmNum:rmNum, rmTomo:rmTomo,
+               bancoUsd:bancoUsd, cuentaUsd:cuentaUsd, billetera:billetera };
   var data = {nombre, rif, ciudad, tel, email, direccion, representante, repCI,
-              repCargo, repDoc, rm, rmEstado, rmFecha, rmNum, rmTomo, updated: new Date().toISOString()};
+              repCargo, repDoc, rm, rmEstado, rmFecha, rmNum, rmTomo,
+              bancoUsd, cuentaUsd, billetera, updated: new Date().toISOString()};
   if(db){
     db.collection('config').doc('empresa').set(data)
       .then(function(){ toast('Empresa guardada — se reflejará en contratos y reportes','success'); if(typeof logActividad==='function') logActividad('config_actualizada','config','empresa',{nombre:nombre}); })

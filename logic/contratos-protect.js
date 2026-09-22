@@ -159,9 +159,12 @@ function _protectDatos(credId){
   var fmt = function(d){ return d.toLocaleDateString('es-VE',{day:'2-digit',month:'2-digit',year:'numeric'}); };
 
   var uso = String(c.uso_moto||'PERSONAL').toUpperCase();
-  var medios = 'Transferencia o deposito a las cuentas de PAGASI 18 C.A. en <strong>100% Banco Universal</strong> '
-             + '(cuenta corriente en bolivares y cuentas custodia en dolares) y a la billetera digital de PAGASI 18 C.A. '
-             + 'en <strong>Binance</strong> (USDT), segun los datos que Pagasi comunique por escrito al Comprador';
+  // Los bancos tambien salen de Configuracion -> Empresa: con dos companias, las
+  // cuentas de una no pueden aparecer en el contrato de la otra (22-sep-2026).
+  var _empC = _empCtr();
+  var medios = 'Transferencia o deposito a las cuentas de '+_empC.nom+' en <strong>'+_empC.bancoUsd+'</strong> '
+             + '(cuenta corriente en bolivares y cuentas custodia en dolares) y a la billetera digital de '+_empC.nom+' '
+             + 'en <strong>'+_empC.billetera+'</strong>, segun los datos que Pagasi comunique por escrito al Comprador';
 
   return {
     c:c, cli:cli, moto:moto, emp:emp, conc:conc, gps:gps, F:F, b:b, num:num, V:V, USD:USD, T:T, fmt:fmt,
@@ -235,7 +238,7 @@ function _protectDatos(credId){
 var _PROTECT_CUERPO = [
   // ── Preambulo ──
   function(D){ return 'El presente CONTRATO DE FINANCIAMIENTO PARA LA ADQUISICIÓN DE VEHÍCULO AUTOMOTOR, CON GARANTÍAS, FIANZA Y PRESTACIÓN DE SERVICIOS «PAGASI PROTECT» (en lo sucesivo, el “Contrato”) se celebra el dia '+D.fechaLarga+', siendo las '+D.hora+' (la “Fecha de Celebración”), entre:'; },
-  function(D){ return '(i) <strong>PAGASI 18 C.A.</strong>, sociedad mercantil domiciliada en Caracas, Distrito Capital, inscrita en el Registro Mercantil '+D.empRm+' de la Circunscripción Judicial '+D.empRmEstado+', bajo el N° '+D.empRmNum+', Tomo '+D.empRmTomo+', de fecha '+D.empRmFecha+', inscrita en el Registro de Información Fiscal (“RIF”) bajo el N° <strong>J-50829589-7</strong> (en adelante “Pagasi”, y en su condición de otorgante del financiamiento y acreedor, también el “Financista”); y'; },
+  function(D){ return '(i) <strong>'+_empCtr().nom+'</strong>, sociedad mercantil domiciliada en Caracas, Distrito Capital, inscrita en el Registro Mercantil '+D.empRm+' de la Circunscripción Judicial '+D.empRmEstado+', bajo el N° '+D.empRmNum+', Tomo '+D.empRmTomo+', de fecha '+D.empRmFecha+', inscrita en el Registro de Información Fiscal (“RIF”) bajo el N° <strong>'+_empCtr().rif+'</strong> (en adelante “Pagasi”, y en su condición de otorgante del financiamiento y acreedor, también el “Financista”); y'; },
   function(D){ return '(ii) '+D.cliNom+', venezolano(a), mayor de edad, '+D.cliProfFrase+'domiciliado(a) en '+D.cliDir+', titular de la cédula de identidad venezolana N° '+D.cliCi+' y del RIF N° '+D.cliRif+' (el “Comprador” o “Deudor”, y conjuntamente con Pagasi, las “Partes” y cada una, una “Parte”).'; },
   function(D){ return D.hayFiador ? 'Asimismo interviene en el presente Contrato (iii) '+D.fiaNom+', venezolano(a), mayor de edad, '+D.fiaProfFrase+'domiciliado(a) en '+D.fiaDir+', titular de la cédula de identidad venezolana N° '+D.fiaCi+', quien actúa en su carácter de fiador solidario y principal pagador del Comprador (el “Fiador”), quedando comprendido dentro de la definición de “Partes” para todos los efectos de este Contrato.' : ''; },
   function(D){ return 'Todo ello de conformidad con lo previsto en los artículos 1.133, 1.159, 1.160, 1.167, 1.211, 1.215, 1.264, 1.266, 1.268, 1.269, 1.283, 1.296, 1.299, 1.300, 1.302, 1.735 y siguientes, y 1.804 y siguientes del Código Civil; el artículo 128 del Decreto con Rango, Valor y Fuerza de Ley del Banco Central de Venezuela; la Ley de Transporte Terrestre; y demás normativa aplicable, en base a los términos y condiciones siguientes:'; },
@@ -252,7 +255,7 @@ var _PROTECT_CUERPO = [
   function(D){ return '1. OBJETO DEL CONTRATO'; },
   function(D){ return '1.1\tOtorgamiento del Financiamiento. Pagasi otorga al Comprador, quien acepta, un financiamiento con destino único y exclusivo al pago del precio de adquisición del Vehículo al Concesionario y del Precio Protect, por el monto, en los términos y bajo las condiciones establecidos en la Cláusula 3 (el “Financiamiento”). El Comprador se obliga a reembolsar a Pagasi el Monto Total Adeudado en la forma, oportunidad y condiciones allí previstas.'; },
   function(D){ return '1.2\tDesembolso; Destino de los Fondos. El desembolso del Financiamiento se realiza en este acto mediante el pago directo por Pagasi al Concesionario de la cantidad de '+D.saldoPrecio+', por cuenta, orden y en descargo del Comprador, quien así lo instruye de manera expresa e irrevocable. El Comprador declara que dicho pago se efectúa exclusivamente con fondos provistos por Pagasi en virtud de este Contrato, y que el Financiamiento no podrá ser destinado a ninguna finalidad distinta.'; },
-  function(D){ return '1.3\tRecaudos de la Compraventa. El Comprador se obliga a obtener del Concesionario y a entregar a Pagasi, en este acto o dentro de los '+D.b(4)+' días continuos siguientes: (a) la factura o documento de la Compraventa, en la cual deberá dejarse constancia expresa de que el precio fue pagado con fondos provenientes del financiamiento otorgado por PAGASI 18 C.A. conforme a este Contrato; (b) el recibo o finiquito de pago del precio emitido por el Concesionario, con idéntica mención y con indicación de si la venta se efectuó o no con reserva de dominio; y (c) el certificado de origen o documento de propiedad del Vehículo. Estos recaudos son requisito para la plena eficacia de la subrogación prevista en la Sección 6.1.'; },
+  function(D){ return '1.3\tRecaudos de la Compraventa. El Comprador se obliga a obtener del Concesionario y a entregar a Pagasi, en este acto o dentro de los '+D.b(4)+' días continuos siguientes: (a) la factura o documento de la Compraventa, en la cual deberá dejarse constancia expresa de que el precio fue pagado con fondos provenientes del financiamiento otorgado por '+_empCtr().nom+' conforme a este Contrato; (b) el recibo o finiquito de pago del precio emitido por el Concesionario, con idéntica mención y con indicación de si la venta se efectuó o no con reserva de dominio; y (c) el certificado de origen o documento de propiedad del Vehículo. Estos recaudos son requisito para la plena eficacia de la subrogación prevista en la Sección 6.1.'; },
   function(D){ return '1.4\tPrestación de Servicios «Pagasi Protect». Adicionalmente, y como negocio jurídico autónomo y separable del Financiamiento, Pagasi presta al Comprador los servicios y suministra los bienes que integran el programa “Pagasi Protect” (el “Programa”), en los términos de la Cláusula 2 y del Anexo “B”.'; },
   function(D){ return '1.5\tPagasi no es Vendedora; Ausencia de Responsabilidad sobre el Vehículo. El Comprador reconoce y acepta expresamente que Pagasi no es vendedora, fabricante, ensambladora, importadora ni distribuidora del Vehículo, y que su única intervención consiste en el otorgamiento del Financiamiento y en la prestación de los servicios del Programa. En consecuencia: (a) Pagasi no asume obligación alguna de entrega, saneamiento por evicción, saneamiento por vicios ocultos, garantía, calidad, idoneidad, funcionamiento, mantenimiento o reparación del Vehículo; (b) toda reclamación relativa al Vehículo, su estado, su documentación, su entrega o la garantía del fabricante deberá dirigirse exclusivamente contra el Concesionario o contra el garante que corresponda; y (c) ninguna incidencia, reclamación, controversia, retraso, defecto o litigio entre el Comprador y el Concesionario suspenderá, extinguirá, reducirá ni permitirá compensar las obligaciones de pago del Comprador frente a Pagasi bajo este Contrato, las cuales son autónomas, líquidas, exigibles e incondicionales.'; },
   function(D){ return '1.6\tRecepción del Vehículo. El Comprador declara que ha recibido el Vehículo del Concesionario, en este acto, previa inspección directa y personal a su entera satisfacción, conjuntamente con sus llaves, manuales, documentos y accesorios, todo lo cual hace constar en la Constancia de Recepción que se acompaña como Anexo “C” y forma parte integrante de este Contrato. Desde la recepción material, el Comprador asume la posesión, uso, guarda, custodia, conservación, mantenimiento ordinario y extraordinario, y la responsabilidad civil, administrativa, penal y de tránsito derivada del Vehículo.'; },
@@ -445,7 +448,7 @@ function _protectFirmas(D, incluirPagasi){
   var f = [];
   f.push(['Por el Comprador', D.cliNom, 'C.I. '+(_draCedulaTxt(D.cli.cedula||D.cli.ci) || 'V-________')]);
   if(D.hayFiador) f.push(['Por el Fiador', D.fiaNom, 'C.I. '+(_draCedulaTxt(D.cli.fiador_ci) || 'V-________')]);
-  if(incluirPagasi!==false) f.push(['Por Pagasi', '<strong>PAGASI 18 C.A.</strong>', 'RIF J-50829589-7']);
+  if(incluirPagasi!==false) f.push(['Por Pagasi', '<strong>'+_empCtr().nom+'</strong>', 'RIF '+_empCtr().rif]);
   var n = f.length;
   // break-before:avoid = la firma se va con el parrafo que la precede, nunca sola arriba de una hoja
   return '<div style="display:flex;gap:24px;margin-top:12px;align-items:flex-start;page-break-inside:avoid;break-before:avoid;page-break-before:avoid">'
@@ -504,7 +507,7 @@ function _protectAnexoB(D, S_){
     + p('El Comprador declara haber recibido, leído y comprendido las condiciones del Programa; haber sido informado de que su contratación es voluntaria y de que el Programa no constituye un contrato de seguro; y haber recibido los Dispositivos instalados y en funcionamiento a su entera satisfacción, o, en su defecto, conocer la fecha y lugar de su instalación.')
     + '<div style="display:flex;gap:24px;align-items:flex-start;margin-top:14px;page-break-inside:avoid">'
     +   _draFirma('Por el Comprador', D.cliNom, 'C.I. '+(_draCedulaTxt(D.cli.cedula||D.cli.ci) || 'V-________'), 2)
-    +   _draFirma('Por Pagasi', '<strong>PAGASI 18 C.A.</strong>', 'RIF J-50829589-7', 2)
+    +   _draFirma('Por Pagasi', '<strong>'+_empCtr().nom+'</strong>', 'RIF '+_empCtr().rif, 2)
     + '</div>';
 }
 
@@ -534,7 +537,7 @@ function _protectAnexoC(D, S_){
     + '<p style="'+S_.p+'">El Comprador declara que Pagasi no es vendedora del Vehículo y que no asume responsabilidad alguna por su estado, entrega, documentación o garantía, conforme a la Sección 1.5 del Contrato.</p>'
     + '<div style="display:flex;gap:24px;align-items:flex-start;margin-top:14px;page-break-inside:avoid">'
     +   _draFirma('Por el Comprador', D.cliNom, 'C.I. '+(_draCedulaTxt(D.cli.cedula||D.cli.ci) || 'V-________'), 2)
-    +   _draFirma('Recibido por Pagasi (a los solos efectos de constancia)', '<strong>PAGASI 18 C.A.</strong>', 'RIF J-50829589-7', 2)
+    +   _draFirma('Recibido por Pagasi (a los solos efectos de constancia)', '<strong>'+_empCtr().nom+'</strong>', 'RIF '+_empCtr().rif, 2)
     + '</div>';
 }
 
