@@ -1132,7 +1132,7 @@ function _creditoAlDia(c, cuotasPagadas, totalCuotas, estado){
   var inicio=parseFechaLocal(c.fecha); inicio.setHours(0,0,0,0);
   var fechaVence=new Date(inicio.getTime()+((cuotasPagadas+1)*15*24*60*60*1000));
   fechaVence.setHours(0,0,0,0);
-  return Math.floor((hoy-fechaVence)/(24*60*60*1000)) <= 0;
+  return Math.round((hoy-fechaVence)/(24*60*60*1000)) <= 0;   // round: ver punto 35
 }
 
 function _notaCobranzaSeLimpia(c, cuotasPagadas, totalCuotas, estado){
@@ -1438,7 +1438,8 @@ function calcularMoraAuto(){
     var cuotaSiguiente=cuotasPagadas+1;
     var fechaVence=new Date(inicio.getTime()+(cuotaSiguiente*15*24*60*60*1000));
     fechaVence.setHours(0,0,0,0);
-    var diasAtraso=Math.floor((hoy-fechaVence)/(24*60*60*1000));
+    // round y no floor: es el mismo caso del punto 35, y este es el numero que se GUARDA
+    var diasAtraso=Math.round((hoy-fechaVence)/(24*60*60*1000));
     var gracia=PLAN.diasGracia||5;
     var nuevaMora=diasAtraso>0?diasAtraso:0;
     var nuevoEstado=diasAtraso>gracia?'mora':'activo';

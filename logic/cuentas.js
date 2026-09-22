@@ -13,13 +13,20 @@ function setCuentasMes(v){
   window._cuentasMes=v; nav('cuentas');
 }
 
+// El monto de un movimiento puede venir como TEXTO ('100') si es viejo, importado o lo
+// escribio un robot. Sin convertir, JavaScript concatena en vez de sumar y el saldo sale
+// disparatado: un deposito '100', otro de 50 y un retiro de 30 daban 10020 en vez de 120
+// (punto 31, 22-sep-2026). Todo el archivo suma por aqui.
+function montoMov(m){ var v = parseFloat(m && m.monto); return isNaN(v) ? 0 : Math.round(v*100)/100; }
+
 function saldoCuenta(nombre){
   var s=0;
   S.movimientos.filter(function(m){return !m.eliminado;}).forEach(function(m){
-    if(m.cuentaDestino===nombre) s+=m.monto;
-    if(m.cuentaOrigen===nombre) s-=m.monto;
+    var v = montoMov(m);
+    if(m.cuentaDestino===nombre) s+=v;
+    if(m.cuentaOrigen===nombre) s-=v;
   });
-  return s;
+  return Math.round(s*100)/100;
 }
 function totalCuentas(){
   return (_cuentasBanc||[]).reduce(function(a,c){return a+saldoCuenta(c.nombre);},0);
@@ -104,8 +111,8 @@ function renderTabCuentasBanc(){
   var movsMes = (S.movimientos||[]).filter(function(m){
     return !m.eliminado && (m.fecha||'').startsWith(mesKey);
   });
-  var ingresosMes = movsMes.filter(function(m){return m.cuentaDestino && m.tipo!=='transferencia';}).reduce(function(a,m){return a+(m.monto||0);},0);
-  var egresosMes = movsMes.filter(function(m){return m.cuentaOrigen && m.tipo!=='transferencia';}).reduce(function(a,m){return a+(m.monto||0);},0);
+  var ingresosMes = movsMes.filter(function(m){return m.cuentaDestino && m.tipo!=='transferencia';}).reduce(function(a,m){return a+montoMov(m);},0);
+  var egresosMes = movsMes.filter(function(m){return m.cuentaOrigen && m.tipo!=='transferencia';}).reduce(function(a,m){return a+montoMov(m);},0);
   var transfMes = movsMes.filter(function(m){return m.tipo==='transferencia';}).length;
   var netoMes = ingresosMes - egresosMes;
 
@@ -115,8 +122,8 @@ function renderTabCuentasBanc(){
     var d = new Date(now.getFullYear(), now.getMonth()-i, 1);
     var k = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
     var ms = (S.movimientos||[]).filter(function(m){return !m.eliminado && (m.fecha||'').startsWith(k);});
-    var ing = ms.filter(function(m){return m.cuentaDestino && m.tipo!=='transferencia';}).reduce(function(a,m){return a+(m.monto||0);},0);
-    var eg = ms.filter(function(m){return m.cuentaOrigen && m.tipo!=='transferencia';}).reduce(function(a,m){return a+(m.monto||0);},0);
+    var ing = ms.filter(function(m){return m.cuentaDestino && m.tipo!=='transferencia';}).reduce(function(a,m){return a+montoMov(m);},0);
+    var eg = ms.filter(function(m){return m.cuentaOrigen && m.tipo!=='transferencia';}).reduce(function(a,m){return a+montoMov(m);},0);
     flujo6m.push({lbl:d.toLocaleDateString('es-VE',{month:'short'}), ing:ing, eg:eg, neto:ing-eg});
   }
   var maxFlujo = Math.max(1, ...flujo6m.map(function(f){return Math.max(f.ing,f.eg);}));
@@ -182,8 +189,8 @@ function renderTabCuentasBanc(){
     });
     var nMovs = movsCuenta.length;
     var movsCuentaMes = movsCuenta.filter(function(m){return (m.fecha||'').startsWith(mesKey);});
-    var ingCuentaMes = movsCuentaMes.filter(function(m){return m.cuentaDestino===c.nombre;}).reduce(function(a,m){return a+(m.monto||0);},0);
-    var egCuentaMes = movsCuentaMes.filter(function(m){return m.cuentaOrigen===c.nombre;}).reduce(function(a,m){return a+(m.monto||0);},0);
+    var ingCuentaMes = movsCuentaMes.filter(function(m){return m.cuentaDestino===c.nombre;}).reduce(function(a,m){return a+montoMov(m);},0);
+    var egCuentaMes = movsCuentaMes.filter(function(m){return m.cuentaOrigen===c.nombre;}).reduce(function(a,m){return a+montoMov(m);},0);
     var moneda = (c.moneda||'USD').toUpperCase()==='BS'?'Bs':'$';
     var accentColor = (c.moneda||'USD').toUpperCase()==='BS' ? '#60A5FA' : 'var(--p1)';
 
@@ -281,8 +288,8 @@ function renderDetalleCuenta(nombre){
 
   // Para los totales y saldo: SOLO los NO eliminados
   var activos = todos.filter(function(m){ return !m.eliminado; });
-  var totalIng = activos.filter(function(m){return m.cuentaDestino===nombre;}).reduce(function(a,m){return a+(m.monto||0);},0);
-  var totalEg = activos.filter(function(m){return m.cuentaOrigen===nombre;}).reduce(function(a,m){return a+(m.monto||0);},0);
+  var totalIng = activos.filter(function(m){return m.cuentaDestino===nombre;}).reduce(function(a,m){return a+montoMov(m);},0);
+  var totalEg = activos.filter(function(m){return m.cuentaOrigen===nombre;}).reduce(function(a,m){return a+montoMov(m);},0);
   var saldo = totalIng - totalEg;
 
   var esAdmin = S.currentUser && S.currentUser.rol === 'Administrador';
@@ -523,8 +530,8 @@ function renderTabHistorial(){
 
   // ═══ KPIs del mes ═══
   var movsActivos = movs.filter(function(m){return !m.eliminado;});
-  var totalIngresos = movsActivos.filter(function(m){return m.cuentaDestino && m.tipo!=='transferencia';}).reduce(function(a,m){return a+(m.monto||0);},0);
-  var totalEgresos = movsActivos.filter(function(m){return m.cuentaOrigen && m.tipo!=='transferencia';}).reduce(function(a,m){return a+(m.monto||0);},0);
+  var totalIngresos = movsActivos.filter(function(m){return m.cuentaDestino && m.tipo!=='transferencia';}).reduce(function(a,m){return a+montoMov(m);},0);
+  var totalEgresos = movsActivos.filter(function(m){return m.cuentaOrigen && m.tipo!=='transferencia';}).reduce(function(a,m){return a+montoMov(m);},0);
   var totalTransf = movsActivos.filter(function(m){return m.tipo==='transferencia';}).length;
   var neto = totalIngresos - totalEgresos;
   var anulados = movs.filter(function(m){return m.eliminado;}).length;
@@ -564,8 +571,8 @@ function renderTabHistorial(){
   for(var d=1; d<=diasEnMes; d++){
     var dayKey = mes+'-'+String(d).padStart(2,'0');
     var movsDia = movsActivos.filter(function(m){return (m.fecha||'').startsWith(dayKey);});
-    var ing = movsDia.filter(function(m){return m.cuentaDestino && m.tipo!=='transferencia';}).reduce(function(a,m){return a+(m.monto||0);},0);
-    var eg = movsDia.filter(function(m){return m.cuentaOrigen && m.tipo!=='transferencia';}).reduce(function(a,m){return a+(m.monto||0);},0);
+    var ing = movsDia.filter(function(m){return m.cuentaDestino && m.tipo!=='transferencia';}).reduce(function(a,m){return a+montoMov(m);},0);
+    var eg = movsDia.filter(function(m){return m.cuentaOrigen && m.tipo!=='transferencia';}).reduce(function(a,m){return a+montoMov(m);},0);
     flujoDiario.push({dia:d, ing:ing, eg:eg});
   }
   var maxDia = Math.max(1, ...flujoDiario.map(function(f){return Math.max(f.ing,f.eg);}));

@@ -254,7 +254,7 @@ function _gpsRender(){
       + 'Hay saldo vencido y la moto dejo de reportar. Puede ser bateria, la SIM sin saldo, o que le quitaron el equipo.</div>';
     caidos.forEach(function(g){
       var i = _gpsCredInfo(g.creditoId);
-      html += '<div style="font-size:11.5px;padding:2px 0"><b>' + (g.idGps||g.id) + '</b> · ' + g.creditoId
+      html += '<div style="font-size:11.5px;padding:2px 0"><b>' + _gpsE(g.idGps||g.id) + '</b> · ' + g.creditoId
         + ' · ' + (i ? i.cliente + ' · ' + i.diasMora + ' dias de mora' : '') + '</div>';
     });
     html += '</div>';
@@ -270,7 +270,7 @@ function _gpsRender(){
       + 'Siguen instalados en creditos que ya se cerraron. Se pueden desmontar y reutilizar: ';
     html += porRec.slice(0,8).map(function(g){
       var i = _gpsCredInfo(g.creditoId);
-      return '<b>' + (g.idGps||g.id) + '</b> (' + g.creditoId + (i ? ' · ' + i.estado : '') + ')';
+      return '<b>' + _gpsE(g.idGps||g.id) + '</b> (' + g.creditoId + (i ? ' · ' + i.estado : '') + ')';
     }).join(' · ');
     if(porRec.length > 8) html += ' y ' + (porRec.length-8) + ' mas';
     html += '</div></div>';
@@ -342,6 +342,12 @@ function _gpsRepintarTabla(){
   cont.innerHTML = _gpsFilasEquipos();
 }
 
+// Todo lo que entra por el Excel pegado o por MiCODUS es texto AJENO: una celda con un
+// < rompe la tabla y una con <img onerror=...> corre codigo en la sesion del admin. Se
+// pinta escapado, como ya se hacia con el mensaje de error del robot (punto 32, 22-sep-2026).
+function _gpsE(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
 function _gpsCoincide(g, q){
   if(!q) return true;
   var info = _gpsCredInfo(g.creditoId);
@@ -411,9 +417,9 @@ function _gpsFilasEquipos(){
     h += '<tr' + (alerta ? ' style="background:rgba(240,75,106,0.05)"' : '') + '>'
       + '<td><span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800;'
       + 'color:' + def.c + ';background:' + def.c + '1a;border:1px solid ' + def.c + '40">' + def.l + '</span></td>'
-      + '<td style="font-family:ui-monospace,monospace;font-size:11.5px">' + (g.idGps || '—') + '</td>'
-      + '<td style="font-family:ui-monospace,monospace;font-size:11px;color:var(--ink3)">' + (g.imei || '—') + '</td>'
-      + '<td style="font-family:ui-monospace,monospace;font-size:11.5px">' + (g.linea || '—') + '</td>'
+      + '<td style="font-family:ui-monospace,monospace;font-size:11.5px">' + _gpsE(g.idGps || '—') + '</td>'
+      + '<td style="font-family:ui-monospace,monospace;font-size:11px;color:var(--ink3)">' + _gpsE(g.imei || '—') + '</td>'
+      + '<td style="font-family:ui-monospace,monospace;font-size:11.5px">' + _gpsE(g.linea || '—') + '</td>'
       + '<td>' + (g.creditoId ? '<b>' + g.creditoId + '</b>' : '<span style="color:var(--ink3)">—</span>') + '</td>'
       + '<td>' + (info ? info.cliente : '<span style="color:var(--ink3)">—</span>')
       + (info && info.enMora ? ' <span style="color:var(--red);font-size:10px;font-weight:800">' + info.diasMora + 'd mora</span>' : '') + '</td>'
@@ -511,7 +517,7 @@ function _gpsHtmlRevision(g){
   var col = d > GPS_DIAS_REVISION ? 'var(--amber)' : 'var(--ink3)';
   var txt = d === 0 ? 'hoy' : 'hace ' + d + ' d';
   return '<span style="color:' + col + (d > GPS_DIAS_REVISION ? ';font-weight:800' : '') + '">' + txt + '</span>'
-    + (g.estadoMicodus ? '<br><span style="font-size:10px;color:var(--ink3)">' + g.estadoMicodus + '</span>' : '');
+    + (g.estadoMicodus ? '<br><span style="font-size:10px;color:var(--ink3)">' + _gpsE(g.estadoMicodus) + '</span>' : '');
 }
 
 // Un clic: quien reviso, cuando, y como respondio el equipo. Es lo mismo que
@@ -521,7 +527,7 @@ function _gpsRevisar(id){
   if(!g) return;
   setMicon('check');
   $('mtt').textContent = 'Revisar equipo';
-  $('msb').textContent = (g.idGps || g.id) + (g.creditoId ? ' · ' + g.creditoId : '');
+  $('msb').textContent = _gpsE(g.idGps || g.id) + (g.creditoId ? ' · ' + g.creditoId : '');
   $('modal-box').className = 'modal';
   var info = _gpsCredInfo(g.creditoId);
   $('mbd').innerHTML = ''
@@ -603,8 +609,8 @@ function _gpsAsignar(id){
   var hoy = (typeof hoyLocalISO === 'function') ? hoyLocalISO() : new Date().toISOString().slice(0,10);
   $('mbd').innerHTML = ''
     + '<div style="font-size:12.5px;color:var(--ink2);line-height:1.6;margin-bottom:12px">'
-    + 'Equipo <b style="font-family:ui-monospace,monospace">' + (g.idGps||g.id) + '</b>'
-    + (g.linea ? ' · linea ' + g.linea : '')
+    + 'Equipo <b style="font-family:ui-monospace,monospace">' + _gpsE(g.idGps||g.id) + '</b>'
+    + (g.linea ? ' · linea ' + _gpsE(g.linea) : '')
 
     + '</div>'
     + '<div class="fgr c1" style="gap:10px">'
@@ -714,9 +720,9 @@ function _gpsHtmlSims(lista){
       var def = _gpsEstadoDef(g.estado);
       var info = _gpsCredInfo(g.creditoId);
       h += '<tr>'
-        + '<td style="font-family:ui-monospace,monospace;font-size:11.5px">' + (g.linea || '—') + '</td>'
-        + '<td style="font-family:ui-monospace,monospace;font-size:11px;color:var(--ink3)">' + (g.iccid || '—') + '</td>'
-        + '<td style="font-family:ui-monospace,monospace;font-size:11.5px">' + (g.idGps || '—') + '</td>'
+        + '<td style="font-family:ui-monospace,monospace;font-size:11.5px">' + _gpsE(g.linea || '—') + '</td>'
+        + '<td style="font-family:ui-monospace,monospace;font-size:11px;color:var(--ink3)">' + _gpsE(g.iccid || '—') + '</td>'
+        + '<td style="font-family:ui-monospace,monospace;font-size:11.5px">' + _gpsE(g.idGps || '—') + '</td>'
         + '<td><span style="color:' + def.c + ';font-weight:800;font-size:11px">' + def.l + '</span></td>'
         + '<td style="font-size:11.5px">' + (info ? info.cliente + ' · ' + g.creditoId : '<span style="color:var(--ink3)">libre</span>') + '</td>'
         + '<td style="white-space:nowrap">'
@@ -1012,7 +1018,7 @@ function _gpsListaMapa(conPos){
       + '<div style="display:flex;align-items:center;gap:7px">'
       + '<span style="width:8px;height:8px;border-radius:50%;background:' + color + ';flex:0 0 8px"></span>'
       + '<span style="font-weight:' + (on?'800':'700') + ';font-size:12px;line-height:1.3;overflow:hidden;'
-      + 'text-overflow:ellipsis;white-space:nowrap">' + (info ? info.cliente : (g.idGps||g.id)) + '</span>'
+      + 'text-overflow:ellipsis;white-space:nowrap">' + (info ? info.cliente : _gpsE(g.idGps||g.id)) + '</span>'
       + (moviendo ? '<span style="margin-left:auto;font-size:9.5px;font-weight:800;color:var(--green);white-space:nowrap">'
                     + Math.round(g.velocidad) + ' km/h</span>' : '')
       + '</div>'
@@ -1058,7 +1064,7 @@ function _gpsHtmlDetalle(id){
   h += '<div style="display:flex;align-items:flex-start;gap:9px;margin-bottom:3px">'
     + '<span style="width:10px;height:10px;border-radius:50%;background:' + color + ';flex:0 0 10px;margin-top:5px"></span>'
     + '<div style="flex:1;min-width:0">'
-    + '<div style="font-weight:800;font-size:14px;line-height:1.25">' + (info ? info.cliente : (g.idGps||g.id)) + '</div>'
+    + '<div style="font-weight:800;font-size:14px;line-height:1.25">' + (info ? info.cliente : _gpsE(g.idGps||g.id)) + '</div>'
     + '<div style="font-size:11px;color:var(--ink3);font-family:ui-monospace,monospace">' + (g.idGps||'') + '</div>'
     + '</div></div>';
 
@@ -1117,15 +1123,15 @@ function _gpsHtmlDetalle(id){
   // La SIM
   if(g.linea || g.iccid){
     h += titulo('SIM Movistar');
-    if(g.linea) h += fila('Linea', '<span style="font-family:ui-monospace,monospace;font-size:11px">' + g.linea + '</span>');
-    if(g.iccid) h += fila('ICCID', '<span style="font-family:ui-monospace,monospace;font-size:10.5px">' + g.iccid + '</span>');
+    if(g.linea) h += fila('Linea', '<span style="font-family:ui-monospace,monospace;font-size:11px">' + _gpsE(g.linea) + '</span>');
+    if(g.iccid) h += fila('ICCID', '<span style="font-family:ui-monospace,monospace;font-size:10.5px">' + _gpsE(g.iccid) + '</span>');
   }
 
   // Instalacion
   if(g.fechaInstalacion || g.tecnico){
     h += titulo('Instalacion');
-    if(g.fechaInstalacion) h += fila('Dia', g.fechaInstalacion);
-    if(g.tecnico) h += fila('Tecnico', g.tecnico);
+    if(g.fechaInstalacion) h += fila('Dia', _gpsE(g.fechaInstalacion));
+    if(g.tecnico) h += fila('Tecnico', _gpsE(g.tecnico));
     var d = _gpsDiasSinRevisar(g);
     if(d !== null) h += fila('Revisado', d === 0 ? 'hoy' : 'hace ' + d + ' d',
         d > GPS_DIAS_REVISION ? 'color:var(--amber)' : '');
@@ -1336,7 +1342,7 @@ function _gpsPintarMapa(){
 
     var pop = '<div style="font-family:system-ui,-apple-system,sans-serif;font-size:12px;line-height:1.55;min-width:170px">'
       + '<div style="font-weight:800;font-size:13px;margin-bottom:2px">'
-      + (info ? info.cliente : (g.idGps || g.id)) + '</div>';
+      + (info ? info.cliente : _gpsE(g.idGps || g.id)) + '</div>';
     if(g.creditoId) pop += '<div style="color:#555">' + g.creditoId
       + (info && info.placa ? ' · ' + info.placa : '') + '</div>';
     if(info && info.enMora) pop += '<div style="color:#F04B6A;font-weight:700">' + info.diasMora + ' dias de mora</div>';
@@ -1487,7 +1493,7 @@ function _gpsVerPassword(id){
 function _gpsEliminar(id){
   var g = _gpsById(id);
   if(!g) return;
-  if(!confirm('¿Eliminar el equipo ' + (g.idGps || g.id) + '?\n\nQueda marcado como eliminado, no se borra del historial.')) return;
+  if(!confirm('¿Eliminar el equipo ' + _gpsE(g.idGps || g.id) + '?\n\nQueda marcado como eliminado, no se borra del historial.')) return;
   g.eliminado = true;
   g.eliminadoEn = new Date().toISOString();
   g.eliminadoPor = (S.currentUser && S.currentUser.nombre) || 'Admin';

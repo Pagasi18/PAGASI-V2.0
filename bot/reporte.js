@@ -73,10 +73,18 @@ async function cargar() {
   const pagos = pS.docs.map(d => ({ id: d.id, ...d.data() })).filter(pagoOK);
   const clientes = clS.docs.map(d => ({ id: d.id, ...d.data() }));
   const concNom = {}; coS.docs.forEach(d => { concNom[d.id] = (d.data().nombre) || '—'; });
-  const cliById = {}; clientes.forEach(c => { cliById[String(c.id)] = c; });
+  // Dos indices, como los avisos de las 7:46 (bot/avisos-cuotas.js): si el credito no trae
+  // clienteId, o trae uno que ya no existe, se busca por nombre. Sin esto la fila del
+  // reporte salia sin telefono y la cobradora no tenia a quien llamar (punto 33).
+  // Con homonimos gana el primero no eliminado: el reporte no es el sitio para adivinar.
+  const cliById = {}, cliPorNombre = {};
+  clientes.forEach(c => {
+    cliById[String(c.id)] = c;
+    if (c && c.nombre && !c.eliminado && !(c.nombre in cliPorNombre)) cliPorNombre[c.nombre] = c;
+  });
   const pagosByCred = {}; pagos.forEach(p => { (pagosByCred[p.cred] = pagosByCred[p.cred] || []).push(p); });
   const telDe = cred => {
-    const cl = cliById[String(cred.clienteId)] || {};
+    const cl = (cred.clienteId != null && cliById[String(cred.clienteId)]) || cliPorNombre[cred.cli] || {};
     return cl.tel || cl.telefono || cl.wa || cred.tel || '';
   };
   return { creds, pagos, clientes, concNom, cliById, pagosByCred, telDe };

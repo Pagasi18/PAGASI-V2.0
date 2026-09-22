@@ -110,7 +110,11 @@
       cuotas.forEach(function(c){
         var vence = dateFromISO(c.fechaVence);
         if(!vence || c.saldo <= 0.001) return;
-        var atraso = Math.floor((today.getTime() - vence.getTime()) / DAY_MS);
+        // round y no floor: las dos fechas van ancladas al mediodia, asi que sin cambio de
+        // hora la resta es exacta y da lo mismo. Con cambio de hora (un usuario en EEUU,
+        // Espana o Chile) la diferencia real es N dias menos una hora y floor la bajaba un
+        // dia entero: la mora salia corta (punto 35, 22-sep-2026).
+        var atraso = Math.round((today.getTime() - vence.getTime()) / DAY_MS);
         c.diasMora = atraso > gracia ? atraso : 0;
         if(c.diasMora > 0) c.estado = 'mora';
       });
@@ -156,7 +160,7 @@
       c.aplicaciones = aplicaciones.filter(function(a){ return a.cuota === c.numero; });
       if(c.saldo <= 0.001){ c.diasMora = 0; c.estado = 'pagada'; return; }
       var venceRef = dateFromISO(c.fechaVence);
-      var atraso = (venceRef && hoyRef) ? Math.floor((hoyRef.getTime() - venceRef.getTime()) / DAY_MS) : 0;
+      var atraso = (venceRef && hoyRef) ? Math.round((hoyRef.getTime() - venceRef.getTime()) / DAY_MS) : 0;   // round: ver punto 35
       c.diasMora = atraso > graciaRef ? atraso : 0;
       c.estado = c.diasMora > 0 ? 'mora' : (c.pagado > 0.001 ? 'parcial' : 'pendiente');
     });
