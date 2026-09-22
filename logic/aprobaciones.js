@@ -114,6 +114,10 @@ function _aprAprobarConfirm(credId){
   var c = (S.creds||[]).find(function(x){return x.id === credId;});
   if(!c){ toast('Crédito no encontrado','error'); return; }
   if(c.estado !== 'pendiente_revision'){ toast('Este crédito ya no está pendiente','error'); closeM(); return; }
+  // Si ya tiene su inicial registrada, aprobar otra vez crearia un segundo deposito
+  if((S.pagos||[]).some(function(p){ return p && !p.eliminado && p.cred===c.id && (p.esInicial || p.tipoOperacion==='inicial_credito'); })){
+    toast('Este crédito ya tiene su inicial registrada','error'); closeM(); return;
+  }
   var monto = parseFloat(($('apr_ini_monto')&&$('apr_ini_monto').value)||'0');
   var metodo = ($('apr_ini_metodo')&&$('apr_ini_metodo').value) || '';
   if(!metodo){ toast('Elige en qué cuenta entró la inicial','error'); return; }
@@ -123,6 +127,9 @@ function _aprAprobarConfirm(credId){
   c.estado = 'activo';
   c.aprobadoEn = new Date().toISOString();
   c.aprobadoPor = nombreUser;
+  // El rechazo anterior queda como historia, pero deja de mandar: si no, cualquier
+  // restauracion futura devolvia el credito a la cola (revisado el 22-sep-2026)
+  c.rechazadoEn = null; c.rechazadoPor = null;
   if(DB && DB.saveCred) DB.saveCred(c);
   // Registrar la inicial como pago (mismo formato que la creación directa)
   var pagoIniId = 'PAG-'+Date.now();
@@ -156,8 +163,11 @@ function _aprRechazar(credId){
   // mismo permiso que anular en Finanzas, y hay que pedirlo ANTES de escribir nada, para
   // no dejar el credito cancelado a medias (revisado el 22-sep-2026).
   var _motoPrev = (S.motos||[]).find(function(m){ return String(m.id)===String(c.motoId); });
+  // La nota se compara por numero completo: "financiamiento CRED-14" no puede dar por
+  // dueña a la moto de CRED-140 (mismo fallo del punto 19; revisado el 22-sep-2026).
   var _creoLaMoto = _motoPrev
-    ? (String(_motoPrev.creadaEnCredito||'') === String(credId) || String(_motoPrev.notas||'').indexOf('financiamiento '+credId) > -1)
+    ? (String(_motoPrev.creadaEnCredito||'') === String(credId)
+       || (typeof _movEsDelCredito==='function' && _movEsDelCredito({concepto:String(_motoPrev.notas||'')}, credId)))
     : (c.motoCreadaEnSolicitud === true);
   if(_creoLaMoto && typeof requireDeletePermission==='function' && !requireDeletePermission()) return;
   var razon = prompt('Razón para rechazar el crédito '+credId+':');

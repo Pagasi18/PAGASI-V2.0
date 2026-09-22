@@ -213,7 +213,7 @@ service cloud.firestore {
             // horario) sigue siendo de Configuracion (revisado el 22-sep-2026).
             ? ( esAdmin() || permiso('config')
                 || ( permiso('gps') && request.resource.data.diff(resource.data).affectedKeys()
-                       .hasOnly(['pedidoRefresco','pedidoRefrescoEn','pedidoRefrescoPor']) ) )
+                       .hasOnly(['refrescoPedido','refrescoPedidoPor','refrescoPedidoEn']) ) )
         : ( id in ['plan','cuentasBanc','empresa','rolesPermisos','score','cobradores','avisosTelegram','avisosChats']
             ? (esAdmin() || permiso('config'))
             : esStaff() ) ) );

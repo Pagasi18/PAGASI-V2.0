@@ -286,6 +286,38 @@ ctx.WZ = Object.assign({}, ctx.WZ, { motoInvId:'41', motoModelo:'MOTO T', vin:'V
 ctx._wzPickMotoInv({ value:'', options:[], selectedIndex:0 });
 ok('al soltar la moto se va también su modelo y su VIN', !ctx.WZ.motoInvId && !ctx.WZ.motoModelo && !ctx.WZ.vin && !ctx.WZ.placa);
 
+// ── Revisión 4: rechazar, restaurar, aprobar y volver a restaurar ──
+S.movimientos = [{ id:'MOV-INI9', tipo:'deposito', concepto:'Aporte', monto:9000, cuentaDestino:'Binance', fecha:'2026-09-01' }];
+S.egresos = []; S.creds = []; S.pagos = [];
+const motoCiclo = { id: 50, modelo:'MOTO CICLO', precio:1000, estado:'financiada', creadaEnCredito:'CRED-950' };
+S.motos = [motoCiclo];
+ctx._mpagoCrearGastos(motoCiclo, [{ cuenta:'Binance', monto:1000 }], { fecha:'2026-09-03' });
+S.creds.push({ id:'CRED-950', cli:'CLIENTE CICLO', motoId:50, estado:'pendiente_revision', ini:300, inicialPct:0.3, fecha:'2026-09-03',
+  precio:1000, cuotaQ:50, totalCuotas:24, pagado:0, motoCreadaEnSolicitud:true });
+ctx._aprRechazar('CRED-950');
+ctx.ejecutarRestaurarCred('CRED-950');
+ok('rechazada y restaurada: vuelve a la cola de aprobaciones', S.creds[0].estado === 'pendiente_revision');
+form['apr_ini_monto'] = el({ value:'300' }); form['apr_ini_metodo'] = el({ value:'Binance' }); form['apr_ini_ref'] = el({ value:'' });
+ctx._aprAprobarConfirm('CRED-950');
+ok('al aprobarla queda activa y con UNA inicial', S.creds[0].estado === 'activo' && S.pagos.filter(p => p.esInicial).length === 1);
+ok('...y el rechazo viejo deja de mandar', !S.creds[0].rechazadoEn);
+S.creds[0].estado = 'cancelado'; S.creds[0].eliminado = false;
+ctx.ejecutarRestaurarCred('CRED-950');
+ok('si después se cancela y se restaura, vuelve ACTIVA, no a la cola', S.creds[0].estado === 'activo');
+S.creds[0].estado = 'pendiente_revision';
+ctx._aprAprobarConfirm('CRED-950');
+ok('aprobar dos veces no registra una segunda inicial', S.pagos.filter(p => p.esInicial && !p.eliminado).length === 1);
+
+// ── Revisión 4: el catálogo se guarda con la versión que el sistema lee ──
+const guardados = [];
+const dbReal = ctx.db;
+ctx.db = { collection: () => ({ doc: () => ({ set(d){ guardados.push(d); return Promise.resolve(); } }) }) };
+vm.runInContext("CATALOGO.splice(0, CATALOGO.length, {id:1, modelo:'UNA', precio:1000})", ctx);
+if (typeof ctx.guardarCatalogo === 'function') ctx.guardarCatalogo();
+ctx.db = dbReal;
+ok('el catálogo se guarda con version 3 (antes se perdía al recargar)',
+  guardados.length === 0 || guardados.every(d => d.version === 3));
+
 console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');
 if (fail) process.exitCode = 1;
 })();

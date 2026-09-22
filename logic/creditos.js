@@ -1919,11 +1919,15 @@ function _wzGuardar(){
   if(btn){ btn.textContent='Guardando...'; btn.disabled=true; }
 
   // ── Si se eligió "Agregar nueva moto al catálogo" en el wizard, guardarla primero ──
+  // Al guardar (paso 4) el paso 3 ya NO esta en pantalla: el selector y los campos de la
+  // moto nueva no existen, asi que se leen de WZ, donde quedaron guardados al avanzar.
+  // Por eso la moto nueva del catalogo nunca se creaba (revisado el 22-sep-2026).
   var _wzCatSel = document.getElementById('wz_moto_cat');
-  if(_wzCatSel && _wzCatSel.value === '__wz_new_cat__'){
-    var _wzCatModelo = ((document.getElementById('wz_cat_modelo')||{}).value||'').trim();
-    var _wzCatPrecio = parseFloat((document.getElementById('wz_cat_precio')||{}).value)||0;
-    var _wzCatMarca  = ((document.getElementById('wz_cat_marca')||{}).value||'').trim();
+  var _wzCatElegida = _wzCatSel ? _wzCatSel.value : (WZ.wz_moto_cat||'');
+  if(_wzCatElegida === '__wz_new_cat__'){
+    var _wzCatModelo = (((document.getElementById('wz_cat_modelo')||{}).value) || WZ.catModelo || '').toString().trim();
+    var _wzCatPrecio = parseFloat(((document.getElementById('wz_cat_precio')||{}).value) || WZ.catPrecio || 0)||0;
+    var _wzCatMarca  = (((document.getElementById('wz_cat_marca')||{}).value) || WZ.catMarca || '').toString().trim();
     if(!_wzCatModelo || !_wzCatPrecio){
       toast('Ingresa el modelo y precio de la nueva moto','error');
       if(btn){ btn.textContent='Guardar Solicitud'; btn.disabled=false; }
@@ -1933,7 +1937,7 @@ function _wzGuardar(){
     var _wzCatEntry = {id:_wzNewCatId, modelo:_wzCatModelo, precio:_wzCatPrecio};
     if(_wzCatMarca) _wzCatEntry.marca = _wzCatMarca;
     CATALOGO.push(_wzCatEntry);
-    if(db){ db.collection('config').doc('catalogo').set({items:CATALOGO, version:2}).then(function(){ try{localStorage.setItem('pagasi_catalogo_config',JSON.stringify(CATALOGO));localStorage.setItem('pagasi_catalogo_ver','2');}catch(e){} }).catch(function(){}); }
+    if(db){ db.collection('config').doc('catalogo').set({items:CATALOGO, version:3}).then(function(){ try{localStorage.setItem('pagasi_catalogo_config',JSON.stringify(CATALOGO));localStorage.setItem('pagasi_catalogo_ver','2');}catch(e){} }).catch(function(){}); }
     WZ.motoModelo = _wzCatModelo;
     WZ.precio = _wzCatPrecio;
     if(_wzCatMarca) WZ.marca = _wzCatMarca;
@@ -2643,7 +2647,10 @@ function ejecutarRestaurarCred(credId){
   // Una SOLICITUD rechazada vuelve a la cola de aprobaciones, no a credito activo: si no,
   // empezaba a cobrar cuotas sin haber pasado por Aprobaciones ni registrado la inicial
   // (revisado el 22-sep-2026).
-  var nuevoEstado = c.rechazadoEn ? 'pendiente_revision'
+  // Solo vuelve a la cola de aprobaciones la solicitud que se cancelo POR un rechazo y
+  // que nunca se aprobo. Un credito que vivio activo no puede volver a "pendiente".
+  var _vieneDeRechazo = !!c.rechazadoEn && !c.aprobadoEn && c.estado === 'cancelado';
+  var nuevoEstado = _vieneDeRechazo ? 'pendiente_revision'
     : ((pagadas>=totalCuotas && totalCuotas>0) ? 'completado' : 'activo');
 
   // 2) Restaurar el crédito
@@ -2666,17 +2673,35 @@ function ejecutarRestaurarCred(credId){
   if(c.motoId){
     var mi = S.motos.findIndex(function(x){return String(x.id)===String(c.motoId);});
     if(mi>=0){
-      // Si la moto salio del inventario al rechazar esta solicitud, su compra se devolvio
-      // a la cuenta: restaurar el credito tiene que volver a registrarla, o el cliente
-      // paga una moto que en los libros nunca se pago (revisado el 22-sep-2026).
-      if(S.motos[mi].eliminado && typeof _motoRestaurarConGastos==='function'){
-        var _rm = _motoRestaurarConGastos(S.motos[mi]) || {};
-        _gastosMotoRest = _rm.egRest || 0;
+      // ¿La moto ya es de otro credito vivo? Entonces no se le quita (revisado 22-sep-2026)
+      var _otroDueno = (S.creds||[]).find(function(x){
+        return x && !x.eliminado && String(x.id)!==String(c.id) && String(x.motoId)===String(c.motoId)
+          && (x.estado==='activo' || x.estado==='mora' || x.estado==='pendiente_revision');
+      });
+      if(_otroDueno){
+        toast('La moto #'+c.motoId+' ya es del crédito '+_otroDueno.id+': el crédito se restauró sin moto','info');
+        c.motoId = null; c.motoPendiente = true;
+        DB.updateCred(credId, { motoId: null, motoPendiente: true });
+      } else {
+        // Solo se vuelve a registrar la compra si la moto salio POR el rechazo de ESTE
+        // credito: si la borraron por otra razon, ese dinero no le corresponde.
+        var _salioPorEsteRechazo = S.motos[mi].eliminado
+          && String(S.motos[mi].eliminadoRazon||'').indexOf('Solicitud rechazada') === 0
+          && (String(S.motos[mi].creadaEnCredito||'') === String(c.id)
+              || (!!c.rechazadoEn && String(S.motos[mi].eliminadoEn||'') === String(c.rechazadoEn)));
+        if(_salioPorEsteRechazo && typeof _motoRestaurarConGastos==='function'){
+          var _rm = _motoRestaurarConGastos(S.motos[mi]) || {};
+          _gastosMotoRest = _rm.egRest || 0;
+        }
+        if(!S.motos[mi].eliminado){
+          S.motos[mi].estado = 'financiada';
+          S.motos[mi].cliente = c.cli;
+          S.motos[mi].creditoId = c.id;
+          DB.saveMoto(S.motos[mi]);
+        } else {
+          toast('La moto #'+c.motoId+' está eliminada por otra razón: revísala en Inventario','info');
+        }
       }
-      S.motos[mi].estado = 'financiada';
-      S.motos[mi].cliente = c.cli;
-      S.motos[mi].creditoId = c.id;
-      DB.saveMoto(S.motos[mi]);
     }
   }
 

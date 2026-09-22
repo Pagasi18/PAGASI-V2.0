@@ -890,10 +890,13 @@ function loginStaff(){
 // La cuenta de correo solo es "del equipo" si tiene ficha en /usuarios
 function verificarStaff(u){
   return db.collection('usuarios').doc(u.uid).get().then(function(d){
-    if(!d.exists){
+    var _f = d.exists ? (d.data()||{}) : null;
+    // Suspendido o eliminado vale lo mismo que no tener ficha: las Reglas ya no lo dejan
+    // ver nada y sin esto quedaba en una pantalla de errores (revisado el 22-sep-2026).
+    if(!_f || _f.suspendido === true || _f.eliminado === true){
       return auth.signOut().then(function(){
         prepararLogin();
-        showErr('lgErr','Esa cuenta no tiene acceso al equipo Pagasi.');
+        showErr('lgErr', _f ? 'Tu cuenta está suspendida. Habla con el administrador.' : 'Esa cuenta no tiene acceso al equipo Pagasi.');
       });
     }
     S.master = true;

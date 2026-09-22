@@ -1259,6 +1259,8 @@ function auditarPagosHuerfanos(){
 }
 
 function auditEliminarPago(pagoId, idx){
+  // Anular un pago mueve dinero: mismo permiso que en Pagos (revisado el 22-sep-2026)
+  if(typeof requireDeletePermission==='function' && !requireDeletePermission()) return;
   var h = (window._auditHuerfanos||[])[idx];
   if(!h) return;
   var p = h.pago;

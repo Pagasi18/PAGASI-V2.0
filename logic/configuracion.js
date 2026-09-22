@@ -264,7 +264,7 @@ function openEditCatalogo(id){
     }
     // Save to Firestore
     if(db){
-      db.collection('config').doc('catalogo').set({items: CATALOGO, version: 2})
+      db.collection('config').doc('catalogo').set({items: CATALOGO, version: 3})
         .then(function(){ try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); localStorage.setItem('pagasi_catalogo_ver','2'); }catch(_e){} })
         .catch(function(){});
     }
@@ -295,7 +295,7 @@ function cDelCatalogo(id){
   var i = CATALOGO.findIndex(function(c){return c.id===id;});
   if(i>=0) CATALOGO.splice(i,1);
   if(db){
-    db.collection('config').doc('catalogo').set({items:CATALOGO, version: 2})
+    db.collection('config').doc('catalogo').set({items:CATALOGO, version: 3})
       .then(function(){ try{ localStorage.setItem('pagasi_catalogo_config', JSON.stringify(CATALOGO)); localStorage.setItem('pagasi_catalogo_ver','2'); }catch(_e){} })
       .catch(function(){});
   }

@@ -302,7 +302,7 @@ function openAddMoto(id=null){
       var _catEntry = {id:_newCatId, modelo:_modeloFinal, precio:_catPrecio};
       if(_catMarca) _catEntry.marca = _catMarca;
       CATALOGO.push(_catEntry);
-      if(db){ db.collection('config').doc('catalogo').set({items:CATALOGO}).then(function(){ try{localStorage.setItem('pagasi_catalogo_config',JSON.stringify(CATALOGO));}catch(e){} }).catch(function(){}); }
+      if(db){ db.collection('config').doc('catalogo').set({items:CATALOGO, version:3}).then(function(){ try{localStorage.setItem('pagasi_catalogo_config',JSON.stringify(CATALOGO));}catch(e){} }).catch(function(){}); }
       toast('Moto agregada al catálogo: '+_modeloFinal,'success');
       // Usar el precio del catálogo si no se puso precio en el campo principal
       if(!($('m_pr')&&$('m_pr').value)){ var _prEl=$('m_pr'); if(_prEl){_prEl.value=_catPrecio.toFixed(2);} }
@@ -590,8 +590,35 @@ function resyncMotosConFirebase(){
 
 function restaurarTodasLasMotosEliminadas(){
   if(typeof requireDeletePermission==='function' && !requireDeletePermission()) return;
-  var eliminadas = (S.motos||[]).filter(function(m){return m.eliminado;});
+  // Solo las de la sede que se esta viendo (el bloque que pinta el boton usa _concFiltrar)
+  var _lista = (typeof _concFiltrar==='function') ? _concFiltrar(S.motos||[]) : (S.motos||[]);
+  var eliminadas = _lista.filter(function(m){return m.eliminado;});
   if(eliminadas.length===0){ toast('No hay motos eliminadas','info'); return; }
+  // Restaurar vuelve a descontar la compra de cada moto: hay que avisarlo antes
+  var _montoVuelve = 0, _porCuenta = {};
+  eliminadas.forEach(function(m){
+    (S.egresos||[]).forEach(function(eg){
+      if(!eg || !eg.eliminado || String(eg.motoIdRef)!==String(m.id) || eg.origenAuto!=='compra_moto') return;
+      // mismo criterio con el que se van a revivir, para no prometer montos que no se mueven
+      var loAnulo = eg.anuladoPorMoto
+        ? (!m.eliminadoEn || eg.anuladoPorMoto===m.eliminadoEn)
+        : (!!eg.eliminadoEn && !!m.eliminadoEn && eg.eliminadoEn===m.eliminadoEn);
+      if(!loAnulo) return;
+      var monto = parseFloat(eg.monto)||0;
+      _montoVuelve += monto;
+      var cta = eg.forma || '(sin cuenta)';
+      _porCuenta[cta] = (_porCuenta[cta]||0) + monto;
+    });
+  });
+  var _msg = '¿Restaurar '+eliminadas.length+' moto(s)?\n\n';
+  if(_montoVuelve > 0){
+    _msg += 'Se vuelve a registrar su compra: se descontará '+fmt(_montoVuelve)+' de las cuentas:\n';
+    Object.keys(_porCuenta).forEach(function(cta){ _msg += ' · '+cta+': −'+fmt(_porCuenta[cta])+'\n'; });
+    _msg += '\nEsto deshace el reverso que devolvió ese dinero.';
+  } else {
+    _msg += 'No hay compras que revivir: solo vuelven al inventario.';
+  }
+  if(!confirm(_msg)) return;
   var egTot=0, movTot=0;
   eliminadas.forEach(function(m){
     var r = _motoRestaurarConGastos(m);   // misma logica que "Restaurar" de a una
