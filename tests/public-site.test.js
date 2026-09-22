@@ -26,11 +26,18 @@ check('46 stable model IDs, prices, dealerships and original simulator results',
   assert.equal(catalog.get(0),undefined);assert.equal(catalog.plan(999),null);
 });
 check('catalog image files exist; unknown photos do not impersonate another model',()=>{for(const m of catalog.motos)if(m.image)assert.ok(fs.existsSync(path.join(root,m.image)),m.image);for(let id=42;id<=46;id++)assert.equal(catalog.get(id).image,'');});
-check('customer portal script and dependencies unchanged',()=>{
-  const before=scripts(baseline('micuenta.html')),after=scripts(read('micuenta.html'));
-  before.forEach((script,i)=>assert.equal(after[i],script,'account script '+i));
-  const sources=html=>[...html.matchAll(/<script[^>]*src="([^"]+)"/g)].map(x=>x[1]);
-  for(const src of sources(baseline('micuenta.html')))assert.ok(sources(read('micuenta.html')).includes(src));
+/* Antes esta prueba exigia que el script de micuenta.html fuera IDENTICO letra por letra
+   al del commit 4585bcf. Desde entonces el portal cambio a proposito (el GPS de Mi cuenta
+   en septiembre, y el pie con el nombre de la compania), asi que fallaba sola sin que
+   hubiera nada roto: una prueba que grita cuando el sistema esta bien acaba ignorandose,
+   que es lo peor que le puede pasar a una prueba (punto 40 de la lista del 18-sep).
+   Lo que si importa se sigue comprobando: que no se le caiga ninguna dependencia y que
+   sus controles sigan ahi (la comprobacion de ids de mas abajo). */
+check('customer portal keeps every dependency it had',()=>{
+  const sources=html=>[...html.matchAll(/<script[^>]*src="([^"]+)"/g)].map(x=>x[1].split('?')[0]);
+  const after=sources(read('micuenta.html'));
+  for(const src of sources(baseline('micuenta.html')))assert.ok(after.includes(src),'falta '+src);
+  assert.ok(scripts(read('micuenta.html')).length>0,'el portal se quedo sin script');
 });
 check('all original request and portal control IDs are present exactly once',()=>{
   for(const page of ['solicitar.html','micuenta.html']){

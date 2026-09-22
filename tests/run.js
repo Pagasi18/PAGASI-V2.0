@@ -1,8 +1,11 @@
 // Corre todas las suites tests/t_*.js y resume.
+// public-site.test.js entra tambien: estaba fuera de la suite, nadie la corria y se
+// quedo desactualizada meses (punto 40 de la lista del 18-sep). Una prueba que no
+// corre no es una prueba. Imprime "OK ..." igual que las demas.
 const { spawnSync } = require('child_process');
 const fs = require('fs'), path = require('path');
 const dir = __dirname;
-const suites = fs.readdirSync(dir).filter(f => /^t_.*\.js$/.test(f)).sort();
+const suites = fs.readdirSync(dir).filter(f => /^t_.*\.js$/.test(f) || f === 'public-site.test.js').sort();
 let totalOk = 0, totalFail = 0, crashed = 0;
 for (const f of suites) {
   const r = spawnSync(process.execPath, [path.join(dir, f)], { encoding: 'utf8' });
