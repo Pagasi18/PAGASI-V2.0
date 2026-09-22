@@ -3470,7 +3470,12 @@ function saveM(){
   var ok;
   try { ok = S.saveFn(); }
   catch(e){ liberar(); throw e; }
-  if(ok === false) liberar(); else setTimeout(liberar, 1500);
+  // Si el guardado es asincrono (reservar el numero de la moto tarda), el candado dura
+  // hasta que TERMINA de verdad; el temporizador queda solo de red para los que no
+  // devuelven nada (revisado el 22-sep-2026: 1,5 s no alcanzaba y se duplicaba la moto).
+  if(ok === false) liberar();
+  else if(ok && typeof ok.then === 'function') ok.then(liberar, liberar);
+  else setTimeout(liberar, 1500);
   return ok;
 }
 function topAct(){

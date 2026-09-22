@@ -93,19 +93,51 @@ ok('al restaurar, vuelve el gasto que anuló el borrado de la moto', !S.egresos.
 ok('...y NO revive el que estaba anulado por otra vía', S.egresos.find(e => e.id === 901).eliminado === true);
 
 // ── 10) Solicitud de concesionario rechazada ──
+// (a) La moto la creó ESA solicitud (moto del catálogo): su compra se descontó al
+//     enviarla, así que al rechazar hay que devolverla.
 S.movimientos = [{ id:'MOV-INI2', tipo:'deposito', concepto:'Aporte', monto:5000, cuentaDestino:'Binance', fecha:'2026-09-01' }];
 S.egresos = []; S.motos = []; S.creds = [];
-const motoSol = { id: 8, modelo:'MOTO 200', precio:1200, estado:'financiada', cliente:'CLIENTE SOLICITUD' };
+const motoSol = { id: 8, modelo:'MOTO 200', precio:1200, estado:'financiada', cliente:'CLIENTE SOLICITUD',
+  creadaEnCredito:'CRED-900', notas:'Creada automáticamente desde catálogo al registrar financiamiento CRED-900' };
 S.motos.push(motoSol);
 ctx._mpagoCrearGastos(motoSol, [{ cuenta:'Binance', monto:1000 }], { fecha:'2026-09-03' });
 const saldoConSolicitud = saldo('Binance');
-S.creds.push({ id:'CRED-900', cli:'CLIENTE SOLICITUD', motoId:8, estado:'pendiente_revision', ini:300, fecha:'2026-09-03' });
+S.creds.push({ id:'CRED-900', cli:'CLIENTE SOLICITUD', motoId:8, estado:'pendiente_revision', ini:300, fecha:'2026-09-03', motoCreadaEnSolicitud:true });
 ctx._aprRechazar('CRED-900');
 const credRech = S.creds[0];
 ok('la solicitud queda cancelada con su razón', credRech.estado === 'cancelado' && !!credRech.razonRechazo);
-ok('el dinero de la compra vuelve a la cuenta', saldo('Binance') === saldoConSolicitud + 1000);
-ok('el gasto de la moto queda anulado', S.egresos.filter(e => e.motoIdRef === 8 && !e.eliminado).length === 0);
-ok('la moto vuelve a estar disponible y sin cliente', motoSol.estado === 'disponible' && !motoSol.cliente);
+ok('moto creada por la solicitud: el dinero vuelve a la cuenta', saldo('Binance') === saldoConSolicitud + 1000);
+ok('...y su gasto queda anulado', S.egresos.filter(e => e.motoIdRef === 8 && !e.eliminado).length === 0);
+ok('...y la moto vuelve a estar disponible y sin cliente', motoSol.estado === 'disponible' && !motoSol.cliente);
+
+// (b) La moto YA estaba en inventario (comprada antes de verdad): rechazar NO devuelve
+//     ese dinero; solo libera la moto. Devolverlo inventaba plata (revisión 22-sep).
+S.movimientos = [{ id:'MOV-INI3', tipo:'deposito', concepto:'Aporte', monto:5000, cuentaDestino:'Binance', fecha:'2026-08-01' }];
+S.egresos = []; S.creds = [];
+const motoStock = { id: 9, modelo:'MOTO 150', precio:1000, estado:'financiada', cliente:'CLIENTE DOS' };
+S.motos = [motoStock];
+ctx._mpagoCrearGastos(motoStock, [{ cuenta:'Binance', monto:900 }], { fecha:'2026-08-01' });   // compra real al ingresarla
+const saldoStock = saldo('Binance');
+S.creds.push({ id:'CRED-901', cli:'CLIENTE DOS', motoId:9, estado:'pendiente_revision', ini:300, fecha:'2026-09-03' });
+ctx._aprRechazar('CRED-901');
+ok('moto que ya estaba en inventario: el saldo NO se mueve', saldo('Binance') === saldoStock);
+ok('...su compra real sigue viva', S.egresos.filter(e => e.motoIdRef === 9 && !e.eliminado).length === 1);
+ok('...pero la moto sí vuelve al stock', motoStock.estado === 'disponible' && !motoStock.cliente);
+
+// (c) Moto de la solicitud que ya se había borrado con "sin regresar el dinero":
+//     rechazar tampoco lo devuelve (ese dinero se dio por salido).
+S.movimientos = [{ id:'MOV-INI4', tipo:'deposito', concepto:'Aporte', monto:5000, cuentaDestino:'Binance', fecha:'2026-09-01' }];
+S.egresos = []; S.creds = [];
+const motoPerdida = { id: 10, modelo:'MOTO 300', precio:1000, estado:'financiada', creadaEnCredito:'CRED-902' };
+S.motos = [motoPerdida];
+ctx._mpagoCrearGastos(motoPerdida, [{ cuenta:'Binance', monto:1000 }], { fecha:'2026-09-03' });
+const auditSinDevolver = { eliminado:true, eliminadoPor:'Prueba', eliminadoEn:'2026-09-09T12:00:00Z', eliminadoRazon:'Moto perdida', eliminacionReversaCuenta:false };
+Object.assign(motoPerdida, auditSinDevolver);
+ctx._mpagoReversarGastos(10, false, auditSinDevolver);
+const saldoSinDevolver = saldo('Binance');
+S.creds.push({ id:'CRED-902', cli:'CLIENTE TRES', motoId:10, estado:'pendiente_revision', ini:300, fecha:'2026-09-03', motoCreadaEnSolicitud:true });
+ctx._aprRechazar('CRED-902');
+ok('moto borrada sin regresar el dinero: el rechazo tampoco lo devuelve', saldo('Binance') === saldoSinDevolver);
 
 // ── 11) El botón "Solicitud" de Inventario no pierde la moto ──
 S.motos = [{ id: 11, modelo:'NEW HORSE 150', precio:1320, estado:'disponible' }];
@@ -124,5 +156,40 @@ form['wz_moto_inv'] = el({ value:'', options:[], selectedIndex:0 });
 try { ctx._wzRender(); } catch(e) {}
 ok('al llegar al paso 3 la moto sigue elegida (antes se creaba otra del catálogo)', String(pedido) === '11');
 
+(async function(){
+// ── 11) El paso de la moto SÍ tiene selector de inventario, y el catálogo no lo pisa ──
+S.motos = [{ id: 11, modelo:'NEW HORSE 150', precio:1320, estado:'disponible' }];
+S.creds = []; S.clientes = [];
+ctx.WZ = Object.assign({}, ctx.WZ, { step:3, motoInvId:null, motoModelo:'' });
+ctx.setTimeout = function(){ return 0; };
+try { ctx._wzRender(); } catch(e) {}
+ok('el paso de la moto vuelve a tener el selector del inventario', /id="wz_moto_inv"/.test(htmlWz));
+ok('...con la moto disponible dentro', /value="11"/.test(htmlWz));
+ok('...y avisa que esa moto ya se pagó', /no se vuelve a descontar la compra/.test(htmlWz));
+
+// "+ Solicitud" de Plan y Precios manda un id del CATÁLOGO: no debe quedar como moto
+vm.runInContext("CATALOGO.splice(0, CATALOGO.length, {id:11, modelo:'CATALOGO 11', precio:1500})", ctx);
+ctx.openAddCredConCatalogo(11);
+ok('"+ Solicitud" del catálogo NO engancha la moto de inventario con ese número',
+  !ctx.WZ.motoInvId && ctx.WZ.motoModelo === 'CATALOGO 11');
+ctx.openAddCredConMoto(999);   // moto que no existe
+ok('un número de moto que no existe se ignora', !ctx.WZ.motoInvId);
+ctx.openAddCredConMoto(11);
+ok('un número de moto real sí se toma', String(ctx.WZ.motoInvId) === '11');
+
+// ── 24) El candado espera a que el guardado termine, aunque tarde ──
+let corridas = 0, resolver;
+ctx.closeM();
+S.saveFn = function(){ corridas++; return new Promise(function(res){ resolver = res; }); };
+ctx.saveM();
+ctx.saveM();   // segundo clic mientras el guardado sigue en vuelo
+ok('mientras el guardado está en vuelo, un segundo clic no vuelve a guardar', corridas === 1);
+resolver(true);
+await new Promise(function(r){ setImmediate(r); });
+S.saveFn = function(){ corridas++; return true; };
+ctx.saveM();
+ok('cuando termina, el siguiente guardado sí entra', corridas === 2);
+
 console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas');
 if (fail) process.exitCode = 1;
+})();

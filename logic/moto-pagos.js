@@ -254,6 +254,10 @@ function _mpagoReversarGastos(motoId, devolver, audit){
         return !x.eliminado && x.reversoDe==='egreso:'+m.conceptoEgreso;
       });
       if(yaVolvio) return;
+      // Si su gasto ya se anulo ANTES eligiendo "sin regresar el dinero", ese dinero se
+      // dio por salido: no se devuelve ahora por otra via (revisado el 22-sep-2026).
+      var _egDeEste = (S.egresos||[]).find(function(x){ return String(x.id)===String(m.conceptoEgreso); });
+      if(_egDeEste && _egDeEste.eliminado && _egDeEste.eliminacionReversaCuenta === false) return;
       var rev = {
         id:'MOV-REV-MOTO-'+motoId+'-'+Date.now()+'-'+Math.floor(Math.random()*1000),
         tipo:'deposito',

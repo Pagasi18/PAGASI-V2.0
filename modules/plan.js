@@ -123,7 +123,7 @@ PG.plan = function(){
         + '<div style="font-size:10px;color:var(--ink3);font-weight:600">Q: '+fmt(r.cuotaQ)+'</div>'
       + '</td>'
       + '<td onclick="event.stopPropagation()" style="white-space:nowrap"><div style="display:flex;gap:4px;justify-content:flex-end">'
-        + '<button class="btn btn-p btn-xs" title="Crear solicitud" onclick="openAddCredConMoto('+c.id+')">+ Solicitud</button>'
+        + '<button class="btn btn-p btn-xs" title="Crear solicitud" onclick="openAddCredConCatalogo('+c.id+')">+ Solicitud</button>'
         + '<button class="btn btn-g btn-xs" title="Editar modelo" onclick="openEditCatalogo('+c.id+')">Editar</button>'
         + '<button class="btn btn-d btn-xs" title="Eliminar" onclick="delCatalogo('+c.id+')">✕</button>'
       + '</div></td>'

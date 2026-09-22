@@ -21,7 +21,12 @@ function openAddCred(motoId=null){
   // viajaba como parametro del primer dibujo y al llegar al paso 3 se perdia, asi que
   // el wizard creaba OTRA moto del catalogo y descontaba la compra de nuevo
   // (punto 11, 21-sep-2026).
-  if(motoId != null && String(motoId) !== '') WZ.motoInvId = String(motoId);
+  // Solo un id de moto REAL del inventario: el boton "+ Solicitud" de Plan y Precios
+  // manda ids del CATALOGO, que son otra numeracion y enganchaban una moto ajena.
+  if(motoId != null && String(motoId) !== ''){
+    var _mReal = (S.motos||[]).find(function(m){ return !m.eliminado && String(m.id)===String(motoId); });
+    if(_mReal) WZ.motoInvId = String(motoId);
+  }
   // Si hay datos precargados desde editarCredSinFirma, restaurarlos después del reset
   if(window._wzPreload){
     Object.assign(WZ, window._wzPreload);
@@ -150,7 +155,19 @@ function _wzRender(motoId){
     return '<option value="cat-'+i+'" data-modelo="'+modelo+'">'+modelo+sede+'</option>';
   }).join('');
 
-  var step2 = '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Modelo del catálogo</label>'
+  // Moto del INVENTARIO: el selector se habia quedado sin dibujar (motoOptions se
+  // calculaba y no se insertaba), asi que el boton "Solicitud" de Inventario no tenia
+  // donde mostrarse y el wizard terminaba creando otra moto del catalogo y descontando
+  // la compra de nuevo (punto 11, 22-sep-2026).
+  var step2 = (motosDisp.length
+    ? '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Moto del inventario (ya comprada)</label>'
+      + '<select class="fs" id="wz_moto_inv" onchange="_wzPickMotoInv(this)">'
+      + '<option value="">— Ninguna: es una moto nueva del catálogo —</option>'
+      + motoOptions
+      + '</select>'
+      + '<div style="font-size:11px;color:var(--ink3);margin-top:4px">Si eliges una del inventario no se vuelve a descontar la compra: ya se pagó al ingresarla.</div></div>'
+    : '')
+    + '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Modelo del catálogo</label>'
     + '<select class="fs" id="wz_moto_cat" onchange="_wzPickMotoCat(this)">'
     + '<option value="">Seleccionar modelo...</option>'
     + catOptions
@@ -513,7 +530,7 @@ function _wzRender(motoId){
     }, 60);
   }
   // Si la moto viene del catálogo (sin inventario), restaurar modelo
-  if(WZ.step===3 && !motoId && WZ.motoModelo){
+  if(WZ.step===3 && !motoId && !WZ.motoInvId && WZ.motoModelo){
     setTimeout(function(){
       // Intentar encontrar en el selector de catálogo por modelo
       var catSel = document.getElementById('wz_moto_cat');
@@ -2008,6 +2025,8 @@ function _wzGuardar(){
         cli: WZ.nom||(existing&&existing.nombre)||S.creds[_ei].cli||'',
         modelo: _modeloFinal,
         motoId: _newMotoId,
+        // al enlazar la moto se quita la marca de "sin moto" (revisado el 22-sep-2026)
+        motoPendiente: _newMotoId ? false : (S.creds[_ei].motoPendiente||false),
         marca: WZ.marca||S.creds[_ei].marca||'',
         vin: WZ.vin||S.creds[_ei].vin||'',
         color: WZ.color||S.creds[_ei].color||'',
@@ -2328,6 +2347,9 @@ function _wzGuardar(){
         cliente:((existing&&existing.nombre)||WZ.nom)||null,
         gps:false,
         notas:'Creada automáticamente desde catálogo al registrar financiamiento '+credId,
+        // Marca de quien la creo: solo si la creo ESTA solicitud se puede devolver su
+        // compra al rechazarla (una moto que ya estaba en inventario se pago de verdad)
+        creadaEnCredito: credId,
         ini:r.ini,
         fin:r.fin,
         total:r.total,
@@ -2341,10 +2363,15 @@ function _wzGuardar(){
     var _mCredId = newCred.id;
     nextMotoIdAsync().then(function(newMotoId){
       var motoInvNueva = Object.assign({ id:newMotoId }, _mDatos);
+      // marca interna (no se guarda en la base): sirve para sacarla de memoria si falla
+      Object.defineProperty(motoInvNueva, '_enCreacion', { value:_mCredId, enumerable:false, configurable:true });
       S.motos.push(motoInvNueva);
       return DB.crearMoto(motoInvNueva).then(function(){
         newCred.motoId = motoInvNueva.id;
-        DB.updateCred(_mCredId, { motoId: motoInvNueva.id, motoPendiente: false });
+        newCred.motoCreadaEnSolicitud = true;
+        newCred.motoPendiente = false;
+        delete motoInvNueva._enCreacion;
+        DB.updateCred(_mCredId, { motoId: motoInvNueva.id, motoPendiente: false, motoCreadaEnSolicitud: true });
         // ── Crear egresos + movimientos por la compra de la moto (catálogo) ──
         if(_mPagos) _mpagoCrearGastos(motoInvNueva, _mPagos, {fecha: _mFecha});
       });
@@ -2353,6 +2380,10 @@ function _wzGuardar(){
       // enteraba: el credito quedaba sin moto y sin su gasto (punto 22, 21-sep-2026).
       // Ahora se avisa, se deja marcado en el credito y se anota en la bitacora.
       console.error('crear moto catálogo:', e && (e.code||e.message));
+      // La moto se habia metido en memoria antes de guardarla: si no se guardo, fuera
+      // (si no, se ve en Inventario y su numero puede pisar a una real)
+      var _mIdx = (S.motos||[]).findIndex(function(m){ return m && m._enCreacion === _mCredId; });
+      if(_mIdx>=0) S.motos.splice(_mIdx,1);
       try{ DB.updateCred(_mCredId, { motoPendiente: true }); }catch(_e){}
       var _c = (S.creds||[]).find(function(x){ return x.id===_mCredId; });
       if(_c) _c.motoPendiente = true;
@@ -2710,6 +2741,13 @@ function openEditCred(credId){
 }
 
 function openAddCredConMoto(motoId){openAddCred(motoId);}
+// "+ Solicitud" desde Plan y Precios: eso es un MODELO del catalogo, no una moto del
+// inventario. Se precarga el modelo y su precio; la moto se creara al guardar.
+function openAddCredConCatalogo(catId){
+  var it = (typeof CATALOGO!=='undefined' ? CATALOGO : []).find(function(x){ return x && String(x.id)===String(catId); });
+  window._wzPreload = it ? { motoModelo: it.modelo||'', precio: parseFloat(it.precio)||0, marca: it.marca||'' } : null;
+  openAddCred();
+}
 // ══════════════════════════════════════════════════════════════════
 // CONFIRMAR CONTRATO FIRMADO
 // ══════════════════════════════════════════════════════════════════

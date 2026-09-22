@@ -323,7 +323,7 @@ function openAddMoto(id=null){
     } else {
       calc=Object.assign({precioBaseReal:precioBaseReal, planModo:'global', plazo:PLAN.plazo, totalCuotas:PLAN.plazo*2}, calcMoto(precioBaseReal));
     }
-    nextMotoIdAsync().then(function(_nextMotoId){
+    return nextMotoIdAsync().then(function(_nextMotoId){
     const obj={id:(m&&m.id)||_nextMotoId,modelo:_modeloFinal,precio,precioBaseReal:calc.precioBaseReal||precioBaseReal,planModo:planMode,marca:g('m_marca')||'',color:g('m_color')||'',anio:(parseInt(g('m_anio'),10)||null),vin:g('m_vin')||'',placa:g('m_placa')||'',serialMotor:g('m_serial_motor')||'',serialChasis:g('m_serial_chasis')||'',gpsNum:g('m_gps_num')||'',estado:($('m_est')&&$('m_est').value)||'disponible',cliente:g('m_cli')||null,gps:($('m_gps')&&$('m_gps').classList).contains('on')||false,notas:g('m_notas')||'',plazo:calc.plazo||PLAN.plazo,totalCuotas:calc.totalCuotas||(PLAN.plazo*2),...calc};
     // Asignar concesionario: si está editando preserva el existente, si es nuevo usa el activo o el default
     if(ed && m && m.concesionarioId){
