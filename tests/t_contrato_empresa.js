@@ -35,6 +35,11 @@ const avisos = [];
 ctx.toast = function(m, t){ avisos.push(String(m)); };
 
 // ── 1. Ficha vacia (como viene el app de fabrica): los datos de PAGASI 18 ──────
+// El respaldo solo vale en la base de PAGASI 18, asi que esta prueba dice en cual
+// esta parada. Si no lo dijera, en PAGASI 26 estaria probando lo contrario de lo que
+// dice su titulo: esta misma suite corre en las dos companias.
+const proyectoReal = ctx.FIREBASE_CONFIG ? ctx.FIREBASE_CONFIG.projectId : null;
+ctx.FIREBASE_CONFIG = { projectId: 'pagasi-v2' };
 ctx._empresa = { nombre:'Pagasi', rif:'J-00000000-0', ciudad:'Caracas', tel:'', email:'', direccion:'' };
 let e = ctx._empCtr();
 ok('ficha vacia: el contrato sigue saliendo como PAGASI 18', e.nom === 'PAGASI 18, C.A.' && e.rif === 'J-50829589-7');
@@ -86,7 +91,6 @@ ok('ficha completa: sin avisos', avisos.length === 0);
 // Lo peor que puede pasar con un papel que se firma es que salga perfecto y
 // equivocado. El 22-sep-2026 PAGASI 26 imprimio un contrato a nombre de PAGASI 18
 // porque la ficha no se habia podido leer (se habia caido la sesion).
-const proyectoAntes = ctx.FIREBASE_CONFIG ? ctx.FIREBASE_CONFIG.projectId : null;
 ctx._empresa = { nombre:'Pagasi', rif:'J-00000000-0', ciudad:'Caracas', tel:'', email:'', direccion:'' };
 
 ctx.FIREBASE_CONFIG = { projectId: 'pagasi-v2' };
@@ -106,7 +110,10 @@ ok('...y el aviso dice que NO se firme',
 ctx.FIREBASE_CONFIG = { projectId: 'pagasi-v2' };
 avisos.length = 0; ctx._avisarEmpresaContrato();
 ok('en PAGASI 18 el aviso sigue siendo el de siempre', /Configuración → Empresa/.test(avisos[0]));
-if (proyectoAntes) ctx.FIREBASE_CONFIG = { projectId: proyectoAntes };
+if (proyectoReal) ctx.FIREBASE_CONFIG = { projectId: proyectoReal };
+
+// ── 3d. La llave de ESTA copia no apunta a la base de la otra compania ───────
+ok('el proyecto de Firebase de esta copia esta configurado', !!proyectoReal);
 
 // ── 4. El codigo ya no lleva a PAGASI 18 escrito dentro de los contratos ─────
 ['logic/contratos.js','logic/contratos-dra.js','logic/contratos-protect.js'].forEach(function(f){
