@@ -60,7 +60,7 @@ ok('version grabada manda (al reves)', V({contratoVersion:'dra', contratoFirmado
 
 // ── Bordes: nada raro debe reventar ──
 ok('credito nulo no revienta', V(null)==='dra');
-}
 ok('firmado sin ninguna fecha -> anterior (conservador)', V({contratoFirmado:true})==='contrato');
 ok('fecha con hora se recorta bien', V({contratoFirmado:true, fechaContratoFirmado:'2026-08-30T23:59:00'})==='contrato');
+}
 ok('objeto vacio no revienta', V({})==='protect');
