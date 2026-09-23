@@ -2,3 +2,4 @@
 # cache local de wrangler: no va al repo
 .wrangler/
 bot/.wrangler/
+exportar-26.html
