@@ -603,7 +603,7 @@ function _wzRender(motoId){
 
   var btnNext = WZ.step < 4
     ? '<button class="wz-btn wz-btn-p" onclick="_wzNext()">'+(WZ.step===3?'Calcular score →':'Siguiente →')+'</button>'
-    : '<button class="wz-btn wz-btn-ok" onclick="_wzGuardar()">'+(window._wzEditando ? 'Guardar cambios' : 'Enviar a aprobación')+'</button>';
+    : '<button class="wz-btn wz-btn-ok" onclick="_wzGuardar()">'+(window._wzEditando ? 'Guardar cambios' : (_wzVaAAprobaciones() ? 'Enviar a aprobación' : 'Guardar solicitud'))+'</button>';
 
   ov.innerHTML =
     '<div class="wz-head"><div class="wz-head-in">'
@@ -2063,7 +2063,10 @@ function _wzPrev(){
 }
 
 // ── Renderizar resultado (paso 4) ──
-// Que le dice el paso 4 al vendedor. No aprueba ni rechaza: eso lo hace Aprobaciones.
+// Solo el vendedor de concesionario (externo) manda la solicitud a la bandeja de Aprobaciones;
+// las demas ya vienen aprobadas por WhatsApp y nacen activas (Adam, 24-sep-2026).
+function _wzVaAAprobaciones(){ return (S.currentUser&&S.currentUser.rol)==='Vendedor Concesionario'; }
+// Que le dice el paso 4 al vendedor. El score es una guia: no aprueba ni rechaza.
 function _wzDecisionPaso4(score){
   var motivos = (WZ.scoreMotivos||[]).slice(), faltan = [];
   if(!(WZ.dir_q||WZ.dir_det||WZ.estado_ubi)) faltan.push('dirección');
@@ -2076,11 +2079,13 @@ function _wzDecisionPaso4(score){
   if(motivos.length) porque = porque.concat(motivos);
   if(dudosa) porque.push('el vendedor la marcó como dudosa');
   if(score>0 && score<450 && !motivos.length) porque.push('score bajo ('+score+')');
+  var aBandeja = _wzVaAAprobaciones();
   var detalle = revisar
-    ? 'Conviene que un gerente la mire con lupa: '+porque.join(' · ')+'. Igual se envía a Aprobaciones.'
-    : 'Se envía a Aprobaciones y ahí la aprueba un gerente o administrador. El score ('+score+') es una guía, no decide.';
+    ? 'Conviene revisarla con un gerente antes de guardar: '+porque.join(' · ')+'.'
+    : (aBandeja ? 'Se envía a Aprobaciones y ahí la aprueba un gerente o administrador.' : 'Al guardar, el crédito queda activo con su inicial registrada.')
+      + ' El score ('+score+') es una guía, no decide.';
   if(faltan.length) detalle += ' Falta: '+faltan.join(', ')+' (se puede completar después).';
-  return { titulo: revisar ? 'Revisar con gerente' : 'Lista para enviar a aprobación', color: revisar ? 'amber' : 'green', detalle: detalle, faltan: faltan, revisar: revisar };
+  return { titulo: revisar ? 'Revisar con gerente' : (aBandeja ? 'Lista para enviar a aprobación' : 'Lista para guardar'), color: revisar ? 'amber' : 'green', detalle: detalle, faltan: faltan, revisar: revisar };
 }
 function _wzRenderResultado(){
   var s = WZ.score;
@@ -2764,12 +2769,12 @@ function _wzGuardar(){
     plan: _finNew.plan,
     frecuencia: 'quincenal',
     fecha: hoyLocalISO(),
-    // 24-sep-2026, Adam: TODAS las solicitudes nacen pendientes y las aprueba alguien
-    // desde Aprobaciones (antes solo las del vendedor de concesionario; las demas nacian
-    // activas al instante, con la moto comprada y sin que nadie mas las mirara).
-    estado: 'pendiente_revision',
-    // Lo que el vendedor ya contesto en el paso 3: la cuenta donde entro la inicial. Al
-    // aprobar sale precargada; quien aprueba solo confirma.
+    // 24-sep-2026, Adam: la aprobacion se hace por WhatsApp ANTES de crear la solicitud,
+    // asi que el credito nace activo. Solo las del vendedor de concesionario (externo)
+    // pasan por la bandeja de Aprobaciones.
+    estado: ((S.currentUser&&S.currentUser.rol)==='Vendedor Concesionario') ? 'pendiente_revision' : 'activo',
+    // Lo que el vendedor contesto en el paso 3: la cuenta donde entro la inicial. Si la
+    // solicitud pasa por Aprobaciones, ahi sale precargada y quien aprueba solo confirma.
     inicialCuenta: WZ.iniMetodo||'', inicialRef: WZ.iniRef||'',
     impresionVendedor: WZ.impresion||'',
     pagado: 0,

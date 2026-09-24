@@ -19,17 +19,21 @@ ctx.toast = m => avisos.push(String(m)); ctx.nav = function(){}; ctx.closeM = fu
 const S = ctx.S; const cr = src('logic/creditos.js'), ap = src('logic/aprobaciones.js'), cl = src('logic/clientes.js');
 vm.runInContext("_cuentasBanc = [{nombre:'Binance 26'},{nombre:'100% Banco 26'}];", ctx);
 
-// ── 1. Todas nacen pendientes ──
-ok('la solicitud nueva nace pendiente, sea quien sea el vendedor', /estado: 'pendiente_revision',/.test(cr) && !/Vendedor Concesionario'\) \? 'pendiente_revision' : 'activo'/.test(cr));
+// ── 1. Nacen activas (la aprobación se hizo por WhatsApp antes); solo el vendedor de concesionario va a la bandeja ──
+ok('la solicitud nace activa, salvo la del vendedor de concesionario', /Vendedor Concesionario'\) \? 'pendiente_revision' : 'activo'/.test(cr));
 ok('guarda la cuenta de la inicial que dijo el vendedor y su impresión', /inicialCuenta: WZ\.iniMetodo\|\|'', inicialRef: WZ\.iniRef\|\|''/.test(cr) && /impresionVendedor: WZ\.impresion/.test(cr));
 ok('al guardar avisa que se envió a aprobación y lleva a la bandeja', /enviada a aprobación/.test(cr) && /hasModuleAccess\('aprobaciones'\)\) \? 'aprobaciones' : 'creditos'/.test(cr));
-ok('el botón del paso 4 dice "Enviar a aprobación"', /Enviar a aprobación/.test(cr));
+S.currentUser = { uid:'u', nombre:'X', rol:'Empleado' };
+ok('el botón dice "Guardar solicitud" para el equipo y "Enviar a aprobación" solo para el vendedor de concesionario', /_wzVaAAprobaciones\(\) \? 'Enviar a aprobación' : 'Guardar solicitud'/.test(cr) && ctx._wzVaAAprobaciones() === false);
 
 // ── 2. El paso 4 no aprueba ni rechaza ──
 ok('ya no dice "Crédito Aprobado" ni "Crédito Rechazado"', cr.indexOf("'Crédito Aprobado'") === -1 && cr.indexOf("'Crédito Rechazado'") === -1);
 vm.runInContext("WZ = { scoreMotivos:[], dir_q:'Calle 1', _chip_wz_hist_g:'bueno', r1n:'Ana', documentos:[{label:'Cédula'},{label:'Selfie con cédula'},{label:'Recibo de luz'},{label:'Estado de cuenta'}] };", ctx);
 let d = ctx._wzDecisionPaso4(650);
-ok('perfil completo con buen score: lista para enviar', d.titulo === 'Lista para enviar a aprobación' && d.color === 'green' && d.faltan.length === 0 && /es una guía, no decide/.test(d.detalle));
+ok('perfil completo con buen score: lista para guardar, y dice que queda activo', d.titulo === 'Lista para guardar' && d.color === 'green' && d.faltan.length === 0 && /queda activo/.test(d.detalle) && /es una guía, no decide/.test(d.detalle));
+S.currentUser = { uid:'u', nombre:'X', rol:'Vendedor Concesionario' };
+ok('para el vendedor de concesionario sí dice que va a Aprobaciones', ctx._wzDecisionPaso4(650).titulo === 'Lista para enviar a aprobación');
+S.currentUser = { uid:'u', nombre:'X', rol:'Empleado' };
 vm.runInContext("WZ = { scoreMotivos:[], documentos:[] };", ctx);
 d = ctx._wzDecisionPaso4(650);
 ok('dice qué falta sin bloquear', /dirección/.test(d.detalle) && /créditos anteriores/.test(d.detalle) && /una referencia/.test(d.detalle) && /los documentos/.test(d.detalle) && /se puede completar después/.test(d.detalle) && d.color === 'green');

@@ -24,7 +24,7 @@ function _aprRender(){
     // KPI
     + '<div style="background:rgba(255,165,0,0.07);border:1px solid rgba(255,165,0,0.3);border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:11.5px;color:var(--ink2);line-height:1.6">'
     + '<strong style="color:var(--amber)">Bandeja de aprobaciones.</strong> '
-    + 'Toda solicitud nueva llega aquí. Al aprobar se registra la inicial y el crédito pasa a activo; al rechazar se devuelve la compra de la moto. Nadie aprueba la suya, salvo un administrador.'
+    + 'Aquí llegan las solicitudes de los vendedores de concesionario. Al aprobar se registra la inicial y el crédito pasa a activo; al rechazar se devuelve la compra de la moto. Nadie aprueba la suya, salvo un administrador.'
     + '</div>';
 
   if(pendientes.length === 0){
@@ -74,9 +74,10 @@ function _aprRender(){
   return html;
 }
 
-// 24-sep-2026, Adam: todas las solicitudes nacen pendientes y "las aprueba todos" (quien
-// tenga acceso a Aprobaciones). Una sola salvaguarda de sentido comun: nadie aprueba su
-// propia solicitud, salvo un administrador.
+// 24-sep-2026, Adam: las solicitudes se aprueban por WhatsApp antes de crearse y nacen
+// activas; aqui llegan solo las del vendedor de concesionario, y "las aprueba todos"
+// (quien tenga acceso). Una salvaguarda de sentido comun: nadie aprueba la suya, salvo
+// un administrador.
 function _aprPuedeDecidir(c){
   var u = S.currentUser || {};
   if(typeof isAdminUser==='function' && isAdminUser()) return true;
