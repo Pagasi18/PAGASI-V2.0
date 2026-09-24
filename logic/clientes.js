@@ -489,6 +489,8 @@ function verCliente(id){
         + '<div class="cf-score-l" style="color:'+scoreColor+';font-size:9px;font-weight:900;letter-spacing:.5px">'+scoreLabel+' ↻</div>'
       : '<div class="cf-score-v" style="color:var(--ink3)">—</div><div class="cf-score-l">Calcular ↻</div>'
     )
+    // El score con que se aprobo el ultimo credito no se mueve (24-sep-2026)
+    + (function(){ var u = creditos.slice().sort(function(a,b){ return String(b.fecha||'').localeCompare(String(a.fecha||'')); })[0]; var sa = u && (u.score_aprobacion || u.score_indexa); return sa ? '<div style="font-size:9px;color:var(--ink3);margin-top:4px">Al aprobar '+esc(u.id)+': <b>'+Math.round(sa)+'</b></div>' : ''; })()
     + '</div>'
     + '</div>'
     + '<div class="cf-action-btns" style="margin-top:12px">'

@@ -48,7 +48,7 @@ ok('nivel 6 suma más que nivel 1', sc({cashea_nivel:6}) > sc({cashea_nivel:1}) 
 ok('40 cuotas a tiempo suman 10', sc({cashea_nivel:0, cashea_cuotas_tiempo:'40'}) === 10);
 ok('dos o más atrasos restan 18 y bajar de nivel resta 10', sc({cashea_atrasos:'2+'}) === -18 && sc({cashea_bajo_nivel:'si'}) === -10);
 ok('sin datos no cambia nada', sc({}) === 0);
-ok('el asistente lo usa en la intención de pago', /f1\+_casheaExtraScore\(\{/.test(cr));
+ok('la fórmula única lo usa en la intención de pago', /_casheaExtraScore\(input\)/.test(src('logic/scores.js')) && /calcularScoreConCfg\(input\)/.test(cr));
 
 console.log('\n' + pass + ' OK · ' + fail + ' fallas');
 process.exit(fail ? 1 : 0);

@@ -1731,129 +1731,59 @@ function _wzAddrSelect(i){
 // ── Documento handler ──
 
 function _wzScore(){
-  var g=function(id){var el=document.getElementById(id);return el?el.value:'';};
-  var ing = parseFloat(g('wz_ing'))||0;
-  var ifam = parseFloat(g('wz_ifam'))||0;
-  var emp = _wzChipVal('wz_emp_g')||g('wz_emp')||'';
-  var ant = g('wz_ant');
-  var hist = _wzChipVal('wz_hist_g')||'ninguno';
-  var deuda = _wzChipVal('wz_deuda_g')||'no';
-  var dep = parseInt(_wzChipVal('wz_dep_g')||0);
-  var banco = g('wz_banco')||'activa';
-  var viv = g('wz_viv')||'propia';
-  var rem = g('wz_rem')||'no';
-  var uso = g('wz_uso')||'personal';
-  var conocio = g('wz_conocio')||'';
-  var cashea = (document.querySelector('input[name="wz_cashea"]:checked')||{value:'no'}).value;
-  var casheaNivel = parseInt(g('wz_cashea_nivel'))||0;
-  var casheaEstado = g('wz_cashea_estado')||'';
-  var casheaDeuda = g('wz_cashea_deuda')||'no';
-  var casheaTotalCompras = g('wz_cashea_total_compras')||'';
-  var fiador = (document.querySelector('input[name="wz_fiador"]:checked')||{value:'no'}).value==='si';
-  var precio = WZ.precio||parseFloat(g('wz_precio'))||0;
+  // 24-sep-2026: antes leia solo la pantalla, y cada paso borra la anterior. Al llegar al
+  // paso 4 ya no existian el ingreso, la antiguedad, el banco, la vivienda ni el fiador
+  // del paso 1 y 2: la formula recibia ingreso 0 y "sin fiador" para TODOS, y por eso
+  // capacidad de pago daba 10 y garantias 50 en toda la cartera. Ahora cada dato se
+  // toma de la pantalla si esta, y si no, de lo que ya se recogio en WZ.
+  var v = function(id, alias){
+    var el = document.getElementById(id);
+    if(el) return el.value;
+    if(WZ[id] != null && WZ[id] !== '') return WZ[id];
+    return (alias && WZ[alias] != null) ? WZ[alias] : '';
+  };
+  var radio = function(name, alias, def){
+    var el = document.querySelector('input[name="'+name+'"]:checked');
+    if(el) return el.value;
+    return (WZ[alias] != null && WZ[alias] !== '') ? WZ[alias] : def;
+  };
+  var precio = WZ.precio||parseFloat(v('wz_precio','precio'))||0;
   var planCfg = precio>0 ? getWzPlanConfig() : null;
-  var cuotaQ = planCfg ? (parseFloat(planCfg.cuotaQ)||0) : 0;
-  var ingEf = Math.max(ing,ifam);
-  var ratio = (cuotaQ>0&&ingEf>0)?cuotaQ/ingEf:0;
-
-  var f1={ninguno:50,bueno:100,mora_leve:35,malo:5}[hist]||50;
-  if(deuda==='menores')f1=Math.max(0,f1-12);
-  else if(deuda==='graves')f1=Math.max(0,f1-35);
-  if(banco==='activa')f1=Math.min(100,f1+10);
-  else if(banco==='no')f1=Math.max(0,f1-10);
-  // Cashea: nivel base + estado actual + historial
-  if(cashea==='si'){
-    // Bonus por nivel (cliente activo Cashea)
-    // nivel, cuotas a tiempo, atrasos y bajadas de nivel: una sola cuenta (24-sep-2026)
-    f1=Math.max(0,Math.min(100,f1+_casheaExtraScore({ cashea_nivel:casheaNivel, cashea_cuotas_tiempo:g('wz_cashea_cuotas_tiempo'), cashea_atrasos:g('wz_cashea_atrasos'), cashea_bajo_nivel:g('wz_cashea_bajo_nivel') })));
-    // Estado de pago con Cashea: señal crediticia directa y fuerte
-    if(casheaEstado==='completado') f1=Math.min(100,f1+15); // canceló todo ok
-    else if(casheaEstado==='al_dia') f1=Math.min(100,f1+10); // al día
-    else if(casheaEstado==='mora_leve') f1=Math.max(0,f1-15); // mora leve
-    else if(casheaEstado==='mora_grave') f1=Math.max(0,f1-35);// mora grave (equivale a hist malo)
-    // Historial de compras: cuantas más compras sin problema = más confianza
-    if(casheaEstado!=='mora_leve' && casheaEstado!=='mora_grave'){
-      if(casheaTotalCompras==='6+') f1=Math.min(100,f1+10);
-      else if(casheaTotalCompras==='4-5') f1=Math.min(100,f1+6);
-      else if(casheaTotalCompras==='2-3') f1=Math.min(100,f1+3);
-    }
-    // Deuda activa alta con Cashea = señal de sobreendeudamiento
-    if(casheaDeuda==='si'){
-      var casheaMonto = parseFloat(g('wz_cashea_monto'))||0;
-      if(casheaMonto>500) f1=Math.max(0,f1-8);
-      else if(casheaMonto>200) f1=Math.max(0,f1-4);
-    }
-  }
-  f1=Math.max(0,Math.min(100,f1));
-
-  var ingBase={formal:80,publico:70,independiente:60,comerciante:65,delivery:70,remesas:55,informal:30};
-  // f2 usa ingreso base configurable
-  var _minB=(SCORE_CFG&&SCORE_CFG.ingreso&&SCORE_CFG.ingreso.minBase)||100;
-  var _maxB=(SCORE_CFG&&SCORE_CFG.ingreso&&SCORE_CFG.ingreso.maxBase)||3000;
-  var f2= (ingEf>=_minB) ? Math.min(100, ((ingEf-_minB)/(_maxB-_minB))*100) : 0;
-  if(emp)f2=Math.min(100,f2*(ingBase[emp]||50)/70);
-  if(dep===1)f2=Math.max(0,f2-8);
-  else if(dep===2)f2=Math.max(0,f2-18);
-  else if(dep>=3)f2=Math.max(0,f2-28);
-  if(viv==='propia')f2=Math.min(100,f2+10);
-  else if(viv==='alquilada')f2=Math.max(0,f2-8);
-  if(ratio>0){
-    var _rIdeal=(SCORE_CFG&&SCORE_CFG.ratios&&SCORE_CFG.ratios.ideal)||0.20;
-    var _rAce=(SCORE_CFG&&SCORE_CFG.ratios&&SCORE_CFG.ratios.aceptable)||0.30;
-    var _rAlto=(SCORE_CFG&&SCORE_CFG.ratios&&SCORE_CFG.ratios.alto)||0.40;
-    var _rMuy=(SCORE_CFG&&SCORE_CFG.ratios&&SCORE_CFG.ratios.muyAlto)||0.50;
-    if(ratio<=_rIdeal)f2=Math.min(100,f2+12);
-    else if(ratio<=_rAce){}
-    else if(ratio<=_rAlto)f2=Math.max(0,f2-18);
-    else if(ratio<=_rMuy)f2=Math.max(0,f2-38);
-    else f2=Math.max(0,f2-60);
-  }
-  f2=Math.max(0,Math.min(100,f2));
-
-  var empBase={formal:78,publico:70,independiente:65,comerciante:68,delivery:70,remesas:60,informal:38};
-  var antBase={'1':0,'2':10,'3':22,'5':35};
-  var f3=Math.min(100,(empBase[emp]||30)+(antBase[ant]||0));
-  if(uso==='delivery')f3=Math.min(100,f3+15);
-  else if(uso==='negocio')f3=Math.min(100,f3+7);
-  if(rem==='si'&&emp!=='remesas')f3=Math.min(100,f3+8);
-  f3=Math.max(0,Math.min(100,f3));
-
-  var f4=25;
-  if(fiador)f4=Math.min(100,f4+45);
-  if(viv==='propia')f4=Math.min(100,f4+15);
-  else if(viv==='familiar')f4=Math.min(100,f4+5);
-  if(banco==='activa')f4=Math.min(100,f4+10);
-  else if(banco==='no')f4=Math.max(0,f4-10);
-  f4=Math.max(0,Math.min(100,f4));
-
-  var f5=50;
-  if(conocio==='referido')f5=Math.min(100,f5+30);
-  else if(conocio==='anterior')f5=Math.min(100,f5+22);
-  else if(conocio==='redes')f5=Math.min(100,f5+5);
-  if(deuda==='no')f5=Math.min(100,f5+10);
-  else if(deuda==='graves')f5=Math.max(0,f5-15);
-  if(rem==='si')f5=Math.min(100,f5+8);
-  f5=Math.max(0,Math.min(100,f5));
-
-  // Hard rejects con SCORE_CFG
-  var _hr = (SCORE_CFG&&SCORE_CFG.hardReject)||{};
-  var _ingMin = _hr.ingresoMinimo||100;
-  var _ratioMax = _hr.ratioCuotaMax||0.55;
-  // nota: ratio aquí es cuota quincenal/ingreso mensual; convertimos para que sea mensual/mensual
-  var _ratioMensual = ratio*2;
-  var hardReject = (ingEf>0 && ingEf<_ingMin)
-    || (_ratioMensual>_ratioMax)
-    || (_hr.historialMaloConDeuda && hist==='malo' && deuda==='graves');
-  // Pesos configurables
-  var _p = (SCORE_CFG&&SCORE_CFG.pesos)||{f1:30,f2:30,f3:20,f4:15,f5:5};
-  var _totalPeso = (_p.f1+_p.f2+_p.f3+_p.f4+_p.f5)||100;
-  var raw=Math.round((f1*_p.f1+f2*_p.f2+f3*_p.f3+f4*_p.f4+f5*_p.f5)/_totalPeso*10);
-  var score=hardReject?300:Math.max(300,Math.min(850,Math.round(300+(raw/1000)*550)));
-
-  WZ.score=score;WZ.f1=Math.round(f1);WZ.f2=Math.round(f2);
-  WZ.f3=Math.round(f3);WZ.f4=Math.round(f4);WZ.f5=Math.round(f5);
-  WZ.ratio=ratio;WZ.ingEf=ingEf;WZ.precio=precio;
-  if(cuotaQ>0){WZ.cuota=cuotaQ;WZ.monto=planCfg ? (parseFloat(planCfg.fin)||0) : calcMoto(precio).fin; }
+  var input = {
+    ing: parseFloat(v('wz_ing','ing'))||0,
+    ifam: parseFloat(v('wz_ifam','ifam'))||0,
+    cuotaQ: planCfg ? (parseFloat(planCfg.cuotaQ)||0) : 0,
+    emp: _wzChipVal('wz_emp_g')||v('wz_emp','emp')||'',
+    ant: String(v('wz_ant','ant')||''),
+    hist: _wzChipVal('wz_hist_g')||'ninguno',
+    deuda: _wzChipVal('wz_deuda_g')||'no',
+    dep: parseInt(_wzChipVal('wz_dep_g')||0, 10)||0,
+    banco: v('wz_banco','banco')||'activa',
+    viv: v('wz_viv','viv')||'propia',
+    rem: (v('wz_rem','rem')||'no')==='si',
+    fiador: radio('wz_fiador','fiador_tiene','no')==='si',
+    tieneTel: !!(v('wz_tel','tel')),
+    tieneRef: !!(v('wz_r1n','r1n') || v('wz_r2n','r2n')),
+    uso: v('wz_uso','uso')||'personal',
+    conocio: v('wz_conocio','conocio')||'',
+    cashea: radio('wz_cashea','cashea','no'),
+    cashea_nivel: parseInt(v('wz_cashea_nivel','cashea_nivel'),10)||0,
+    cashea_estado: v('wz_cashea_estado','cashea_estado')||'',
+    cashea_total_compras: v('wz_cashea_total_compras','cashea_total_compras')||'',
+    cashea_deuda: v('wz_cashea_deuda','cashea_deuda')||'no',
+    cashea_monto: parseFloat(v('wz_cashea_monto','cashea_monto'))||0,
+    cashea_cuotas_tiempo: v('wz_cashea_cuotas_tiempo','cashea_cuotas_tiempo')||'',
+    cashea_atrasos: v('wz_cashea_atrasos','cashea_atrasos')||'',
+    cashea_bajo_nivel: v('wz_cashea_bajo_nivel','cashea_bajo_nivel')||''
+  };
+  // La misma formula que la ficha del cliente y el simulador (logic/scores.js)
+  var r = calcularScoreConCfg(input);
+  WZ.score=r.score; WZ.f1=r.f1; WZ.f2=r.f2; WZ.f3=r.f3; WZ.f4=r.f4; WZ.f5=r.f5;
+  WZ.ratio=r.ratio; WZ.ingEf=r.ingEf; WZ.precio=precio;
+  // Los datos exactos con que salio este score: se guardan con el credito para poder
+  // revisar la formula en diciembre sin adivinar que se sabia ese dia
+  WZ.scoreInput = input; WZ.scoreMotivos = r.motivosRechazo||[];
+  if(input.cuotaQ>0){ WZ.cuota=input.cuotaQ; WZ.monto=planCfg ? (parseFloat(planCfg.fin)||0) : calcMoto(precio).fin; }
   _wzActualizarPill();
 }
 
@@ -2761,6 +2691,11 @@ function _wzGuardar(){
     cobrador: (function(){ var l = getCobradoresList(); return (l && l[0]) || 'Admin'; })(),
     score_indexa: WZ.score||0,
     f1:WZ.f1, f2:WZ.f2, f3:WZ.f3, f4:WZ.f4, f5:WZ.f5,
+    // El score del dia de la aprobacion, con los datos con que salio. No se recalcula
+    // nunca: el del cliente si cambia con el tiempo, este es la foto de ese dia.
+    score_aprobacion: WZ.score||0,
+    score_aprobacion_fecha: new Date().toISOString(),
+    score_input: WZ.scoreInput||null,
     emp_tipo: WZ.emp||'',
     uso_moto: WZ.uso||'',
     notas: WZ.obs||'',
