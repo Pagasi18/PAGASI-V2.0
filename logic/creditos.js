@@ -160,23 +160,15 @@ function _wzRender(motoId){
   function scoreLbl(s){ return s>=750?'Excelente':s>=625?'Bueno':s>=450?'Regular':'Bajo'; }
 
   // ── HTML de pasos ──
-  var stepsTpl = [
-    '① Cliente',
-    '② Perfil',
-    '③ Moto',
-    '④ Resultado'
-  ].map(function(l,i){
-    var on = WZ.step === i+1;
-    var done = WZ.step > i+1;
-    return '<div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:'+(on?'700':'500')+';color:'+(on?'var(--p1)':done?'var(--green)':'var(--ink3)')+'">'+
-      '<div style="width:20px;height:20px;border-radius:50%;background:'+(on?'var(--p1)':done?'var(--green)':'var(--rim2)')+';color:'+(on||done?'#fff':'var(--ink3)')+';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">'+(done?'✓':(i+1))+'</div>'+
-      '<span style="white-space:nowrap">'+l.slice(2)+'</span></div>' +
-      (i<3?'<div style="height:1px;background:var(--rim);flex:1;min-width:8px"></div>':'');
+  var stepsTpl = ['Cliente','Perfil','Moto','Resultado'].map(function(l,i){
+    var on = WZ.step === i+1, done = WZ.step > i+1;
+    return '<div class="wz-step'+(on?' is-on':done?' is-done':'')+'"><div class="wz-step-n">'+(done?'✓':(i+1))+'</div><span>'+l+'</span></div>'
+      + (i<3 ? '<div class="wz-step-line'+(done?' is-done':'')+'"></div>' : '');
   }).join('');
 
   // ── Score pill ──
   var scorePill = WZ.score>0
-    ? '<div style="display:flex;align-items:center;gap:10px;background:var(--surf);border:1.5px solid var(--rim2);border-radius:50px;padding:7px 16px">'
+    ? '<div class="wz-pill">'
         +'<div style="font-size:22px;font-weight:900;letter-spacing:-1px;color:'+scoreCol(WZ.score)+'">'+WZ.score+'</div>'
         +'<div><div style="font-size:10px;font-weight:700;color:'+scoreCol(WZ.score)+'">'+scoreLbl(WZ.score)+'</div>'
         +'<div style="font-size:9px;color:var(--ink3)">Score Indexa /850</div></div>'
@@ -268,7 +260,7 @@ function _wzRender(motoId){
   // La sede va PRIMERO: de ella depende de donde sale el dinero de la moto (su
   // anticipo). Antes se elegia al final, venia puesta la primera de la lista y nadie la
   // cambiaba: las motos quedaban en una sede y los creditos en otra (23-sep-2026).
-  var step2 = _wzSedeHtml() + (motosDisp.length
+  var step2 = _wzSedeHtml() + '<div class="wz-card"><div class="wz-card-h"><span>La moto y su plan</span></div>' + (motosDisp.length
     ? '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px">Moto del inventario (ya comprada)</label>'
       + '<select class="fs" id="wz_moto_inv" onchange="_wzPickMotoInv(this)">'
       + '<option value="">— Ninguna: es una moto nueva del catálogo —</option>'
@@ -363,11 +355,13 @@ function _wzRender(motoId){
     // Al EDITAR no se dibuja: la compra de esta moto ya se registro hace tiempo, y lo
     // que el operario llenaba aqui se tiraba a la basura sin decir nada (el guardado de
     // la edicion pone WZ._pagosMoto = null y nunca crea el gasto). Punto 13, 22-sep-2026.
-    + (window._wzEditando ? '' : _wzDineroHtml());
+    + '</div>' + (window._wzEditando ? '' : _wzDineroHtml());
 
   // ── PASO 3: Perfil crediticio ──
   // helper para secciones
-  function _s(title){ return '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--p1);margin:18px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--rim)">'+title+'</div>'; }
+  // Cada seccion es una tarjeta (cierra la anterior y abre la suya) con su ancla para el indice
+  var _secs = [];
+  function _s(title){ _secs.push(title); return '</div><div class="wz-card" id="wz-sec-'+_secs.length+'"><div class="wz-card-h"><span>'+title+'</span></div>'; }
   function _s2(title){ return '<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);margin:12px 0 6px">'+title+'</div>'; }
   function _row2(a,b){ return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+a+b+'</div>'; }
   function _fg(label,inner){ return '<div class="fg"><label class="fsec" style="display:block;margin-bottom:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink3)">'+label+'</label>'+inner+'</div>'; }
@@ -546,43 +540,37 @@ function _wzRender(motoId){
   // ── PASO 4: Resultado ──
   var step4 = '<div id="wz-resultado-contenido">Calculando...</div>';
 
+  // Vestido de tarjetas (24-sep-2026): el paso 2 lleva un indice fijo para saltar de seccion
+  var navPerfil = '<div class="wz-nav">' + _secs.map(function(t,i){ return '<a onclick="_wzIrSeccion('+(i+1)+',this)">'+t+'</a>'; }).join('') + '</div>';
+  step1 = '<div class="wz-card">' + step1 + '</div>';
+  step3 = navPerfil + '<div class="wz-card">' + step3 + '</div>';
   var steps = [step1, step3, step2, step4];
   var current = steps[WZ.step-1];
 
   var btnBack = WZ.step > 1
-    ? '<button onclick="_wzPrev()" style="padding:11px 20px;border-radius:12px;border:1.5px solid var(--rim);background:var(--surf2);color:var(--ink2);font-family:var(--f);font-weight:700;font-size:13px;cursor:pointer">← Atrás</button>'
-    : '<button onclick="_wzClose()" style="padding:11px 20px;border-radius:12px;border:1.5px solid var(--rim);background:var(--surf2);color:var(--ink2);font-family:var(--f);font-weight:700;font-size:13px;cursor:pointer">Cancelar</button>';
+    ? '<button class="wz-btn wz-btn-g" onclick="_wzPrev()">← Atrás</button>'
+    : '<button class="wz-btn wz-btn-g" onclick="_wzClose()">Cancelar</button>';
 
   var btnNext = WZ.step < 4
-    ? '<button onclick="_wzNext()" style="padding:11px 24px;border-radius:12px;background:var(--p1);color:#fff;font-family:var(--f);font-weight:700;font-size:13px;border:none;cursor:pointer;box-shadow:0 2px 10px rgba(37,99,235,.25)">'+(WZ.step===3?'Calcular Score →':'Siguiente →')+'</button>'
-    : '<button onclick="_wzGuardar()" style="padding:11px 24px;border-radius:12px;background:var(--green);color:#fff;font-family:var(--f);font-weight:700;font-size:13px;border:none;cursor:pointer"> Guardar Solicitud</button>';
+    ? '<button class="wz-btn wz-btn-p" onclick="_wzNext()">'+(WZ.step===3?'Calcular score →':'Siguiente →')+'</button>'
+    : '<button class="wz-btn wz-btn-ok" onclick="_wzGuardar()">Guardar solicitud</button>';
 
   ov.innerHTML =
-    // Header
-    '<div style="position:sticky;top:0;z-index:10;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--rim);padding:0 20px">'
-    + '<div style="max-width:680px;margin:0 auto;display:flex;align-items:center;gap:12px;height:56px">'
-    + '<button onclick="_wzClose()" style="width:32px;height:32px;border-radius:50%;border:1px solid var(--rim);background:var(--surf2);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--ink3);flex-shrink:0">✕</button>'
-    + '<div style="flex:1"><div style="font-size:15px;font-weight:800;letter-spacing:-.3px">Nueva Solicitud</div><div style="font-size:11px;color:var(--ink3)">Paso '+WZ.step+' de 4</div></div>'
-    + '<div data-wz-header>'
-    + scorePill
-    + '</div>'
-    + '</div>'
-    // Steps indicator
-    + '<div style="max-width:680px;margin:0 auto;display:flex;align-items:center;gap:6px;padding:10px 0">'
-    + stepsTpl
-    + '</div></div>'
-    // Body
-    + '<div style="max-width:680px;margin:0 auto;padding:20px 20px 100px">'
-    + '<div style="font-size:16px;font-weight:800;margin-bottom:4px;letter-spacing:-.3px">'+['Datos del Cliente','Perfil Crediticio','Motocicleta','Resultado'][WZ.step-1]+'</div>'
-    + '<div style="font-size:12px;color:var(--ink3);margin-bottom:18px">'+['Información personal y laboral','Historial y capacidad de pago','¿Qué moto quiere financiar?','Score Indexa y resumen'][WZ.step-1]+'</div>'
+    '<div class="wz-head"><div class="wz-head-in">'
+    + '<button class="wz-x" onclick="_wzClose()" title="Cerrar">✕</button>'
+    + '<div style="flex:1;min-width:0"><div class="wz-title">'+(window._wzEditando ? 'Editar solicitud' : 'Nueva solicitud')+'</div><div class="wz-sub">Paso '+WZ.step+' de 4 · '+['Datos del cliente','Perfil crediticio','Motocicleta','Resultado'][WZ.step-1]+'</div></div>'
+    + '<div data-wz-header>'+scorePill+'</div>'
+    + '</div><div class="wz-steps">'+stepsTpl+'</div></div>'
+    + '<div class="wz-body">'
+    + '<div class="wz-h1">'+['Datos del cliente','Perfil crediticio','Motocicleta','Resultado'][WZ.step-1]+'</div>'
+    + '<div class="wz-h2">'+['Información personal y laboral','Historial y capacidad de pago','¿Qué moto quiere financiar?','Score Indexa y resumen'][WZ.step-1]+'</div>'
     + current
     + '</div>'
-    // Footer fijo
-    + '<div style="position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-top:1px solid var(--rim);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;z-index:11">'
+    + '<div class="wz-foot"><div class="wz-foot-in">'
     + btnBack
-    + '<div style="font-size:11px;color:var(--ink3)">'+WZ.step+' / 4</div>'
+    + '<div class="wz-foot-mid">'+WZ.step+' / 4</div>'
     + btnNext
-    + '</div>';
+    + '</div></div>';
 
   setTimeout(function(){ _wzHydrate(); _wzHydrateDocsUI(); }, 0);
   // Inicializar preview financiero si hay precio (ahora en paso 3 = moto)
@@ -1082,9 +1070,9 @@ function _wzSedeHtml(){
   if(disp.length === 1){
     // Al EDITAR no se pisa la sede que traia el credito (punto 14, 22-sep-2026)
     if(!(window._wzEditando && WZ.concesionarioId)) WZ.concesionarioId = disp[0].id;
-    return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:14px 16px;margin-bottom:14px">'
+    return '<div class="wz-card">'
       + '<div style="display:flex;justify-content:space-between;align-items:center">'
-      + '<div><div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1)">Concesionario</div>'
+      + '<div><div class="wz-card-h" style="margin:0 0 4px"><span>Concesionario</span></div>'
       + '<div style="font-size:13.5px;font-weight:700;margin-top:3px">'+_wzEsc(disp[0].nombre)+(disp[0].ciudad?' · '+_wzEsc(disp[0].ciudad):'')+'</div></div>'
       + '<span style="background:rgba(0,184,118,.15);color:var(--green);padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700">SEDE ÚNICA</span>'
       + '</div>'
@@ -1096,8 +1084,8 @@ function _wzSedeHtml(){
   var elegida = WZ.concesionarioId ? String(WZ.concesionarioId) : '';
   if(elegida && !disp.some(function(c){ return String(c.id)===elegida; })) elegida = '';
   WZ.concesionarioId = elegida;
-  return '<div style="background:var(--surf);border:1.5px solid var(--p1);border-radius:14px;padding:14px 16px;margin-bottom:14px">'
-    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:9px">¿De qué concesionario sale la moto? *</div>'
+  return '<div class="wz-card wz-card-accent">'
+    + '<div class="wz-card-h"><span>¿De qué concesionario sale la moto? *</span></div>'
     + '<select class="fs" id="wz_concesionario_id" onchange="_wzSetSede(this.value)" style="font-size:13px;font-weight:700">'
     + '<option value=""'+(elegida?'':' selected')+'>— Elegir concesionario —</option>'
     + disp.map(function(c){
@@ -1116,8 +1104,8 @@ function _wzSetSede(v){
 // La tarjeta "El dinero de esta venta" (solo al crear)
 function _wzDineroHtml(){
   var esVendConc = (S.currentUser&&S.currentUser.rol)==='Vendedor Concesionario';
-  return '<div id="wz-dinero" style="margin-top:16px;background:var(--surf);border:1.5px solid var(--p1);border-radius:14px;padding:14px 16px">'
-    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">El dinero de esta venta</div>'
+  return '<div id="wz-dinero" class="wz-card wz-card-accent">'
+    + '<div class="wz-card-h"><span>El dinero de esta venta</span></div>'
     + '<div class="fgr">'
     +   '<div class="fg"><label id="wz_ini_lbl">¿Dónde pagó el cliente la inicial? *</label>'
     +   '<select class="fs" id="wz_ini_metodo" onchange="WZ.iniMetodo=this.value;_wzMpagoSync()">'+_wzIniMetodoOpts()+'</select></div>'
@@ -1286,12 +1274,9 @@ function _wzResumenDineroHTML(r){
     }
   }
   if(!filas.length) return '';
-  return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:16px;margin-bottom:12px">'
-    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">'+(window._wzEditando ? 'Sede' : 'El dinero de esta venta')+'</div>'
-    + filas.map(function(f){
-        return '<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--rim2);font-size:12.5px">'
-          + '<span style="color:var(--ink3);flex-shrink:0">'+f[0]+'</span><span style="font-weight:700;text-align:right">'+f[1]+'</span></div>';
-      }).join('')
+  return '<div class="wz-card">'
+    + '<div class="wz-card-h"><span>'+(window._wzEditando ? 'Sede' : 'El dinero de esta venta')+'</span></div>'
+    + filas.map(function(f){ return '<div class="wz-row"><span style="flex-shrink:0">'+f[0]+'</span><span>'+f[1]+'</span></div>'; }).join('')
     + '<div style="font-size:11px;color:var(--ink3);margin-top:8px">Para cambiar algo, vuelve al paso 3 con “← Atrás”.</div>'
     + '</div>';
 }
@@ -2005,6 +1990,12 @@ function _wzNext(){
   WZ.step = Math.min(WZ.totalSteps, WZ.step+1);
   _wzRender();
 }
+// El indice del paso 2: lleva a la tarjeta y la marca (24-sep-2026)
+function _wzIrSeccion(n, chip){
+  var el = document.getElementById('wz-sec-'+n);
+  if(el && el.scrollIntoView) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  var nav = chip && chip.parentNode; if(nav) Array.prototype.forEach.call(nav.children, function(a){ a.classList.toggle('is-on', a===chip); });
+}
 function _wzPrev(){
   _wzCollectVisibleValues();
   WZ.step = Math.max(1, WZ.step-1);
@@ -2033,16 +2024,15 @@ function _wzRenderResultado(){
 
   el.innerHTML =
     // Decisión
-    '<div style="background:'+decClass+';border:1.5px solid '+decBorder+';border-radius:16px;padding:20px;text-align:center;margin-bottom:14px">'
-    +'<div style="font-size:36px;margin-bottom:6px">'+decIco+'</div>'
-    +'<div style="font-size:19px;font-weight:900;color:'+col(s)+';margin-bottom:5px">'+decTxt+'</div>'
-    +'<div style="font-size:12.5px;opacity:.8;max-width:340px;margin:0 auto;line-height:1.55">'+decSub+'</div>'
+    '<div class="wz-dec" style="background:'+decClass+';border-color:'+decBorder+'">'
+    +'<div class="wz-dec-t" style="color:'+col(s)+'">'+decTxt+'</div>'
+    +'<div class="wz-dec-s">'+decSub+'</div>'
     +'</div>'
-    // Score ring (simplificado)
-    +'<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:18px;display:flex;align-items:center;gap:16px;margin-bottom:12px">'
-    +'<div style="text-align:center;flex-shrink:0">'
-    +'<div style="font-size:48px;font-weight:900;letter-spacing:-2px;color:'+col(s)+'">'+s+'</div>'
-    +'<div style="font-size:10px;color:var(--ink3);font-weight:700">/850 · '+lbl(s)+'</div>'
+    // Score y sus factores
+    +'<div class="wz-card wz-score">'
+    +'<div style="text-align:center;flex-shrink:0;min-width:110px">'
+    +'<div class="wz-score-n" style="color:'+col(s)+'">'+s+'</div>'
+    +'<div class="wz-score-l">/850 · '+lbl(s)+'</div>'
     +'</div>'
     +'<div style="flex:1">'
     // Barras de factores
@@ -2055,8 +2045,8 @@ function _wzRenderResultado(){
     }).join('')
     +'</div></div>'
     // Resumen del cliente
-    +'<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:16px;margin-bottom:12px">'
-    +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Resumen del Solicitante</div>'
+    +'<div class="wz-card">'
+    +'<div class="wz-card-h"><span>Resumen del solicitante</span></div>'
     +[
       ['Cliente', WZ.nom||'—'],
       ['Cédula', WZ.ci||'—'],
@@ -2065,13 +2055,18 @@ function _wzRenderResultado(){
       ['Empleo', WZ.emp||'—'],
       ['Ingreso', '$'+(WZ.ing||0)+'/mes'],
     ].map(function(row){
-      return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--rim2);font-size:12.5px"><span style="color:var(--ink3)">'+row[0]+'</span><span style="font-weight:700">'+row[1]+'</span></div>';
+      return '<div class="wz-row"><span>'+row[0]+'</span><span>'+row[1]+'</span></div>';
     }).join('')
     +'</div>'
     // Plan de financiamiento
     +(WZ.precio>0?
-      '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:16px;margin-bottom:12px">'
-      +'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Plan de Crédito · Pagasi</div>'
+      '<div class="wz-card">'
+      +'<div class="wz-card-h"><span>Plan de crédito · Pagasi</span></div>'
+      // Lo que el cliente va a pagar, grande, como en la pagina
+      +'<div style="display:grid;grid-template-columns:1.15fr 1fr;gap:14px;padding:14px 16px;border-radius:14px;background:var(--gs);border:1px solid var(--rim2);margin-bottom:12px">'
+      +'<div><div class="wz-score-l" style="margin:0 0 4px">Cuota quincenal</div><div style="font-size:30px;font-weight:900;letter-spacing:-1px;color:var(--p1)">$'+r.cuotaQ.toFixed(2)+'</div><div style="font-size:11px;color:var(--ink3)">'+(r.totalCuotas||((r.plazo||0)*2))+' pagos · '+(r.plazo||0)+' meses</div></div>'
+      +'<div style="border-left:1px solid var(--rim2);padding-left:14px"><div class="wz-score-l" style="margin:0 0 4px">Inicial</div><div style="font-size:26px;font-weight:900;letter-spacing:-1px;color:var(--ink)">$'+r.ini.toFixed(0)+'</div><div style="font-size:11px;color:var(--ink3)">financia $'+r.fin.toFixed(0)+'</div></div>'
+      +'</div>'
       +[
         ['Modelo', WZ.motoModelo||'—'],
         ['Precio catálogo', '$'+WZ.precio.toFixed(0)],
@@ -2079,12 +2074,12 @@ function _wzRenderResultado(){
         [r.mode==='custom'?'Inicial real':'Inicial ('+((r.inicialPct||0)*100).toFixed(0)+'%)', '$'+r.ini.toFixed(0)],
         ['Monto a financiar', '$'+r.fin.toFixed(0)],
         ['Cuota quincenal', '$'+r.cuotaQ.toFixed(2)],
-        ['Cuota / Ingreso', WZ.ratio>0?(WZ.ratio*100).toFixed(0)+'%':'—'],
+        ['Cuota mensual / ingreso', WZ.ratio>0?(WZ.ratio*100).toFixed(0)+'%':'—'],
         ['Plazo', (r.plazo||0)+' meses'],
         ['Total a pagar', '$'+r.totalPagado.toFixed(0)],
       ].map(function(row){
-        var col2color = (row[0]==='Cuota / Ingreso') ? ratioColor : 'var(--ink)';
-        return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--rim2);font-size:12.5px"><span style="color:var(--ink3)">'+row[0]+'</span><span style="font-weight:700;color:'+col2color+'">'+row[1]+'</span></div>';
+        var col2color = (row[0]==='Cuota mensual / ingreso') ? ratioColor : 'var(--ink)';
+        return '<div class="wz-row"><span>'+row[0]+'</span><span style="color:'+col2color+'">'+row[1]+'</span></div>';
       }).join('')
       +'</div>'
       // Editando: la inicial ya se cobro (o no) hace tiempo. Pedir cuenta y referencia
@@ -2191,8 +2186,8 @@ function _wzInicialRealHTML(credId){
   } else {
     cuerpo = '<div style="font-size:12.5px;color:var(--red);font-weight:700">No hay ninguna inicial registrada en este crédito.</div>';
   }
-  return '<div style="background:var(--surf);border:1px solid var(--rim);border-radius:14px;padding:16px;margin-bottom:12px">'
-    + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--p1);margin-bottom:10px">Inicial ya cobrada</div>'
+  return '<div class="wz-card">'
+    + '<div class="wz-card-h"><span>Inicial ya cobrada</span></div>'
     + cuerpo
     + '<div style="font-size:11px;color:var(--ink3);margin-top:8px;line-height:1.5">Esto es lo que entró de verdad. Desde aquí no se toca: si hay que corregir el monto, la fecha o la cuenta, se hace en <b>Cobranza</b>, sobre ese pago.</div>'
     + '</div>';
