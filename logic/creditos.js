@@ -7,6 +7,78 @@ var WZ = {
   cuota:0, ratio:0, monto:0, precio:0, plazo:0, ini:0, ing:0
 };
 
+
+// ══════════════════════════════════════════════════════════════════════
+// CASHEA: LO QUE LA APP LE MUESTRA AL CLIENTE
+// 24-sep-2026, los empleados le pidieron a Adam "más data de Cashea". Cashea es la
+// mejor referencia crediticia que tiene un cliente en Venezuela: la app le enseña
+// su nivel, su línea, su cupo y cuántas cuotas ha pagado a tiempo. Todo eso se
+// puede ver en el teléfono del cliente en la misma visita.
+// Una sola lista: el formulario de la solicitud, el de la ficha del cliente, la
+// ficha, el guardado y la edición la recorren. Antes cada dato de Cashea se copiaba
+// a mano en diez sitios y era fácil que uno se quedara sin guardar.
+// Los niveles son los del Club Cashea Más (6, con nombre propio). Antes el sistema
+// ofrecía 4 con nombres inventados (Bronce, Plata, Oro).
+// ══════════════════════════════════════════════════════════════════════
+var CASHEA_NIVELES = [[1,'Semilla'],[2,'Raíz'],[3,'Hoja'],[4,'Tronco'],[5,'Árbol'],[6,'Araguaney']];
+var CASHEA_EXTRA = [
+  { k:'cashea_linea',           et:'Línea de crédito (USD)',           tipo:'number', ph:'Ej: 600' },
+  { k:'cashea_cupo',            et:'Cupo disponible (USD)',            tipo:'number', ph:'Ej: 350' },
+  { k:'cashea_cuotas_tiempo',   et:'Cuotas pagadas a tiempo',          tipo:'number', ph:'Ej: 24', score:true },
+  { k:'cashea_total_pagado',    et:'Total pagado a Cashea (USD)',      tipo:'number', ph:'Ej: 1200' },
+  { k:'cashea_atrasos',         et:'Atrasos en el último año',         tipo:'sel', score:true, ops:[['','—'],['0','Ninguno'],['1','Uno'],['2+','Dos o más']] },
+  { k:'cashea_bajo_nivel',      et:'¿Bajó de nivel por atraso?',       tipo:'sel', score:true, ops:[['','—'],['no','No'],['si','Sí']] },
+  { k:'cashea_compras_activas', et:'Compras en curso',                 tipo:'number', ph:'Ej: 2' },
+  { k:'cashea_antiguedad',      et:'Tiempo usando Cashea',             tipo:'sel', ops:[['','—'],['<6m','Menos de 6 meses'],['6-12m','6 meses a 1 año'],['1-2a','1 a 2 años'],['2a+','Más de 2 años']] },
+  { k:'cashea_prox_fecha',      et:'Próxima cuota: fecha',             tipo:'date' },
+  { k:'cashea_prox_monto',      et:'Próxima cuota: monto (USD)',       tipo:'number', ph:'Ej: 45' },
+  { k:'cashea_verificado',      et:'¿Cómo confirmaste estos datos?',   tipo:'sel', solo:true, ops:[['','Seleccionar...'],['app','Lo vi en la app del cliente'],['captura','Me mandó una captura'],['dicho','Solo me lo dijo el cliente']] }
+];
+function _casheaIds(){ return CASHEA_EXTRA.map(function(f){ return 'wz_'+f.k; }); }
+function _casheaKeys(){ return CASHEA_EXTRA.map(function(f){ return f.k; }); }
+function _casheaNivelNombre(n){ var x = CASHEA_NIVELES.filter(function(p){ return String(p[0])===String(n); })[0]; return x ? 'Nivel '+x[0]+' — '+x[1] : (n ? 'Nivel '+n : ''); }
+function _casheaNivelOpts(){
+  return '<option value="">Seleccionar...</option>' + CASHEA_NIVELES.map(function(p){ return '<option value="'+p[0]+'">Nivel '+p[0]+' — '+p[1]+'</option>'; }).join('');
+}
+function _casheaEtiqueta(k, v){
+  var f = CASHEA_EXTRA.filter(function(x){ return x.k===k; })[0];
+  if(!f || v==null || v==='') return '';
+  if(f.ops){ var o = f.ops.filter(function(p){ return String(p[0])===String(v); })[0]; return o ? o[1] : String(v); }
+  return String(v);
+}
+// El trozo del formulario. h = las ayudas locales de cada formulario (_row2, _fg, _sel, _inp, _s2)
+function _casheaExtraHtml(h){
+  var campo = function(f){
+    var extra = f.score ? (f.tipo==='sel' ? '_wzScore()' : 'oninput="_wzScore()"') : '';
+    if(f.tipo==='sel') return h.fg(f.et, h.sel('wz_'+f.k, f.ops.map(function(p){ return '<option value="'+p[0]+'">'+p[1]+'</option>'; }).join(''), extra));
+    return h.fg(f.et, h.inp('wz_'+f.k, f.tipo, f.ph||'', extra));
+  };
+  var pares = CASHEA_EXTRA.filter(function(f){ return !f.solo; }), out = h.s2('Lo que muestra la app de Cashea');
+  for(var i=0;i<pares.length;i+=2) out += h.row2(campo(pares[i]), pares[i+1] ? campo(pares[i+1]) : '');
+  CASHEA_EXTRA.filter(function(f){ return f.solo; }).forEach(function(f){ out += '<div style="margin-bottom:10px">'+campo(f)+'</div>'; });
+  return out;
+}
+// Lo que se guarda (en el cliente y en el crédito). Con base, lo vacío conserva lo que ya había.
+function _casheaExtraDatos(base){
+  var o = {};
+  CASHEA_EXTRA.forEach(function(f){
+    var v = (typeof WZ!=='undefined' && WZ) ? WZ[f.k] : undefined;
+    if((v==null || v==='') && base) v = base[f.k];
+    if(f.tipo==='number') o[f.k] = parseFloat(v)||0; else o[f.k] = (v==null ? '' : String(v));
+  });
+  return o;
+}
+// Lo que suma o resta al factor "intención de pago" del score
+function _casheaExtraScore(v){
+  var d = 0, n = parseInt(v.cashea_nivel,10)||0;
+  d += n>=5 ? 15 : n>=3 ? 12 : n>=2 ? 7 : n>=1 ? 3 : 0;
+  var ct = parseInt(v.cashea_cuotas_tiempo,10)||0;
+  d += ct>=40 ? 10 : ct>=20 ? 7 : ct>=10 ? 4 : 0;
+  if(v.cashea_atrasos==='0') d += 5; else if(v.cashea_atrasos==='1') d -= 6; else if(v.cashea_atrasos==='2+') d -= 18;
+  if(v.cashea_bajo_nivel==='si') d -= 10;
+  return d;
+}
+
 function openAddCred(motoId=null){
   // La compania que ya no vende no abre solicitudes nuevas (23-sep-2026). El boton
   // se esconde, pero la puerta se cierra AQUI: al asistente se llega tambien desde
@@ -389,7 +461,7 @@ function _wzRender(motoId){
   )+'</div>'
   +'<div id="wz_cashea_det" style="display:none;background:var(--surf2);border:1px solid var(--rim);border-radius:12px;padding:12px">'
   +_row2(
-    _fg('Nivel Cashea',_sel('wz_cashea_nivel','<option value="">Seleccionar...</option><option value="1">Nivel 1 — Básico</option><option value="2">Nivel 2 — Bronce</option><option value="3">Nivel 3 — Plata</option><option value="4">Nivel 4 — Oro</option>','_wzScore()')),
+    _fg('Nivel Cashea',_sel('wz_cashea_nivel',_casheaNivelOpts(),'_wzScore()')),
     _fg('Estado con Cashea',_sel('wz_cashea_estado','<option value="">Seleccionar...</option><option value="al_dia">Al día</option><option value="mora_leve">Mora < 30 días</option><option value="mora_grave">Mora > 30 días</option><option value="completado">Ya canceló todo</option>','_wzScore()'))
   )
   +_row2(
@@ -410,6 +482,7 @@ function _wzRender(motoId){
     _fg('Fecha de compra',_inp('wz_cashea_ultima_fecha','date','')),
     _fg('Total compras con Cashea',_sel('wz_cashea_total_compras','<option value="">—</option><option value="1">1 producto</option><option value="2-3">2 a 3 productos</option><option value="4-5">4 a 5 productos</option><option value="6+">6 o más</option>','_wzScore()'))
   )
+  +_casheaExtraHtml({row2:_row2, fg:_fg, sel:_sel, inp:_inp, s2:_s2})
   +_fg('Observaciones sobre Cashea',_inp('wz_cashea_obs','text','Ej: Cliente con buen historial, pagó iPhone sin atrasos...'))
   +'</div>'
 
@@ -734,7 +807,7 @@ function _wzHydrate(){
     // Selector moto inventario
     'wz_moto_inv',
     // Referencia de la inicial (la cuenta se marca sola al pintar el desplegable)
-    'wz_ini_ref'];
+    'wz_ini_ref'].concat(_casheaIds());
   ids.forEach(function(id){
     var el=document.getElementById(id);
     if(!el) return;
@@ -819,6 +892,7 @@ function _wzCollectVisibleValues(){
     wz_ini_metodo:'iniMetodo', wz_ini_ref:'iniRef', wz_mpago_resto:'_mpagoCuentaResto',
     wz_cat_marca:'catMarca', wz_cat_modelo:'catModelo', wz_cat_precio:'catPrecio'
   };
+  CASHEA_EXTRA.forEach(function(f){ alias['wz_'+f.k] = f.k; });
   Array.from(ov.querySelectorAll('input[id^="wz_"],select[id^="wz_"],textarea[id^="wz_"]')).forEach(function(el){
     var id = el.id;
     if(!id || el.type==='radio' || el.type==='checkbox') return;
@@ -856,10 +930,10 @@ function _wzPickCliente(sel){
   WZ.clienteSel = id || '';
   if(!id){
     // Limpiar TODOS los campos al deseleccionar
-    var keys = ['nom','ci','tel','wa','email','ciudad','emp','ant','ing','ifam','conocio','viv','tdir','estado_ubi','ciudad_res','dir_det','dir_q','empresa','cargo','rem','dep','hist','deuda','banco','banco_nm','banco_cobro','cuenta','ahorro','cashea','cashea_nivel','cashea_pago','cashea_estado','cashea_deuda','cashea_monto','cashea_cuotas_pend','cashea_ultimo_art','cashea_ultimo_monto','cashea_ultima_fecha','cashea_total_compras','cashea_obs','fiador_tiene','fiador_nom','fiador_tel','fiador_ci','fiador_rel','r1n','r1t','r1r','r1obs','r2n','r2t','r2r','r2obs','impresion','obs'];
+    var keys = ['nom','ci','tel','wa','email','ciudad','emp','ant','ing','ifam','conocio','viv','tdir','estado_ubi','ciudad_res','dir_det','dir_q','empresa','cargo','rem','dep','hist','deuda','banco','banco_nm','banco_cobro','cuenta','ahorro','cashea','cashea_nivel','cashea_pago','cashea_estado','cashea_deuda','cashea_monto','cashea_cuotas_pend','cashea_ultimo_art','cashea_ultimo_monto','cashea_ultima_fecha','cashea_total_compras','cashea_obs','fiador_tiene','fiador_nom','fiador_tel','fiador_ci','fiador_rel','r1n','r1t','r1r','r1obs','r2n','r2t','r2r','r2obs','impresion','obs'].concat(_casheaKeys());
     keys.forEach(function(k){ WZ[k]=''; });
     // Limpiar también todos los aliases wz_*
-    var wzKeys = ['wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_viv','wz_tdir','wz_terremoto','wz_terremoto_danos','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_impresion','wz_obs'];
+    var wzKeys = ['wz_nom','wz_ci','wz_tel','wz_wa','wz_email','wz_ciudad','wz_emp','wz_ant','wz_ing','wz_ifam','wz_conocio','wz_viv','wz_tdir','wz_terremoto','wz_terremoto_danos','wz_estado','wz_ciudad_res','wz_dir_det','wz_dir_q','wz_empresa','wz_cargo','wz_rem','wz_banco','wz_banco_nm','wz_banco_cobro','wz_cuenta','wz_ahorro','wz_cashea_nivel','wz_cashea_pago','wz_cashea_estado','wz_cashea_deuda','wz_cashea_monto','wz_cashea_cuotas_pend','wz_cashea_ultimo_art','wz_cashea_ultimo_monto','wz_cashea_ultima_fecha','wz_cashea_total_compras','wz_cashea_obs','wz_fiador_nom','wz_fiador_tel','wz_fiador_ci','wz_fiador_rel','wz_r1n','wz_r1t','wz_r1r','wz_r1obs','wz_r2n','wz_r2t','wz_r2r','wz_r2obs','wz_impresion','wz_obs'].concat(_casheaIds());
     wzKeys.forEach(function(k){ WZ[k]=''; });
     // Limpiar chips
     WZ['_chip_wz_emp_g']=WZ['_chip_wz_dep_g']=WZ['_chip_wz_hist_g']=WZ['_chip_wz_deuda_g']=WZ['_chip_wz_impresion_g']='';
@@ -915,6 +989,7 @@ function _wzPickCliente(sel){
   WZ.cashea_ultima_fecha = WZ.wz_cashea_ultima_fecha = c.cashea_ultima_fecha || '';
   WZ.cashea_total_compras = WZ.wz_cashea_total_compras = c.cashea_total_compras || '';
   WZ.cashea_obs = WZ.wz_cashea_obs = c.cashea_obs || '';
+  CASHEA_EXTRA.forEach(function(f){ WZ[f.k] = WZ['wz_'+f.k] = (c[f.k]==null ? '' : c[f.k]); });
   // Fiador
   WZ.fiador_tiene = c.fiador || 'no';
   WZ.fiador_nom = WZ.wz_fiador_nom = c.fiador_nom || '';
@@ -1689,7 +1764,8 @@ function _wzScore(){
   // Cashea: nivel base + estado actual + historial
   if(cashea==='si'){
     // Bonus por nivel (cliente activo Cashea)
-    f1=Math.min(100,f1+(casheaNivel>=3?12:casheaNivel>=2?7:3));
+    // nivel, cuotas a tiempo, atrasos y bajadas de nivel: una sola cuenta (24-sep-2026)
+    f1=Math.max(0,Math.min(100,f1+_casheaExtraScore({ cashea_nivel:casheaNivel, cashea_cuotas_tiempo:g('wz_cashea_cuotas_tiempo'), cashea_atrasos:g('wz_cashea_atrasos'), cashea_bajo_nivel:g('wz_cashea_bajo_nivel') })));
     // Estado de pago con Cashea: señal crediticia directa y fuerte
     if(casheaEstado==='completado') f1=Math.min(100,f1+15); // canceló todo ok
     else if(casheaEstado==='al_dia') f1=Math.min(100,f1+10); // al día
@@ -1977,6 +2053,7 @@ function _wzValidar(){
     WZ.cashea_ultima_fecha = g('wz_cashea_ultima_fecha');
     WZ.cashea_total_compras = g('wz_cashea_total_compras');
     WZ.cashea_obs = g('wz_cashea_obs');
+    CASHEA_EXTRA.forEach(function(f){ WZ[f.k] = WZ['wz_'+f.k] = g('wz_'+f.k); });
     WZ.fiador_tiene = (document.querySelector('input[name="wz_fiador"]:checked')||{value:'no'}).value;
     WZ.fiador_nom = g('wz_fiador_nom');
     WZ.fiador_tel = g('wz_fiador_tel');
@@ -2404,6 +2481,7 @@ function _wzGuardar(){
     cashea_ultima_fecha: WZ.cashea_ultima_fecha||'',
     cashea_total_compras: WZ.cashea_total_compras||'',
     cashea_obs: WZ.cashea_obs||'',
+    ..._casheaExtraDatos(),
     fiador: WZ.fiador_tiene||'no',
     fiador_nom: WZ.fiador_nom||'',
     fiador_tel: WZ.fiador_tel||'',
@@ -2563,6 +2641,7 @@ function _wzGuardar(){
         cashea_ultima_fecha: WZ.cashea_ultima_fecha||S.creds[_ei].cashea_ultima_fecha||'',
         cashea_total_compras: WZ.cashea_total_compras||S.creds[_ei].cashea_total_compras||'',
         cashea_obs: WZ.cashea_obs||S.creds[_ei].cashea_obs||'',
+        ..._casheaExtraDatos(S.creds[_ei]),
         score: WZ.score||S.creds[_ei].score||0,
         concesionarioId: WZ.concesionarioId||S.creds[_ei].concesionarioId||'',
         f1: WZ.f1||S.creds[_ei].f1||'',
@@ -2720,6 +2799,7 @@ function _wzGuardar(){
     cashea_ultimo_art: WZ.cashea_ultimo_art||'', cashea_ultimo_monto: WZ.cashea_ultimo_monto||0,
     cashea_ultima_fecha: WZ.cashea_ultima_fecha||'',
     cashea_total_compras: WZ.cashea_total_compras||'', cashea_obs: WZ.cashea_obs||'',
+    ..._casheaExtraDatos(),
     // ── Paso 2: Fiador ──
     fiador_tiene: WZ.fiador_tiene||'no', fiador_nom: WZ.fiador_nom||'',
     fiador_tel: WZ.fiador_tel||'', fiador_ci: WZ.fiador_ci||'', fiador_rel: WZ.fiador_rel||'',
@@ -3471,6 +3551,7 @@ function editarCredSinFirma(credId){
   preload['wz_cashea_ultima_fecha'] = _f('cashea_ultima_fecha','cashea_ultima_fecha',''); preload.cashea_ultima_fecha = preload['wz_cashea_ultima_fecha'];
   preload['wz_cashea_total_compras'] = _f('cashea_total_compras','cashea_total_compras',''); preload.cashea_total_compras = preload['wz_cashea_total_compras'];
   preload['wz_cashea_obs'] = _f('cashea_obs','cashea_obs',''); preload.cashea_obs = preload['wz_cashea_obs'];
+  CASHEA_EXTRA.forEach(function(f){ preload['wz_'+f.k] = _f(f.k, f.k, ''); preload[f.k] = preload['wz_'+f.k]; });
   // Fiador
   preload.fiador_tiene = _f('fiador_tiene','fiador','no');
   preload['wz_fiador_nom'] = _f('fiador_nom','fiador_nom',''); preload.fiador_nom = preload['wz_fiador_nom'];
