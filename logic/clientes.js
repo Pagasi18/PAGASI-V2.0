@@ -1459,7 +1459,12 @@ function _cliInitFromCliente(c){
   WZ.cashea_obs = WZ.wz_cashea_obs = c.cashea_obs || '';
   CASHEA_EXTRA.forEach(function(f){ WZ[f.k] = WZ['wz_'+f.k] = (c[f.k]==null ? '' : c[f.k]); });
   PERFIL_EXTRA.forEach(function(f){ WZ[f.k] = WZ['wz_'+f.k] = (c[f.k]==null ? '' : c[f.k]); });
-  WZ.fiador_tiene = c.fiador || 'no';
+  // 27-sep-2026: la web guarda el nombre del fiador aunque el cliente no haya puesto su
+  // telefono ("No se esto, siguiente"), pero sin fiador:'si' (las Reglas piden nombre y
+  // telefono para eso). Con 'no' el bloque quedaba cerrado y el empleado no veia el nombre
+  // que ya escribio el cliente. Se abre igual que en la ficha (verCliente): el empleado le
+  // pide el telefono o lo pasa a "No".
+  WZ.fiador_tiene = c.fiador || (String(c.fiador_nom||'').trim() ? 'si' : 'no');
   WZ.fiador_nom = WZ.wz_fiador_nom = c.fiador_nom || '';
   WZ.fiador_rif = WZ.wz_fiador_rif = c.fiador_rif || '';
   WZ.fiador_dir = WZ.wz_fiador_dir = c.fiador_dir || '';

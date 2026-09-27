@@ -168,6 +168,19 @@ setTimeout(function(){
   ctx._wzCliPick('WEB-23456789');
   ok('las pistas escapan lo que escribió el cliente', paso(3).indexOf('<img src=x') === -1 && /&lt;img src=x/.test(html()) && paso(2).indexOf('Marcó <b>') === -1);
 
+  // ── Fiador con nombre y sin teléfono ──
+  // La web no marca fiador 'si' sin nombre y teléfono, pero sí guarda el nombre que escribió.
+  reiniciar();
+  Object.assign(S.clientes[1], { fiador_nom:'ANA GOMEZ', fiador_rel:'amigo' });
+  ctx._wzCliPick('WEB-23456789');
+  ok('el fiador que dejó a medias se ve: "Sí" con su nombre y su relación', WZ().fiador_tiene === 'si' && WZ().fiador_nom === 'ANA GOMEZ' && WZ().fiador_rel === 'amigo');
+  ctx.openAddCliente('WEB-23456789');
+  ok('...también en el formulario del cliente', WZ().fiador_tiene === 'si' && WZ().fiador_nom === 'ANA GOMEZ');
+  reiniciar(); Object.assign(S.clientes[1], { fiador:'no', fiador_nom:'ANA GOMEZ' }); ctx._wzCliPick('WEB-23456789');
+  ok('...pero si después contestó "No tengo", gana el "No"', WZ().fiador_tiene === 'no');
+  reiniciar(); ctx._wzCliPick('WEB-23456789');
+  ok('...y sin nada del fiador sigue en "No"', WZ().fiador_tiene === 'no');
+
   // ── El vacío es "sin dato" en el score ──
   reiniciar(); ctx._wzCliPick('WEB-23456789'); vm.runInContext('WZ.step=2;', ctx); ctx._wzScore();
   const si = WZ().scoreInput;

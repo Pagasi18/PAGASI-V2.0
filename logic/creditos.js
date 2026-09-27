@@ -1096,7 +1096,12 @@ function _wzPickCliente(sel){
   WZ.ingreso_rango = c.ingreso_rango || '';
   WZ.ingreso_exacto = c.ingreso_exacto === true;
   // Fiador
-  WZ.fiador_tiene = c.fiador || 'no';
+  // 27-sep-2026: la web guarda el nombre del fiador aunque el cliente no haya puesto su
+  // telefono ("No se esto, siguiente"), pero sin fiador:'si' (las Reglas piden nombre y
+  // telefono para eso). Con 'no' el bloque quedaba cerrado y el empleado no veia el nombre
+  // que ya escribio el cliente. Se abre igual que en la ficha (verCliente): el empleado le
+  // pide el telefono o lo pasa a "No".
+  WZ.fiador_tiene = c.fiador || (String(c.fiador_nom||'').trim() ? 'si' : 'no');
   WZ.fiador_nom = WZ.wz_fiador_nom = c.fiador_nom || '';
   WZ.fiador_tel = WZ.wz_fiador_tel = c.fiador_tel || '';
   WZ.fiador_ci = WZ.wz_fiador_ci = _wzFmtCedula(c.fiador_ci || '');
