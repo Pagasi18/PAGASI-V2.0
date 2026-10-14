@@ -26,9 +26,13 @@ vm.runInContext(oldCatalog.slice(0,oldCatalog.indexOf('function calcMoto'))+';th
    arriba como la calculadora de los vendedores. Lo que se sigue exigiendo: los mismos 46
    modelos con sus precios y concesionarios, y que la cuota salga de la formula publicada. */
 check('46 stable model IDs, prices, dealerships and the published plan formula',()=>{
-  assert.equal(catalog.motos.length,46);assert.equal(new Set(catalog.motos.map(m=>m.id)).size,46);
+  // Desde el 13-oct-2026 tambien estan los modelos de Veloz (ids 47 en adelante): los 46 de
+  // siempre se exigen iguales y los nuevos solo con id unico y precio.
+  const originales=catalog.motos.filter(m=>m.id<=46);
+  assert.equal(originales.length,46);assert.equal(new Set(catalog.motos.map(m=>m.id)).size,catalog.motos.length);
+  catalog.motos.filter(m=>m.id>46).forEach(m=>{assert.ok(m.precio>0);assert.equal(m.sedeName,'Veloz');});
   const up=n=>Math.ceil(Math.round(n*100)/100);
-  for(const m of catalog.motos){const old=originalModels.models.find(x=>x.id===m.id);assert.ok(old);assert.equal(m.precio,old.precio);assert.equal(m.modelo,old.modelo);assert.equal(m.sedeName,old.sedeName);
+  for(const m of originales){const old=originalModels.models.find(x=>x.id===m.id);assert.ok(old);assert.equal(m.precio,old.precio);assert.equal(m.modelo,old.modelo);assert.equal(m.sedeName,old.sedeName);
     const p=catalog.plan(m.id),q=Math.pow(1+650/100,1/24)-1,fin=m.precio*0.6,cuota=fin*q/(1-Math.pow(1+q,-24));
     assert.equal(p.inicial,up(m.precio*0.4));assert.equal(p.seguro,up(m.precio*0.045));assert.equal(p.alFirmar,p.inicial+p.seguro);assert.equal(p.quincenal,up(cuota));assert.equal(p.mensual,p.quincenal*2);}
   assert.equal(catalog.get(0),undefined);assert.equal(catalog.plan(999),null);
