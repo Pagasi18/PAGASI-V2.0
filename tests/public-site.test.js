@@ -34,7 +34,7 @@ check('46 stable model IDs, prices, dealerships and the published plan formula',
   const up=n=>Math.ceil(Math.round(n*100)/100);
   for(const m of originales){const old=originalModels.models.find(x=>x.id===m.id);assert.ok(old);assert.equal(m.precio,old.precio);assert.equal(m.modelo,old.modelo);assert.equal(m.sedeName,old.sedeName);
     const p=catalog.plan(m.id),q=Math.pow(1+catalog.COND_BASE.apy/100,1/24)-1,fin=m.precio*0.6,cuota=fin*q/(1-Math.pow(1+q,-24));
-    assert.equal(p.inicial,up(m.precio*0.4));assert.equal(p.seguro,up(m.precio*0.045));assert.equal(p.alFirmar,p.inicial+p.seguro);assert.equal(p.quincenal,up(cuota));assert.equal(p.mensual,p.quincenal*2);}
+    assert.equal(p.inicial,up(m.precio*0.4));assert.equal(p.seguro,0);assert.equal(p.alFirmar,p.inicial+p.seguro);assert.equal(p.quincenal,up(cuota));assert.equal(p.mensual,p.quincenal*2);}
   assert.equal(catalog.get(0),undefined);assert.equal(catalog.plan(999),null);
 });
 check('catalog image files exist; unknown photos do not impersonate another model',()=>{for(const m of catalog.motos)if(m.image)assert.ok(fs.existsSync(path.join(root,m.image)),m.image);for(let id=42;id<=46;id++)assert.equal(catalog.get(id).image,'');});
