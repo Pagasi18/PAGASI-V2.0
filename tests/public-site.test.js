@@ -20,9 +20,17 @@ const oldContext={};vm.createContext(oldContext);
 vm.runInContext(oldSim.slice(0,oldSim.indexOf('window.addEventListener'))+';this.models=CATALOG;',oldContext);
 const originalModels={};vm.createContext(originalModels);
 vm.runInContext(oldCatalog.slice(0,oldCatalog.indexOf('function calcMoto'))+';this.models=MOTOS;',originalModels);
-check('46 stable model IDs, prices, dealerships and original simulator results',()=>{
+/* Hasta el 13-oct-2026 esta prueba exigia que cada cuota fuera identica a la del simulador
+   original (inicial del 50% y tasa de 380%). Adam cambio las condiciones a proposito: una sola
+   tasa de 650%, inicial de 40% a 60%, seguro del 4,5% que va con la inicial y redondeo hacia
+   arriba como la calculadora de los vendedores. Lo que se sigue exigiendo: los mismos 46
+   modelos con sus precios y concesionarios, y que la cuota salga de la formula publicada. */
+check('46 stable model IDs, prices, dealerships and the published plan formula',()=>{
   assert.equal(catalog.motos.length,46);assert.equal(new Set(catalog.motos.map(m=>m.id)).size,46);
-  for(const m of catalog.motos){const old=originalModels.models.find(x=>x.id===m.id);assert.ok(old);assert.equal(m.precio,old.precio);assert.equal(m.modelo,old.modelo);assert.equal(m.sedeName,old.sedeName);assert.deepEqual(catalog.plan(m.id),JSON.parse(JSON.stringify(oldContext.calcPlan(m.precio,12))));}
+  const up=n=>Math.ceil(Math.round(n*100)/100);
+  for(const m of catalog.motos){const old=originalModels.models.find(x=>x.id===m.id);assert.ok(old);assert.equal(m.precio,old.precio);assert.equal(m.modelo,old.modelo);assert.equal(m.sedeName,old.sedeName);
+    const p=catalog.plan(m.id),q=Math.pow(1+650/100,1/24)-1,fin=m.precio*0.6,cuota=fin*q/(1-Math.pow(1+q,-24));
+    assert.equal(p.inicial,up(m.precio*0.4));assert.equal(p.seguro,up(m.precio*0.045));assert.equal(p.alFirmar,p.inicial+p.seguro);assert.equal(p.quincenal,up(cuota));assert.equal(p.mensual,p.quincenal*2);}
   assert.equal(catalog.get(0),undefined);assert.equal(catalog.plan(999),null);
 });
 check('catalog image files exist; unknown photos do not impersonate another model',()=>{for(const m of catalog.motos)if(m.image)assert.ok(fs.existsSync(path.join(root,m.image)),m.image);for(let id=42;id<=46;id++)assert.equal(catalog.get(id).image,'');});
