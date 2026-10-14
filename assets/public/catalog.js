@@ -688,17 +688,21 @@ function calcExacto(precio, meses, inicialPct, c){
   const seguro = precio * c.seguroPct / 100;
   return { precio, meses, pct, totalCuotas, inicial, seguro, alFirmar: inicial + seguro, financiado, quincenal, mensual: quincenal * 2, totalEnCuotas: quincenal * totalCuotas };
 }
-// Redondeado al dolar, como lo ve el cliente. "Al firmar" es la suma de lo que se muestra.
+// Sin decimales y redondeando HACIA ARRIBA, la misma regla de la calculadora de los
+// vendedores (Adam, 11-sep-2026): $88.01 se ve $89. Primero los centavos, para que un resto
+// de coma flotante no sume un dolar. Todo cuadra a simple vista: al firmar = inicial + seguro,
+// mensual = 2 quincenas, total = cuota x numero de cuotas, inicial + financiado = precio.
+const arriba = n => Math.ceil(Math.round((Number(n) || 0) * 100) / 100);
 function calcPlan(precio, meses, inicialPct, c){
-  const e = calcExacto(precio, meses, inicialPct, c), r = Math.round;
-  return { inicial: r(e.inicial), seguro: r(e.seguro), alFirmar: r(e.inicial) + r(e.seguro), financiado: r(e.financiado),
-           quincenal: r(e.quincenal), mensual: r(e.quincenal * 2), totalEnCuotas: r(e.totalEnCuotas),
+  const e = calcExacto(precio, meses, inicialPct, c), q = arriba(e.quincenal), ini = arriba(e.inicial), seg = arriba(e.seguro);
+  return { inicial: ini, seguro: seg, alFirmar: ini + seg, financiado: Math.max(0, arriba(e.precio) - ini),
+           quincenal: q, mensual: q * 2, totalEnCuotas: q * e.totalCuotas,
            meses: e.meses, totalCuotas: e.totalCuotas, pct: e.pct };
 }
 const normalize = value => String(value || '').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
 const get = id => lista.find(m => m.id === Number(id));
 const plan = (id, inicialPct, meses) => { const m = get(id); return m ? calcPlan(m.precio, meses || m.meses, inicialPct) : null; };
-const money = n => '$' + Math.round(n).toLocaleString('en-US');
+const money = n => '$' + arriba(n).toLocaleString('en-US');
 
 // Un documento de Firestore (formato REST) a objeto plano
 function valor(v){
@@ -764,7 +768,7 @@ function cargar(){
 const api = Object.freeze({
   get motos(){ return lista; }, get condiciones(){ return cond; }, get origen(){ return origen; },
   base: Object.freeze(BASE.map(Object.freeze)), COND_BASE, FB_PUBLICO: Object.freeze(Object.assign({}, FB_PUBLICO)),
-  get, plan, calcPlan, calcExacto, condValidas, normalize, money, cargar, aplicar, desdeDocumentos, valor
+  get, plan, calcPlan, calcExacto, arriba, condValidas, normalize, money, cargar, aplicar, desdeDocumentos, valor
 });
 if(typeof module==='object' && module.exports) module.exports=api;
 else root.PagasiCatalog=api;
