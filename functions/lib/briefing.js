@@ -3,7 +3,11 @@
    instrucciones del equipo), asi lo que se cambia en el panel lo sabe de inmediato.        */
 'use strict';
 const path = require('path');
-const Ledger = require(path.join(__dirname, '..', '..', 'logic', 'credito-ledger.js'));
+// El ledger del sistema: al desplegar se copia a functions/logic (firebase.json, predeploy); en el
+// repo se usa el original de logic/. La misma matemática que la pantalla.
+const _fs = require('fs');
+function _compartido(nombre) { const copia = path.join(__dirname, '..', 'logic', nombre); return require(_fs.existsSync(copia) ? copia : path.join(__dirname, '..', '..', 'logic', nombre)); }
+const Ledger = _compartido('credito-ledger.js');
 const DIAS_GRACIA = 5;
 const MES3 = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const money = n => '$' + (Math.round((parseFloat(n) || 0) * 100) / 100).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

@@ -45,7 +45,7 @@ toma la conversación (`modo: 'humano'`), el asistente no responde hasta que la 
    firebase functions:secrets:set ANTHROPIC_API_KEY        --project pagasi26-65ced
    ```
    Después de cambiar un secreto hay que volver a desplegar (`firebase deploy --only functions --project pagasi26-65ced`): las funciones quedan atadas a la versión del secreto que existía al desplegar. Mientras `WHATSAPP_APP_SECRET` diga `pendiente`, el webhook rechaza todo.
-3. **Permisos**: la cuenta de las funciones (`415041001199-compute@developer.gserviceaccount.com`) necesita `roles/datastore.user` en `pagasi-v2` y escritura en el bucket `pagasi-v2.firebasestorage.app` para atender a los clientes de la 18.
+3. **Permisos** (hechos el 18-oct-2026): la cuenta de cómputo de la 26 (`415041001199-compute@developer.gserviceaccount.com`) corre y construye las funciones. En proyectos nuevos no trae Editor, así que tiene en la 26 `cloudbuild.builds.builder`, `datastore.user`, `storage.objectAdmin`, `logging.logWriter` y `artifactregistry.writer`; y para atender a los clientes de la 18, `datastore.user` en `pagasi-v2` y `storage.objectAdmin` en el bucket `pagasi-v2.firebasestorage.app`. Las imágenes de los contenedores se borran a los 3 días (`functions:artifacts:setpolicy`).
 4. **Firestore Rules** publicadas en las dos compañías (bloque "Cobranza por WhatsApp").
 5. `config/asistente`: `conectado: true`, `telefono`, `datosPago`, `plantillas`. Con `conectado` en falso, la pantalla sigue en demostración y el robot de la mañana no manda nada.
 6. Consentimiento: una línea en el contrato y en la solicitud web para recibir avisos por WhatsApp.
