@@ -2975,7 +2975,20 @@ function getPermsEfectivos(){
   return getCurrentPerms();
 }
 
+// == Modulos en prueba (18-oct-2026) ==
+// Adam: "publica todo, pero a todos los usuarios menos al mio escondele el WhatsApp y el
+// Instagram". Los dos modulos viajan en el sistema (permisos, Reglas, servidor) pero solo los ve
+// quien esta en esta lista, hasta que Meta este conectado y el decida abrirlos. Para abrirlos a
+// todos basta vaciar MODULOS_EN_PRUEBA.
+var MODULOS_EN_PRUEBA = { whatsapp: true, instagram: true };
+var USUARIOS_DE_PRUEBA = ['l8OCCAHCWyNLU6akwlU8vdrP3Ow2', 'adam@pagasi.io'];   // Adam (mismo uid en las dos companias)
+function moduloOcultoParaMi(key){
+  if(!MODULOS_EN_PRUEBA[key]) return false;
+  var u = S.currentUser || {};
+  return !(USUARIOS_DE_PRUEBA.indexOf(String(u.uid || '')) > -1 || USUARIOS_DE_PRUEBA.indexOf(String(u.email || '').toLowerCase()) > -1);
+}
 function hasModuleAccess(key){
+  if(moduloOcultoParaMi(key)) return false;
   if(isAdminUser()) return true;
   // Recursos: repositorio de material disponible para TODOS los usuarios logueados
   if(key === 'recursos') return true;
@@ -3138,6 +3151,7 @@ function _sidebarAprobPendientes(){
   } catch(e){ return 0; }
 }
 function sidebarMuestra(k){
+  if(typeof moduloOcultoParaMi === 'function' && moduloOcultoParaMi(k)) return false;   // (typeof: los arneses viejos cargan solo un trozo del archivo)
   if(k === 'aprobaciones') return _sidebarAprobPendientes() > 0;
   return SIDEBAR_OCULTOS.indexOf(k) === -1;
 }
