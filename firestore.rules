@@ -285,6 +285,13 @@ service cloud.firestore {
     // mandados y el resultado de cada corrida. Se leen desde administracion, no se tocan.
     match /webhooks_meta/{id} { allow read: if esAdmin(); allow write: if false; }
     match /recordatorios/{id} { allow read: if veWhatsapp(); allow write: if false; }
+    // Los leads de Instagram (quien quiere comprar y dejo sus datos): los anota el asistente
+    // desde el servidor; el equipo los ve y marca como atendidos.
+    match /leads/{id} {
+      allow read: if veWhatsapp();
+      allow update: if veWhatsapp() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado','atendidoPor','nota','actualizado']);
+      allow create, delete: if false;
+    }
     match /recordatorios_corridas/{id} { allow read: if esAdmin(); allow write: if false; }
 
     // == Portal de aliados (17-oct-2026) ==

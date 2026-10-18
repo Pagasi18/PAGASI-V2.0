@@ -12,11 +12,12 @@ const HERRAMIENTA = {
     type: 'object',
     properties: {
       reply: { type: 'string', description: 'Lo que se le manda al cliente por WhatsApp, en español de Venezuela, corto.' },
-      draft: { type: ['object', 'null'], description: 'Promesa de pago si el cliente dijo cuándo paga; si no, null.',
-        properties: { tipo: { type: 'string', enum: ['promesa'] }, fecha: { type: 'string', description: 'AAAA-MM-DD' }, monto: { type: 'number' }, nota: { type: 'string' } }, required: ['tipo', 'fecha'] },
+      draft: { type: ['object', 'null'], description: 'Lo que hay que anotar: una promesa de pago (cobranza) si el cliente dijo cuándo paga, o un lead (ventas) si la persona quiere que la contacten o dio sus datos; si no hay nada, null.',
+        properties: { tipo: { type: 'string', enum: ['promesa', 'lead'] }, fecha: { type: 'string', description: 'promesa: AAAA-MM-DD' }, monto: { type: 'number' }, nota: { type: 'string' },
+          nombre: { type: 'string', description: 'lead: nombre de la persona' }, ciudad: { type: 'string' }, modelo: { type: 'string', description: 'lead: la moto que le interesa' }, telefono: { type: 'string', description: 'lead: su WhatsApp' } }, required: ['tipo'] },
       summary: { type: 'string', description: 'Una línea para el equipo: qué quiere el cliente y en qué quedó.' },
       handoff: { type: 'boolean', description: 'true si una persona debe tomar la conversación.' },
-      handoffReason: { type: 'string', enum: ['', 'pide_persona', 'queja', 'comprobante', 'no_puede_pagar', 'descuento', 'no_cliente', 'otro'] }
+      handoffReason: { type: 'string', enum: ['', 'pide_persona', 'queja', 'comprobante', 'no_puede_pagar', 'descuento', 'no_cliente', 'lead', 'otro'] }
     },
     required: ['reply', 'summary', 'handoff']
   }
@@ -28,10 +29,16 @@ function validar(x) {
   const reply = typeof x.reply === 'string' ? x.reply.trim() : '';
   if (!reply || reply.length > 1500) return null;
   let draft = null;
-  if (x.draft && typeof x.draft === 'object' && x.draft.tipo === 'promesa' && /^\d{4}-\d{2}-\d{2}$/.test(String(x.draft.fecha || ''))) {
-    draft = { tipo: 'promesa', fecha: String(x.draft.fecha), monto: typeof x.draft.monto === 'number' && x.draft.monto > 0 ? Math.round(x.draft.monto * 100) / 100 : null, nota: typeof x.draft.nota === 'string' ? x.draft.nota.slice(0, 200) : '' };
+  const d = x.draft && typeof x.draft === 'object' ? x.draft : null;
+  const txt = (v, n) => typeof v === 'string' ? v.trim().slice(0, n) : '';
+  if (d && d.tipo === 'promesa' && /^\d{4}-\d{2}-\d{2}$/.test(String(d.fecha || ''))) {
+    draft = { tipo: 'promesa', fecha: String(d.fecha), monto: typeof d.monto === 'number' && d.monto > 0 ? Math.round(d.monto * 100) / 100 : null, nota: txt(d.nota, 200) };
+  } else if (d && d.tipo === 'lead') {
+    const tel = String(d.telefono || '').replace(/\D/g, '');
+    const lead = { tipo: 'lead', nombre: txt(d.nombre, 80), ciudad: txt(d.ciudad, 60), modelo: txt(d.modelo, 80), telefono: tel.length >= 10 ? tel : '', nota: txt(d.nota, 200) };
+    if (lead.nombre || lead.modelo || lead.telefono || lead.ciudad) draft = lead;
   }
-  const razones = ['', 'pide_persona', 'queja', 'comprobante', 'no_puede_pagar', 'descuento', 'no_cliente', 'otro'];
+  const razones = ['', 'pide_persona', 'queja', 'comprobante', 'no_puede_pagar', 'descuento', 'no_cliente', 'lead', 'otro'];
   return { reply, draft, summary: typeof x.summary === 'string' ? x.summary.slice(0, 300) : '', handoff: !!x.handoff, handoffReason: razones.includes(x.handoffReason) ? x.handoffReason : (x.handoff ? 'otro' : '') };
 }
 

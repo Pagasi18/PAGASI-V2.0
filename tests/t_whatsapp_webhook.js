@@ -4,7 +4,8 @@
 // recordatorios.
 const path = require('path');
 const F = path.join(__dirname, '..', 'functions', 'lib');
-const meta = require(path.join(F, 'meta.js')), briefing = require(path.join(F, 'briefing.js')), cerebro = require(path.join(F, 'cerebro.js')), procesar = require(path.join(F, 'procesar.js')), recordatorios = require(path.join(F, 'recordatorios.js'));
+const meta = require(path.join(F, 'meta.js')), briefing = require(path.join(F, 'briefing.js')), cerebro = require(path.join(F, 'cerebro.js')), procesar = require(path.join(F, 'procesar.js')), recordatorios = require(path.join(F, 'recordatorios.js')), ventas = require(path.join(F, 'ventas.js'));
+const Cat = require(path.join(__dirname, '..', 'assets', 'public', 'catalog.js'));
 let pass = 0, fail = 0;
 const ok = (l, v) => { if (v) { pass++; console.log('OK   ' + l); } else { fail++; console.log('FALLA ' + l); } };
 
@@ -42,8 +43,10 @@ function armar() {
   const enviados = [], plantillas = [], subidos = [];
   const metaFalso = { enviarTexto: async (a, t) => { enviados.push({ a, t }); return 'wamid.out' + enviados.length; }, enviarPlantilla: async (a, n, p) => { plantillas.push({ a, n, p }); return 'wamid.tpl' + plantillas.length; }, marcarLeido: async () => '', bajarMedio: async () => ({ bytes: Buffer.from('img'), mime: 'image/jpeg' }) };
   const cerebroFalso = { ultimo: null, respuesta: null, falla: false, async pensar(x) { this.ultimo = x; if (this.falla) throw new Error('sin cuota'); return this.respuesta || { reply: 'Hola María, vas al día.', draft: null, summary: 'Preguntó cuánto debe.', handoff: false, handoffReason: '' }; } };
-  const deps = { bases: { '26': db26, '18': db18 }, storage: () => ({ subir: async (ruta, bytes, mime) => { subidos.push({ ruta, mime }); return 'https://st/' + ruta; } }), meta: metaFalso, cerebro: cerebroFalso, cfg: { instrucciones: 'Esta semana no se recibe efectivo.', datosPago: 'Pago Móvil 0414-000-0000 · Banco X · RIF J-00000000-0', empresaNombre: { '18': 'PAGASI 18', '26': 'PAGASI 26' } }, ahora: () => AHORA, hoy: () => HOY, log: () => {} };
-  return { db26, db18, enviados, plantillas, subidos, metaFalso, cerebroFalso, deps };
+  const ig = [], igFalso = { enviarTexto: async (a, t, op) => { ig.push({ a, t, humano: !!(op && op.humano) }); return 'mid.out' + ig.length; }, marcarLeido: async () => '', perfil: async () => ({ nombre: 'Luis Pérez', usuario: 'luisperez.ve' }) };
+  const catalogo = { motos: [{ id: '1', name: 'BRZ 200', modelo: 'BRZ 200', sedeName: 'EK Bello Monte', precio: 1750, cc: '200cc', cat: 'Ciudad', disponible: true, orden: 1 }, { id: '2', name: 'Kavak 250', sedeName: 'EK Bello Monte', precio: 2900, disponible: true, orden: 2 }, { id: '3', name: 'SBR 150', sedeName: 'Haojin', precio: null, disponible: true }, { id: '4', name: 'Vieja', sedeName: 'Haojin', precio: 900, disponible: false }], cond: { apy: 500, seguroPct: 0, inicialMin: 40, inicialMax: 60, plazos: [6, 9, 12] }, sedes: [{ nombre: 'EK Bello Monte', ciudad: 'Caracas', direccion: 'Av. Principal' }] };
+  const deps = { bases: { '26': db26, '18': db18 }, storage: () => ({ subir: async (ruta, bytes, mime) => { subidos.push({ ruta, mime }); return 'https://st/' + ruta; } }), meta: metaFalso, metaIG: igFalso, ventas: async () => catalogo, cerebro: cerebroFalso, cfg: { instrucciones: 'Esta semana no se recibe efectivo.', instruccionesVentas: 'Hay promo de casco gratis en octubre.', datosPago: 'Pago Móvil 0414-000-0000 · Banco X · RIF J-00000000-0', empresaNombre: { '18': 'PAGASI 18', '26': 'PAGASI 26' } }, ahora: () => AHORA, hoy: () => HOY, log: () => {} };
+  return { db26, db18, enviados, plantillas, subidos, ig, catalogo, metaFalso, cerebroFalso, deps };
 }
 const msgTexto = (de, texto, id) => ({ metaId: id || 'wamid.in' + Math.random().toString(36).slice(2), de, nombre: 'Perfil WA', tipo: 'texto', texto, medio: null, hora: AHORA });
 
@@ -137,6 +140,44 @@ const msgTexto = (de, texto, id) => ({ metaId: id || 'wamid.in' + Math.random().
   ok('la segunda corrida del mismo día no repite el envío', A.plantillas.length === antesTpl && rr.find(x => x.empresa === '26').repetidos >= 1);
   rr = await recordatorios.correr(armar().deps, { hoy: HOY, plantillas: {} });
   ok('sin plantillas aprobadas no se manda nada (se cuenta como sin plantilla)', rr.every(x => x.enviados === 0));
+
+  // ── 6. Instagram: ventas ──
+  const avisoIg = { object: 'instagram', entry: [{ id: '17841400000', time: 1760796000000, messaging: [
+    { sender: { id: '555001' }, recipient: { id: '17841400000' }, timestamp: 1760796000000, message: { mid: 'mid.1', text: 'hola, precio de la BRZ 200?' } },
+    { sender: { id: '17841400000' }, recipient: { id: '555001' }, timestamp: 1760796001000, message: { mid: 'mid.eco', text: 'nuestra respuesta', is_echo: true } },
+    { sender: { id: '555001' }, recipient: { id: '17841400000' }, timestamp: 1760796002000, message: { mid: 'mid.2', attachments: [{ type: 'image', payload: { url: 'https://cdn.ig/x.jpg' } }] } },
+    { sender: { id: '555001' }, recipient: { id: '17841400000' }, timestamp: 1760796003000, read: { mid: 'mid.out1' } } ] }] };
+  const pi = meta.parsearWebhook(avisoIg);
+  ok('de Instagram salen el texto y la imagen, se ignora el eco y la lectura es un estado', pi.objeto === 'instagram' && pi.mensajes.length === 2 && pi.mensajes.every(x => x.canal === 'instagram' && x.de === '555001') && pi.mensajes[0].texto === 'hola, precio de la BRZ 200?' && pi.mensajes[1].tipo === 'imagen' && pi.mensajes[1].medio.url === 'https://cdn.ig/x.jpg' && pi.estados.length === 1 && pi.estados[0].estado === 'leido' && pi.estados[0].para === '555001');
+  let B = armar();
+  const sv = ventas.armarVentas({ instrucciones: B.deps.cfg.instruccionesVentas, motos: B.catalogo.motos, cond: B.catalogo.cond, sedes: B.catalogo.sedes, hoy: HOY, nombrePerfil: 'Luis', usuario: 'luisperez.ve' });
+  const plan = Cat.calcPlan(1750, 12, 0.4, Cat.condValidas(B.catalogo.cond));
+  ok('el briefing de ventas lleva el catálogo con la cuota exacta de la web, la sede con ciudad, la promo y cómo solicitar', new RegExp('BRZ 200 200cc \\(Ciudad\\): precio \\$1,750 · inicial desde \\$' + plan.inicial + ' \\(40%\\) · cuota quincenal \\$' + plan.quincenal + ' a 12 meses \\(24 cuotas\\)').test(sv) && /SEDE EK Bello Monte \(Caracas\)/.test(sv) && /casco gratis/.test(sv) && /pagasi\.io\/solicitar/.test(sv) && /@luisperez\.ve/.test(sv));
+  ok('...sin precio dice "por confirmar" y lo no disponible no aparece', /SBR 150: precio por confirmar/.test(sv) && !/Vieja/.test(sv));
+  ok('...y no habla de cobranza ni de deudas como si fuera cliente', !/cuotas pagadas|TIENE .* VENCIDA|cobranza de Pagasi/.test(sv) && /no la trates como deudora/.test(sv));
+  ok('el cerebro valida un lead y limpia el teléfono', JSON.stringify(cerebro.validar({ reply: 'ok', draft: { tipo: 'lead', nombre: 'Luis Pérez', ciudad: 'Maracay', modelo: 'BRZ 200', telefono: '0414-555.0000' }, summary: 's', handoff: true, handoffReason: 'lead' }).draft) === JSON.stringify({ tipo: 'lead', nombre: 'Luis Pérez', ciudad: 'Maracay', modelo: 'BRZ 200', telefono: '04145550000', nota: '' }) && cerebro.validar({ reply: 'x', draft: { tipo: 'lead' }, summary: '', handoff: false }).draft === null);
+  let ri = await procesar.procesarMensaje(B.deps, pi.mensajes[0]);
+  const convIg = B.db26._store.get('conversaciones/ig:555001');
+  ok('un mensaje de Instagram crea la conversación en la 26 con el usuario del perfil y sin cliente ni crédito', ri.empresa === '26' && ri.canal === 'instagram' && convIg && convIg.canal === 'instagram' && convIg.usuario === 'luisperez.ve' && convIg.nombre === 'Luis Pérez' && convIg.clienteId === '' && !convIg.cred);
+  ok('...el cerebro recibió el briefing de VENTAS (catálogo, no ledger) y se respondió por Instagram', /CATÁLOGO VIGENTE/.test(B.cerebroFalso.ultimo.sistema) && !/CRÉDITO M-1/.test(B.cerebroFalso.ultimo.sistema) && B.ig.length === 1 && B.ig[0].a === '555001' && B.enviados.length === 0);
+  B.cerebroFalso.respuesta = { reply: 'Listo, Luis. Un asesor te escribe.', draft: { tipo: 'lead', nombre: 'Luis Pérez', ciudad: 'Maracay', modelo: 'BRZ 200', telefono: '04145550000' }, summary: 'Quiere la BRZ 200, Maracay.', handoff: true, handoffReason: 'lead' };
+  ri = await procesar.procesarMensaje(B.deps, { canal: 'instagram', metaId: 'mid.3', de: '555001', nombre: '', tipo: 'texto', texto: 'soy Luis, Maracay, 0414-5550000', medio: null, hora: AHORA });
+  const lead = B.db26._store.get('leads/ig:555001');
+  ok('cuando quiere comprar queda el lead (colección leads + borrador) y la conversación marcada "Quiere comprar"', ri.handoff && lead && lead.modelo === 'BRZ 200' && lead.telefono === '04145550000' && lead.estado === 'nuevo' && lead.usuario === 'luisperez.ve' && B.db26._store.get('conversaciones/ig:555001').atencion === 'lead' && B.db26._store.get('conversaciones/ig:555001').borrador.ciudad === 'Maracay');
+  ri = await procesar.procesarMensaje(B.deps, pi.mensajes[0]);
+  ok('el mismo mid otra vez no se procesa', ri.saltado === 'repetido');
+  await procesar.procesarEstado(B.deps, pi.estados[0]);
+  ok('la lectura de Instagram marca nuestro mensaje como leído', B.db26._store.get('conversaciones/ig:555001/mensajes/mid.out1').estado === 'leido');
+  await procesar.enviarEquipo(B.deps, { empresa: '26', convId: 'ig:555001', texto: 'Hola Luis, soy Samantha', por: 'Samantha' });
+  ok('el equipo responde por Instagram dentro de la ventana (sin etiqueta) y toma la conversación', B.ig[B.ig.length - 1].a === '555001' && B.ig[B.ig.length - 1].humano === false && B.db26._store.get('conversaciones/ig:555001').modo === 'humano');
+  await B.db26.collection('conversaciones').doc('ig:555001').set({ ultimoEntranteHora: '2026-10-16T10:00:00.000Z' }, { merge: true });
+  await procesar.enviarEquipo(B.deps, { empresa: '26', convId: 'ig:555001', texto: 'seguimos', por: 'Samantha' });
+  ok('...pasadas 24 h y antes de 7 días va como agente humano', B.ig[B.ig.length - 1].humano === true);
+  await B.db26.collection('conversaciones').doc('ig:555001').set({ ultimoEntranteHora: '2026-10-01T10:00:00.000Z' }, { merge: true });
+  let errIg = null; try { await procesar.enviarEquipo(B.deps, { empresa: '26', convId: 'ig:555001', texto: 'x', por: 'S' }); } catch (x) { errIg = x; }
+  ok('...y pasados 7 días ya no se puede', errIg && errIg.codigo === 'ventana');
+  const C = armar(); C.deps.metaIG = null;
+  ok('sin Instagram configurado el mensaje se salta sin romper nada', (await procesar.procesarMensaje(C.deps, pi.mensajes[0])).saltado === 'instagram-no-configurado');
 
   console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas'); if (fail) process.exitCode = 1;
 })().catch(e => { console.log('FALLA ' + e.stack); process.exitCode = 1; });

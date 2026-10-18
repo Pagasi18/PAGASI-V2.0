@@ -1,9 +1,11 @@
 /* Cloud Functions (proyecto pagasi26-65ced, region us-east1) — Cobranza por WhatsApp.
-     whatsappWebhook   GET: verificacion de Meta · POST: aviso de Meta (se guarda crudo, se responde
-                       200 y se procesa) · POST /equipo: el panel manda un mensaje como equipo.
+     whatsappWebhook   GET: verificacion de Meta · POST: aviso de Meta, de WhatsApp (cobranza) o de
+                       Instagram (ventas): se guarda crudo, se responde 200 y se procesa ·
+                       POST /equipo: el panel manda un mensaje como equipo por el canal que toque.
      recordatoriosWhatsApp  todos los dias 8:30 am (Caracas): las plantillas de cuotas.
    Secretos (firebase functions:secrets:set): WHATSAPP_VERIFY_TOKEN, WHATSAPP_ACCESS_TOKEN,
-   WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_APP_SECRET, ANTHROPIC_API_KEY.
+   WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_APP_SECRET, ANTHROPIC_API_KEY; y para los mensajes de
+   Instagram (ventas, misma app de Meta y mismo webhook): INSTAGRAM_ACCESS_TOKEN, INSTAGRAM_ACCOUNT_ID.
    Las dos companias: la app por defecto es la 26; la 18 se abre con su projectId (la cuenta de
    servicio de las funciones tiene datastore.user en pagasi-v2).                            */
 'use strict';
@@ -26,6 +28,8 @@ const TOKEN = defineSecret('WHATSAPP_ACCESS_TOKEN');
 const PHONE_ID = defineSecret('WHATSAPP_PHONE_NUMBER_ID');
 const APP_SECRET = defineSecret('WHATSAPP_APP_SECRET');
 const ANTHROPIC = defineSecret('ANTHROPIC_API_KEY');
+const IG_TOKEN = defineSecret('INSTAGRAM_ACCESS_TOKEN');
+const IG_CUENTA = defineSecret('INSTAGRAM_ACCOUNT_ID');
 const PROYECTOS = { '26': 'pagasi26-65ced', '18': 'pagasi-v2' };
 const BUCKETS = { '26': 'pagasi26-65ced.firebasestorage.app', '18': 'pagasi-v2.firebasestorage.app' };
 
@@ -38,7 +42,15 @@ function hoyCaracas() { return new Date(Date.now() - 4 * 3600 * 1000).toISOStrin
 async function cfgAsistente() {
   const d = await bases['26'].collection('config').doc('asistente').get();
   const c = d.exists ? d.data() : {};
-  return { instrucciones: c.instrucciones || '', datosPago: c.datosPago || '', plantillas: c.plantillas || {}, empresaNombre: { '18': 'PAGASI 18', '26': 'PAGASI 26' }, conectado: !!c.conectado };
+  return { instrucciones: c.instrucciones || '', instruccionesVentas: c.instruccionesVentas || '', datosPago: c.datosPago || '', plantillas: c.plantillas || {}, empresaNombre: { '18': 'PAGASI 18', '26': 'PAGASI 26' }, conectado: !!c.conectado };
+}
+// Lo que necesita el asistente de ventas (Instagram): el catalogo de pagasi.io y las sedes de la 26
+async function catalogoVentas() {
+  const [cat, conc] = await Promise.all([bases['26'].collection('catalogo').get(), bases['26'].collection('concesionarios').get()]);
+  let cond = null; const motos = [];
+  cat.docs.forEach(d => { const x = d.data() || {}; if (d.id === '_condiciones') cond = x; else motos.push(Object.assign({ id: d.id }, x)); });
+  const sedes = conc.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(c => c && c.activo !== false && !c.eliminado).map(c => ({ nombre: c.nombre || '', ciudad: c.ciudad || '', direccion: c.direccion || '' }));
+  return { motos, cond, sedes };
 }
 function storageDe(empresa) {
   // Se guarda con un token de descarga, igual que las fotos que sube el portal: la URL abre
@@ -50,9 +62,11 @@ function storageDe(empresa) {
     return `https://firebasestorage.googleapis.com/v0/b/${BUCKETS[empresa]}/o/${encodeURIComponent(ruta)}?alt=media&token=${token}`;
   } };
 }
+function configurado(v) { return !!v && v !== 'pendiente'; }
 function armarDeps(cfg) {
   const m = meta.cliente({ accessToken: TOKEN.value(), phoneNumberId: PHONE_ID.value() });
-  return { bases, storage: storageDe, meta: m, cfg, ahora: () => new Date().toISOString(), hoy: hoyCaracas, log: (q, d) => logger.info(q, d || {}),
+  const ig = configurado(IG_TOKEN.value()) && configurado(IG_CUENTA.value()) ? meta.clienteInstagram({ accessToken: IG_TOKEN.value(), accountId: IG_CUENTA.value() }) : null;
+  return { bases, storage: storageDe, meta: m, metaIG: ig, ventas: catalogoVentas, cfg, ahora: () => new Date().toISOString(), hoy: hoyCaracas, log: (q, d) => logger.info(q, d || {}),
     cerebro: { pensar: ({ sistema, mensajes }) => cerebro.pensar({ apiKey: ANTHROPIC.value(), sistema, mensajes }) } };
 }
 
@@ -72,7 +86,7 @@ async function quienEscribe(req) {
 
 // invoker 'public': Meta y el panel llaman sin credenciales de Google; la seguridad es la firma
 // de Meta (POST) y el token de Firebase del usuario (/equipo).
-exports.whatsappWebhook = onRequest({ region: 'us-east1', invoker: 'public', secrets: [VERIFY, TOKEN, PHONE_ID, APP_SECRET, ANTHROPIC], memory: '512MiB', timeoutSeconds: 120, cors: true }, async (req, res) => {
+exports.whatsappWebhook = onRequest({ region: 'us-east1', invoker: 'public', secrets: [VERIFY, TOKEN, PHONE_ID, APP_SECRET, ANTHROPIC, IG_TOKEN, IG_CUENTA], memory: '512MiB', timeoutSeconds: 120, cors: true }, async (req, res) => {
   if (req.method === 'GET') {
     const reto = meta.verificacion(req.query, VERIFY.value());
     if (reto) return res.status(200).send(reto);

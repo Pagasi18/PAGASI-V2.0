@@ -29,6 +29,7 @@ async function prueba(nombre, promesa) {
     await setDoc(doc(db, 'webhooks_meta/a1'), { crudo: '{}' });
     await setDoc(doc(db, 'recordatorios/26_M-1_2_hoy'), { cred: 'M-1', estado: 'enviado' });
     await setDoc(doc(db, 'recordatorios_corridas/r1'), { hoy: '2026-10-18' });
+    await setDoc(doc(db, 'leads/ig:555001'), { canal: 'instagram', nombre: 'Luis', modelo: 'BRZ 200', estado: 'nuevo' });
   });
   const ses = (uid, email) => env.authenticatedContext(uid, { email, firebase: { sign_in_provider: 'password' } }).firestore();
   const admin = ses('admin1', 'a@x.com'), cob = ses('cob1', 'cob1@x.com'), emp = ses('emp1', 'emp1@x.com'), vc = ses('vc1', 'vc1@x.com');
@@ -70,6 +71,10 @@ async function prueba(nombre, promesa) {
   await prueba('...y nadie los escribe', assertFails(setDoc(doc(admin, 'webhooks_meta/a2'), { crudo: '{}' })));
   await prueba('las corridas de recordatorios: lee administración, no se escriben', assertSucceeds(getDoc(doc(admin, 'recordatorios_corridas/r1'))));
   await prueba('...ni el administrador las escribe', assertFails(setDoc(doc(admin, 'recordatorios_corridas/r2'), { hoy: 'x' })));
+  await prueba('los leads de Instagram los lee la cobradora con el módulo', assertSucceeds(getDoc(doc(cob, 'leads/ig:555001'))));
+  await prueba('...y los marca atendidos', assertSucceeds(updateDoc(doc(cob, 'leads/ig:555001'), { estado: 'atendido', atendidoPor: 'Cobradora', actualizado: 'x' })));
+  await prueba('...pero no cambia el teléfono ni crea leads', assertFails(updateDoc(doc(cob, 'leads/ig:555001'), { telefono: '0' })) && assertFails(setDoc(doc(cob, 'leads/ig:9'), { nombre: 'x' })));
+  await prueba('la empleada sin el módulo no los ve', assertFails(getDoc(doc(emp, 'leads/ig:555001'))));
 
   await env.cleanup();
   console.log('\n' + pass + ' pruebas OK, ' + fail + ' fallas');
