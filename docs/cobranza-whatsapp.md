@@ -1,8 +1,12 @@
 # Cobranza por WhatsApp y ventas por Instagram
 
-*18 de octubre de 2026.* Un asistente con dos caras y un solo servidor:
-- **WhatsApp = cobranza.** Recuerda las cuotas, responde lo que el cliente pregunta de su crédito y le pasa al equipo lo que no le toca. Sirve a las dos compañías (PAGASI 18 y PAGASI 26) con un solo número.
-- **Instagram = ventas.** Responde los mensajes directos de la cuenta de Pagasi con el catálogo real de pagasi.io (precio, inicial y cuota con la misma fórmula de la web), las sedes y cómo solicitar. Quien quiere comprar queda como **lead** para que un asesor lo llame. Siempre en la 26.
+*18 de octubre de 2026.* Un asistente con dos caras y un solo servidor, y dos módulos en el panel (Adam, 18-oct: "Instagram aparte; en WhatsApp, ventas y cobranza"):
+- **Módulo WhatsApp**, con dos áreas:
+  - **Cobranza**: el cliente registrado. Recuerda las cuotas, responde lo que pregunta de su crédito y le pasa al equipo lo que no le toca. Sirve a las dos compañías (PAGASI 18 y PAGASI 26) con un solo número.
+  - **Ventas**: quien escribe al WhatsApp y no es cliente (o escribe al número de ventas, si se configura `config/asistente.numeros`). El asistente de ventas responde con el catálogo y anota a quien quiere comprar como lead, ya con su teléfono.
+- **Módulo Instagram** (permiso `instagram`, lo tienen Administrador, Gerente, Empleado y Vendedor): los mensajes directos de la cuenta de Pagasi, atendidos por el mismo asistente de ventas con el catálogo real de pagasi.io (precio, inicial y cuota con la misma fórmula de la web), las sedes y cómo solicitar. Quien quiere comprar queda como **lead**. Siempre en la 26.
+
+Las dos pantallas comparten el motor (`modules/whatsapp.js`: lista, hilo, ficha, pestaña Asistente); `modules/instagram.js` es el módulo aparte. Cada canal se lee con su permiso: las Reglas exigen `where('canal','==',…)` en las listas y hay un índice compuesto `conversaciones (canal, actualizado desc)` creado en los dos proyectos el 18-oct.
 
 ## Las piezas
 
@@ -22,8 +26,9 @@
 - `conversaciones/wa:+58414…` con sus `mensajes/{id de Meta}`. Usar el id de Meta como id del documento es lo que evita procesar dos veces un reenvío del webhook.
 - Una imagen o PDF del cliente va a Storage (`comprobantes_whatsapp/<tel>/<id>`), crea un `comprobantes` pendiente con `origen: 'whatsapp'` (se confirma desde Pagos como los del portal) y marca la conversación con `atencion: 'comprobante'`.
 - Auditoría en la 26: `webhooks_meta` (cada aviso crudo), `recordatorios/{empresa}_{crédito}_{cuota}_{tipo}` (cada envío, no se repite), `recordatorios_corridas` (el resultado de cada mañana).
-- `config/asistente` (en la 26, lo lee el servidor): `instrucciones`, `instruccionesVentas`, `datosPago`, `plantillas` (`{proximas, hoy, gracia, atrasadas}` con los nombres aprobados por Meta), `conectado`, `telefono`, `instagram` (el usuario, solo para mostrarlo), `urlEquipo` opcional.
-- Instagram: conversaciones `ig:<IGSID>` en la 26 (`usuario`, `nombre`, sin cliente); `leads/ig:<IGSID>` con nombre, ciudad, modelo, teléfono, `estado: 'nuevo'` (el equipo lo pasa a atendido). Los mensajes del equipo salen normal dentro de las 24 h y como agente humano (etiqueta HUMAN_AGENT, hay que pedirla en la app) hasta 7 días; después hay que esperar a que la persona vuelva a escribir.
+- `config/asistente` (en la 26, lo lee el servidor): `instrucciones` (cobranza), `instruccionesVentas` (ventas, WhatsApp e Instagram), `datosPago`, `plantillas` (`{proximas, hoy, gracia, atrasadas}` con los nombres aprobados por Meta), `conectado` (WhatsApp), `telefono`, `numeros` opcional (`{ventas, cobranza}` si hay dos números), `instagram` (el usuario de la cuenta: con él el módulo Instagram deja de estar en demostración), `urlEquipo` opcional.
+- Cada conversación lleva `canal` (`whatsapp` | `instagram`) y `area` (`cobranza` | `ventas`). Por WhatsApp hay una sola conversación por teléfono: el área es la del último mensaje (un cliente que escribe al número de ventas lo atiende ventas; un desconocido al de cobranza, también ventas).
+- Instagram: conversaciones `ig:<IGSID>` en la 26 (`usuario`, `nombre`, sin cliente). Leads en `leads/{convId}` (`ig:…` o `wa:…`) con canal, nombre, ciudad, modelo, teléfono, `estado: 'nuevo'` (el equipo lo pasa a atendido). Los mensajes del equipo salen normal dentro de las 24 h y como agente humano (etiqueta HUMAN_AGENT, hay que pedirla en la app) hasta 7 días; después hay que esperar a que la persona vuelva a escribir.
 
 ## Reglas fijas del asistente (en el briefing, no se editan desde la pantalla)
 

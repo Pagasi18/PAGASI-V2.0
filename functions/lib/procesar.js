@@ -51,6 +51,15 @@ async function contexto(deps, empresa, clienteId, hoy) {
   return { cliente, creditos: estados, credActivo: vivos[0] || null, comprobantesPendientes: comp };
 }
 
+// El area por WhatsApp: ventas si escribio al numero de ventas (config/asistente.numeros) o si no
+// es cliente; cobranza si es cliente. Una sola conversacion por telefono: el area es la del ultimo mensaje.
+function areaDe(deps, m, clienteId) {
+  const d = v => String(v || '').replace(/\D/g, '').replace(/^(58|0)/, '');   // 0412-555… y 58412555… son el mismo número
+  const nums = (deps.cfg && deps.cfg.numeros) || {};
+  const neg = d(m.telefonoNegocio);
+  if (neg && d(nums.ventas) && neg === d(nums.ventas)) return 'ventas';
+  return clienteId ? 'cobranza' : 'ventas';
+}
 // El canal decide por donde se manda y a quien
 function canalDe(conv) { return (conv && conv.canal) || 'whatsapp'; }
 function emisor(deps, canal) { return canal === 'instagram' ? deps.metaIG : deps.meta; }
@@ -70,12 +79,19 @@ async function procesarMensaje(deps, m) {
   const convSnap = await convRef.get();
   const conv = convSnap.exists ? convSnap.data() : null;
   const ctx = await contexto(deps, u.empresa, u.clienteId, hoy);
-  const base = { canal: 'whatsapp', telE164: tel, nombre: (conv && conv.nombre) || m.nombre || (ctx.cliente && ctx.cliente.nombre) || tel, clienteId: u.clienteId || (conv && conv.clienteId) || '', clienteNombre: (ctx.cliente && ctx.cliente.nombre) || (conv && conv.clienteNombre) || '',
+  const area = areaDe(deps, m, u.clienteId);
+  const base = { canal: 'whatsapp', area, telE164: tel, nombre: (conv && conv.nombre) || m.nombre || (ctx.cliente && ctx.cliente.nombre) || tel, clienteId: u.clienteId || (conv && conv.clienteId) || '', clienteNombre: (ctx.cliente && ctx.cliente.nombre) || (conv && conv.clienteNombre) || '',
     cred: ctx.credActivo ? ctx.credActivo.id : ((conv && conv.cred) || ''), modo: (conv && conv.modo) || 'bot', noLeidos: ((conv && conv.noLeidos) || 0) + 1, ultimoMensaje: textoLista(m), ultimoMensajeHora: entrante.hora, ultimoEntranteHora: entrante.hora, actualizado: ahora, empresa: u.empresa };
   if (!conv) base.creado = ahora;
   await convRef.set(base, { merge: true });
-  deps.log('entrante', { canal: 'whatsapp', empresa: u.empresa, tipo: m.tipo, cliente: !!u.clienteId });
+  deps.log('entrante', { canal: 'whatsapp', area, empresa: u.empresa, tipo: m.tipo, cliente: !!u.clienteId });
   if (deps.meta.marcarLeido) deps.meta.marcarLeido(m.metaId).catch(() => {});
+
+  // VENTAS por WhatsApp: el mismo asistente que en Instagram, ya con el telefono de la persona
+  if (area === 'ventas') {
+    if (base.modo === 'humano') return { empresa: u.empresa, area, callado: true };
+    return responderVentas(deps, { db, convRef, conv, base, canal: 'whatsapp', hoy, ahora, nombrePerfil: m.nombre, usuario: '', telefono: tel.replace('+', ''), leadId: 'wa:' + tel, empresa: u.empresa });
+  }
 
   // Una imagen o un documento: posible comprobante. Se guarda y se le pasa al equipo.
   if (m.medio && (m.tipo === 'imagen' || m.tipo === 'documento')) {
@@ -131,7 +147,7 @@ async function procesarInstagram(deps, m) {
   const conv = convSnap.exists ? convSnap.data() : null;
   let perfil = { nombre: (conv && conv.nombre) || '', usuario: (conv && conv.usuario) || '' };
   if (!conv || (!conv.usuario && !conv.nombre)) { try { const p = await deps.metaIG.perfil(igsid); perfil = { nombre: p.nombre || perfil.nombre, usuario: p.usuario || perfil.usuario }; } catch (e) { /* sin perfil, no pasa nada */ } }
-  const base = { canal: 'instagram', igsid, usuario: perfil.usuario || '', nombre: perfil.nombre || (perfil.usuario ? '@' + perfil.usuario : 'Instagram'), telE164: '', clienteId: '', clienteNombre: '', cred: '',
+  const base = { canal: 'instagram', area: 'ventas', igsid, usuario: perfil.usuario || '', nombre: perfil.nombre || (perfil.usuario ? '@' + perfil.usuario : 'Instagram'), telE164: '', clienteId: '', clienteNombre: '', cred: '',
     modo: (conv && conv.modo) || 'bot', noLeidos: ((conv && conv.noLeidos) || 0) + 1, ultimoMensaje: textoLista(m), ultimoMensajeHora: entrante.hora, ultimoEntranteHora: entrante.hora, actualizado: ahora, empresa: '26' };
   if (!conv) base.creado = ahora;
   await convRef.set(base, { merge: true });
@@ -139,28 +155,36 @@ async function procesarInstagram(deps, m) {
   if (deps.metaIG.marcarLeido) deps.metaIG.marcarLeido(igsid).catch(() => {});
   if (base.modo === 'humano') return { empresa: '26', canal: 'instagram', callado: true };
 
+  return responderVentas(deps, { db, convRef, conv, base, canal: 'instagram', hoy, ahora, nombrePerfil: perfil.nombre, usuario: perfil.usuario, telefono: '', leadId: 'ig:' + igsid, empresa: '26' });
+}
+
+// El asistente de ventas (WhatsApp o Instagram): briefing con el catalogo, respuesta, y el lead
+// si la persona quiere comprar. Por WhatsApp el telefono ya se sabe y queda en el lead.
+async function responderVentas(deps, x) {
+  const { db, convRef, conv, base, canal, hoy, ahora } = x;
   const historial = await docs(convRef.collection('mensajes').orderBy('hora', 'asc').limit(40));
   let cat = { motos: [], cond: null, sedes: [] };
   try { cat = await deps.ventas(); } catch (e) { deps.log('catalogo-fallo', { error: String(e && e.message || e).slice(0, 120) }); }
-  const sistema = ventas.armarVentas({ instrucciones: deps.cfg.instruccionesVentas, motos: cat.motos, cond: cat.cond, sedes: cat.sedes, hoy, nombrePerfil: perfil.nombre, usuario: perfil.usuario });
+  const sistema = ventas.armarVentas({ instrucciones: deps.cfg.instruccionesVentas, motos: cat.motos, cond: cat.cond, sedes: cat.sedes, hoy, nombrePerfil: x.nombrePerfil, usuario: x.usuario, canal, telefono: x.telefono, esCliente: !!base.clienteId });
   let r;
   try { r = await deps.cerebro.pensar({ sistema, mensajes: historial }); }
   catch (e) {
-    deps.log('cerebro-fallo', { canal: 'instagram', error: String(e && e.message || e).slice(0, 160) });
+    deps.log('cerebro-fallo', { canal, area: 'ventas', error: String(e && e.message || e).slice(0, 160) });
     await responder(deps, convRef, base, CORTESIA, ahora, { atencion: 'error' });
-    return { empresa: '26', canal: 'instagram', cerebro: 'fallo' };
+    return { empresa: x.empresa, canal, area: 'ventas', cerebro: 'fallo' };
   }
   const cambios = {};
   if (r.summary) cambios.resumen = r.summary;
   if (r.draft && r.draft.tipo === 'lead') {
     const previo = (conv && conv.borrador && conv.borrador.tipo === 'lead') ? conv.borrador : {};
     const lead = Object.assign({}, previo, Object.fromEntries(Object.entries(r.draft).filter(([, v]) => v)));   // lo nuevo completa lo que ya habia
+    if (!lead.telefono && x.telefono) lead.telefono = x.telefono;
     cambios.borrador = lead;
     cambios.atencion = 'lead';
-    await db.collection('leads').doc('ig:' + igsid).set(Object.assign({ canal: 'instagram', convId: 'ig:' + igsid, usuario: base.usuario, nombrePerfil: base.nombre, estado: 'nuevo', creado: ahora }, lead, { actualizado: ahora, resumen: r.summary || '' }), { merge: true });
+    await db.collection('leads').doc(x.leadId).set(Object.assign({ canal, convId: x.leadId, usuario: base.usuario || '', nombrePerfil: base.nombre || '', telE164: base.telE164 || '', clienteId: base.clienteId || '', estado: 'nuevo', creado: ahora }, lead, { actualizado: ahora, resumen: r.summary || '' }), { merge: true });
   } else if (r.handoff) cambios.atencion = RAZON_A_ATENCION[r.handoffReason] || 'pide_persona';
   await responder(deps, convRef, base, r.reply, ahora, cambios);
-  return { empresa: '26', canal: 'instagram', respondido: true, handoff: !!r.handoff || !!(r.draft && r.draft.tipo === 'lead'), draft: r.draft || null };
+  return { empresa: x.empresa, canal, area: 'ventas', respondido: true, handoff: !!r.handoff || !!(r.draft && r.draft.tipo === 'lead'), draft: r.draft || null };
 }
 
 // Manda el texto por el canal que toque, lo guarda como mensaje del asistente y actualiza la conversacion
@@ -215,4 +239,4 @@ async function enviarEquipo(deps, { empresa, convId, texto, por }) {
   return { metaId };
 }
 
-module.exports = { procesarAviso, procesarMensaje, procesarInstagram, procesarEstado, enviarEquipo, ubicar, contexto, CORTESIA, ACK_COMPROBANTE, telDe };
+module.exports = { procesarAviso, procesarMensaje, procesarInstagram, procesarEstado, enviarEquipo, ubicar, contexto, areaDe, CORTESIA, ACK_COMPROBANTE, telDe };
