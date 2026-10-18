@@ -70,7 +70,9 @@ async function quienEscribe(req) {
   return null;
 }
 
-exports.whatsappWebhook = onRequest({ region: 'us-east1', secrets: [VERIFY, TOKEN, PHONE_ID, APP_SECRET, ANTHROPIC], memory: '512MiB', timeoutSeconds: 120, cors: true }, async (req, res) => {
+// invoker 'public': Meta y el panel llaman sin credenciales de Google; la seguridad es la firma
+// de Meta (POST) y el token de Firebase del usuario (/equipo).
+exports.whatsappWebhook = onRequest({ region: 'us-east1', invoker: 'public', secrets: [VERIFY, TOKEN, PHONE_ID, APP_SECRET, ANTHROPIC], memory: '512MiB', timeoutSeconds: 120, cors: true }, async (req, res) => {
   if (req.method === 'GET') {
     const reto = meta.verificacion(req.query, VERIFY.value());
     if (reto) return res.status(200).send(reto);
