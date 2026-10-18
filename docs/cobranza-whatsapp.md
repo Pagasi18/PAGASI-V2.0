@@ -1,8 +1,8 @@
-# Cobranza por WhatsApp
+# Cobranza por WhatsApp y ventas por Instagram
 
-*18 de octubre de 2026.* Un asistente que recuerda las cuotas, responde por WhatsApp lo que el
-cliente pregunta de su crédito y le pasa al equipo lo que no le toca. Sirve a las dos compañías
-(PAGASI 18 y PAGASI 26) con un solo número.
+*18 de octubre de 2026.* Un asistente con dos caras y un solo servidor:
+- **WhatsApp = cobranza.** Recuerda las cuotas, responde lo que el cliente pregunta de su crédito y le pasa al equipo lo que no le toca. Sirve a las dos compañías (PAGASI 18 y PAGASI 26) con un solo número.
+- **Instagram = ventas.** Responde los mensajes directos de la cuenta de Pagasi con el catálogo real de pagasi.io (precio, inicial y cuota con la misma fórmula de la web), las sedes y cómo solicitar. Quien quiere comprar queda como **lead** para que un asesor lo llame. Siempre en la 26.
 
 ## Las piezas
 
@@ -12,7 +12,8 @@ cliente pregunta de su crédito y le pasa al equipo lo que no le toca. Sirve a l
 | Webhook `whatsappWebhook` | `functions/index.js` (proyecto **pagasi26-65ced**, us-east1) · `https://whatsappwebhook-xo5umdw5cq-ue.a.run.app` (también `https://us-east1-pagasi26-65ced.cloudfunctions.net/whatsappWebhook`) | GET: verificación de Meta · POST: recibe mensajes y estados · POST `/equipo`: el panel manda como equipo |
 | Robot `recordatoriosWhatsApp` | `functions/index.js` | Todos los días 8:30 am (Caracas): plantillas 2 días antes, el día, al 3.º y al 6.º día de vencida |
 | El cerebro | `functions/lib/cerebro.js` + `briefing.js` | Claude (`claude-sonnet-5-5`) con una herramienta `responder`: respuesta, promesa, resumen, handoff |
-| El flujo | `functions/lib/procesar.js` | Dónde vive la conversación, de qué cliente es, qué se guarda, cuándo se calla |
+| El flujo | `functions/lib/procesar.js` | Dónde vive la conversación, de qué cliente es, qué se guarda, cuándo se calla; `procesarInstagram` para ventas |
+| Ventas | `functions/lib/ventas.js` | El briefing de ventas: catálogo (`catalogo` + `_condiciones`), sedes (`concesionarios`), pasos de la solicitud, reglas (no aprobar, no pedir cédula, lead) |
 | Meta | `functions/lib/meta.js` | Firma, verificación, parseo del aviso, envío de texto y plantillas, bajar medios |
 
 ## Dónde queda cada cosa
@@ -21,7 +22,8 @@ cliente pregunta de su crédito y le pasa al equipo lo que no le toca. Sirve a l
 - `conversaciones/wa:+58414…` con sus `mensajes/{id de Meta}`. Usar el id de Meta como id del documento es lo que evita procesar dos veces un reenvío del webhook.
 - Una imagen o PDF del cliente va a Storage (`comprobantes_whatsapp/<tel>/<id>`), crea un `comprobantes` pendiente con `origen: 'whatsapp'` (se confirma desde Pagos como los del portal) y marca la conversación con `atencion: 'comprobante'`.
 - Auditoría en la 26: `webhooks_meta` (cada aviso crudo), `recordatorios/{empresa}_{crédito}_{cuota}_{tipo}` (cada envío, no se repite), `recordatorios_corridas` (el resultado de cada mañana).
-- `config/asistente` (en la 26, lo lee el servidor): `instrucciones`, `datosPago`, `plantillas` (`{proximas, hoy, gracia, atrasadas}` con los nombres aprobados por Meta), `conectado`, `telefono`, `urlEquipo` opcional.
+- `config/asistente` (en la 26, lo lee el servidor): `instrucciones`, `instruccionesVentas`, `datosPago`, `plantillas` (`{proximas, hoy, gracia, atrasadas}` con los nombres aprobados por Meta), `conectado`, `telefono`, `instagram` (el usuario, solo para mostrarlo), `urlEquipo` opcional.
+- Instagram: conversaciones `ig:<IGSID>` en la 26 (`usuario`, `nombre`, sin cliente); `leads/ig:<IGSID>` con nombre, ciudad, modelo, teléfono, `estado: 'nuevo'` (el equipo lo pasa a atendido). Los mensajes del equipo salen normal dentro de las 24 h y como agente humano (etiqueta HUMAN_AGENT, hay que pedirla en la app) hasta 7 días; después hay que esperar a que la persona vuelva a escribir.
 
 ## Reglas fijas del asistente (en el briefing, no se editan desde la pantalla)
 
@@ -30,6 +32,14 @@ refinancia ni promete. No pide cédula ni documentos. Nunca amenaza. Si el clien
 una persona, manda una imagen o dice que no puede pagar, se calla y avisa. Si dice cuándo paga,
 queda como borrador de promesa para que el equipo lo confirme con un clic. Cuando una persona
 toma la conversación (`modo: 'humano'`), el asistente no responde hasta que la devuelvan.
+
+## Reglas fijas del asistente de ventas (Instagram)
+
+Solo habla de las motos, los planes y cómo solicitar; si alguien pregunta por un crédito que ya
+tiene, lo manda a Mi cuenta o al WhatsApp. Cifras únicamente del catálogo. No aprueba ni promete
+entrega. No pide cédula ni documentos: para que un asesor llame basta nombre, ciudad, modelo y
+WhatsApp, y eso queda como lead. Instrucciones extra del equipo en el panel (pestaña Asistente,
+"Ventas por Instagram").
 
 ## Lo que hace falta para encenderlo
 
@@ -49,6 +59,7 @@ toma la conversación (`modo: 'humano'`), el asistente no responde hasta que la 
 4. **Firestore Rules** publicadas en las dos compañías (bloque "Cobranza por WhatsApp").
 5. `config/asistente`: `conectado: true`, `telefono`, `datosPago`, `plantillas`. Con `conectado` en falso, la pantalla sigue en demostración y el robot de la mañana no manda nada.
 6. Consentimiento: una línea en el contrato y en la solicitud web para recibir avisos por WhatsApp.
+7. **Instagram**: la cuenta de Pagasi debe ser profesional (empresa) y estar ligada a una página de Facebook; en la misma app de Meta se agrega el producto Instagram con `instagram_manage_messages` (y el permiso de etiqueta de agente humano), se suscribe el mismo webhook al objeto `instagram` (campo `messages`), y se guardan `INSTAGRAM_ACCESS_TOKEN` (token de la página o de la cuenta) e `INSTAGRAM_ACCOUNT_ID` (id de la cuenta profesional) con `firebase functions:secrets:set`. Mientras digan `pendiente`, los mensajes de Instagram se saltan sin romper nada.
 
 ## Despliegue
 
@@ -64,7 +75,7 @@ repo) para que el robot calcule la cola con el mismo código que la pantalla.
 
 ## Pruebas
 
-- `node tests/t_whatsapp_webhook.js`: parseo de Meta, briefing, cerebro (validación y turnos), el flujo completo con bases falsas, comprobantes, estados, el equipo, los recordatorios.
+- `node tests/t_whatsapp_webhook.js`: parseo de Meta (WhatsApp e Instagram), briefings de cobranza y de ventas, cerebro (validación y turnos, promesa y lead), el flujo completo con bases falsas, comprobantes, estados, el equipo por los dos canales, los recordatorios.
 - `node tests/t_whatsapp_cola.js`: la cola del día y la pantalla.
 - `tests/reglas/t_reglas_whatsapp.js`: las Reglas contra el emulador (workflow `reglas-probar`).
 
