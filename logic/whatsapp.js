@@ -186,13 +186,24 @@ function waEnviarEquipo(id, texto){
   var m = { autor: 'equipo', direccion: 'saliente', tipo: 'texto', texto: texto, hora: new Date().toISOString(), estado: waConectado() ? 'pendiente' : 'entregado', por: (S.currentUser && S.currentUser.nombre) || 'Equipo' };
   (_waRoot._waMsgs[id] = _waRoot._waMsgs[id] || []).push(Object.assign({ id: 'local-' + Date.now() }, m));
   Object.assign(c, { ultimoMensaje: texto, ultimoMensajeHora: m.hora, modo: 'humano', atendidoPor: m.por });
-  if(waConectado() && typeof db !== 'undefined' && db){
-    var ref = db.collection('conversaciones').doc(id);
-    ref.collection('mensajes').add(m).then(function(){ return ref.set({ modo: 'humano', atendidoPor: m.por, ultimoMensaje: texto, ultimoMensajeHora: m.hora, actualizado: m.hora }, { merge: true }); })
-      .catch(function(e){ toast('No se pudo enviar: ' + (e && e.message || e), 'error'); });
-  }
+  if(waConectado()) _waMandarAlServidor(id, texto, m);
   if(typeof logActividad === 'function') logActividad('wa_mensaje_equipo', 'whatsapp', id, { largo: texto.length });
   if(typeof _waPintarHilo === 'function') _waPintarHilo(id);
+}
+// Con Meta conectado el mensaje del equipo lo manda el servidor (Cloud Functions): él habla con
+// Meta y guarda el mensaje; aquí solo se pide con la sesión del usuario. La URL se puede cambiar
+// en config/asistente.urlEquipo.
+var WA_URL_EQUIPO = 'https://us-east1-pagasi26-65ced.cloudfunctions.net/whatsappWebhook/equipo';
+function waEmpresa(){ return (typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG && FIREBASE_CONFIG.projectId === 'pagasi-v2') ? '18' : '26'; }
+function _waMandarAlServidor(id, texto, m){
+  var url = (_waRoot._waCfg && _waRoot._waCfg.urlEquipo) || WA_URL_EQUIPO;
+  var fallo = function(msg){ m.estado = 'fallo'; toast('No se pudo enviar: ' + msg, 'error'); if(typeof _waPintarHilo === 'function') _waPintarHilo(id); };
+  var user = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) || null;
+  if(!user){ fallo('sin sesión'); return Promise.resolve(); }
+  return user.getIdToken().then(function(tok){
+    return fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + tok }, body: JSON.stringify({ empresa: waEmpresa(), conv: id, texto: texto }) });
+  }).then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ if(!r.ok) throw new Error(j.error || ('HTTP ' + r.status)); m.estado = 'enviado'; }); })
+    .catch(function(e){ fallo(e && e.message || e); });
 }
 // En la demostración el "cliente" responde para que se vea el ida y vuelta del asistente
 function waDemoClienteEscribe(id, texto){
@@ -210,13 +221,14 @@ function waDemoClienteEscribe(id, texto){
     if(typeof _waPintarLista === 'function') _waPintarLista();
   }, 900);
 }
-function waGuardarInstrucciones(texto){
+function waGuardarInstrucciones(texto, datosPago){
   if(typeof isAdminUser === 'function' && !isAdminUser()){ toast('Solo un administrador cambia las instrucciones del asistente', 'error'); return; }
   texto = String(texto || '');
   var datos = { instrucciones: texto, actualizadoPor: (S.currentUser && S.currentUser.nombre) || '', actualizadoEn: new Date().toISOString() };
+  if(typeof datosPago === 'string') datos.datosPago = datosPago;   // cómo pagar: lo que el asistente le dice al cliente
   _waRoot._waCfg = Object.assign(_waRoot._waCfg || {}, datos);
   var fin = function(){ if(typeof logActividad === 'function') logActividad('asistente_instrucciones', 'whatsapp', 'config/asistente', { largo: texto.length }); toast('Instrucciones guardadas: el asistente las lee en su próxima respuesta', 'success'); };
   if(typeof db === 'undefined' || !db){ fin(); return; }
   db.collection('config').doc('asistente').set(datos, { merge: true }).then(fin).catch(function(e){ toast('No se pudo guardar: ' + (e && e.message || e), 'error'); });
 }
-if(typeof module !== 'undefined' && module.exports) module.exports = { waTelE164: waTelE164, waColaHoy: waColaHoy, waPlantilla: waPlantilla, waDemoResponder: waDemoResponder, waVentanaAbierta: waVentanaAbierta, WA_GRUPOS: WA_GRUPOS };
+if(typeof module !== 'undefined' && module.exports) module.exports = { waTelE164: waTelE164, waColaHoy: waColaHoy, waPlantilla: waPlantilla, waDemoResponder: waDemoResponder, waVentanaAbierta: waVentanaAbierta, waEmpresa: waEmpresa, WA_GRUPOS: WA_GRUPOS, WA_URL_EQUIPO: WA_URL_EQUIPO };

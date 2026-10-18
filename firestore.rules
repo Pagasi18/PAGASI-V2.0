@@ -257,8 +257,35 @@ service cloud.firestore {
                        .hasOnly(['refrescoPedido','refrescoPedidoPor','refrescoPedidoEn']) ) )
         : ( id in ['plan','cuentasBanc','empresa','rolesPermisos','score','cobradores','avisosTelegram','avisosChats']
             ? (esAdmin() || permiso('config'))
-            : esInterno() ) ) );
+        // config/asistente (18-oct-2026): las instrucciones y los datos de pago que lee el
+        // asistente de cobranza por WhatsApp. Solo administracion, como en la pantalla.
+        : ( id == 'asistente' ? esAdmin()
+            : esInterno() ) ) ) );
     }
+
+    // == Cobranza por WhatsApp (18-oct-2026) ==
+    // Las conversaciones y sus mensajes los escribe el servidor (Cloud Functions, con la
+    // cuenta de servicio): desde el navegador quien tiene el modulo 'whatsapp' las lee y
+    // solo cambia lo de atenderlas (tomarla, devolverla, marcar vista, el borrador de la
+    // promesa). Los mensajes del equipo salen por el endpoint /equipo, no por aqui, para
+    // que nada quede guardado como enviado sin haber pasado por Meta.
+    function veWhatsapp() { return esInterno() && (esAdmin() || permiso('whatsapp')); }
+    match /conversaciones/{id} {
+      allow read: if veWhatsapp();
+      allow update: if veWhatsapp()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['modo','atendidoPor','atencion','noLeidos','borrador','actualizado']);
+      allow create, delete: if false;
+      match /mensajes/{mid} {
+        allow read: if veWhatsapp();
+        allow write: if false;
+      }
+    }
+    // Lo que guarda el servidor para auditoria: los avisos crudos de Meta, los recordatorios
+    // mandados y el resultado de cada corrida. Se leen desde administracion, no se tocan.
+    match /webhooks_meta/{id} { allow read: if esAdmin(); allow write: if false; }
+    match /recordatorios/{id} { allow read: if veWhatsapp(); allow write: if false; }
+    match /recordatorios_corridas/{id} { allow read: if esAdmin(); allow write: if false; }
 
     // == Portal de aliados (17-oct-2026) ==
     // aliados_resumen/{concId}: lo escribe el robot (cuenta de servicio, no pasa por aqui) con
