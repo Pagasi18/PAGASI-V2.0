@@ -1,7 +1,7 @@
 {
   "functions": {
     "source": "functions",
-    "runtime": "nodejs20",
+    "runtime": "nodejs22",
     "predeploy": ["mkdir -p functions/logic && cp logic/whatsapp.js logic/credito-ledger.js functions/logic/"],
     "ignore": ["node_modules", ".git", "*.log"]
   }

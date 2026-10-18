@@ -11,7 +11,10 @@ const { onRequest } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
-const admin = require('firebase-admin');
+const { initializeApp, getApps } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
+const { getStorage } = require('firebase-admin/storage');
+const { getAuth } = require('firebase-admin/auth');
 const crypto = require('crypto');
 const meta = require('./lib/meta');
 const cerebro = require('./lib/cerebro');
@@ -26,10 +29,10 @@ const ANTHROPIC = defineSecret('ANTHROPIC_API_KEY');
 const PROYECTOS = { '26': 'pagasi26-65ced', '18': 'pagasi-v2' };
 const BUCKETS = { '26': 'pagasi26-65ced.firebasestorage.app', '18': 'pagasi-v2.firebasestorage.app' };
 
-if (!admin.apps.length) admin.initializeApp();
-const app18 = admin.apps.find(a => a.name === 'p18') || admin.initializeApp({ projectId: PROYECTOS['18'], storageBucket: BUCKETS['18'] }, 'p18');
-const bases = { '26': admin.firestore(), '18': admin.firestore(app18) };
-const apps = { '26': admin.app(), '18': app18 };
+const app26 = getApps().find(a => a.name === '[DEFAULT]') || initializeApp({ projectId: PROYECTOS['26'], storageBucket: BUCKETS['26'] });
+const app18 = getApps().find(a => a.name === 'p18') || initializeApp({ projectId: PROYECTOS['18'], storageBucket: BUCKETS['18'] }, 'p18');
+const apps = { '26': app26, '18': app18 };
+const bases = { '26': getFirestore(app26), '18': getFirestore(app18) };
 
 function hoyCaracas() { return new Date(Date.now() - 4 * 3600 * 1000).toISOString().slice(0, 10); }
 async function cfgAsistente() {
@@ -41,7 +44,7 @@ function storageDe(empresa) {
   // Se guarda con un token de descarga, igual que las fotos que sube el portal: la URL abre
   // desde el panel sin firmar nada ni dar permisos extra a la cuenta de las funciones.
   return { async subir(ruta, bytes, mime) {
-    const bucket = admin.storage(apps[empresa]).bucket(BUCKETS[empresa]);
+    const bucket = getStorage(apps[empresa]).bucket(BUCKETS[empresa]);
     const token = crypto.randomUUID();
     await bucket.file(ruta).save(bytes, { contentType: mime, resumable: false, metadata: { cacheControl: 'private, max-age=0', metadata: { firebaseStorageDownloadTokens: token } } });
     return `https://firebasestorage.googleapis.com/v0/b/${BUCKETS[empresa]}/o/${encodeURIComponent(ruta)}?alt=media&token=${token}`;
@@ -59,7 +62,7 @@ async function quienEscribe(req) {
   if (!tok) return null;
   for (const emp of ['26', '18']) {
     try {
-      const dec = await admin.auth(apps[emp]).verifyIdToken(tok);
+      const dec = await getAuth(apps[emp]).verifyIdToken(tok);
       const u = await bases[emp].collection('usuarios').doc(dec.uid).get();
       if (u.exists && u.data().rol !== 'Aliado' && u.data().suspendido !== true && u.data().eliminado !== true) return { empresa: emp, uid: dec.uid, nombre: u.data().nombre || dec.email || 'Equipo' };
     } catch (e) { /* no es de esta compania */ }
