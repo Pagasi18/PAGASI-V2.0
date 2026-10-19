@@ -4,6 +4,8 @@
 
 Todo lo que el sistema calcula con números, dónde vive cada fórmula (archivo:línea) y con qué valores trabaja. Los valores marcados *(Configuración)* se leen de Firestore y mandan sobre el código.
 
+**Valores en la base el 19-oct-2026:** `config/plan` igual en 18 y 26 desde el 10-jul-2026 (plazo 12, factor 2,102343, inicial 0,45, tasaMensual 14,11, apy 413,34, diasGracia 5, moraPct 2,5). `catalogo/_condiciones` en la 26: apy 500, seguroPct 0, inicialMin 40, inicialMax 60, plazos [6, 9, 12] (15-oct-2026); la 18 no tiene el documento y usa el respaldo del código, que es igual. `config/tasa`: USD BCV 881,07 · EUR BCV 991,16 · Binance 1.003. `config/score` y `config/facturacion` no existen en ninguna base: rigen los valores del código.
+
 ## 1. La cuota del crédito — `logic/financiero.js`
 
 Hay tres formas de llegar a la cuota, según el modo que elija el asistente de crédito. Desde el 15 de octubre la cuota de los créditos nuevos sale del plan del catálogo (sección 2) y se puede editar a mano.
