@@ -300,3 +300,7 @@ El dashboard la calcula sobre el BCV; la calculadora de tasas sobre Binance. Son
 
 Dentro del total y sobre base más IVA (factura); encima del total (libro SENIAT); sobre el bruto con el IVA siempre en 16% (reporte del contador).
 
+### 14. Fin del contrato: 30 días por mes o 15 por cuota
+
+El módulo de Contratos calcula el vencimiento con `plazo × 30` días; el detalle, el ledger y los contratos usan `n × 15`. Un crédito de 12 meses termina 5 días antes en un sitio que en el otro.
+
