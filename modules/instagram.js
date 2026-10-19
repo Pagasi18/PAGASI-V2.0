@@ -15,11 +15,11 @@ PG.instagram = function(){
     + '<div>' + (conectado ? '<span class="wa-pill ig">' + (typeof cfg.instagram === 'string' && cfg.instagram ? '@' + _waEsc(cfg.instagram.replace(/^@/, '')) + ' conectado' : 'Instagram conectado') + '</span>' : '<span class="wa-pill ambar">Modo demostración</span>') + '</div></div>'
     + (conectado ? '' : '<div class="wa-aviso"><span style="font-size:18px">⚠️</span><div><b>Instagram todavía no está conectado.</b> Las conversaciones son de muestra, en memoria, para ver cómo atiende el asistente. Falta que la cuenta sea profesional, esté ligada a una página de Facebook y tenga el permiso de mensajes en la app de Meta.</div></div>')
     + '<div class="sg wa-stats" style="margin-bottom:14px">'
-    + '<div class="stat"><div class="st-v">' + convs.length + '</div><div class="st-l">Conversaciones</div></div>'
-    + '<div class="stat"><div class="st-v" style="color:var(--amber)">' + conAtencion + '</div><div class="st-l">Esperan a una persona</div></div>'
-    + '<div class="stat"><div class="st-v" style="color:#0f7a3e">' + leads + '</div><div class="st-l">Quieren comprar (leads)</div></div>'
+    + '<div class="stat"><div class="st-v" id="wa-st-conv">' + convs.length + '</div><div class="st-l">Conversaciones</div></div>'
+    + '<div class="stat"><div class="st-v" id="wa-st-esperan" style="color:var(--amber)">' + conAtencion + '</div><div class="st-l">Esperan a una persona</div></div>'
+    + '<div class="stat"><div class="st-v" id="wa-st-leads" style="color:#0f7a3e">' + leads + '</div><div class="st-l">Quieren comprar (leads)</div></div>'
     + '</div>'
-    + '<div class="wa-tabs"><button class="' + (tab === 'conv' ? 'on' : '') + '" onclick="waTab(\'conv\')">Conversaciones' + (conAtencion ? ' · ' + conAtencion + ' esperan' : '') + '</button><button class="' + (tab === 'asistente' ? 'on' : '') + '" onclick="waTab(\'asistente\')">Asistente</button></div>';
+    + '<div class="wa-tabs"><button class="' + (tab === 'conv' ? 'on' : '') + '" id="wa-tab-conv" onclick="waTab(\'conv\')">Conversaciones' + (conAtencion ? ' · ' + conAtencion + ' esperan' : '') + '</button><button class="' + (tab === 'asistente' ? 'on' : '') + '" onclick="waTab(\'asistente\')">Asistente</button></div>';
   if(tab === 'asistente') h += _waPanelAsistente(ctx);
   else h += _waPanelConversaciones(ctx);
   h += '</div>';
