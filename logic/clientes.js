@@ -51,6 +51,7 @@ function getClienteEstados(c){
 function clienteMatchesFiltro(c, filtro){
   filtro=filtro||'todos';
   if(filtro==='todos') return true;
+  if(filtro==='instagram'||filtro==='whatsapp') return !!c && c.origen===filtro;   // leads del chat de Paola
   var info=getClienteEstados(c).estados;
   return info.indexOf(filtro)>=0;
 }
