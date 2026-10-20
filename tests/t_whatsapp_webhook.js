@@ -120,6 +120,11 @@ const msgTexto = (de, texto, id) => ({ metaId: id || 'wamid.in' + Math.random().
   A = armar(); A.cerebroFalso.falla = true;
   r = await procesar.procesarMensaje(A.deps, msgTexto('584141234567', 'hola', 'wamid.f1'));
   ok('si el cerebro falla, se manda una frase de cortesía y se marca error', r.cerebro === 'fallo' && A.enviados[0].t === procesar.CORTESIA && A.db26._store.get('conversaciones/wa:+584141234567').atencion === 'error');
+  r = await procesar.procesarMensaje(A.deps, msgTexto('584141234567', 'sigues ahí?', 'wamid.f2'));
+  ok('si sigue caído, la disculpa NO se repite: el mensaje se guarda y la conversación sigue en error', r.cerebro === 'fallo' && r.disculpa === 'omitida' && A.enviados.length === 1 && A.db26._store.get('conversaciones/wa:+584141234567/mensajes/wamid.f2').texto === 'sigues ahí?' && A.db26._store.get('conversaciones/wa:+584141234567').atencion === 'error');
+  A.cerebroFalso.falla = false; A.cerebroFalso.respuesta = { reply: 'Ya volví, ¿en qué te ayudo?', draft: null, summary: '', handoff: false };
+  r = await procesar.procesarMensaje(A.deps, msgTexto('584141234567', 'hola de nuevo', 'wamid.f3'));
+  ok('cuando el cerebro vuelve, responde normal', !r.cerebro && A.enviados.length === 2 && /Ya volví/.test(A.enviados[1].t));
   // estados
   A = armar();
   await procesar.procesarMensaje(A.deps, msgTexto('584141234567', 'hola', 'wamid.s1'));
