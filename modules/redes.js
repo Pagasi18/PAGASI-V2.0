@@ -194,6 +194,11 @@ var RS_CALIDADES = [
   { id: 'maxima', nombre: 'Máxima', modelo: 'Claude Opus', nota: 'La más lista' }
 ];
 var _RS_CHISPA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>';
+// Messenger (el rayo) y Facebook (la f), para los interruptores
+var _RS_ICONOS = {
+  ms: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m6.5 14.5 4-4.3 2.2 2.3 4.8-2.6-4 4.3-2.2-2.3z"/></svg>',
+  fb: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 21v-7.5H16l.4-3h-2.9V8.6c0-.9.3-1.5 1.5-1.5h1.5V4.4c-.3 0-1.2-.1-2.2-.1-2.2 0-3.7 1.3-3.7 3.8v2.4H8.1v3h2.5V21z"/></svg>'
+};
 var _RS_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 var _RS_NO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 // Las conversaciones de esa asistente en las que contestó hoy (y la última vez que contestó)
@@ -208,8 +213,9 @@ function rsAsistente(area){
   var puede = typeof isAdminUser === 'function' && isAdminUser(), aqui = waConectado() || waConectadoCanal('instagram');
   var editable = puede && aqui && !!(typeof db !== 'undefined' && db), uso = _rsUsoHoy(A.area);
   var claudeOk = !!uso.ultima && (Date.now() - new Date(uso.ultima).getTime()) < 48 * 3600 * 1000;
-  var fila = function(id, txt, ic, pend, sub){ var on = pend ? false : resp[id] !== false;
-    return '<label class="rs-swf"><span class="ic ' + ic + '">' + (ic === 'wa' ? _waIcono('wa') : ic === 'rl' ? _waIcono('bot') : _waIcono('ig')) + '</span><span class="t">' + txt + (pend ? ' <span class="wa-pill gris">sin conectar</span>' : '') + (sub ? '<small>' + sub + '</small>' : '') + '</span>'
+  // Los recordatorios tienen su propio campo (config/asistente.recordatorios): el servidor los manda salvo que diga false
+  var fila = function(id, txt, ic, pend, sub){ var on = pend ? false : id === 'recordatorios' ? cfg.recordatorios !== false : resp[id] !== false;
+    return '<label class="rs-swf"><span class="ic ' + ic + '">' + (_RS_ICONOS[ic] || _waIcono(ic === 'wa' ? 'wa' : ic === 'rl' ? 'bot' : 'ig')) + '</span><span class="t">' + txt + (pend ? ' <span class="wa-pill gris">sin conectar</span>' : '') + (sub ? '<small>' + sub + '</small>' : '') + '</span>'
       + '<input type="checkbox" role="switch" class="rs-sw" data-canal="' + id + '"' + (on ? ' checked' : '') + (pend || !editable ? ' disabled' : '') + '></label>'; };
   var h = '<div class="rs-v">'
     + (!aqui ? '<div class="aviso" style="margin:0 0 12px">En esta compañía ' + A.nombre + ' no está conectada a Meta: lo que ves es de muestra. Las asistentes se configuran en <b>pagasi.io</b>.</div>' : '')
@@ -248,7 +254,7 @@ function rsGuardarAsistente(area){
   datos.actualizadoPor = (S.currentUser && S.currentUser.nombre) || ''; datos.actualizadoEn = new Date().toISOString();
   return db.collection('config').doc('asistente').set(datos, { merge: true }).then(function(){
     window._waCfg = Object.assign(window._waCfg || {}, datos);
-    if(typeof logActividad === 'function') logActividad('asistente_config', 'redes', 'config/asistente', { area: area, calidad: cal[area], responde: JSON.stringify(resp), recordatorios: datos.recordatorios });
+    if(typeof logActividad === 'function') logActividad('asistente_config', 'redes', 'config/asistente', Object.assign({ area: area, calidad: cal[area], responde: JSON.stringify(resp) }, 'recordatorios' in datos ? { recordatorios: datos.recordatorios } : {}));
     if(typeof toast === 'function') toast('Listo: ' + RS_ASIS[area].nombre + ' lo aplica desde su próxima respuesta', 'success');
     closeM();
   }).catch(function(e){ if(typeof toast === 'function') toast('No se pudo guardar: ' + (e && e.message || e), 'error'); return false; });

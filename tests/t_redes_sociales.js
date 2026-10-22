@@ -122,6 +122,8 @@ ok('la conexión: Meta, Instagram, WhatsApp, Messenger y Claude', /Meta \(la app
 ok('el administrador ve Guardar', /saveM\(\)">Guardar/.test(els['mft'].innerHTML));
 ctx.rsAsistente('cobranza'); v = els['mbd'].innerHTML;
 ok('la de Patricia: WhatsApp y los recordatorios de las 8:30, con el aviso de que salen a clientes de verdad', els['mtt'].textContent === 'Patricia de Pagasi' && /data-canal="recordatorios"/.test(v) && /clientes de verdad/.test(v) && /Cómo pagar/.test(v));
+ok('los recordatorios salen apagados si config/asistente dice recordatorios: false (como hoy en la 26)', (ctx._waCfg.recordatorios = false, ctx.rsAsistente('cobranza'), /data-canal="recordatorios">/.test(els['mbd'].innerHTML)));
+ok('...y encendidos si no dice nada (el servidor los manda)', (delete ctx._waCfg.recordatorios, ctx.rsAsistente('cobranza'), /data-canal="recordatorios" checked>/.test(els['mbd'].innerHTML)));
 // Guardar: lo que se escoge queda en config/asistente (lo lee el servidor)
 const escrito = [];
 const sw = (canal, on) => ({ disabled: false, checked: on, getAttribute: () => canal });
