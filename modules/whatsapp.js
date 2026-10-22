@@ -1,26 +1,24 @@
-// Pagasi module: whatsapp (18-oct-2026). Dos areas: COBRANZA (Hoy = la cola de recordatorios
-// calculada con la cartera, Conversaciones y Asistente) y VENTAS (quien escribe al WhatsApp
-// preguntando por una moto: Conversaciones y Asistente de ventas). El motor de la pantalla
-// (lista + hilo + ficha, pestana Asistente) es compartido con modules/instagram.js, que es
-// otro modulo con el mismo asistente de ventas por mensajes directos. Ver logic/whatsapp.js.
-window._waArea = window._waArea || 'cobranza';
-window._waTabs = window._waTabs || {};
-function _waCtxActual(){ return S.page === 'instagram' ? { modulo: 'instagram', canal: 'instagram', area: 'ventas' } : { modulo: 'whatsapp', canal: 'whatsapp', area: window._waArea || 'cobranza' }; }
-function _waClave(ctx){ ctx = ctx || _waCtxActual(); return ctx.modulo + ':' + ctx.area; }
-function _waTabActual(ctx){ ctx = ctx || _waCtxActual(); return window._waTabs[_waClave(ctx)] || (ctx.modulo === 'whatsapp' && ctx.area === 'cobranza' ? 'hoy' : 'conv'); }
-function waTab(t){ window._waTabs[_waClave()] = t; nav(S.page === 'instagram' ? 'instagram' : 'whatsapp'); }
-function waArea(a){ window._waArea = a === 'ventas' ? 'ventas' : 'cobranza'; window._waSel = null; nav('whatsapp'); }
+// Pagasi module: whatsapp (18-oct-2026) — el MOTOR de la bandeja de Redes sociales.
+// Desde el 22-oct-2026 WhatsApp e Instagram son un solo modulo, Redes sociales
+// (modules/redes.js), con una pestana por canal. Aqui queda la pantalla compartida: lista +
+// hilo + ficha, la cola de cobranza de hoy y las instrucciones de las asistentes. Patricia
+// atiende la COBRANZA por WhatsApp; Paola las VENTAS por WhatsApp e Instagram. Ver logic/whatsapp.js.
+// El contexto es la pestana abierta de Redes sociales: 'todos', 'whatsapp', 'instagram'...
+function _waCtxActual(){ return { modulo: 'redes', canal: window._rsTab || 'todos', area: '' }; }
+function _waClave(ctx){ ctx = ctx || _waCtxActual(); return ctx.modulo + ':' + ctx.canal; }
 // Abrir una conversacion: si ya estamos en esa pantalla se cambia solo el hilo y la ficha (sin
 // recargar la pagina, que saltaba el formato y el scroll con cada clic, 19-oct-2026); si no, nav.
+// Si la conversacion no es del canal de la pestana abierta, se abre en "Todos los mensajes".
 function waAbrir(id){
-  var c = _waConv(id), mod = _waModuloDe(id), antes = _waCtxActual();
+  var c = _waConv(id), enLista = !!c && _waConvsDe(_waCtxActual()).indexOf(c) > -1;
   window._waSel = id;
-  if(c && c.canal !== 'instagram'){ window._waArea = c.area === 'ventas' ? 'ventas' : 'cobranza'; }
-  window._waTabs[_waClave(c && c.canal === 'instagram' ? { modulo: 'instagram', area: 'ventas' } : { modulo: 'whatsapp', area: window._waArea })] = 'conv';
-  var enSitio = S.page === mod && document.getElementById('wa-hilo') && antes.modulo === mod && antes.area === _waCtxActual().area;
-  if(enSitio) _waPintarSeleccion(); else nav(mod);
+  var enSitio = S.page === 'redes' && (window._rsVista || 'bandeja') === 'bandeja' && document.getElementById('wa-hilo') && enLista;
+  if(enSitio){ _waPintarSeleccion(); return; }
+  window._rsVista = 'bandeja';
+  if(!enLista) window._rsTab = 'todos';
+  nav('redes');
 }
-// Filtros de la lista (por pantalla): la clave es modulo:area
+// Filtros de la lista (por pestana): la clave es redes:canal
 window._waFiltros = window._waFiltros || {};
 function _waFiltroActual(ctx){ return window._waFiltros[_waClave(ctx || _waCtxActual())] || 'todas'; }
 function waFiltro(f){ window._waFiltros[_waClave()] = f; _waPintarLista(); }
@@ -28,19 +26,23 @@ function waFiltro(f){ window._waFiltros[_waClave()] = f; _waPintarLista(); }
 // conversaciones de antes, si la hora del ultimo mensaje es la del ultimo entrante, fue el cliente.
 function _waSinResponder(c){ if(!c || !c.ultimoEntranteHora) return false; return c.ultimoAutor ? c.ultimoAutor === 'cliente' : String(c.ultimoMensajeHora || '') === String(c.ultimoEntranteHora || ''); }
 function _waEsHoy(iso){ return !!iso && new Date(iso).toDateString() === new Date().toDateString(); }
+function _waEsCobranza(c){ return (c.canal || 'whatsapp') === 'whatsapp' && (c.area || 'cobranza') === 'cobranza'; }
+// en: las pestanas donde sale el filtro (sin "en", sale en todas). Cobranza solo hay por WhatsApp.
 var WA_FILTROS = [
   { id: 'todas', nombre: 'Todas', f: function(){ return true; } },
-  { id: 'sin', nombre: 'Sin responder', f: _waSinResponder },
   { id: 'noleidas', nombre: 'No leídas', f: function(c){ return (c.noLeidos || 0) > 0; } },
+  { id: 'sin', nombre: 'Sin responder', f: _waSinResponder },
   { id: 'esperan', nombre: 'Esperan persona', f: function(c){ return !!c.atencion; } },
   { id: 'humano', nombre: 'Atiende una persona', f: function(c){ return c.modo === 'humano'; } },
-  { id: 'leads', nombre: 'Quieren comprar', f: function(c){ return !!(c.borrador && c.borrador.tipo === 'lead'); }, solo: 'ventas' },
-  { id: 'promesas', nombre: 'Con promesa', f: function(c){ return !!(c.borrador && c.borrador.tipo === 'promesa'); }, solo: 'cobranza' },
+  { id: 'cobranza', nombre: 'Cobranza', f: _waEsCobranza, en: ['todos', 'whatsapp'] },
+  { id: 'ventas', nombre: 'Ventas', f: function(c){ return !_waEsCobranza(c); }, en: ['todos', 'whatsapp'] },
+  { id: 'leads', nombre: 'Quieren comprar', f: function(c){ return !!(c.borrador && c.borrador.tipo === 'lead'); } },
+  { id: 'promesas', nombre: 'Con promesa', f: function(c){ return !!(c.borrador && c.borrador.tipo === 'promesa'); }, en: ['todos', 'whatsapp'] },
   { id: 'hoy', nombre: 'Hoy', f: function(c){ return _waEsHoy(c.ultimoMensajeHora); } }
 ];
-function _waFiltrosDe(ctx){ return WA_FILTROS.filter(function(f){ return !f.solo || f.solo === ctx.area; }); }
-// Las conversaciones que le tocan a este contexto (canal y, en WhatsApp, el area)
-function _waConvsDe(ctx){ return (window._waConvs || []).filter(function(c){ return (c.canal || 'whatsapp') === ctx.canal && (ctx.canal === 'instagram' || (c.area || 'cobranza') === ctx.area); }); }
+function _waFiltrosDe(ctx){ return WA_FILTROS.filter(function(f){ return !f.en || f.en.indexOf(ctx.canal) > -1; }); }
+// Las conversaciones de la pestana abierta ('todos' = todos los canales que este usuario ve)
+function _waConvsDe(ctx){ return (window._waConvs || []).filter(function(c){ return ctx.canal === 'todos' || (c.canal || 'whatsapp') === ctx.canal; }); }
 
 var _WA_CSS = '<style id="wa-css">'
   + '.wa-cab{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:12px}.wa-cab-izq .cs{max-width:620px}.wa-cab-der{display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.wa-cab .wa-tabs,.wa-cab .wa-areas{margin:0}.wa-minis{display:flex;gap:6px;flex-wrap:wrap}.wa-minis span{border:1px solid var(--rim);background:var(--surf);border-radius:999px;padding:5px 11px;font-size:11.5px;color:var(--ink3);white-space:nowrap}.wa-minis b{color:var(--ink);font-size:13px;margin-right:3px}.wa-minis .ambar b{color:#b45309}.wa-minis .verde b{color:#0f7a3e}.wa-tabs{display:flex;gap:6px;margin:0 0 14px;flex-wrap:wrap}.wa-tabs button{border:1px solid var(--rim);background:var(--surf);border-radius:999px;padding:8px 14px;font:inherit;font-size:12.5px;font-weight:700;color:var(--ink2);cursor:pointer}.wa-tabs button.on{background:var(--p1);border-color:var(--p1);color:#fff}'
@@ -57,6 +59,7 @@ var _WA_CSS = '<style id="wa-css">'
   + '.wa-demo-cliente{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;border-top:1px dashed var(--rim);background:#fffdf5}.wa-demo-cliente button{font:inherit;font-size:11px;border:1px solid var(--rim);background:#fff;border-radius:999px;padding:4px 10px;cursor:pointer}.wa-demo-cliente small{width:100%;color:var(--ink3);font-size:10.5px}'
   + '.wa-stats .stat{text-align:left}.wa-stats .st-v{font-size:26px}'
   + '.wa-pill.ig{background:linear-gradient(90deg,#f58529,#dd2a7b,#8134af);color:#fff}.wa-pill.verde{background:#e6f7ee;color:#0f7a3e}.wa-item .av.ig{background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af);color:#fff}'
+  + '.wa-item .av{position:relative}.wa-item .av .cn{position:absolute;right:-3px;bottom:-3px;width:15px;height:15px;border-radius:50%;border:2px solid var(--surf)}.wa-item .av .cn.wa{background:#25D366}.wa-item .av .cn.ig{background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)}.wa-item .av .cn.ms{background:linear-gradient(135deg,#00b2ff,#006aff)}'
   + '.wa-areas{display:flex;gap:0;margin:0 0 14px;border:1px solid var(--rim);border-radius:14px;overflow:hidden;width:max-content;max-width:100%}.wa-areas button{border:0;background:var(--surf);font:inherit;font-size:13px;font-weight:800;color:var(--ink2);padding:10px 18px;cursor:pointer;display:flex;gap:8px;align-items:center}.wa-areas button+button{border-left:1px solid var(--rim)}.wa-areas button.on{background:var(--p1);color:#fff}.wa-areas button .wa-pill{background:rgba(255,255,255,.25);color:inherit}.wa-areas button:not(.on) .wa-pill{background:var(--surf2);color:var(--ink2)}'
   + '</style>';
 
@@ -78,11 +81,11 @@ function _waPintarLista(){
     .slice().sort(function(a, b){ return (b.atencion ? 1 : 0) - (a.atencion ? 1 : 0) || String(b.ultimoMensajeHora || '').localeCompare(String(a.ultimoMensajeHora || '')); });
   cont.innerHTML = convs.length ? convs.map(function(c){
     return '<div class="wa-item' + (c.id === window._waSel ? ' on' : '') + '" onclick="waAbrir(\'' + _waEsc(c.id) + '\')">'
-      + '<div class="av' + (c.canal === 'instagram' ? ' ig' : '') + '">' + _waEsc(_waIni(c.nombre || c.clienteNombre)) + '</div>'
-      + '<div><div class="n">' + (_waSinResponder(c) ? '<span class="sr" title="Sin responder"></span>' : '') + _waEsc(c.nombre || c.clienteNombre || c.telE164) + (c.canal === 'instagram' ? '<span class="wa-pill ig">IG</span>' : (c.area === 'ventas' ? '<span class="wa-pill azul">ventas</span>' : '')) + (c.modo === 'humano' ? '<span class="wa-pill gris" title="' + _waEsc(c.atendidoPor || '') + '">persona</span>' : '') + '</div>'
+      + '<div class="av' + (c.canal === 'instagram' ? ' ig' : '') + '">' + _waEsc(_waIni(c.nombre || c.clienteNombre)) + '<span class="cn ' + (c.canal === 'instagram' ? 'ig' : 'wa') + '" title="' + (c.canal === 'instagram' ? 'Instagram' : 'WhatsApp') + '"></span></div>'
+      + '<div><div class="n">' + (_waSinResponder(c) ? '<span class="sr" title="Sin responder"></span>' : '') + _waEsc(c.nombre || c.clienteNombre || c.telE164) + (c.canal === 'instagram' ? '<span class="wa-pill ig">IG</span>' : (c.area === 'ventas' ? '<span class="wa-pill azul">ventas</span>' : '<span class="wa-pill gris">cobranza</span>')) + (c.modo === 'humano' ? '<span class="wa-pill gris" title="' + _waEsc(c.atendidoPor || '') + '">persona</span>' : '') + '</div>'
       + '<div class="u">' + _waEsc(c.ultimoMensaje || '') + '</div>' + (c.atencion ? '<div style="margin-top:4px">' + _waAtencion(c.atencion) + '</div>' : '') + '</div>'
       + '<div class="h">' + _waHora(c.ultimoMensajeHora) + (c.noLeidos ? '<br><span class="nl">' + c.noLeidos + '</span>' : '') + '</div></div>';
-  }).join('') : '<div class="empty" style="padding:30px 16px">' + (todas.length ? 'Ninguna conversación con ese filtro.' : (waConectadoCanal(ctx.canal) ? 'Todavía no hay conversaciones.' : 'Sin conversaciones de muestra.')) + '</div>';
+  }).join('') : '<div class="empty" style="padding:30px 16px">' + (todas.length ? 'Ninguna conversación con ese filtro.' : (ctx.canal === 'todos' || waConectadoCanal(ctx.canal) ? 'Todavía no hay conversaciones.' : 'Sin conversaciones de muestra.')) + '</div>';
 }
 function _waPintarHilo(id){
   var cont = document.getElementById('wa-burbujas'); if(!cont || window._waSel !== id) return;
@@ -113,7 +116,7 @@ function _waPanelConversaciones(ctx){
   // Solo el esqueleto: la lista, el hilo y la ficha se llenan en el sitio (_waPintarSeleccion) y se
   // refrescan solos cuando llegan mensajes, sin volver a armar la pagina.
   var h = '<div class="wa-split">'
-    + '<div class="wa-lista"><div class="wa-busca"><input class="fi" id="wa-q" placeholder="' + (ctx.canal === 'instagram' ? 'Buscar por nombre o usuario' : 'Buscar por nombre o teléfono') + '" oninput="_waPintarLista()" style="width:100%"></div><div class="wa-filtros" id="wa-filtros"></div><div class="items" id="wa-items"></div></div>'
+    + '<div class="wa-lista"><div class="wa-busca"><input class="fi" id="wa-q" placeholder="' + (ctx.canal === 'instagram' ? 'Buscar por nombre o usuario' : ctx.canal === 'whatsapp' ? 'Buscar por nombre o teléfono' : 'Buscar por nombre, usuario o teléfono') + '" oninput="_waPintarLista()" style="width:100%"></div><div class="wa-filtros" id="wa-filtros"></div><div class="items" id="wa-items"></div></div>'
     + '<div class="wa-hilo" id="wa-hilo"></div>'
     + '<div class="wa-ficha" id="wa-ficha"></div></div>';
   window._waFirma = ''; window._waMsgSel = null;
@@ -138,7 +141,7 @@ if(typeof window.addEventListener === 'function' && !window._waResize){ window._
 function _waPintarSeleccion(){
   var ctx = _waCtxActual(), hilo = document.getElementById('wa-hilo'), ficha = document.getElementById('wa-ficha'); if(!hilo || !ficha) return;
   _waAjustarAltura();
-  var conectado = waConectadoCanal(ctx.canal), sel = _waSeleccionada(ctx);
+  var sel = _waSeleccionada(ctx), conectado = sel ? waConectadoCanal(sel.canal || 'whatsapp') : false;
   var borrador = (document.getElementById('wa-texto') || {}).value || '';
   hilo.innerHTML = _waHtmlHilo(sel, ctx, conectado);
   ficha.innerHTML = _waHtmlFicha(sel, ctx);
@@ -155,7 +158,11 @@ function _waMarcarLeida(c){ if(!c || !(c.noLeidos > 0)) return; c.noLeidos = 0; 
 // Llamada cuando cambian las conversaciones en la base o tras una accion: refresca en el sitio
 // y devuelve true; si la pantalla no esta puesta devuelve false y el que llama hace nav.
 function _waRefrescarEnSitio(forzar){
-  if(!(S.page === 'whatsapp' || S.page === 'instagram') || !document.getElementById('wa-items')) return false;
+  if(S.page !== 'redes') return false;
+  if(typeof _rsPintarContadores === 'function') _rsPintarContadores();
+  // En la cola de hoy, los comentarios o el asistente no hay lista que refrescar, y no se recarga
+  // la pagina (borraria lo que se esta escribiendo en las instrucciones)
+  if(!document.getElementById('wa-items')) return true;
   var ctx = _waCtxActual(), convs = _waConvsDe(ctx), esperan = convs.filter(function(c){ return c.atencion; }).length;
   var e;
   if((e = document.getElementById('wa-st-conv'))) e.textContent = convs.length;
@@ -203,11 +210,13 @@ function _waHtmlFicha(sel, ctx){
 }
 
 function _waPanelAsistente(ctx){
-  var cfg = window._waCfg || {}, conectado = waConectadoCanal(ctx.canal), h = '';
+  var cfg = window._waCfg || {}, h = '';
+  var veWa = ctx.canal === 'whatsapp' || ctx.modulo === 'redes', veIg = ctx.canal === 'instagram' || (ctx.modulo === 'redes' && ctx.area === 'ventas');
+  var conectado = waConectado();
   var puede = typeof isAdminUser === 'function' && isAdminUser();
   var pie = '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap"><div class="cs">' + (cfg.actualizadoEn ? 'Última edición: ' + _waEsc(cfg.actualizadoPor || '') + ' · ' + _waHora(cfg.actualizadoEn) : 'Nadie las ha editado todavía') + (puede ? '' : ' · solo administración las edita') + '</div>';
-  var conexionWa = conectado && ctx.canal === 'whatsapp' ? '<div class="cs">WhatsApp: número ' + _waEsc(cfg.telefono || '') + ' conectado por la API oficial.</div>' : (ctx.canal === 'whatsapp' ? '<div class="cs" style="line-height:1.6">WhatsApp pendiente: verificación del negocio en Meta, el número, plantillas aprobadas y las claves en el servidor. Mientras tanto el módulo funciona en demostración.</div>' : '');
-  var conexionIg = ctx.canal === 'instagram' ? (cfg.instagram ? '<div class="cs">Instagram: ' + (typeof cfg.instagram === 'string' ? '@' + _waEsc(cfg.instagram.replace(/^@/, '')) + ' ' : '') + 'conectado (mensajes directos).</div>' : '<div class="cs" style="line-height:1.6">Instagram pendiente: cuenta profesional ligada a una página de Facebook y permiso de mensajes en la misma app de Meta. Mientras tanto el módulo funciona en demostración.</div>') : '';
+  var conexionWa = conectado && veWa ? '<div class="cs">WhatsApp: número ' + _waEsc(cfg.telefono || '') + ' conectado por la API oficial.</div>' : (veWa ? '<div class="cs" style="line-height:1.6">WhatsApp pendiente: verificación del negocio en Meta, el número, plantillas aprobadas y las claves en el servidor. Mientras tanto el módulo funciona en demostración.</div>' : '');
+  var conexionIg = veIg ? (cfg.instagram ? '<div class="cs">Instagram: ' + (typeof cfg.instagram === 'string' ? '@' + _waEsc(cfg.instagram.replace(/^@/, '')) + ' ' : '') + 'conectado (mensajes directos).</div>' : '<div class="cs" style="line-height:1.6">Instagram pendiente: cuenta profesional ligada a una página de Facebook y permiso de mensajes en la misma app de Meta. Mientras tanto el módulo funciona en demostración.</div>') : '';
   if(ctx.area === 'cobranza'){
     h += '<div class="sg" style="grid-template-columns:1.4fr 1fr;align-items:start">'
       + '<div class="card"><div class="ch"><div><div class="ct">Instrucciones del asistente de cobranza</div><div class="cs">Texto libre. El asistente lo lee antes de cada respuesta y manda sobre todo lo demás. Ejemplos: "esta semana no se reciben pagos en efectivo", "si preguntan por refinanciar, pásalos a Samantha".</div></div></div>'
@@ -230,57 +239,38 @@ function _waPanelAsistente(ctx){
       + '<div class="card"><div class="ct">Reglas fijas (no se cambian desde aquí)</div><ul style="margin:8px 0 0 18px;padding:0;font-size:12.5px;line-height:1.7;color:var(--ink2)">'
       + '<li>Solo habla de las motos, los planes y cómo solicitar; los precios y cuotas salen del catálogo de pagasi.io.</li><li>Nunca aprueba ni promete aprobación, entrega ni descuentos: "eso lo confirma tu asesor".</li><li>No pide cédula ni documentos: para que un asesor llame basta nombre, ciudad, modelo y WhatsApp.</li><li>Quien quiere comprar queda anotado como "Quiere comprar" con sus datos, para que el equipo lo llame.</li><li>Si pregunta por un crédito que ya tiene, lo manda a Mi cuenta o a cobranza.</li><li>Tono: cercano, entusiasta y breve, en el español de Venezuela.</li></ul></div>'
       + '<div class="card"><div class="ct">Conexión con Meta</div>' + conexionWa + conexionIg + '</div>'
-      + '<div class="card"><div class="ct">Ventana para responder</div><div class="cs" style="line-height:1.6">' + (ctx.canal === 'instagram' ? 'El equipo puede escribirle a la persona hasta 7 días después de su último mensaje; pasado eso, hay que esperar a que vuelva a escribir.' : 'El equipo puede escribirle libremente durante las 24 horas siguientes a su último mensaje; después solo con una plantilla aprobada.') + '</div></div>'
+      + '<div class="card"><div class="ct">Ventana para responder</div><div class="cs" style="line-height:1.6">' + (veWa ? '<b>WhatsApp:</b> el equipo puede escribirle libremente durante las 24 horas siguientes a su último mensaje; después solo con una plantilla aprobada.' : '') + (veWa && veIg ? '<br>' : '') + (veIg ? '<b>Instagram:</b> el equipo puede escribirle a la persona hasta 7 días después de su último mensaje; pasado eso, hay que esperar a que vuelva a escribir.' : '') + '</div></div>'
       + '</div></div>';
   }
   return h;
 }
-PG.whatsapp = function(){
-  if(!document.getElementById('wa-css')) document.head.insertAdjacentHTML('beforeend', _WA_CSS);
-  if(!window._waCfg){ waCargarCfg(function(){ if(S.page === 'whatsapp') nav('whatsapp'); }); }
-  var cola = waColaHoy();
+// La cola de cobranza de hoy (antes la pestana "Hoy" del modulo WhatsApp): sale de la cartera
+// y del ledger; los recordatorios los manda Patricia sola a las 8:30 am.
+function _waPanelHoy(cola){
   var conectado = waConectado();
-  if(!conectado) waDemoConversaciones(cola); else waAbrirConversaciones('whatsapp');
-  var ctx = _waCtxActual(), tab = _waTabActual(ctx);
-  var cob = _waConvsDe({ canal: 'whatsapp', area: 'cobranza' }), ven = _waConvsDe({ canal: 'whatsapp', area: 'ventas' });
-  var esperanCob = cob.filter(function(c){ return c.atencion; }).length, esperanVen = ven.filter(function(c){ return c.atencion; }).length;
-  var convs = _waConvsDe(ctx), conAtencion = convs.filter(function(c){ return c.atencion; }).length;
-  var promesas = cob.filter(function(c){ return c.borrador && c.borrador.tipo === 'promesa'; }).length;
-
-  var h = '<div class="page wa-page">'
-    + '<div class="wa-cab"><div class="wa-cab-izq"><div class="ct" style="font-size:20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">WhatsApp ' + (conectado ? '<span class="wa-pill verde">Conectado · ' + _waEsc((window._waCfg || {}).telefono || '') + '</span>' : '<span class="wa-pill ambar">Modo demostración</span>') + '</div>'
-    + '<div class="cs">' + (ctx.area === 'cobranza' ? 'Cobranza: el asistente recuerda las cuotas, responde al cliente y le pasa al equipo lo que necesita una persona.' : 'Ventas: el asistente atiende a quien pregunta por una moto, con el catálogo de pagasi.io, y anota a quien quiere comprar.') + '</div></div>'
-    + '<div class="wa-cab-der"><div class="wa-areas"><button class="' + (ctx.area === 'cobranza' ? 'on' : '') + '" onclick="waArea(\'cobranza\')">Cobranza' + (esperanCob ? ' <span class="wa-pill">' + esperanCob + '</span>' : '') + '</button><button class="' + (ctx.area === 'ventas' ? 'on' : '') + '" onclick="waArea(\'ventas\')">Ventas' + (esperanVen ? ' <span class="wa-pill">' + esperanVen + '</span>' : '') + '</button></div>'
-    + '<div class="wa-tabs">' + (ctx.area === 'cobranza' ? '<button class="' + (tab === 'hoy' ? 'on' : '') + '" onclick="waTab(\'hoy\')">Hoy · ' + cola.total + '</button>' : '') + '<button class="' + (tab === 'conv' ? 'on' : '') + '" id="wa-tab-conv" onclick="waTab(\'conv\')">Conversaciones' + (conAtencion ? ' · ' + conAtencion + ' esperan' : '') + '</button><button class="' + (tab === 'asistente' ? 'on' : '') + '" onclick="waTab(\'asistente\')">Asistente</button></div></div></div>'
-    + (conectado ? '' : '<div class="wa-aviso"><span style="font-size:18px">⚠️</span><div><b>Meta todavía no está conectado.</b> ' + (ctx.area === 'cobranza' ? 'La cola de hoy es real (sale de tu cartera y del ledger) pero no se manda nada; las conversaciones son de muestra.' : 'Las conversaciones son de muestra, en memoria, para ver cómo atiende el asistente de ventas.') + '</div></div>');
-
-  if(tab === 'hoy' && ctx.area === 'cobranza'){
-    h += '<div class="sg wa-stats">'
-      + '<div class="stat"><div class="st-v">' + (cola.grupos.proximas.length + cola.grupos.hoy.length) + '</div><div class="st-l">Recordatorios antes de vencer (2 días y hoy)</div></div>'
-      + '<div class="stat"><div class="st-v" style="color:var(--amber)">' + (cola.grupos.gracia.length + cola.grupos.atrasadas.length) + '</div><div class="st-l">Vencidas que el asistente persigue (1 a 10 días)</div></div>'
-      + '<div class="stat"><div class="st-v" style="color:var(--red)">' + cola.grupos.cobrador.length + '</div><div class="st-l">Para un cobrador (más de 10 días)</div></div>'
-      + '<div class="stat"><div class="st-v">' + promesas + '</div><div class="st-l">Promesas de pago anotadas</div></div>'
-      + '</div>'
-      + (cola.sinTel ? '<div class="wa-aviso" style="background:var(--surf2);border-color:var(--rim);color:var(--ink2)">📵 <div><b>' + cola.sinTel + '</b> de estos clientes no tienen un celular válido en su ficha: a esos no les llega nada. Corrígelos en Clientes.</div></div>' : '');
-    WA_GRUPOS.forEach(function(g){
-      var items = cola.grupos[g.id];
-      h += '<div class="card wa-grupo"><div class="ch"><div><div class="ct"><span class="wa-pill ' + g.tono + '">' + items.length + '</span> &nbsp;' + g.titulo + '</div><div class="cs">' + g.sub + '</div></div>'
-        + (g.id !== 'cobrador' ? '<button class="btn btn-p btn-sm" ' + (conectado ? 'onclick="toast(\'Los recordatorios los manda el asistente solo, a las 8:30 am\',\'info\')"' : 'disabled title="Se activa cuando Meta esté conectado"') + '>Enviar ' + items.length + '</button>' : '<button class="btn btn-g btn-sm" onclick="nav(\'pagos\')">Ver en Cobranza</button>') + '</div>';
-      if(!items.length) h += '<div class="empty" style="padding:10px 0">Nadie en este grupo hoy.</div>';
-      else h += items.slice(0, 40).map(function(it){
-        return '<div class="wa-fila"><div><b>' + _waEsc(it.nombre) + '</b><small>' + _waEsc(it.cred) + ' · ' + _waEsc(it.modelo) + '</small></div>'
-          + '<div>' + (it.tel ? _waEsc(it.tel.replace('+58', '0')) : '<span class="wa-pill rojo">Sin celular</span>') + '<small>' + (it.pagadas) + ' de ' + it.totalCuotas + ' pagadas</small></div>'
-          + '<div><b>' + _waMoney(it.monto) + '</b><small>cuota ' + it.cuota + '</small></div>'
-          + '<div>' + _waFechaCorta(it.fechaVence) + '<small>' + (it.dias < 0 ? 'en ' + (-it.dias) + ' día' + (it.dias === -1 ? '' : 's') : it.dias === 0 ? 'hoy' : 'hace ' + it.dias + ' día' + (it.dias === 1 ? '' : 's')) + (it.vencidas > 1 ? ' · ' + it.vencidas + ' vencidas' : '') + '</small></div>'
-          + '<div class="msg" title="' + _waEsc(waPlantilla(g.id, it)) + '">' + _waEsc(waPlantilla(g.id, it)) + '</div>'
-          + '<div><button class="btn btn-g btn-xs" onclick="nav(\'clientes\');setTimeout(function(){ if(typeof verCliente===\'function\') verCliente(\'' + _waEsc(it.clienteId) + '\'); },150)">Ver</button></div></div>';
-      }).join('') + (items.length > 40 ? '<div class="cs" style="padding-top:8px">… y ' + (items.length - 40) + ' más</div>' : '');
-      h += '</div>';
-    });
-  }
-
-  if(tab === 'conv') h += _waPanelConversaciones(ctx);
-  if(tab === 'asistente') h += _waPanelAsistente(ctx);
-  h += '</div>';
+  var promesas = _waConvsDe({ canal: 'whatsapp' }).filter(function(c){ return _waEsCobranza(c) && c.borrador && c.borrador.tipo === 'promesa'; }).length;
+  var h = '<div class="sg wa-stats">'
+    + '<div class="stat"><div class="st-v">' + (cola.grupos.proximas.length + cola.grupos.hoy.length) + '</div><div class="st-l">Recordatorios antes de vencer (2 días y hoy)</div></div>'
+    + '<div class="stat"><div class="st-v" style="color:var(--amber)">' + (cola.grupos.gracia.length + cola.grupos.atrasadas.length) + '</div><div class="st-l">Vencidas que el asistente persigue (1 a 10 días)</div></div>'
+    + '<div class="stat"><div class="st-v" style="color:var(--red)">' + cola.grupos.cobrador.length + '</div><div class="st-l">Para un cobrador (más de 10 días)</div></div>'
+    + '<div class="stat"><div class="st-v">' + promesas + '</div><div class="st-l">Promesas de pago anotadas</div></div>'
+    + '</div>'
+    + (cola.sinTel ? '<div class="wa-aviso" style="background:var(--surf2);border-color:var(--rim);color:var(--ink2)">📵 <div><b>' + cola.sinTel + '</b> de estos clientes no tienen un celular válido en su ficha: a esos no les llega nada. Corrígelos en Clientes.</div></div>' : '');
+  WA_GRUPOS.forEach(function(g){
+    var items = cola.grupos[g.id];
+    h += '<div class="card wa-grupo"><div class="ch"><div><div class="ct"><span class="wa-pill ' + g.tono + '">' + items.length + '</span> &nbsp;' + g.titulo + '</div><div class="cs">' + g.sub + '</div></div>'
+      + (g.id !== 'cobrador' ? '<button class="btn btn-p btn-sm" ' + (conectado ? 'onclick="toast(\'Los recordatorios los manda el asistente solo, a las 8:30 am\',\'info\')"' : 'disabled title="Se activa cuando Meta esté conectado"') + '>Enviar ' + items.length + '</button>' : '<button class="btn btn-g btn-sm" onclick="nav(\'pagos\')">Ver en Cobranza</button>') + '</div>';
+    if(!items.length) h += '<div class="empty" style="padding:10px 0">Nadie en este grupo hoy.</div>';
+    else h += items.slice(0, 40).map(function(it){
+      return '<div class="wa-fila"><div><b>' + _waEsc(it.nombre) + '</b><small>' + _waEsc(it.cred) + ' · ' + _waEsc(it.modelo) + '</small></div>'
+        + '<div>' + (it.tel ? _waEsc(it.tel.replace('+58', '0')) : '<span class="wa-pill rojo">Sin celular</span>') + '<small>' + (it.pagadas) + ' de ' + it.totalCuotas + ' pagadas</small></div>'
+        + '<div><b>' + _waMoney(it.monto) + '</b><small>cuota ' + it.cuota + '</small></div>'
+        + '<div>' + _waFechaCorta(it.fechaVence) + '<small>' + (it.dias < 0 ? 'en ' + (-it.dias) + ' día' + (it.dias === -1 ? '' : 's') : it.dias === 0 ? 'hoy' : 'hace ' + it.dias + ' día' + (it.dias === 1 ? '' : 's')) + (it.vencidas > 1 ? ' · ' + it.vencidas + ' vencidas' : '') + '</small></div>'
+        + '<div class="msg" title="' + _waEsc(waPlantilla(g.id, it)) + '">' + _waEsc(waPlantilla(g.id, it)) + '</div>'
+        + '<div><button class="btn btn-g btn-xs" onclick="nav(\'clientes\');setTimeout(function(){ if(typeof verCliente===\'function\') verCliente(\'' + _waEsc(it.clienteId) + '\'); },150)">Ver</button></div></div>';
+    }).join('') + (items.length > 40 ? '<div class="cs" style="padding-top:8px">… y ' + (items.length - 40) + ' más</div>' : '');
+    h += '</div>';
+  });
   return h;
-};
+}
+
