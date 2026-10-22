@@ -34,14 +34,14 @@ ctx._waConvs = [
 ['wa-items', 'wa-filtros', 'wa-hilo', 'wa-ficha', 'wa-q', 'wa-st-conv', 'wa-st-esperan', 'wa-st-leads', 'rs-b-instagram'].forEach(el);
 ctx._rsTab = 'instagram';
 const html = ctx.PG.redes();
-ok('la pantalla trae lista, filtros, hilo y ficha', /id="wa-filtros"/.test(html) && /id="wa-hilo"/.test(html) && /id="wa-ficha"/.test(html) && /id="wa-st-conv"/.test(html));
+ok('la pantalla trae lista, filtros, hilo y ficha', /id="wa-filtros"/.test(html) && /id="wa-hilo"/.test(html) && /id="wa-ficha"/.test(html));
 flush();
 ok('los filtros se pintan con sus cantidades', /Todas<i>3<\/i>/.test(els['wa-filtros'].innerHTML) && /Sin responder<i>1<\/i>/.test(els['wa-filtros'].innerHTML) && /Esperan persona<i>1<\/i>/.test(els['wa-filtros'].innerHTML) && /Quieren comprar<i>1<\/i>/.test(els['wa-filtros'].innerHTML));
 ok('el filtro "Con promesa" (de cobranza) no sale en ventas', !/Con promesa/.test(els['wa-filtros'].innerHTML));
 ok('la lista muestra las 3 y marca la que está sin responder', (els['wa-items'].innerHTML.match(/class="wa-item/g) || []).length === 3 && /class="sr"/.test(els['wa-items'].innerHTML));
 ok('se abre la primera (Mootoro) en el hilo y la ficha', ctx._waSel === 'ig:1' && /Mootoro/.test(els['wa-hilo'].innerHTML) && /@mootoroebikes/.test(els['wa-ficha'].innerHTML));
 ok('al abrirla queda leída: noLeidos 0 y se guarda en la base', ctx._waConvs[0].noLeidos === 0 && escritos.some(e => e.id === 'ig:1' && e.c.noLeidos === 0));
-ok('la lista ya no muestra el globo de no leídos de Mootoro', !/<span class="nl">3<\/span>/.test(els['wa-items'].innerHTML));
+ok('la lista ya no marca a Mootoro como no leída', !/waAbrir\('ig:1'\)" data-nl/.test(els['wa-items'].innerHTML) && /waAbrir\('ig:2'\)" data-nl="1"/.test(els['wa-items'].innerHTML));
 
 // Filtros
 ctx.waFiltro('sin');
@@ -63,7 +63,7 @@ ok('Ana quedó leída al abrirla', ctx._waConvs[1].noLeidos === 0);
 // Llega un cambio de la base: se refresca en el sitio y los contadores
 ctx._waConvs[2].atencion = 'lead';
 ok('_waRefrescarEnSitio devuelve true con la pantalla puesta', ctx._waRefrescarEnSitio() === true && navs.length === 0);
-ok('los contadores se actualizan en el sitio', els['wa-st-esperan'].textContent === 2 && els['wa-st-conv'].textContent === 3);
+ok('los contadores de los filtros se actualizan en el sitio', /Esperan persona<i>2<\/i>/.test(els['wa-filtros'].innerHTML) && /Todas<i>3<\/i>/.test(els['wa-filtros'].innerHTML));
 // Si cambia la conversacion abierta (p. ej. la toma una persona) se repinta hilo y ficha
 ctx._waConvs[1].modo = 'humano'; ctx._waConvs[1].atendidoPor = 'Adam';
 ctx._waRefrescarEnSitio();

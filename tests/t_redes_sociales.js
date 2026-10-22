@@ -59,6 +59,22 @@ ctx.waFiltro('cobranza');
 ok('el filtro Cobranza deja solo a María', (els['wa-items'].innerHTML.match(/class="wa-item/g) || []).length === 1 && /María/.test(els['wa-items'].innerHTML));
 ctx.waFiltro('todas');
 
+// ── 2b. El aspecto de la bandeja de Meta (Adam: "necesito que la visual sea como la de Meta") ──
+ok('todo va en un solo panel con las pestañas arriba', /class="rs-caja"><div class="rs-tabs">/.test(html));
+ok('la fila dice quién escribió lo último ("Patricia: ..." / "Paola: ...") y lleva etiquetas', /Paola: |Patricia: /.test(els['wa-items'].innerHTML) || /class="rs-tg"><span>Cobranza<\/span>/.test(els['wa-items'].innerHTML));
+ok('las no leídas van en negrita (data-nl) con el punto azul', /data-nl="1"/.test(els['wa-items'].innerHTML) && /class="punto"/.test(els['wa-items'].innerHTML));
+ok('la cabecera del hilo trae la foto y botones cuadrados', /wa-hilo-top"><div class="quien"><div class="av/.test(els['wa-hilo'].innerHTML) && /class="rs-ib/.test(els['wa-hilo'].innerHTML));
+ok('la ficha empieza con el perfil, como en Meta', /class="card rs-perfil"/.test(els['wa-ficha'].innerHTML) && /Información/.test(els['wa-ficha'].innerHTML));
+ok('la caja de escribir dice por dónde y como quién se responde', /Responde en WhatsApp como Patricia/.test(els['wa-hilo'].innerHTML));
+ctx._waMsgs['wa:+584140000001'] = [
+  { autor: 'asistente', tipo: 'plantilla', texto: 'Tu cuota vence hoy', hora: '2026-10-20T13:00:00.000Z', estado: 'leido' },
+  { autor: 'cliente', tipo: 'texto', texto: 'ya pagué', hora: '2026-10-20T13:05:00.000Z' },
+  { autor: 'cliente', tipo: 'texto', texto: 'me confirman?', hora: '2026-10-20T18:00:00.000Z' }];
+el('wa-burbujas'); ctx._waSel = 'wa:+584140000001'; ctx._waPintarHilo('wa:+584140000001');
+ok('el hilo pone la fecha al empezar y cuando pasa más de una hora (2 separadores)', (els['wa-burbujas'].innerHTML.match(/class="wa-sep"/g) || []).length === 2);
+ok('lo que escribe la persona lleva su foto chica al lado', (els['wa-burbujas'].innerHTML.match(/class="avm/g) || []).length === 2);
+ok('en la lista: la hora si es de hoy, el día si es de esta semana, la fecha si es más vieja', ctx._waHoraLista(new Date().toISOString()).indexOf(':') > 0 && ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].includes(ctx._waHoraLista(new Date(Date.now() - 2 * 86400000).toISOString())) && /oct|sep/.test(ctx._waHoraLista('2026-09-01T15:00:00.000Z')));
+
 // ── 3. Cada pestaña de canal muestra solo lo suyo ──
 ctx._rsTab = 'instagram'; montar();
 ok('Instagram: solo Luis', (els['wa-items'].innerHTML.match(/class="wa-item/g) || []).length === 1 && /Luis/.test(els['wa-items'].innerHTML));

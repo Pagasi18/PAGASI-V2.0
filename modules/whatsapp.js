@@ -67,6 +67,29 @@ function _waIni(n){ var p = String(n || '').trim().split(/\s+/); return ((p[0] |
 // La fecha va en hora local, como la hora: con la del texto ISO (UTC) un mensaje de las 11 pm de
 // Caracas salía con la fecha del día siguiente (22-oct-2026)
 function _waHora(iso){ if(!iso) return ''; var d = new Date(iso), hoy = new Date(); var hm = d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2); return d.toDateString() === hoy.toDateString() ? hm : _waFechaCorta(d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2)) + ' ' + hm; }
+var _WA_DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+function _waFechaLocal(d){ return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+// En la lista, como la bandeja de Meta: la hora si es de hoy, el día si es de esta semana, si no la fecha
+function _waHoraLista(iso){
+  if(!iso) return ''; var d = new Date(iso), hoy = new Date();
+  if(d.toDateString() === hoy.toDateString()) return d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2);
+  var dias = Math.floor((new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+  return dias < 7 ? _WA_DIAS[d.getDay()] : _waFechaCorta(_waFechaLocal(d));
+}
+// Separador de fecha dentro del hilo ("Hoy, 2:37 pm" · "21 oct 2026, 11:21 pm")
+function _waSep(iso){
+  var d = new Date(iso), h = d.getHours(), hm = (h % 12 || 12) + ':' + ('0' + d.getMinutes()).slice(-2) + ' ' + (h < 12 ? 'am' : 'pm');
+  return (d.toDateString() === new Date().toDateString() ? 'Hoy' : _waFechaCorta(_waFechaLocal(d)) + ' ' + d.getFullYear()) + ', ' + hm;
+}
+var _WA_ICONOS = {
+  visto: '<path d="M20 6 9 17l-5-5"/>',
+  yo: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  bot: '<rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V4M9 13h.01M15 13h.01M9 17h6"/>',
+  wa: '<path d="M21 11.5a8.4 8.4 0 0 1-9.2 8.4 8.6 8.6 0 0 1-3.4-.8L3 21l1.9-5.1A8.4 8.4 0 1 1 21 11.5z"/>',
+  ig: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/>'
+};
+function _waIcono(n){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + (_WA_ICONOS[n] || '') + '</svg>'; }
+function _waNombreAsis(c){ return c && _waEsCobranza(c) ? 'Patricia' : 'Paola'; }
 function _waAtencion(a){ return a === 'lead' ? '<span class="wa-pill verde">Quiere comprar</span>' : a === 'pide_persona' ? '<span class="wa-pill rojo">Pide una persona</span>' : a === 'queja' ? '<span class="wa-pill rojo">Queja</span>' : a === 'comprobante' ? '<span class="wa-pill ambar">Comprobante por revisar</span>' : a === 'promesa_vencida' ? '<span class="wa-pill ambar">Promesa vencida</span>' : a === 'error' ? '<span class="wa-pill rojo">El asistente falló</span>' : a === 'revisar' ? '<span class="wa-pill ambar" title="Paola se frenó: demasiados mensajes seguidos en esta conversación">Revisar · Paola se frenó</span>' : ''; }
 function _waEstadoIcono(e){ return e === 'leido' ? '✓✓' : e === 'entregado' ? '✓✓' : e === 'enviado' ? '✓' : e === 'pendiente' ? '…' : e === 'fallo' ? '✕ no se envió' : ''; }
 
@@ -82,23 +105,31 @@ function _waPintarLista(){
     .filter(function(c){ return !q || (String(c.nombre || '') + ' ' + String(c.telE164 || '') + ' ' + String(c.clienteNombre || '') + ' ' + String(c.usuario || '')).toLowerCase().indexOf(q) > -1; })
     .slice().sort(function(a, b){ return (b.atencion ? 1 : 0) - (a.atencion ? 1 : 0) || String(b.ultimoMensajeHora || '').localeCompare(String(a.ultimoMensajeHora || '')); });
   cont.innerHTML = convs.length ? convs.map(function(c){
-    return '<div class="wa-item' + (c.id === window._waSel ? ' on' : '') + '" onclick="waAbrir(\'' + _waEsc(c.id) + '\')">'
-      + '<div class="av' + (c.canal === 'instagram' ? ' ig' : '') + '">' + _waEsc(_waIni(c.nombre || c.clienteNombre)) + '<span class="cn ' + (c.canal === 'instagram' ? 'ig' : 'wa') + '" title="' + (c.canal === 'instagram' ? 'Instagram' : 'WhatsApp') + '"></span></div>'
-      + '<div><div class="n">' + (_waSinResponder(c) ? '<span class="sr" title="Sin responder"></span>' : '') + _waEsc(c.nombre || c.clienteNombre || c.telE164) + (c.canal === 'instagram' ? '<span class="wa-pill ig">IG</span>' : (c.area === 'ventas' ? '<span class="wa-pill azul">ventas</span>' : '<span class="wa-pill gris">cobranza</span>')) + (c.modo === 'humano' ? '<span class="wa-pill gris" title="' + _waEsc(c.atendidoPor || '') + '">persona</span>' : '') + '</div>'
-      + '<div class="u">' + _waEsc(c.ultimoMensaje || '') + '</div>' + (c.atencion ? '<div style="margin-top:4px">' + _waAtencion(c.atencion) + '</div>' : '') + '</div>'
-      + '<div class="h">' + _waHora(c.ultimoMensajeHora) + (c.noLeidos ? '<br><span class="nl">' + c.noLeidos + '</span>' : '') + '</div></div>';
+    // Como la bandeja de Meta: foto redonda con la marca de la red, nombre, "Paola: ..." y etiquetas
+    var quien = c.ultimoAutor === 'equipo' ? 'Tú: ' : c.ultimoAutor === 'asistente' ? _waNombreAsis(c) + ': ' : '';
+    var tags = [_waEsCobranza(c) ? '<span>Cobranza</span>' : '<span>Ventas</span>'];
+    if(c.atencion) tags.push('<span class="' + (/pide_persona|queja|error/.test(c.atencion) ? 'rojo' : c.atencion === 'lead' ? 'verde' : 'ambar') + '">' + _waAtencion(c.atencion).replace(/<[^>]+>/g, '') + '</span>');
+    else if(c.borrador && c.borrador.tipo === 'lead') tags.push('<span class="verde">Quiere comprar</span>');
+    if(c.modo === 'humano') tags.push('<span>Lo atiende ' + _waEsc(c.atendidoPor || 'el equipo') + '</span>');
+    return '<div class="wa-item' + (c.id === window._waSel ? ' on' : '') + '" onclick="waAbrir(\'' + _waEsc(c.id) + '\')"' + (c.noLeidos ? ' data-nl="1"' : '') + '>'
+      + '<div class="av' + (c.canal === 'instagram' ? ' ig' : '') + '">' + _waEsc(_waIni(c.nombre || c.clienteNombre)) + '<span class="cn ' + (c.canal === 'instagram' ? 'ig' : 'wa') + '" title="' + (c.canal === 'instagram' ? 'Instagram' : 'WhatsApp') + '">' + _waIcono(c.canal === 'instagram' ? 'ig' : 'wa') + '</span></div>'
+      + '<div class="cuerpo"><div class="n">' + (_waSinResponder(c) ? '<span class="sr" title="Sin responder"></span>' : '') + '<span class="nom">' + _waEsc(c.nombre || c.clienteNombre || c.telE164) + '</span></div>'
+      + '<div class="u">' + _waEsc(quien + (c.ultimoMensaje || '')) + '</div><div class="rs-tg">' + tags.join('') + '</div></div>'
+      + '<div class="h">' + _waHoraLista(c.ultimoMensajeHora) + (c.noLeidos ? '<span class="punto" title="' + c.noLeidos + ' sin leer"></span>' : '') + '</div></div>';
   }).join('') : '<div class="empty" style="padding:30px 16px">' + (todas.length ? 'Ninguna conversación con ese filtro.' : (ctx.canal === 'todos' || waConectadoCanal(ctx.canal) ? 'Todavía no hay conversaciones.' : 'Sin conversaciones de muestra.')) + '</div>';
 }
 function _waPintarHilo(id){
   var cont = document.getElementById('wa-burbujas'); if(!cont || window._waSel !== id) return;
-  var msgs = window._waMsgs[id] || [];
+  var msgs = window._waMsgs[id] || [], conv = _waConv(id), asis = _waNombreAsis(conv), ini = _waIni(conv && (conv.nombre || conv.clienteNombre)), antes = 0;
   cont.innerHTML = msgs.length ? msgs.map(function(m){
-    var conv = _waConv(id), asis = conv && conv.canal !== 'instagram' && (conv.area || 'cobranza') === 'cobranza' ? 'Patricia' : 'Paola';
     var quien = m.autor === 'cliente' ? '' : (m.autor === 'equipo' ? asis + ' · ' + (m.por || 'equipo') : asis);
-    return '<div class="wa-b ' + _waEsc(m.autor) + '">' + (m.tipo === 'plantilla' ? '<div class="plantilla">Recordatorio automático</div>' : '')
+    // Un separador de fecha al empezar y cada vez que pasa más de una hora, como en Meta
+    var t = new Date(m.hora).getTime(), sep = !antes || t - antes > 3600000 ? '<div class="wa-sep">' + _waSep(m.hora) + '</div>' : ''; antes = t;
+    return sep + '<div class="wa-m ' + _waEsc(m.autor) + '">' + (m.autor === 'cliente' ? '<div class="avm' + (conv && conv.canal === 'instagram' ? ' ig' : '') + '">' + _waEsc(ini) + '</div>' : '')
+      + '<div class="wa-b ' + _waEsc(m.autor) + '">' + (m.tipo === 'plantilla' ? '<div class="plantilla">Recordatorio automático</div>' : '')
       + (m.medio && m.medio.url ? '<img src="' + _waEsc(m.medio.url) + '" alt="">' : '')
       + _waEsc(m.texto || (m.tipo === 'imagen' ? '(imagen)' : m.tipo === 'audio' ? '(audio)' : '')).replace(/\n/g, '<br>')
-      + '<div class="meta">' + (quien ? '<span class="quien">' + _waEsc(quien) + '</span>' : '') + '<span>' + _waHora(m.hora) + '</span>' + (m.autor !== 'cliente' ? '<span title="' + _waEsc(m.estado || '') + '">' + _waEstadoIcono(m.estado) + '</span>' : '') + (m.error ? '<span style="color:var(--red)">' + _waEsc(m.error) + '</span>' : '') + '</div></div>';
+      + '<div class="meta">' + (quien ? '<span class="quien">' + _waEsc(quien) + '</span>' : '') + '<span>' + _waHora(m.hora) + '</span>' + (m.autor !== 'cliente' ? '<span title="' + _waEsc(m.estado || '') + '">' + _waEstadoIcono(m.estado) + '</span>' : '') + (m.error ? '<span class="err">' + _waEsc(m.error) + '</span>' : '') + '</div></div></div>';
   }).join('') : '<div class="empty">Sin mensajes.</div>';
   cont.scrollTop = cont.scrollHeight;
   _waPintarLista();
@@ -178,10 +209,10 @@ function _waRefrescarEnSitio(forzar){
 function _waHtmlHilo(sel, ctx, conectado){
   if(!sel) return '<div class="empty" style="padding:60px 20px">Elige una conversación.</div>';
   var abierta = waVentanaAbierta(sel);
-  return '<div class="wa-hilo-top"><div class="quien"><b>' + _waEsc(sel.nombre || sel.telE164) + '</b><small>' + (sel.canal === 'instagram' ? 'Instagram' + (sel.usuario ? ' · @' + _waEsc(sel.usuario) : '') + ' · ventas' : _waEsc(String(sel.telE164 || '').replace('+58', '0')) + (sel.area === 'ventas' ? ' · ventas' + (sel.clienteNombre ? ' · ya es cliente' : '') : (sel.clienteNombre ? ' · cliente del sistema' : ' · no está en el sistema'))) + ' · ' + (sel.modo === 'humano' ? 'lo atiende ' + _waEsc(sel.atendidoPor || 'el equipo') : 'lo atiende el asistente') + '</small></div>'
-          + '<div class="acc">' + (sel.atencion ? '<button class="btn btn-g btn-sm" onclick="waVisto(\'' + _waEsc(sel.id) + '\')">Visto</button>' : '') + (sel.modo === 'humano' ? '<button class="btn btn-g btn-sm" onclick="waDevolver(\'' + _waEsc(sel.id) + '\')">Devolver al asistente</button>' : '<button class="btn btn-p btn-sm" onclick="waAtender(\'' + _waEsc(sel.id) + '\')">Atender yo</button>') + '</div></div>'
+  return '<div class="wa-hilo-top"><div class="quien"><div class="av' + (sel.canal === 'instagram' ? ' ig' : '') + '">' + _waEsc(_waIni(sel.nombre || sel.clienteNombre)) + '</div><div><b>' + _waEsc(sel.nombre || sel.telE164) + '</b><small>' + (sel.canal === 'instagram' ? 'Instagram' + (sel.usuario ? ' · @' + _waEsc(sel.usuario) : '') + ' · ventas' : _waEsc(String(sel.telE164 || '').replace('+58', '0')) + (sel.area === 'ventas' ? ' · ventas' + (sel.clienteNombre ? ' · ya es cliente' : '') : (sel.clienteNombre ? ' · cliente del sistema' : ' · no está en el sistema'))) + ' · ' + (sel.modo === 'humano' ? 'lo atiende ' + _waEsc(sel.atendidoPor || 'el equipo') : 'lo atiende el asistente') + '</small></div></div>'
+          + '<div class="acc">' + (sel.atencion ? '<button class="rs-ib" title="Visto: ya lo resolví" onclick="waVisto(\'' + _waEsc(sel.id) + '\')">' + _waIcono('visto') + '</button>' : '') + (sel.modo === 'humano' ? '<button class="rs-ib" title="Devolver al asistente" onclick="waDevolver(\'' + _waEsc(sel.id) + '\')">' + _waIcono('bot') + 'Devolver al asistente</button>' : '<button class="rs-ib p" title="Atender yo: el asistente se calla" onclick="waAtender(\'' + _waEsc(sel.id) + '\')">' + _waIcono('yo') + 'Atender yo</button>') + '</div></div>'
           + '<div class="wa-burbujas" id="wa-burbujas"></div>'
-          + (abierta ? '<div class="wa-escribir"><textarea class="fta" id="wa-texto" placeholder="Escribir como ' + (sel.canal !== 'instagram' && (sel.area || 'cobranza') === 'cobranza' ? 'Patricia' : 'Paola') + '… (al escribir, tomas la conversación; queda registrado que fuiste tú)"></textarea><button class="btn btn-p" onclick="_waEnviarDesdeCaja(\'' + _waEsc(sel.id) + '\')">Enviar</button></div>'
+          + (abierta ? '<div class="wa-escribir"><textarea class="fta" id="wa-texto" placeholder="Responde en ' + (sel.canal === 'instagram' ? 'Instagram' : 'WhatsApp') + ' como ' + _waNombreAsis(sel) + '…"></textarea><div class="wa-esc-pie"><span class="cs">Al escribir, tomas la conversación y queda registrado que fuiste tú.</span><button class="btn btn-p btn-sm" onclick="_waEnviarDesdeCaja(\'' + _waEsc(sel.id) + '\')">Enviar</button></div></div>'
             : (sel.canal === 'instagram' ? '<div class="wa-cerrada">Pasaron más de 7 días desde el último mensaje de la persona' + (sel.ultimoEntranteHora ? ' (' + _waHora(sel.ultimoEntranteHora) + ')' : '') + ': Instagram no deja escribirle hasta que vuelva a escribir.</div>'
               : '<div class="wa-cerrada">La ventana de 24 horas de WhatsApp está cerrada: el cliente escribió por última vez ' + (sel.ultimoEntranteHora ? 'el ' + _waHora(sel.ultimoEntranteHora) : 'hace más de un día') + '. Solo se le puede escribir con una plantilla aprobada, o esperar a que vuelva a escribir.</div>'))
           + (conectado ? '' : '<div class="wa-demo-cliente"><small>Demostración · ' + (sel.area === 'ventas' ? 'la persona' : 'el cliente') + ' escribe:</small>' + (sel.area === 'ventas' ? ['precio de la BRZ 200?', 'qué piden para el crédito?', 'quiero una, cómo hago?', 'tienen en Maracay?', 'quiero hablar con una persona'] : ['cuánto debo?', 'ya pagué', 'pago el sábado', 'cómo pago?', 'quiero hablar con una persona', 'no puedo pagar']).map(function(t){ return '<button onclick="waDemoClienteEscribe(\'' + _waEsc(sel.id) + '\',\'' + _waEsc(t) + '\')">' + _waEsc(t) + '</button>'; }).join('') + '</div>');
@@ -190,7 +221,11 @@ function _waHtmlFicha(sel, ctx){
   var cred = sel ? (S.creds || []).find(function(x){ return x.id === sel.cred || (sel.clienteId && String(x.clienteId) === String(sel.clienteId) && x.estado !== 'cancelado'); }) : null;
   var est = null; if(cred){ try{ est = CreditoLedger.generarEstadoCredito(cred, S.pagos || [], { diasGracia: WA_GRACIA, today: hoyLocalISO() }); }catch(e){} }
   var prox = est ? (est.cuotas || []).filter(function(x){ return x && x.saldo > 0.001; })[0] : null;
-  return (sel && sel.area === 'ventas' ? '<div class="card"><div class="ct">Persona</div>'
+  var perfil = sel ? '<div class="card rs-perfil"><div class="av' + (sel.canal === 'instagram' ? ' ig' : '') + '">' + _waEsc(_waIni(sel.nombre || sel.clienteNombre)) + '</div><div><b>' + _waEsc(sel.clienteNombre || sel.nombre || sel.telE164 || '') + '</b>'
+    + (sel.canal === 'instagram' && sel.usuario ? '<a href="https://www.instagram.com/' + encodeURIComponent(sel.usuario) + '/" target="_blank" rel="noopener">Ver perfil</a>'
+      : (sel.clienteId || sel.clienteLead) ? '<button class="lnk" onclick="nav(\'clientes\');setTimeout(function(){ if(typeof verCliente===\'function\') verCliente(\'' + _waEsc(sel.clienteId || sel.clienteLead) + '\'); },150)">Ver cliente</button>'
+      : '<span class="cs">' + (sel.canal === 'instagram' ? 'Instagram' : 'WhatsApp') + '</span>') + '</div></div>' : '';
+  return perfil + (sel && sel.area === 'ventas' ? '<div class="card"><div class="ct">Información</div>'
           + (sel.canal === 'instagram' ? '<div class="wa-kv"><span>Instagram</span><span>' + (sel.usuario ? '@' + _waEsc(sel.usuario) : '—') + '</span></div>' : '<div class="wa-kv"><span>WhatsApp</span><span>' + _waEsc(String(sel.telE164 || '').replace('+58', '0')) + '</span></div>')
           + '<div class="wa-kv"><span>Nombre</span><span>' + _waEsc(sel.nombre || '—') + '</span></div>'
           + '<div class="wa-kv"><span>Canal</span><span>' + (sel.canal === 'instagram' ? 'Instagram' : 'WhatsApp') + ' · ventas</span></div>'
@@ -199,7 +234,7 @@ function _waHtmlFicha(sel, ctx){
           + (sel.borrador && sel.borrador.tipo === 'lead' ? '<div class="wa-kv"><span>Quiere</span><span>' + _waEsc(sel.borrador.modelo || 'una moto') + '</span></div>' + (sel.borrador.nombre ? '<div class="wa-kv"><span>Nombre</span><span>' + _waEsc(sel.borrador.nombre) + '</span></div>' : '') + (sel.borrador.cedula ? '<div class="wa-kv"><span>Cédula</span><span>' + _waEsc(sel.borrador.cedula) + '</span></div>' : '') + '<div class="wa-kv"><span>Ciudad</span><span>' + _waEsc(sel.borrador.ciudad || '—') + '</span></div>' + (sel.borrador.inicial ? '<div class="wa-kv"><span>Inicial disponible</span><span>' + _waMoney(sel.borrador.inicial) + '</span></div>' : '') + (sel.borrador.ocupacion ? '<div class="wa-kv"><span>Se dedica a</span><span>' + _waEsc(sel.borrador.ocupacion) + '</span></div>' : '') + (sel.clienteLead ? '<div class="wa-kv"><span>En el sistema</span><span>' + (sel.canal === 'instagram' ? 'Lead Instagram' : 'Lead WhatsApp') + ' · ' + _waEsc(sel.clienteLead) + '</span></div>' : '') + '<div class="wa-kv"><span>WhatsApp</span><span>' + (sel.borrador.telefono ? '<a href="https://wa.me/' + _waEsc(sel.borrador.telefono) + '" target="_blank" rel="noopener">' + _waEsc(sel.borrador.telefono) + '</a>' : '—') + '</span></div>' + (sel.borrador.telefono && sel.canal === 'instagram' ? '<a class="btn btn-p btn-sm" style="margin-top:10px;display:inline-block" href="https://wa.me/' + _waEsc(sel.borrador.telefono) + '?text=' + encodeURIComponent('Hola ' + (sel.borrador.nombre || '') + ', te escribo de Pagasi por la ' + (sel.borrador.modelo || 'moto') + ' que preguntaste en Instagram.') + '" target="_blank" rel="noopener">Escribirle por WhatsApp</a>' : '') + (sel.clienteLead ? '<button class="btn btn-g btn-sm" style="margin-top:10px;margin-left:6px" onclick="nav(\'clientes\');setTimeout(function(){ if(typeof verCliente===\'function\') verCliente(\'' + _waEsc(sel.clienteLead) + '\'); },150)">Ver cliente</button>' : '<button class="btn btn-g btn-sm" style="margin-top:10px;margin-left:6px" onclick="nav(\'clientes\')">Crear cliente</button>') : '<div class="cs">Todavía no dejó sus datos.</div>')
           + (sel.resumen ? '<div class="cs" style="margin-top:10px;line-height:1.5"><b>Resumen:</b> ' + _waEsc(sel.resumen) + '</div>' : '') + '</div>'
         + '<div class="card"><div class="ct">Alertas</div>' + (sel.atencion ? _waAtencion(sel.atencion) + '<div class="cs" style="margin-top:8px">Cuando lo resuelvas, toca "Visto".</div>' : '<div class="cs">Nada pendiente.</div>') + '</div>'
-      : sel ? '<div class="card"><div class="ct">Cliente</div>'
+      : sel ? '<div class="card"><div class="ct">Información</div>'
           + '<div class="wa-kv"><span>Nombre</span><span>' + _waEsc(sel.clienteNombre || sel.nombre || '—') + '</span></div>'
           + '<div class="wa-kv"><span>Crédito</span><span>' + (cred ? _waEsc(cred.id) + ' · ' + _waEsc(cred.modelo || '') : '—') + '</span></div>'
           + (est ? '<div class="wa-kv"><span>Cuotas</span><span>' + est.cuotasPagadas + ' de ' + est.totalCuotas + '</span></div><div class="wa-kv"><span>Próxima</span><span>' + (prox ? _waMoney(prox.saldo) + ' · ' + _waFechaCorta(prox.fechaVence) : '—') + '</span></div><div class="wa-kv"><span>Estado</span><span>' + (prox && prox.fechaVence < hoyLocalISO() ? '<span class="wa-pill rojo">Atraso ' + _waDias(prox.fechaVence, hoyLocalISO()) + ' d</span>' : '<span class="wa-pill verde">Al día</span>') + '</span></div>' : '')
