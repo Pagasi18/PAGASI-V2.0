@@ -2,6 +2,7 @@
 // sociales... que aparezca todo: Messenger, Instagram, WhatsApp, comentarios de Facebook,
 // comentarios de Instagram, igual que la foto". Una bandeja con una pestaña por canal; Messenger y
 // los comentarios de Facebook todavía sin conectar; la cola de hoy y los asistentes como botones.
+process.env.TZ = 'America/Caracas';   // la hora de la oficina, para la prueba de fechas
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 let pass = 0, fail = 0;
@@ -114,5 +115,8 @@ ctx._waCfg = { conectado: false }; ctx._waConvs = []; ctx._waComs = []; ctx._rsT
 html = montar();
 ok('sin Meta conectado avisa que es de muestra', /todavía no están conectados en esta compañía/.test(html));
 ok('...y trae comentarios de muestra', (els['rs-com-items'].innerHTML.match(/class="wa-item/g) || []).length === 3 && ctx._waComs.every(c => c.demo));
+
+// ── 9. La fecha de un mensaje de noche es la de Caracas, no la de UTC ──
+ok('un mensaje del 21-oct a las 11:21 pm sale "21 oct 23:21" (no "22 oct")', ctx._waHora('2026-10-22T03:21:00.000Z') === '21 oct 23:21');
 
 console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas'); if (fail) process.exitCode = 1;
