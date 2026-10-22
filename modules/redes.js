@@ -174,6 +174,8 @@ PG.redes = function(){
       return '<button class="' + (t.id === tab ? 'on' : '') + '" onclick="rsTab(\'' + t.id + '\')">' + t.nombre
         + '<span id="rs-b-' + t.id + '">' + (t.pendiente ? '' : _rsGlobo(_rsCuenta(t.id))) + '</span>' + (t.pendiente ? '<span class="pend">sin conectar</span>' : '') + '</button>';
     }).join('') + '</div>';
+    // En pantallas angostas la fila de pestañas se desliza: que la abierta quede a la vista
+    setTimeout(function(){ var b = document.querySelector('.rs-tabs button.on'), f = b && b.parentNode; if(f && b.offsetLeft + b.offsetWidth > f.clientWidth) f.scrollLeft = b.offsetLeft - 12; }, 0);
     if(tab === 'messenger' || tab === 'fbcom') h += _rsPanelPendiente(tab);
     else if(tab === 'igcom') h += _rsPanelComentarios();
     else h += _waPanelConversaciones(ctx);
