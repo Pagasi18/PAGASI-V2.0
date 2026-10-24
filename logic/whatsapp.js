@@ -234,19 +234,37 @@ function _waAvisar(canal, convs){
     if(escribieron.length) toast(escribieron.length === 1 ? '<b>' + nom(escribieron[0]) + '</b> te escribió' : escribieron.length + ' de tus conversaciones tienen mensajes nuevos', 'info');
   }
 }
-// Un "ding-dong" corto, hecho en el navegador (sin archivos). Como máximo uno cada 4 segundos.
+// Los sonidos del aviso, hechos en el navegador (sin archivos). Adam, 24-oct-2026: "ponme un botón del sonido en el
+// módulo de redes para probar y que lo puedan cambiar los vendedores". Cada quien escoge el suyo; se guarda en su
+// navegador. notas: [frecuencia, empieza (s), dura (s), forma]; barrido: [de Hz, a Hz, dura (s)].
+var WA_SONIDOS = [
+  { id: 'dingdong', nombre: 'Ding-dong', desc: 'Dos notas, como un timbre', notas: [[880, 0, 0.38], [1320, 0.17, 0.38]] },
+  { id: 'campana', nombre: 'Campanita', desc: 'Una campana clara', notas: [[1568, 0, 0.9], [3136, 0, 0.45]] },
+  { id: 'pip', nombre: 'Pip-pip', desc: 'Dos pitidos cortos', notas: [[1046, 0, 0.12, 'triangle'], [1046, 0.17, 0.12, 'triangle']] },
+  { id: 'tres', nombre: 'Tres notas', desc: 'Sube: do, mi, sol', notas: [[523, 0, 0.28], [659, 0.13, 0.28], [784, 0.26, 0.45]] },
+  { id: 'gota', nombre: 'Gota', desc: 'Un "plop" suave', barrido: [1300, 480, 0.2] },
+  { id: 'nada', nombre: 'Sin sonido', desc: 'Solo el mensaje en la pantalla' }
+];
+function waSonidoActual(){ var v = ''; try{ v = localStorage.getItem('pg_sonido_redes') || ''; }catch(e){} return WA_SONIDOS.some(function(x){ return x.id === v; }) ? v : 'dingdong'; }
+function waSonidoGuardar(id){ if(!WA_SONIDOS.some(function(x){ return x.id === id; })) return; try{ localStorage.setItem('pg_sonido_redes', id); }catch(e){} }
 var _waAudio = null;
-function _waSonar(){
+// Suena el aviso escogido (o el que se pasa, para probarlo). Fuera de las pruebas, como máximo uno cada 4 segundos.
+function _waSonar(id, probar){
   try{
-    var Ctx = window.AudioContext || window.webkitAudioContext; if(!Ctx || Date.now() - (_waSonar.ult || 0) < 4000) return;
-    _waSonar.ult = Date.now();
+    var son = WA_SONIDOS.filter(function(x){ return x.id === (id || waSonidoActual()); })[0];
+    if(!son || son.id === 'nada') return;
+    var Ctx = window.AudioContext || window.webkitAudioContext; if(!Ctx) return;
+    if(!probar){ if(Date.now() - (_waSonar.ult || 0) < 4000) return; _waSonar.ult = Date.now(); }
     _waAudio = _waAudio || new Ctx(); if(_waAudio.state === 'suspended' && _waAudio.resume) _waAudio.resume();
-    [[880, 0], [1320, 0.17]].forEach(function(n){
-      var o = _waAudio.createOscillator(), g = _waAudio.createGain(), t = _waAudio.currentTime + n[1];
-      o.type = 'sine'; o.frequency.value = n[0];
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.38);
-      o.connect(g); g.connect(_waAudio.destination); o.start(t); o.stop(t + 0.42);
-    });
+    var t0 = _waAudio.currentTime + 0.02;
+    var tono = function(f, ini, dur, forma, hasta){
+      var o = _waAudio.createOscillator(), g = _waAudio.createGain(), t = t0 + ini, vol = forma === 'triangle' ? 0.16 : 0.22;
+      o.type = forma || 'sine'; o.frequency.setValueAtTime(f, t); if(hasta) o.frequency.exponentialRampToValueAtTime(hasta, t + dur);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(_waAudio.destination); o.start(t); o.stop(t + dur + 0.05);
+    };
+    if(son.barrido) tono(son.barrido[0], 0, son.barrido[2], 'sine', son.barrido[1]);
+    (son.notas || []).forEach(function(n){ tono(n[0], n[1], n[2], n[3]); });
   }catch(e){}
 }
 // El navegador solo deja sonar después de que la persona tocó algo: al primer clic se prepara el sonido

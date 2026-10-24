@@ -80,6 +80,8 @@ var _RS_CSS = '<style id="rs-css">'
   + '.rs-v h4{font-size:14px;font-weight:800;margin:18px 0 3px}.rs-v h4:first-child{margin-top:0}.rs-v .sv{font-size:12px;color:var(--ink3);margin-bottom:10px;line-height:1.5}'
   + '.rs-rep{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 6px}.rs-rep-p{display:flex;align-items:center;gap:7px;border:1px solid var(--rim);border-radius:999px;padding:4px 11px 4px 6px;font-size:12.5px;font-weight:600;cursor:pointer}.rs-rep-p small{color:var(--ink3);font-weight:600}'
   + '.rs-rep-p .av{width:22px;height:22px;border-radius:50%;color:#fff;font-size:9.5px;font-weight:800;display:grid;place-items:center}.rs-rep-p input{margin:0}'
+  + '.rs-sons{display:flex;flex-direction:column;gap:6px}.rs-son{display:flex;align-items:center;gap:11px;border:1px solid var(--rim);border-radius:12px;padding:9px 12px;cursor:pointer}.rs-son.on{border-color:var(--p1);background:#e8f0ff}'
+  + '.rs-son .t{flex:1;min-width:0}.rs-son .t b{display:block;font-size:13.5px}.rs-son .t small{color:var(--ink3);font-size:11.5px}.rs-son input{margin:0}'
   + '.rs-sws{display:flex;flex-direction:column;gap:4px}.rs-swf{display:flex;align-items:center;gap:10px;padding:7px 2px;font-size:13.5px;font-weight:600}.rs-swf .ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:#fff;flex:none}.rs-swf .ic svg{width:12px;height:12px}.rs-swf .ic.wa{background:#25D366}.rs-swf .ic.ig{background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af)}.rs-swf .ic.ms{background:linear-gradient(135deg,#00b2ff,#a334fa)}.rs-swf .ic.fb{background:#0866ff}.rs-swf .ic.rl{background:var(--ink2)}.rs-swf .t{flex:1}.rs-swf small{display:block;font-weight:500;color:var(--ink3);font-size:11.5px}'
   + '.rs-sw{appearance:none;-webkit-appearance:none;width:46px;height:26px;border-radius:999px;background:var(--rim2);position:relative;cursor:pointer;transition:background .15s;flex:none;margin:0}.rs-sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}.rs-sw:checked{background:#2f7a4f}.rs-sw:checked::after{left:23px}.rs-sw:disabled{opacity:.45;cursor:default}'
   + '.rs-qs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}@media(max-width:560px){.rs-qs{grid-template-columns:1fr}}.rs-q{border:1px solid var(--rim2);border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:3px}.rs-q input{display:none}.rs-q b{font-size:13.5px}.rs-q span{font-size:12.5px}.rs-q small{font-size:11px;color:var(--ink3);line-height:1.4}.rs-q.on{border:2px solid var(--ink);padding:9px 11px}'
@@ -100,6 +102,36 @@ var _RS_CSS = '<style id="rs-css">'
 
 function rsTab(t){ window._rsTab = t; window._rsVista = 'bandeja'; window._waSel = null; nav('redes'); }
 function rsVista(v){ window._rsVista = v; nav('redes'); }
+
+// El sonido de los avisos (Adam, 24-oct-2026: "ponme un botón del sonido en el módulo de redes para probar y que
+// lo puedan cambiar los vendedores"). Cada quien escoge el suyo; se guarda en su navegador.
+function _rsIconoSonido(){
+  var off = typeof waSonidoActual === 'function' && waSonidoActual() === 'nada';
+  return '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>' + (off ? '<path d="M3 3l18 18"/>' : '') + '</svg>';
+}
+function rsSonido(){
+  var actual = waSonidoActual();
+  var h = '<div class="rs-v"><div class="sv" style="margin-bottom:10px">Suena cuando te asignan una conversación o cuando te escribe alguien de las tuyas, estés en la pantalla que estés. Toca <b>Probar</b> para oírlo y escoge el que más te guste. Queda guardado en esta computadora.</div><div class="rs-sons">'
+    + WA_SONIDOS.map(function(x){ return '<label class="rs-son' + (x.id === actual ? ' on' : '') + '"><input type="radio" name="rs-sonido" value="' + x.id + '"' + (x.id === actual ? ' checked' : '') + ' onchange="rsSonidoEscoger(this.value)"><span class="t"><b>' + x.nombre + '</b><small>' + x.desc + '</small></span>'
+      + (x.id === 'nada' ? '' : '<button type="button" class="btn btn-g btn-sm" onclick="event.preventDefault();_waSonar(\'' + x.id + '\', true)">▶ Probar</button>') + '</label>'; }).join('')
+    + '</div></div>';
+  if(typeof setMicon === 'function') setMicon('whatsapp');
+  var mic = document.getElementById('mic'); if(mic){ mic.innerHTML = _rsIconoSonido(); mic.style.color = '#fff'; mic.style.background = 'var(--ink)'; }
+  document.getElementById('mtt').textContent = 'Sonido de los avisos';
+  document.getElementById('msb').textContent = 'Redes sociales · solo para ti';
+  document.getElementById('modal-box').className = 'modal';
+  document.getElementById('mbd').innerHTML = h;
+  S.saveFn = null;
+  document.getElementById('mft').innerHTML = '<button class="btn btn-p" onclick="closeM()">Listo</button>';
+  document.getElementById('ov').style.display = 'flex';
+}
+function rsSonidoEscoger(id){
+  waSonidoGuardar(id);
+  document.querySelectorAll('#mbd .rs-son').forEach(function(e){ var r = e.querySelector('input'); e.classList.toggle('on', !!(r && r.value === id)); });
+  var b = document.getElementById('rs-son-btn'); if(b) b.innerHTML = _rsIconoSonido() + 'Sonido';
+  _waSonar(id, true);
+  if(typeof toast === 'function') toast(id === 'nada' ? 'Avisos sin sonido' : 'Listo: los avisos suenan con «' + WA_SONIDOS.filter(function(x){ return x.id === id; })[0].nombre + '»', 'success');
+}
 
 // La barra de vendedores, debajo de las pestañas (Adam, 24-oct-2026: "necesito también filtros por vendedores…
 // pronto vamos a tener más… ponle una barra abajo de esta"). Cada vendedor con su inicial y cuántas conversaciones
@@ -467,7 +499,8 @@ PG.redes = function(){
       + (veWa ? '<button class="' + (vista === 'hoy' ? 'on' : '') + '" onclick="rsVista(\'hoy\')">Cobranza de hoy · ' + cola.total + '</button>' : '')
       + '<button class="' + (vista === 'metricas' ? 'on' : '') + '" onclick="rsVista(\'metricas\')">Métricas</button>'
       + (veIg || veWa ? '<button class="rs-asis-btn" onclick="rsAsistente(\'ventas\')">' + _RS_CHISPA + 'Paola</button>' : '')
-      + (veWa ? '<button class="rs-asis-btn" onclick="rsAsistente(\'cobranza\')">' + _RS_CHISPA + 'Patricia</button>' : '') + '</div>'
+      + (veWa ? '<button class="rs-asis-btn" onclick="rsAsistente(\'cobranza\')">' + _RS_CHISPA + 'Patricia</button>' : '')
+      + '<button class="rs-asis-btn" id="rs-son-btn" onclick="rsSonido()" title="El sonido de los avisos">' + _rsIconoSonido() + 'Sonido</button>' + '</div>'
     + '</div>'
     + ((veWa && !waOk) || (veIg && !igOk) ? '<div class="wa-aviso"><span style="font-size:18px">⚠️</span><div><b>' + (veWa && !waOk && veIg && !igOk ? 'WhatsApp e Instagram todavía no están conectados' : veWa && !waOk ? 'WhatsApp todavía no está conectado' : 'Instagram todavía no está conectado') + ' en esta compañía.</b> Lo que ves de ' + (veWa && !waOk && veIg && !igOk ? 'esos canales' : 'ese canal') + ' es de muestra, en memoria, para ver cómo atienden las asistentes.</div></div>' : '');
 

@@ -42,7 +42,7 @@ ok('las que esperan van primero y la que más lleva esperando, arriba', orden ==
 ok('cada una dice cuánto lleva esperando: en rojo pasada 1 hora, en ámbar antes', /class="rojo" title="Esperando a una persona desde [^"]*">⏱ 5 h<\/span>/.test(els['wa-items'].innerHTML) && /class="ambar" title="[^"]*">⏱ 20 min<\/span>/.test(els['wa-items'].innerHTML));
 
 // ── 2. El aviso al vendedor ──
-let sonidos = 0; ctx._waSonar = () => { sonidos++; };
+const sonarReal = ctx._waSonar; let sonidos = 0; ctx._waSonar = () => { sonidos++; };
 const c = (id, extra) => Object.assign({ id, canal: 'instagram', area: 'ventas', nombre: 'Persona ' + id, ultimoMensajeHora: hace(0) }, extra);
 ctx._waAvisar('instagram', [c('ig:10', { vendedor: 'Liz Alejandra' }), c('ig:11')]);
 ok('la primera foto (lo que ya había) no avisa', sonidos === 0 && toasts.length === 0);
@@ -83,6 +83,26 @@ setImmediate(() => {
       ok('con lista guardada se marcan esos y dice a quién le tocó la última', /value="Marianne Molina" checked/.test(r2) && /value="Liz Alejandra"(?! checked)/.test(r2) && /La última fue para Marianne Molina/.test(r2));
       const red = fs.readFileSync(path.join(ROOT, 'modules/redes.js'), 'utf8');
       ok('al guardar va { activo, vendedores } y el turno lo conserva el servidor; encendido sin nadie marcado no deja guardar', /datos\.reparto = \{ activo: !!rep\.checked, vendedores: lista \}/.test(red) && /Para repartir, marca al menos un vendedor/.test(red));
+      // ── 4. El botón del sonido: probar y escoger (Adam: "ponme un botón del sonido… que lo puedan cambiar los vendedores") ──
+      const guardado = {}; ctx.localStorage = { getItem: k => (k in guardado ? guardado[k] : null), setItem: (k, v) => { guardado[k] = String(v); } };
+      ctx._waSonar = sonarReal;
+      ok('hay 6 opciones (5 sonidos y "Sin sonido") y por defecto suena el ding-dong', ctx.WA_SONIDOS.length === 6 && ctx.WA_SONIDOS.some(x => x.id === 'nada') && ctx.waSonidoActual() === 'dingdong');
+      ctx.waSonidoGuardar('campana'); ctx.waSonidoGuardar('inventado');
+      ok('cada quien escoge el suyo y queda guardado en su navegador (lo raro no se guarda)', ctx.waSonidoActual() === 'campana' && guardado.pg_sonido_redes === 'campana');
+      let osc = 0; ctx.AudioContext = function(){ this.state = 'running'; this.currentTime = 0; this.destination = {}; this.createOscillator = () => { osc++; return { frequency: { setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {}, start() {}, stop() {} }; }; this.createGain = () => ({ gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} }, connect() {} }); };
+      ctx._waSonar('pip', true);
+      ok('"Probar" suena el escogido (dos pitidos = dos tonos)', osc === 2);
+      osc = 0; ctx._waSonar('nada', true);
+      ok('"Sin sonido" no suena', osc === 0);
+      ['wa-items', 'wa-filtros', 'wa-hilo', 'wa-ficha', 'wa-q', 'rs-vend'].forEach(el);
+      const pag = ctx.PG.redes(); flush();
+      ok('en Redes sociales está el botón "Sonido" junto a Paola', /id="rs-son-btn" onclick="rsSonido\(\)"[^>]*>[\s\S]*?Sonido<\/button>/.test(pag));
+      ['mtt', 'msb', 'modal-box', 'mbd', 'mft', 'ov', 'mic'].forEach(id => { el(id).style = {}; });
+      ctx.rsSonido();
+      const mod = els['mbd'].innerHTML;
+      ok('la ventana del sonido muestra las 6 opciones, marcada la de esta persona, con "Probar" en cada sonido', (mod.match(/name="rs-sonido"/g) || []).length === 6 && /value="campana" checked/.test(mod) && (mod.match(/▶ Probar/g) || []).length === 5);
+      ctx.rsSonidoEscoger('nada');
+      ok('al escoger "Sin sonido" queda guardado y el botón muestra la campana tachada', guardado.pg_sonido_redes === 'nada' && /M3 3l18 18/.test(ctx._rsIconoSonido()));
       console.log(''); console.log(pass + ' pruebas OK, ' + fail + ' fallas'); if (fail) process.exitCode = 1;
     });
   });
