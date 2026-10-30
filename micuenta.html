@@ -903,6 +903,32 @@ function _enlaceHermano(){
   }catch(e){ return ''; }
 }
 
+/* ── Interruptor: entrada de clientes CERRADA (30-oct-2026) ─────────────────
+   Adam: "apágame para que los clientes no puedan entrar a Mi cuenta desde pagasi.io".
+   true  = los clientes no entran: la página muestra un aviso y no conecta con Firebase
+           (ni SMS, ni enlace ?t=, ni sesión guardada en el navegador).
+           El equipo sigue entrando con micuenta.html?equipo=1 (correo y clave del panel).
+   false = Mi cuenta abierta como siempre. Para reabrir: cambiar este valor y publicar.
+   MICUENTA_CERRADA_PRUEBA solo lo usan las pruebas para ejercitar el portal abierto.
+   ------------------------------------------------------------------------- */
+var MICUENTA_CERRADA = (typeof MICUENTA_CERRADA_PRUEBA === 'boolean') ? MICUENTA_CERRADA_PRUEBA : true;
+function mostrarCerrado(){
+  $('scApp').classList.add('hide'); $('mBar').classList.add('hide');
+  $('scLogin').classList.remove('hide');
+  ['stepTel','stepCod','stepCed','stepStaff','lgStaff','recaptcha-container'].forEach(function(id){ var e=$(id); if(e) e.classList.add('hide'); });
+  hideErr('lgErr');
+  $('lgT').textContent = 'Mi cuenta no está disponible por ahora';
+  $('lgSub').textContent = 'Estamos haciendo mejoras. Para consultar tu crédito o reportar un pago, escríbenos por WhatsApp y te atendemos.';
+  var wa = $('lgWa');
+  if(wa){
+    wa.textContent = 'Escribir por WhatsApp';
+    wa.href = 'https://wa.me/' + WA_PAGASI + '?text=' + encodeURIComponent('Hola, quiero consultar mi crédito Pagasi');
+    wa.classList.remove('lnk'); wa.classList.add('btn','btn-p');
+    wa.style.color='#fff'; wa.style.textDecoration='none'; wa.style.display='flex'; wa.style.justifyContent='center';
+  }
+  var nota = document.querySelector('.pg-motion-note'); if(nota) nota.textContent = 'Gracias por tu paciencia.';
+}
+
 (function boot(){
   $('lgLogo').src = LOGO; $('apLogo').src = LOGO_BLANCO;
   $('pFecha').value = hoyISO();
@@ -912,6 +938,7 @@ function _enlaceHermano(){
   // micuenta.html?equipo=1 -> entrada directa del equipo. Sirve para cuando el
   // navegador tiene guardada la sesion de un cliente (soporte, pruebas).
   S.equipo = qs.get('equipo') === '1' || location.hash === '#equipo';
+  if(MICUENTA_CERRADA && !S.equipo){ mostrarCerrado(); return; }
 
   $('cod').addEventListener('keydown', function(e){ if(e.key==='Enter') verificarCodigo(); });
   $('tel').addEventListener('keydown', function(e){ if(e.key==='Enter') pedirCodigo(); });
@@ -1022,6 +1049,7 @@ function volverATel(){
 var _confirm = null, _verifier = null, _verifierBase = '', _telPend = '';
 
 function pedirCodigo(){
+  if(MICUENTA_CERRADA && !S.equipo) return;   // Mi cuenta cerrada a clientes
   hideErr('lgErr');
   var e164 = telE164($('tel').value || _telPend);
   if(!e164){ showErr('lgErr','Escribe tu número de celular completo (por ejemplo 04143081617).'); return; }
@@ -1072,6 +1100,7 @@ function pedirCodigo(){
 }
 
 function verificarCodigo(){
+  if(MICUENTA_CERRADA && !S.equipo) return;   // Mi cuenta cerrada a clientes
   hideErr('lgErr');
   var c = soloDigitos($('cod').value);
   if(c.length < 4){ showErr('lgErr','Escribe el código completo que te llegó.'); return; }
@@ -1128,6 +1157,7 @@ function abrirSesionPorTelefono(phone){
 
 /* ── Entrar con enlace personal (respaldo si el SMS no llega) ─────────── */
 function entrarConEnlace(){
+  if(MICUENTA_CERRADA && !S.equipo) return;   // Mi cuenta cerrada a clientes
   hideErr('lgErr');
   var ced = soloDigitos($('ced').value);
   if(ced.length < 5){ showErr('lgErr','Escribe tu cédula completa, solo los números.'); return; }
