@@ -321,9 +321,9 @@ const msgTexto = (de, texto, id) => ({ metaId: id || 'wamid.in' + Math.random().
   const D = armar(); D.db26._store.set('creditos/M-2', cred('M-2', 'C26', 12, { cli: 'ANA LÓPEZ' })); D.db26._store.set('clientes/C26b', { id: 'C26b', nombre: 'ANA LÓPEZ', tel: '04149998877' }); D.db26._store.get('creditos/M-2').clienteId = 'C26b';
   rr = await recordatorios.correr(D.deps, { hoy: HOY, plantillas: {} });
   const tpl = D.plantillas.find(x => x.a === '+584149998877');
-  ok('sin configurar nada usa los avisos con imagen (aviso_por_vencer a 3 días) con sus 3 variables y su imagen de cabecera', tpl && tpl.n === 'aviso_por_vencer' && /aviso-por-vencer\.png$/.test(tpl.img) && tpl.p.length === 3 && tpl.p[0] === 'Ana' && /^\$\d+,\d{2}$/.test(tpl.p[1]) && /^\d+ de [a-z]+$/.test(tpl.p[2]));
+  ok('sin configurar nada usa los avisos con imagen (cuota_por_vencer_img a 3 días) con sus 3 variables y su imagen de cabecera', tpl && tpl.n === 'cuota_por_vencer_img' && /aviso-por-vencer\.png$/.test(tpl.img) && tpl.p.length === 3 && tpl.p[0] === 'Ana' && /^\$\d+,\d{2}$/.test(tpl.p[1]) && /^\d+ de [a-z]+$/.test(tpl.p[2]));
   const msgTpl = D.db26._lista('conversaciones/wa:+584149998877/mensajes/').find(m => m.tipo === 'plantilla');
-  ok('...y guarda en la conversación el texto real de la plantilla, ya con los datos', msgTpl && /^Hola, Ana 👋\n\nTu cuota de \$\d+,\d{2} vence el \d+ de [a-z]+\./.test(msgTpl.texto));
+  ok('...y guarda en la conversación el texto real de la plantilla, ya con los datos', msgTpl && /^Hola, Ana 👋\n\nLa cuota de tu crédito por \$\d+,\d{2} vence el \d+ de [a-z]+\./.test(msgTpl.texto));
   const ap = recordatorios.armarPlantilla('vence_hoy', { nombre: 'JOSÉ ROJAS', cuota: 3, totalCuotas: 24, monto: 88.14, fechaVence: '2026-10-18' });
   ok('vence_hoy lleva solo nombre y monto (con el $ dentro, como el ejemplo aprobado "$88,14"); cuota_vencida lleva nombre, monto y fecha', ap.params.join('|') === 'José|$88,14' && ap.texto === 'Hola José, hoy vence la cuota de tu crédito por $88,14. Si ya realizaste el pago, ignora este aviso. Si tienes dudas sobre tu pago, responde a este mensaje.' && recordatorios.armarPlantilla('cuota_vencida', { nombre: 'ANA', monto: 50, fechaVence: '2026-09-12' }).params.join('|') === 'Ana|$50,00|12 de septiembre');
   ok('una plantilla desconocida recibe las 5 variables de siempre', recordatorios.armarPlantilla('otra_cosa', { nombre: 'ANA', cuota: 2, totalCuotas: 24, monto: 50, fechaVence: '2026-10-20' }).params.length === 5);
@@ -391,7 +391,7 @@ const msgTexto = (de, texto, id) => ({ metaId: id || 'wamid.in' + Math.random().
   let Ac = armar(); Ac.db26._store.set('creditos/M-9', cred('M-9', 'C26c', 20, { cli: 'LUIS ROJAS', fechaCompromiso: iso(1) })); Ac.db26._store.set('clientes/C26c', { id: 'C26c', nombre: 'LUIS ROJAS', tel: '04147776655' });
   await recordatorios.correr(Ac.deps, { hoy: HOY, plantillas: {} });
   const tplA = Ac.plantillas.find(x => x.a === '+584147776655');
-  ok('un día antes del compromiso sale el recordatorio con la fecha del compromiso', tplA && tplA.n === 'aviso_por_vencer' && /de octubre/.test(tplA.p[2]));
+  ok('un día antes del compromiso sale el recordatorio con la fecha del compromiso', tplA && tplA.n === 'cuota_por_vencer_img' && /de octubre/.test(tplA.p[2]));
   // ── Comentarios de Instagram (20-oct-2026) ──
   const avisoCom = (id, texto, de, usuario, parent) => ({ object: 'instagram', entry: [{ id: '17841425348351958', time: 1760900000, changes: [{ field: 'comments', value: Object.assign({ id, text: texto, from: { id: de, username: usuario }, media: { id: 'media1', media_product_type: 'FEED' } }, parent ? { parent_id: parent } : {}) }] }] });
   const pc = meta.parsearWebhook(avisoCom('c1', '¿cuánto cuesta la BRZ 200?', '555777', 'pepe.moto'));
