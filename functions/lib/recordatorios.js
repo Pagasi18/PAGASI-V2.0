@@ -22,15 +22,19 @@ const CUANDO = { proximas: it => it.dias === -3, hoy: it => it.dias === 0, graci
 // Las plantillas que Pagasi ya tiene aprobadas en Meta (cuenta "Pagasi Cobranza", 15-sep-2026),
 // con sus variables en orden y su texto, para guardar en la conversacion lo que de verdad se mando.
 // Una plantilla que no este aqui recibe las 5 variables de siempre (nombre, cuota, total, monto, fecha).
+const IMAGENES = 'https://pagasi.io/assets/public/avisos/';   // la cabecera de los avisos con imagen (31-oct-2026)
 const PLANTILLAS = {
+  aviso_por_vencer: { vars: ['nombre', 'monto', 'fecha'], imagen: IMAGENES + 'aviso-por-vencer.png', texto: 'Hola, {{1}} 👋\n\nTu cuota de {{2}} vence el {{3}}.\n\nSi ya pagaste, ¡gracias! Puedes ignorar este mensaje.' },
+  aviso_hoy: { vars: ['nombre', 'monto'], imagen: IMAGENES + 'aviso-hoy.png', texto: 'Hola, {{1}} 👋\n\nHoy vence tu cuota de {{2}}.\n\nSi ya pagaste, ¡gracias! Puedes ignorar este mensaje.' },
+  aviso_pendiente: { vars: ['nombre', 'monto', 'fecha'], imagen: IMAGENES + 'aviso-pendiente.png', texto: 'Hola, {{1}}\n\nTu cuota de {{2}} venció el {{3}} y todavía nos aparece pendiente.\n\nCuéntanos cómo vas y te ayudamos 🤝' },
   recordatorio_cuota: { vars: ['nombre', 'monto', 'fecha'], texto: 'Hola {{1}}, te recordamos que la cuota de tu crédito por {{2}} vence el {{3}}. Si ya realizaste el pago, ignora este aviso. Si tienes dudas sobre tu pago, responde a este mensaje.' },
   vence_hoy: { vars: ['nombre', 'monto'], texto: 'Hola {{1}}, hoy vence la cuota de tu crédito por {{2}}. Si ya realizaste el pago, ignora este aviso. Si tienes dudas sobre tu pago, responde a este mensaje.' },
   cuota_vencida: { vars: ['nombre', 'monto', 'fecha'], texto: 'Hola {{1}}, la cuota de tu crédito por {{2}} venció el {{3}} y sigue pendiente de pago. Si ya realizaste el pago, ignora este aviso. Si no, responde a este mensaje para coordinar tu pago.' }
 };
 // Por defecto, el grupo → plantilla que ya existe en Meta
-const PLANTILLAS_POR_GRUPO = { proximas: 'recordatorio_cuota', hoy: 'vence_hoy', gracia: 'cuota_vencida', atrasadas: 'cuota_vencida', acuerdo: 'recordatorio_cuota' };
+const PLANTILLAS_POR_GRUPO = { proximas: 'aviso_por_vencer', hoy: 'aviso_hoy', gracia: 'aviso_pendiente', atrasadas: 'aviso_pendiente', acuerdo: 'aviso_por_vencer' };
 // El dia del compromiso va como "hoy vence"; el dia antes, como recordatorio con la fecha del compromiso
-function plantillaDe(grupo, it, plantillas) { if (grupo === 'acuerdo' && it.dias === 0) return (plantillas && plantillas.acuerdoHoy) || 'vence_hoy'; return (plantillas && plantillas[grupo]) || PLANTILLAS_POR_GRUPO[grupo]; }
+function plantillaDe(grupo, it, plantillas) { if (grupo === 'acuerdo' && it.dias === 0) return (plantillas && plantillas.acuerdoHoy) || 'aviso_hoy'; return (plantillas && plantillas[grupo]) || PLANTILLAS_POR_GRUPO[grupo]; }
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const fechaLarga = iso => { const p = String(iso || '').slice(0, 10).split('-'); return p.length === 3 ? parseInt(p[2], 10) + ' de ' + MESES[parseInt(p[1], 10) - 1] : String(iso || ''); };
 // La plantilla aprobada en Meta dice "por {{2}}" (ejemplo "$88,14"): el $ va dentro de la variable (21-oct-2026: salía "por 25,00")
@@ -65,7 +69,7 @@ async function correrEmpresa(deps, empresa, plantillas, hoy) {
       try { await regRef.create({ empresa, cred: it.cred, cuota: it.cuota, grupo, tel: it.tel, hoy, creado: deps.ahora(), estado: 'enviando' }); } catch (e) { r.repetidos++; continue; }
       const { params, texto } = armarPlantilla(plantilla, Object.assign({ grupo }, it));
       let metaId = '', estado = 'enviado', error = '';
-      try { metaId = await deps.meta.enviarPlantilla(it.tel, plantilla, params, 'es'); r.enviados++; }
+      try { metaId = await deps.meta.enviarPlantilla(it.tel, plantilla, params, 'es', (PLANTILLAS[plantilla] || {}).imagen); r.enviados++; }
       catch (e) { estado = 'fallo'; error = String(e && e.message || e).slice(0, 160); r.fallos++; }
       await regRef.set({ estado, error, metaId }, { merge: true });
       const convRef = db.collection('conversaciones').doc('wa:' + it.tel);

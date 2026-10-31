@@ -103,7 +103,7 @@ function cliente(cfg) {
     enviarTexto: (para, texto) => enviar({ to: para.replace('+', ''), type: 'text', text: { body: String(texto).slice(0, 4096), preview_url: false } }),
     enviarImagen: (para, url, pie) => enviar({ to: para.replace('+', ''), type: 'image', image: Object.assign({ link: url }, pie ? { caption: String(pie).slice(0, 1024) } : {}) }),
     // Plantilla aprobada por Meta (la unica forma de escribir fuera de la ventana)
-    enviarPlantilla: (para, nombre, parametros, idioma) => enviar({ to: para.replace('+', ''), type: 'template', template: { name: nombre, language: { code: idioma || 'es' }, components: parametros && parametros.length ? [{ type: 'body', parameters: parametros.map(t => ({ type: 'text', text: String(t) })) }] : [] } }),
+    enviarPlantilla: (para, nombre, parametros, idioma, imagen) => enviar({ to: para.replace('+', ''), type: 'template', template: { name: nombre, language: { code: idioma || 'es' }, components: [].concat(imagen ? [{ type: 'header', parameters: [{ type: 'image', image: { link: imagen } }] }] : [], parametros && parametros.length ? [{ type: 'body', parameters: parametros.map(t => ({ type: 'text', text: String(t) })) }] : []) } }),
     marcarLeido: (metaId) => enviar({ status: 'read', message_id: metaId }).catch(() => ''),
     // Un medio que mando el cliente: primero la URL temporal, despues los bytes
     async bajarMedio(mediaId) {
