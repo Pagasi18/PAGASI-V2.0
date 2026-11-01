@@ -111,6 +111,8 @@ function destino(conv) { return canalDe(conv) === 'instagram' ? conv.igsid : con
 function responde(deps, donde) { const r = deps.cfg && deps.cfg.responde; return !r || r[donde] !== false; }
 function calidadDe(deps, area) { const c = deps.cfg && deps.cfg.calidad; return (c && c[area]) || 'normal'; }
 
+// El 0414-2719914 es de ventas y lo atiende una persona (Adam, 30-oct y 1-nov-2026): lo que llegue ahi se guarda y espera a alguien, sin respuesta automatica
+const NUMEROS_SOLO_PERSONA = ['584142719914'];
 async function procesarMensaje(deps, m) {
   if ((m.canal || 'whatsapp') === 'instagram') return procesarInstagram(deps, m);
   const tel = telDe(m.de); if (!tel) return { saltado: 'sin-telefono' };
@@ -132,6 +134,7 @@ async function procesarMensaje(deps, m) {
   if (!conv) base.creado = ahora;
   await convRef.set(base, { merge: true });
   deps.log('entrante', { canal: 'whatsapp', area, empresa: u.empresa, tipo: m.tipo, cliente: !!u.clienteId });
+  if (NUMEROS_SOLO_PERSONA.includes(String(m.telefonoNegocio || '').replace(/\D/g, ''))) { await convRef.set({ atencion: 'pide_persona', actualizado: ahora }, { merge: true }); return { empresa: u.empresa, soloPersona: true }; }
   if (deps.meta.marcarLeido) deps.meta.marcarLeido(m.metaId).catch(() => {});
 
   // VENTAS por WhatsApp: el mismo asistente que en Instagram, ya con el telefono de la persona

@@ -185,6 +185,9 @@ const msgTexto = (de, texto, id) => ({ metaId: id || 'wamid.in' + Math.random().
   const antes = A.enviados.length;
   r = await procesar.procesarMensaje(A.deps, msgTexto('584141234567', 'gracias', 'wamid.a4'));
   ok('con una persona atendiendo, el mensaje se guarda pero el asistente no responde', r.callado && A.enviados.length === antes && A.db26._store.get('conversaciones/wa:+584141234567/mensajes/wamid.a4').texto === 'gracias');
+  const As = armar();
+  const rVentas = await procesar.procesarMensaje(As.deps, Object.assign(msgTexto('584141234567', 'hola, quiero una moto', 'wamid.ventas'), { telefonoNegocio: '+58 414-2719914' }));
+  ok('lo que llega al número de ventas se guarda y espera a una persona, sin respuesta automática', rVentas.soloPersona && As.enviados.length === 0 && As.cerebroFalso.ultimo === null && As.db26._store.get('conversaciones/wa:+584141234567').atencion === 'pide_persona' && As.db26._store.get('conversaciones/wa:+584141234567/mensajes/wamid.ventas').texto === 'hola, quiero una moto');
   // comprobante
   A = armar();
   r = await procesar.procesarMensaje(A.deps, { metaId: 'wamid.img', de: '584141234567', nombre: 'María', tipo: 'imagen', texto: '', medio: { id: 'media9', mime: 'image/jpeg' }, hora: AHORA });
