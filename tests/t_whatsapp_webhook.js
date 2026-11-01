@@ -215,6 +215,15 @@ const msgTexto = (de, texto, id) => ({ metaId: id || 'wamid.in' + Math.random().
   const Af = armar(); Af.cerebroFalso.leerComprobante = async () => { throw new Error('sin saldo'); };
   await procesar.procesarMensaje(Af.deps, imgC('wamid.r4'));
   ok('si no se puede leer el recibo, entra igual a la bandeja', Af.db26._lista('comprobantes/').length === 1 && /Recibí tu comprobante/.test(Af.enviados[0].t));
+  const Ad = armar(); Ad.cerebroFalso.leerComprobante = async () => ({ esComprobante: true, monto: 25, moneda: 'USD', fecha: '', referencia: 'R9', banco: '' });
+  await procesar.procesarMensaje(Ad.deps, imgC('wamid.d1')); await procesar.procesarMensaje(Ad.deps, imgC('wamid.d2'));
+  const dd = Ad.db26._lista('comprobantes/');
+  ok('el mismo recibo mandado dos veces queda marcado como repetido', dd.length === 2 && dd.filter(x => x.referenciaRepetida).length === 1);
+  const Al = armar(); Al.db26._store.set('creditos/M-2', cred('M-2', 'C26b', 12, { cli: 'ANA LÓPEZ' })); Al.db26._store.set('clientes/C26b', { id: 'C26b', nombre: 'ANA LÓPEZ', tel: '04149998877' });
+  let rl = await recordatorios.correr(Al.deps, { hoy: HOY, plantillas: {}, lista: ['18:M-2'] });
+  ok('con lista, a un crédito fuera de ella no se le escribe', Al.plantillas.length === 0 && rl.find(x => x.empresa === '26').fueraDeLista >= 1);
+  rl = await recordatorios.correr(Al.deps, { hoy: HOY, plantillas: {}, lista: ['26:M-2'] });
+  ok('con lista, solo se le escribe a los de la lista', Al.plantillas.length === 1 && Al.plantillas[0].a === '+584149998877');
   const cerebroR = require('../functions/lib/cerebro');
   const lr = await cerebroR.leerComprobante({ apiKey: 'x', bytes: Buffer.from('a'), mime: 'image/png', fetchImpl: async () => ({ ok: true, status: 200, json: async () => ({ usage: {}, content: [{ type: 'tool_use', name: 'anotar_recibo', input: { es_comprobante: true, monto: 25.005, moneda: 'USD', fecha: 'ayer', referencia: '<b>12', banco: null } }] }) }) });
   ok('lo leído se limpia antes de guardarse', lr.monto === 25.01 && lr.fecha === '' && lr.referencia === 'b12' && lr.banco === '');
