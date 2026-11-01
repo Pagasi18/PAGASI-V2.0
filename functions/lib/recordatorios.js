@@ -33,17 +33,17 @@ function imagenDe(plantilla, grupo, it) {
   return IMAGENES + DISENOS[(base + (parseInt(it.cuota, 10) || 0) * 5 + paso) % DISENOS.length] + '-' + estado + '.jpg';
 }
 const PLANTILLAS = {
-  cuota_por_vencer_btn: { vars: ['nombre', 'monto', 'fecha'], imagen: 'por-vencer', texto: 'Hola, {{1}} 👋\n\nLa cuota de tu crédito por {{2}} vence el {{3}}.\n\nSi ya realizaste el pago, ¡gracias! Puedes ignorar este aviso.' },
-  cuota_hoy_btn: { vars: ['nombre', 'monto'], imagen: 'hoy', texto: 'Hola, {{1}} 👋\n\nHoy vence la cuota de tu crédito por {{2}}.\n\nSi ya realizaste el pago, ¡gracias! Puedes ignorar este aviso.' },
-  cuota_pendiente_btn: { vars: ['nombre', 'monto', 'fecha'], imagen: 'pendiente', texto: 'Hola, {{1}}\n\nLa cuota de tu crédito por {{2}} venció el {{3}} y sigue pendiente de pago.\n\nSi ya realizaste el pago, envía tu comprobante. Si no, responde para coordinar tu pago.' },
+  aviso_cuota_proxima: { vars: ['nombre', 'monto', 'fecha'], imagen: 'por-vencer', texto: 'Hola, {{1}} 👋\n\nLa cuota de tu crédito por {{2}} vence el {{3}}.\n\nSi ya realizaste el pago, ¡gracias! Puedes ignorar este aviso.' },
+  aviso_cuota_hoy: { vars: ['nombre', 'monto'], imagen: 'hoy', texto: 'Hola, {{1}} 👋\n\nHoy vence la cuota de tu crédito por {{2}}.\n\nSi ya realizaste el pago, ¡gracias! Puedes ignorar este aviso.' },
+  aviso_cuota_vencida: { vars: ['nombre', 'monto', 'fecha'], imagen: 'pendiente', texto: 'Hola, {{1}}\n\nLa cuota de tu crédito por {{2}} venció el {{3}} y sigue pendiente de pago.\n\nSi ya realizaste el pago, envía tu comprobante. Si no, responde para coordinar tu pago.' },
   recordatorio_cuota: { vars: ['nombre', 'monto', 'fecha'], texto: 'Hola {{1}}, te recordamos que la cuota de tu crédito por {{2}} vence el {{3}}. Si ya realizaste el pago, ignora este aviso. Si tienes dudas sobre tu pago, responde a este mensaje.' },
   vence_hoy: { vars: ['nombre', 'monto'], texto: 'Hola {{1}}, hoy vence la cuota de tu crédito por {{2}}. Si ya realizaste el pago, ignora este aviso. Si tienes dudas sobre tu pago, responde a este mensaje.' },
   cuota_vencida: { vars: ['nombre', 'monto', 'fecha'], texto: 'Hola {{1}}, la cuota de tu crédito por {{2}} venció el {{3}} y sigue pendiente de pago. Si ya realizaste el pago, ignora este aviso. Si no, responde a este mensaje para coordinar tu pago.' }
 };
 // Por defecto, el grupo → plantilla que ya existe en Meta
-const PLANTILLAS_POR_GRUPO = { proximas: 'cuota_por_vencer_btn', hoy: 'cuota_hoy_btn', gracia: 'cuota_pendiente_btn', atrasadas: 'cuota_pendiente_btn', acuerdo: 'cuota_por_vencer_btn' };
+const PLANTILLAS_POR_GRUPO = { proximas: 'aviso_cuota_proxima', hoy: 'aviso_cuota_hoy', gracia: 'aviso_cuota_vencida', atrasadas: 'aviso_cuota_vencida', acuerdo: 'aviso_cuota_proxima' };
 // El dia del compromiso va como "hoy vence"; el dia antes, como recordatorio con la fecha del compromiso
-function plantillaDe(grupo, it, plantillas) { if (grupo === 'acuerdo' && it.dias === 0) return (plantillas && plantillas.acuerdoHoy) || 'cuota_hoy_btn'; return (plantillas && plantillas[grupo]) || PLANTILLAS_POR_GRUPO[grupo]; }
+function plantillaDe(grupo, it, plantillas) { if (grupo === 'acuerdo' && it.dias === 0) return (plantillas && plantillas.acuerdoHoy) || 'aviso_cuota_hoy'; return (plantillas && plantillas[grupo]) || PLANTILLAS_POR_GRUPO[grupo]; }
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const fechaLarga = iso => { const p = String(iso || '').slice(0, 10).split('-'); return p.length === 3 ? parseInt(p[2], 10) + ' de ' + MESES[parseInt(p[1], 10) - 1] : String(iso || ''); };
 // La plantilla aprobada en Meta dice "por {{2}}" (ejemplo "$88,14"): el $ va dentro de la variable (21-oct-2026: salía "por 25,00")

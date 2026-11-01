@@ -329,10 +329,10 @@ const msgTexto = (de, texto, id) => ({ metaId: id || 'wamid.in' + Math.random().
   const D = armar(); D.db26._store.set('creditos/M-2', cred('M-2', 'C26', 12, { cli: 'ANA LÓPEZ' })); D.db26._store.set('clientes/C26b', { id: 'C26b', nombre: 'ANA LÓPEZ', tel: '04149998877' }); D.db26._store.get('creditos/M-2').clienteId = 'C26b';
   rr = await recordatorios.correr(D.deps, { hoy: HOY, plantillas: {} });
   const tpl = D.plantillas.find(x => x.a === '+584149998877');
-  ok('sin configurar nada usa los avisos con imagen (cuota_por_vencer_btn a 3 días) con sus 3 variables, su imagen de cabecera y el botón de la ventana', tpl && tpl.n === 'cuota_por_vencer_btn' && tpl.ventana === 'comprobante' && /-por-vencer\.jpg$/.test(tpl.img) && tpl.p.length === 3 && tpl.p[0] === 'Ana' && /^\$\d+,\d{2}$/.test(tpl.p[1]) && /^\d+ de [a-z]+$/.test(tpl.p[2]));
+  ok('sin configurar nada usa los avisos con imagen (aviso_cuota_proxima a 3 días) con sus 3 variables, su imagen de cabecera y el botón de la ventana', tpl && tpl.n === 'aviso_cuota_proxima' && tpl.ventana === 'comprobante' && /-por-vencer\.jpg$/.test(tpl.img) && tpl.p.length === 3 && tpl.p[0] === 'Ana' && /^\$\d+,\d{2}$/.test(tpl.p[1]) && /^\d+ de [a-z]+$/.test(tpl.p[2]));
   const msgTpl = D.db26._lista('conversaciones/wa:+584149998877/mensajes/').find(m => m.tipo === 'plantilla');
   ok('...y guarda en la conversación el texto real de la plantilla, ya con los datos', msgTpl && /^Hola, Ana 👋\n\nLa cuota de tu crédito por \$\d+,\d{2} vence el \d+ de [a-z]+\./.test(msgTpl.texto));
-  const seq = []; [1, 2, 3].forEach(c => [['proximas', 'cuota_por_vencer_btn', -3], ['hoy', 'cuota_hoy_btn', 0], ['gracia', 'cuota_pendiente_btn', 1], ['gracia', 'cuota_pendiente_btn', 3], ['atrasadas', 'cuota_pendiente_btn', 7]].forEach(([g, p, d]) => seq.push(recordatorios.imagenDe(p, g, { cred: 'M-7', cuota: c, dias: d }))));
+  const seq = []; [1, 2, 3].forEach(c => [['proximas', 'aviso_cuota_proxima', -3], ['hoy', 'aviso_cuota_hoy', 0], ['gracia', 'aviso_cuota_vencida', 1], ['gracia', 'aviso_cuota_vencida', 3], ['atrasadas', 'aviso_cuota_vencida', 7]].forEach(([g, p, d]) => seq.push(recordatorios.imagenDe(p, g, { cred: 'M-7', cuota: c, dias: d }))));
   const dis = seq.map(u => u.split('/').pop().charAt(0));
   ok('la imagen rota: dos avisos seguidos nunca repiten diseño y salen los 6', dis.every((x, i) => i === 0 || x !== dis[i - 1]) && new Set(dis).size === 6);
   ok('cada imagen de la rotación existe en el sitio', seq.every(u => require('fs').existsSync(require('path').join(__dirname, '..', 'assets/public/avisos', u.split('/').pop()))));
@@ -404,7 +404,7 @@ const msgTexto = (de, texto, id) => ({ metaId: id || 'wamid.in' + Math.random().
   let Ac = armar(); Ac.db26._store.set('creditos/M-9', cred('M-9', 'C26c', 20, { cli: 'LUIS ROJAS', fechaCompromiso: iso(1) })); Ac.db26._store.set('clientes/C26c', { id: 'C26c', nombre: 'LUIS ROJAS', tel: '04147776655' });
   await recordatorios.correr(Ac.deps, { hoy: HOY, plantillas: {} });
   const tplA = Ac.plantillas.find(x => x.a === '+584147776655');
-  ok('un día antes del compromiso sale el recordatorio con la fecha del compromiso', tplA && tplA.n === 'cuota_por_vencer_btn' && /de octubre/.test(tplA.p[2]));
+  ok('un día antes del compromiso sale el recordatorio con la fecha del compromiso', tplA && tplA.n === 'aviso_cuota_proxima' && /de octubre/.test(tplA.p[2]));
   // ── Comentarios de Instagram (20-oct-2026) ──
   const avisoCom = (id, texto, de, usuario, parent) => ({ object: 'instagram', entry: [{ id: '17841425348351958', time: 1760900000, changes: [{ field: 'comments', value: Object.assign({ id, text: texto, from: { id: de, username: usuario }, media: { id: 'media1', media_product_type: 'FEED' } }, parent ? { parent_id: parent } : {}) }] }] });
   const pc = meta.parsearWebhook(avisoCom('c1', '¿cuánto cuesta la BRZ 200?', '555777', 'pepe.moto'));
