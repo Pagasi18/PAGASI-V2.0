@@ -41,7 +41,7 @@ function armar() {
   const db26 = FakeDb({ indice_clientes: { '+584141234567': { clienteId: 'C26' } }, clientes: { C26: { id: 'C26', nombre: 'MARÍA JOSÉ PÉREZ', tel: '04141234567', telE164: '+584141234567' } }, creditos: { 'M-1': cred('M-1', 'C26', 20) }, pagos: { p1: { cred: 'M-1', monto: 50, fecha: iso(-6), estado: 'confirmado' } } });
   const db18 = FakeDb({ indice_clientes: { '+584241112233': { clienteId: 'C18' } }, clientes: { C18: { id: 'C18', nombre: 'JOSÉ ROJAS', telE164: '+584241112233' } }, creditos: { 'CRED-9': cred('CRED-9', 'C18', 40, { cli: 'JOSÉ ROJAS' }) }, pagos: {} });
   const enviados = [], plantillas = [], subidos = [];
-  const metaFalso = { enviarTexto: async (a, t) => { enviados.push({ a, t }); return 'wamid.out' + enviados.length; }, enviarPlantilla: async (a, n, p, l, img) => { plantillas.push({ a, n, p, img }); return 'wamid.tpl' + plantillas.length; }, marcarLeido: async () => '', bajarMedio: async () => ({ bytes: Buffer.from('img'), mime: 'image/jpeg' }) };
+  const metaFalso = { enviarTexto: async (a, t) => { enviados.push({ a, t }); return 'wamid.out' + enviados.length; }, enviarPlantilla: async (a, n, p, l, extra) => { plantillas.push({ a, n, p, img: extra && extra.imagen, ventana: extra && extra.ventana }); return 'wamid.tpl' + plantillas.length; }, marcarLeido: async () => '', bajarMedio: async () => ({ bytes: Buffer.from('img'), mime: 'image/jpeg' }) };
   const cerebroFalso = { ultimo: null, respuesta: null, falla: false, async pensar(x) { this.ultimo = x; if (this.falla) throw new Error('sin cuota'); return this.respuesta || { reply: 'Hola María, vas al día.', draft: null, summary: 'Preguntó cuánto debe.', handoff: false, handoffReason: '' }; } };
   const ig = [], comentariosResp = [], privados = [], igFalso = { enviarTexto: async (a, t, op) => { ig.push({ a, t, humano: !!(op && op.humano) }); return 'mid.out' + ig.length; }, marcarLeido: async () => '', perfil: async () => ({ nombre: 'Luis Pérez', usuario: 'luisperez.ve' }), responderComentario: async (id, t) => { comentariosResp.push({ id, t }); return 'rep' + comentariosResp.length; }, mensajePrivado: async (id, t) => { privados.push({ id, t }); return { metaId: 'mid.priv' + privados.length, igsid: '9900' + privados.length }; } };
   const catalogo = { motos: [{ id: '1', name: 'BRZ 200', modelo: 'BRZ 200', sedeName: 'EK Bello Monte', precio: 1750, cc: '200cc', cat: 'Ciudad', disponible: true, orden: 1 }, { id: '2', name: 'Kavak 250', sedeName: 'EK Bello Monte', precio: 2900, disponible: true, orden: 2 }, { id: '3', name: 'SBR 150', sedeName: 'Haojin', precio: null, disponible: true }, { id: '4', name: 'Vieja', sedeName: 'Haojin', precio: 900, disponible: false }], cond: { apy: 500, seguroPct: 0, inicialMin: 40, inicialMax: 60, plazos: [6, 9, 12] }, sedes: [{ nombre: 'EK Bello Monte', ciudad: 'Caracas', direccion: 'Av. Principal' }] };
@@ -190,6 +190,14 @@ const msgTexto = (de, texto, id) => ({ metaId: id || 'wamid.in' + Math.random().
   r = await procesar.procesarMensaje(A.deps, { metaId: 'wamid.img', de: '584141234567', nombre: 'María', tipo: 'imagen', texto: '', medio: { id: 'media9', mime: 'image/jpeg' }, hora: AHORA });
   const comps = A.db26._lista('comprobantes/');
   ok('una imagen del cliente se sube a Storage, crea un comprobante pendiente y avisa al equipo', r.comprobante && A.subidos.length === 1 && comps.length === 1 && comps[0].estado === 'pendiente' && comps[0].origen === 'whatsapp' && comps[0].credId === 'M-1' && A.db26._store.get('conversaciones/wa:+584141234567').atencion === 'comprobante');
+  const pv = meta.parsearWebhook({ object: 'whatsapp_business_account', entry: [{ changes: [{ field: 'messages', value: { messages: [{ id: 'wamid.flow', from: '584141234567', timestamp: '1760796000', type: 'interactive', interactive: { type: 'nfm_reply', nfm_reply: { name: 'flow', response_json: JSON.stringify({ flow_token: 'comprobante', monto: '25 <b>dólares', foto: [{ id: 'mediaF', mime_type: 'image/jpeg', file_name: 'x.jpg' }] }) } } }] } }] }] }).mensajes[0];
+  ok('la ventana del comprobante llega como una imagen con su monto limpio', pv.tipo === 'imagen' && pv.medio.id === 'mediaF' && pv.montoDicho === '25 bdólares' && /Monto: 25/.test(pv.texto));
+  const pm = meta.parsearWebhook({ object: 'whatsapp_business_account', entry: [{ changes: [{ field: 'messages', value: { messages: [{ id: 'wamid.flow2', from: '584141234567', type: 'interactive', interactive: { type: 'nfm_reply', nfm_reply: { response_json: 'esto no es json' } } }] } }] }] }).mensajes[0];
+  ok('una respuesta dañada de la ventana no tumba nada', pm.tipo === 'texto' && !pm.medio);
+  const Av = armar();
+  await procesar.procesarMensaje(Av.deps, Object.assign({}, pv, { hora: AHORA }));
+  const compV = Av.db26._lista('comprobantes/');
+  ok('...y entra a la bandeja como pendiente con lo que dijo el cliente, sin registrar el pago', compV.length === 1 && compV[0].estado === 'pendiente' && compV[0].monto === null && compV[0].montoDicho === '25 bdólares');
   ok('...y se le agradece sin pasar por el cerebro', A.enviados.length === 1 && /comprobante/.test(A.enviados[0].t) && A.cerebroFalso.ultimo === null);
   // cerebro caído
   A = armar(); A.cerebroFalso.falla = true;
@@ -321,10 +329,10 @@ const msgTexto = (de, texto, id) => ({ metaId: id || 'wamid.in' + Math.random().
   const D = armar(); D.db26._store.set('creditos/M-2', cred('M-2', 'C26', 12, { cli: 'ANA LÓPEZ' })); D.db26._store.set('clientes/C26b', { id: 'C26b', nombre: 'ANA LÓPEZ', tel: '04149998877' }); D.db26._store.get('creditos/M-2').clienteId = 'C26b';
   rr = await recordatorios.correr(D.deps, { hoy: HOY, plantillas: {} });
   const tpl = D.plantillas.find(x => x.a === '+584149998877');
-  ok('sin configurar nada usa los avisos con imagen (cuota_por_vencer_img a 3 días) con sus 3 variables y su imagen de cabecera', tpl && tpl.n === 'cuota_por_vencer_img' && /-por-vencer\.jpg$/.test(tpl.img) && tpl.p.length === 3 && tpl.p[0] === 'Ana' && /^\$\d+,\d{2}$/.test(tpl.p[1]) && /^\d+ de [a-z]+$/.test(tpl.p[2]));
+  ok('sin configurar nada usa los avisos con imagen (cuota_por_vencer_btn a 3 días) con sus 3 variables, su imagen de cabecera y el botón de la ventana', tpl && tpl.n === 'cuota_por_vencer_btn' && tpl.ventana === 'comprobante' && /-por-vencer\.jpg$/.test(tpl.img) && tpl.p.length === 3 && tpl.p[0] === 'Ana' && /^\$\d+,\d{2}$/.test(tpl.p[1]) && /^\d+ de [a-z]+$/.test(tpl.p[2]));
   const msgTpl = D.db26._lista('conversaciones/wa:+584149998877/mensajes/').find(m => m.tipo === 'plantilla');
   ok('...y guarda en la conversación el texto real de la plantilla, ya con los datos', msgTpl && /^Hola, Ana 👋\n\nLa cuota de tu crédito por \$\d+,\d{2} vence el \d+ de [a-z]+\./.test(msgTpl.texto));
-  const seq = []; [1, 2, 3].forEach(c => [['proximas', 'cuota_por_vencer_img', -3], ['hoy', 'cuota_hoy_img', 0], ['gracia', 'cuota_pendiente_img', 1], ['gracia', 'cuota_pendiente_img', 3], ['atrasadas', 'cuota_pendiente_img', 7]].forEach(([g, p, d]) => seq.push(recordatorios.imagenDe(p, g, { cred: 'M-7', cuota: c, dias: d }))));
+  const seq = []; [1, 2, 3].forEach(c => [['proximas', 'cuota_por_vencer_btn', -3], ['hoy', 'cuota_hoy_btn', 0], ['gracia', 'cuota_pendiente_btn', 1], ['gracia', 'cuota_pendiente_btn', 3], ['atrasadas', 'cuota_pendiente_btn', 7]].forEach(([g, p, d]) => seq.push(recordatorios.imagenDe(p, g, { cred: 'M-7', cuota: c, dias: d }))));
   const dis = seq.map(u => u.split('/').pop().charAt(0));
   ok('la imagen rota: dos avisos seguidos nunca repiten diseño y salen los 6', dis.every((x, i) => i === 0 || x !== dis[i - 1]) && new Set(dis).size === 6);
   ok('cada imagen de la rotación existe en el sitio', seq.every(u => require('fs').existsSync(require('path').join(__dirname, '..', 'assets/public/avisos', u.split('/').pop()))));
@@ -396,7 +404,7 @@ const msgTexto = (de, texto, id) => ({ metaId: id || 'wamid.in' + Math.random().
   let Ac = armar(); Ac.db26._store.set('creditos/M-9', cred('M-9', 'C26c', 20, { cli: 'LUIS ROJAS', fechaCompromiso: iso(1) })); Ac.db26._store.set('clientes/C26c', { id: 'C26c', nombre: 'LUIS ROJAS', tel: '04147776655' });
   await recordatorios.correr(Ac.deps, { hoy: HOY, plantillas: {} });
   const tplA = Ac.plantillas.find(x => x.a === '+584147776655');
-  ok('un día antes del compromiso sale el recordatorio con la fecha del compromiso', tplA && tplA.n === 'cuota_por_vencer_img' && /de octubre/.test(tplA.p[2]));
+  ok('un día antes del compromiso sale el recordatorio con la fecha del compromiso', tplA && tplA.n === 'cuota_por_vencer_btn' && /de octubre/.test(tplA.p[2]));
   // ── Comentarios de Instagram (20-oct-2026) ──
   const avisoCom = (id, texto, de, usuario, parent) => ({ object: 'instagram', entry: [{ id: '17841425348351958', time: 1760900000, changes: [{ field: 'comments', value: Object.assign({ id, text: texto, from: { id: de, username: usuario }, media: { id: 'media1', media_product_type: 'FEED' } }, parent ? { parent_id: parent } : {}) }] }] });
   const pc = meta.parsearWebhook(avisoCom('c1', '¿cuánto cuesta la BRZ 200?', '555777', 'pepe.moto'));
