@@ -131,7 +131,9 @@ async function procesarMensaje(deps, m) {
   const ahora = deps.ahora(), hoy = deps.hoy();
   const u = await ubicar(deps, tel);
   const db = deps.bases[u.empresa];
-  const convRef = db.collection('conversaciones').doc('wa:' + tel);
+  // Cada numero con su propia conversacion: Paola y Patricia no leen lo que hablo la otra (Adam, 1-nov-2026)
+  const porVentas = areaDe(deps, m, '') === 'ventas';
+  const convRef = db.collection('conversaciones').doc((porVentas ? 'wav:' : 'wa:') + tel);
   const msgRef = convRef.collection('mensajes').doc(m.metaId);
   const entrante = { metaId: m.metaId, direccion: 'entrante', autor: 'cliente', tipo: m.tipo, texto: m.texto || '', medio: m.medio ? { id: m.medio.id, mime: m.medio.mime } : null, estado: 'recibido', hora: m.hora || ahora };
   try { await msgRef.create(entrante); } catch (e) { return { saltado: 'repetido', empresa: u.empresa }; }
@@ -154,7 +156,7 @@ async function procesarMensaje(deps, m) {
   if (area === 'ventas') {
     if (base.modo === 'humano') return { empresa: u.empresa, area, callado: true };
     if (!responde(deps, 'whatsappVentas')) return { empresa: u.empresa, area, callado: true, apagada: true };
-    return responderVentas(deps, { db, convRef, conv, base, canal: 'whatsapp', hoy, ahora, nombrePerfil: m.nombre, usuario: '', telefono: tel.replace('+', ''), leadId: 'wa:' + tel, empresa: u.empresa, entranteId: m.metaId });
+    return responderVentas(deps, { db, convRef, conv, base, canal: 'whatsapp', hoy, ahora, nombrePerfil: m.nombre, usuario: '', telefono: tel.replace('+', ''), leadId: 'wa:' + tel, convId: (porVentas ? 'wav:' : 'wa:') + tel, empresa: u.empresa, entranteId: m.metaId });
   }
 
   // Una imagen o un documento: posible comprobante. Se guarda y se le pasa al equipo.
@@ -184,7 +186,7 @@ async function procesarMensaje(deps, m) {
   if (!responde(deps, 'whatsappCobranza')) return { empresa: u.empresa, callado: true, apagada: true };
 
   // El cerebro
-  const historial = await ultimosMensajes(convRef);
+  const historial = await ultimosMensajes(convRef, 60, conv && conv.historialDesde);
   const freno = frenado(historial, ahora);
   if (freno) { deps.log('frenado', { canal: 'whatsapp', area: 'cobranza', motivo: freno }); await convRef.set({ atencion: 'revisar', actualizado: ahora }, { merge: true }); return { empresa: u.empresa, frenado: freno }; }
   const sistema = briefing.armar({ tasaEuro: deps.cfg.tasaEuro, fechaEuro: deps.cfg.fechaEuro, empresa: (deps.cfg.empresaNombre || {})[u.empresa] || 'Pagasi', cliente: ctx.cliente, creditos: ctx.creditos, instrucciones: deps.cfg.instrucciones, datosPago: u.empresa === '26' ? deps.cfg.datosPago26 : deps.cfg.datosPago, hoy, nombrePerfil: m.nombre, promesa: conv && conv.borrador && conv.borrador.tipo === 'promesa' ? conv.borrador : null, comprobantesPendientes: ctx.comprobantesPendientes });
@@ -275,9 +277,10 @@ function repite(texto, historial) {
 
 // Los ÚLTIMOS mensajes de la conversación, en orden cronológico. Firestore con orderBy asc + limit da
 // los PRIMEROS: con eso, pasados 40 mensajes Paola no veía lo nuevo (20-oct-2026, Liz Ospina).
-async function ultimosMensajes(convRef, n) {
+// desde (conv.historialDesde): lo anterior no se le pasa al asistente; sirve para empezar una prueba de cero sin borrar nada
+async function ultimosMensajes(convRef, n, desde) {
   const s = await docs(convRef.collection('mensajes').orderBy('hora', 'desc').limit(n || 60));
-  return s.sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || '')));
+  return s.filter(m => !desde || String(m.hora || '') >= desde).sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || '')));
 }
 
 // Freno: Paola no manda mas de 3 mensajes en 10 minutos ni 20 en 24 horas a la misma conversacion
@@ -302,7 +305,7 @@ function frenado(historial, ahora) {
 }
 async function responderVentas(deps, x) {
   const { db, convRef, conv, base, canal, hoy, ahora } = x;
-  const historial = await ultimosMensajes(convRef);
+  const historial = await ultimosMensajes(convRef, 60, conv && conv.historialDesde);
   const freno = frenado(historial, ahora);
   if (freno) {
     deps.log('frenado', { canal, area: 'ventas', motivo: freno });
@@ -339,9 +342,9 @@ async function responderVentas(deps, x) {
     cambios.borrador = lead;
     cambios.atencion = 'lead';
     if (!conv || !conv.etapa) cambios.etapa = 'interesado';   // etapa del cliente (24-oct-2026)
-    const clienteLead = await clienteDesdeLead(deps, db, { canal, convId: x.leadId, base, conv, lead, resumen: r.summary, ahora, motos: cat.motos });
+    const clienteLead = await clienteDesdeLead(deps, db, { canal, convId: x.convId || x.leadId, base, conv, lead, resumen: r.summary, ahora, motos: cat.motos });
     if (clienteLead) { cambios.clienteLead = clienteLead; lead.clienteLead = clienteLead; }
-    await db.collection('leads').doc(x.leadId).set(Object.assign({ canal, convId: x.leadId, usuario: base.usuario || '', nombrePerfil: base.nombre || '', telE164: base.telE164 || '', clienteId: base.clienteId || '', estado: 'nuevo', creado: ahora }, lead, { actualizado: ahora, resumen: r.summary || '' }), { merge: true });
+    await db.collection('leads').doc(x.leadId).set(Object.assign({ canal, convId: x.convId || x.leadId, usuario: base.usuario || '', nombrePerfil: base.nombre || '', telE164: base.telE164 || '', clienteId: base.clienteId || '', estado: 'nuevo', creado: ahora }, lead, { actualizado: ahora, resumen: r.summary || '' }), { merge: true });
   } else if (r.handoff) cambios.atencion = RAZON_A_ATENCION[r.handoffReason] || 'pide_persona';
   if (cambios.atencion && !(conv && conv.atencion)) cambios.atencionDesde = ahora;   // desde cuándo espera a una persona
   const asignado = cambios.atencion ? await repartir(deps, conv, cambios.atencion) : '';
@@ -526,11 +529,11 @@ async function responder(deps, convRef, conv, texto, ahora, cambios) {
 // Estados que manda Meta de nuestros mensajes (enviado, entregado, leido, fallo)
 async function procesarEstado(deps, s) {
   const ig = s.canal === 'instagram';
-  const convId = ig ? 'ig:' + String(s.para || '') : 'wa:' + telDe(s.para);
+  const ids = ig ? ['ig:' + String(s.para || '')] : ['wa:' + telDe(s.para), 'wav:' + telDe(s.para)];
   for (const emp of ig ? ['26'] : EMPRESAS) {
     const db = deps.bases[emp]; if (!db) continue;
-    const ref = db.collection('conversaciones').doc(convId).collection('mensajes').doc(s.metaId);
-    const d = await ref.get();
+    let ref = null, d = null;
+    for (const convId of ids) { ref = db.collection('conversaciones').doc(convId).collection('mensajes').doc(s.metaId); d = await ref.get(); if (d.exists) break; }
     if (!d.exists) continue;
     const orden = { enviado: 1, entregado: 2, leido: 3, fallo: 4 };
     if ((orden[d.data().estado] || 0) > (orden[s.estado] || 0) && s.estado !== 'fallo') return { empresa: emp, ignorado: true };
