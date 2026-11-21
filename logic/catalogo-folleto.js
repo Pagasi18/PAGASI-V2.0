@@ -6,16 +6,28 @@
 //  la inicial y la cuota quincenal a 6, 9 y 12 meses, y «Solicitar en pagasi.io»).
 //
 //  El botón «Crear folleto» sale en la franja de cada concesionario de la tabla. El folleto es
-//  una imagen de 1080 × 1440 (la medida de Instagram y WhatsApp) que el sistema dibuja en un
-//  lienzo con LOS MISMOS números de la tabla (catPlan): los modelos visibles en la web y con
-//  precio. Nada se guarda en la base: solo se lee el catálogo y se descarga la imagen.
+//  UNA imagen de 1080 de ancho que el sistema dibuja en un lienzo con LOS MISMOS números de la
+//  tabla (catPlan): los modelos visibles en la web y con precio. Nada se guarda en la base: solo
+//  se lee el catálogo y se descarga la imagen.
+//
+//  SIEMPRE una sola imagen (Adam, 20-nov-2026: "cuando hay muchas motos el sistema crea 2
+//  separados... necesito que siempre sea uno"): hasta 15 modelos mide 1080 × 1440 (publicación de
+//  Instagram); de 16 a 30, 1080 × 1920 (historia de Instagram / estado de WhatsApp); con más de
+//  30 se alarga un poco por cada modelo. Nunca se parte en páginas.
 // ═══════════════════════════════════════════════════════════════
 
-var CAT_FOLLETO = { W: 1080, H: 1440, POR_PAGINA: 14 };
+var CAT_FOLLETO = { W: 1080, H: 1440, H_ALTO: 1920, FILAS_NORMAL: 15, FILAS_ALTO: 30 };
+// El alto de la imagen según cuántos modelos lleva
+function catFolletoAlto(n){
+  n = +n || 0;
+  if(n <= CAT_FOLLETO.FILAS_NORMAL) return CAT_FOLLETO.H;
+  if(n <= CAT_FOLLETO.FILAS_ALTO) return CAT_FOLLETO.H_ALTO;
+  return CAT_FOLLETO.H_ALTO + (n - CAT_FOLLETO.FILAS_ALTO) * 36;
+}
 // Marcas que se reconocen en el nombre del concesionario para el título («Tu Bera.»). Si el
 // nombre no trae ninguna (ARI BENZA), el título es «Tu moto.».
 var CAT_FOLLETO_MARCAS = ['Bera', 'Empire', 'Haojin', 'Toro', 'Veloz', 'Piaggio', 'Bajaj', 'Benmo', 'Zontes', 'Keeway', 'Vespa', 'Suzuki', 'Yamaha', 'Honda', 'Kawasaki', 'Benelli', 'Kymco', 'Hero', 'TVS', 'Lifan', 'Loncin', 'Skygo', 'Escuda'];
-var _catFolleto = { d: null, pag: 0, fotoId: '', fotoAuto: true, imgs: {}, fuente: null, turno: 0, indice: null, indiceP: null };
+var _catFolleto = { d: null, fotoId: '', imgs: {}, fuente: null, turno: 0, indice: null, indiceP: null };
 // Las motos RECORTADAS (sin fondo), para que en el folleto salgan grandes y «flotando» sobre el
 // azul y no en un recuadro blanco (Adam, 20-nov-2026: "la foto de la moto está muy plana").
 // Son archivos del propio sistema: assets/catalogo-recortes/<id>.webp, con un índice que dice de
@@ -37,7 +49,7 @@ function _catFolletoRecorte(m){
   return (x && x.a && de && x.de === de) ? CAT_RECORTES + x.a : '';
 }
 
-function _catFolletoNorm(s){ return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+function _catFolletoNorm(s){ return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
 // Un concesionario = su id del sistema. Los nombres viejos sin asignar van por el nombre (sin
 // mayúsculas ni tildes: «BERA CHACAO» y «BERA Chacao» son el mismo).
 function _catFolletoClave(m){ return (m && m.concesionarioId) ? 'c:' + m.concesionarioId : 'n:' + _catFolletoNorm(m && m.sedeName); }
@@ -51,14 +63,6 @@ function _catFolletoNombre(clave, motos){
 function _catFolletoMarca(nombre){
   var n = ' ' + _catFolletoNorm(nombre) + ' ';
   return CAT_FOLLETO_MARCAS.filter(function(b){ return n.indexOf(' ' + b.toLowerCase() + ' ') > -1; })[0] || '';
-}
-// Hasta 14 modelos caben en una imagen. Si hay más, se reparten parejo en dos o más (21 → 11 y 10).
-function _catFolletoPaginar(filas){
-  var n = filas.length, max = CAT_FOLLETO.POR_PAGINA;
-  if(n <= max) return [filas.slice()];
-  var pags = Math.ceil(n / max), por = Math.ceil(n / pags), out = [];
-  for(var i = 0; i < n; i += por) out.push(filas.slice(i, i + por));
-  return out;
 }
 function _catFolletoDinero(v){ return '$' + (+v || 0).toLocaleString('en-US'); }
 
@@ -83,15 +87,17 @@ function catFolletoDatos(clave){
   var nombre = _catFolletoNombre(clave, todos), marca = _catFolletoMarca(nombre);
   return {
     clave: clave, nombre: String(nombre).replace(/\s+/g, ' ').trim().toUpperCase(), marca: marca, titulo: 'Tu ' + (marca || 'moto') + '.',
-    plazos: CAT_PLAZOS_EXCEL.slice(), inicialPct: c.inicialMin, filas: filas, paginas: _catFolletoPaginar(filas),
+    plazos: CAT_PLAZOS_EXCEL.slice(), inicialPct: c.inicialMin, filas: filas,
+    // La cuota más baja de todo el folleto, para el gancho «Cuotas desde $…»
+    desde: filas.length ? Math.min.apply(null, filas.map(function(f){ return Math.min.apply(null, f.cuotas); })) : 0,
     fotos: filas.filter(function(f){ return f.image; }).map(function(f){ return { id: String(f.id), modelo: f.modelo, url: f.image, recorte: f.recorte || '' }; }),
     fuera: todos.length - enWeb.length,
     fecha: (typeof hoyLocalISO === 'function' ? hoyLocalISO() : new Date().toISOString().slice(0, 10))
   };
 }
-function catFolletoArchivo(d, pagina){
+function catFolletoArchivo(d){
   var slug = _catFolletoNorm(d.nombre).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'concesionario';
-  return 'folleto-pagasi-' + slug + '-' + d.fecha + (d.paginas.length > 1 ? '-' + ((pagina || 0) + 1) + 'de' + d.paginas.length : '') + '.png';
+  return 'folleto-pagasi-' + slug + '-' + d.fecha + '.png';
 }
 
 // ── Dibujo ──────────────────────────────────────────────────────────
@@ -156,23 +162,29 @@ function _cfSilueta(img){
     return c;
   }catch(e){ return null; }
 }
-// Dibuja la página `pagina` del folleto `d` en el lienzo. r = { logo, foto, recortada }: imágenes ya
-// cargadas (o nada). Con la moto recortada sale grande y sin recuadro; si no, en una tarjeta blanca.
-function catFolletoDibujar(cv, d, pagina, r){
+// Una pastilla de vidrio (blanco translúcido con borde), para «pagasi.io» y «Cuotas desde…»
+function _cfVidrio(x, px, py, w, h){
+  x.save(); x.fillStyle = 'rgba(255,255,255,.15)'; _cfCaja(x, px, py, w, h, h / 2); x.fill();
+  x.strokeStyle = 'rgba(255,255,255,.42)'; x.lineWidth = 1.5; _cfCaja(x, px + .75, py + .75, w - 1.5, h - 1.5, h / 2); x.stroke(); x.restore();
+}
+// Dibuja el folleto `d` en el lienzo, en UNA imagen (el alto sale de cuántos modelos lleva).
+// r = { logo, foto, recortada }: imágenes ya cargadas (o nada). Con la moto recortada sale grande
+// y sin recuadro; si no, en una tarjeta blanca.
+function catFolletoDibujar(cv, d, r){
   r = r || {};
-  var W = CAT_FOLLETO.W, H = CAT_FOLLETO.H;
+  var filas = d.filas || [], n = Math.max(filas.length, 1);
+  var W = CAT_FOLLETO.W, H = catFolletoAlto(filas.length), larga = H > CAT_FOLLETO.H;
   cv.width = W; cv.height = H;
   var x = cv.getContext('2d');
-  var filas = d.paginas[pagina] || [], nPag = d.paginas.length, n = Math.max(filas.length, 1);
-  var AZUL = '#1F3FF0', TINTA = '#0C1235', MARINO = '#22327F';
+  var AZUL = '#1F3FF0', TINTA = '#0C1235', MARINO = '#22327F', M = 54;
 
-  // Fondo: azul Pagasi con dos franjas de luz en diagonal y baldosas tenues abajo a la derecha
-  var g = x.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, '#1672FF'); g.addColorStop(.5, '#065CFF'); g.addColorStop(1, '#0448D8');
+  // Fondo: azul Pagasi que se oscurece hacia abajo, dos franjas de luz y baldosas tenues
+  var g = x.createLinearGradient(0, 0, W * .55, H);
+  g.addColorStop(0, '#1C76FF'); g.addColorStop(.42, '#065CFF'); g.addColorStop(1, '#0434B4');
   x.fillStyle = g; x.fillRect(0, 0, W, H);
   x.save(); x.fillStyle = '#fff';
-  x.globalAlpha = .07; x.beginPath(); x.moveTo(W * .40, 0); x.lineTo(W * .74, 0); x.lineTo(W * .22, H); x.lineTo(-W * .12, H); x.closePath(); x.fill();
-  x.globalAlpha = .045; x.beginPath(); x.moveTo(W * .88, 0); x.lineTo(W * 1.12, 0); x.lineTo(W * .64, H); x.lineTo(W * .40, H); x.closePath(); x.fill();
+  x.globalAlpha = .07; x.beginPath(); x.moveTo(W * .40, 0); x.lineTo(W * .74, 0); x.lineTo(W * .74 - H * .36, H); x.lineTo(W * .40 - H * .36, H); x.closePath(); x.fill();
+  x.globalAlpha = .045; x.beginPath(); x.moveTo(W * .88, 0); x.lineTo(W * 1.12, 0); x.lineTo(W * 1.12 - H * .36, H); x.lineTo(W * .88 - H * .36, H); x.closePath(); x.fill();
   x.restore();
   var flota = !!(r.foto && r.recortada), silueta = flota ? _cfSilueta(r.foto) : null;
   [[W - 150, H - 150, 230, -.22], [W - 20, H - 290, 190, -.22], [W - 30, 250, 210, -.22]].forEach(function(t){
@@ -183,38 +195,44 @@ function catFolletoDibujar(cv, d, pagina, r){
     x.restore();
   });
 
-  // Cabecera: Pagasi × CONCESIONARIO ......... pagasi.io
-  var M = 54, lx = M;
+  // Cabecera: Pagasi × CONCESIONARIO ......... (pagasi.io)
+  var lx = M;
   if(r.logo){ var lh = 62, lw = lh * 955 / 256; try{ x.drawImage(r.logo, M, 50, lw, lh); }catch(e){} lx = M + lw; }
   else { _cfTexto(x, 'Pagasi', M, 98, { tam: 54, peso: 800 }); lx = M + x.measureText('Pagasi').width; }
-  _cfTexto(x, 'pagasi.io', W - M, 96, { tam: 30, peso: 700, al: 'right' });
-  var anchoWeb = x.measureText('pagasi.io').width;
+  x.font = _cfFuente(700, 27);
+  var wWeb = x.measureText('pagasi.io').width + 46;
+  _cfVidrio(x, W - M - wWeb, 55, wWeb, 52);
+  _cfTexto(x, 'pagasi.io', W - M - wWeb / 2, 82, { tam: 27, peso: 700, al: 'center', base: 'middle' });
   _cfTexto(x, '×', lx + 22, 96, { tam: 46, peso: 500 });
-  _cfTexto(x, d.nombre, lx + 22 + 46, 97, { tam: 44, min: 22, peso: 800, max: W - M - anchoWeb - 36 - (lx + 68) });
+  _cfTexto(x, d.nombre, lx + 22 + 46, 97, { tam: 44, min: 22, peso: 800, max: W - M - wWeb - 30 - (lx + 68) });
 
-  // Tarjeta de la tabla: abajo, del alto que pidan sus filas; lo que sobra arriba es del título y la foto
+  // Tarjeta de la tabla: abajo, del alto que pidan sus filas; lo que sobra arriba es del título y la moto.
+  // Con muchos modelos el título se aprieta (la tarjeta sube hasta 430) para que las filas no queden
+  // chiquitas; en la imagen larga las filas no pasan de 56 para dejarle aire a la moto.
   var ctaH = 96, ctaY = H - 82 - ctaH, cardX = M - 6, cardW = W - 2 * (M - 6), cardBottom = ctaY - 30;
-  // Con muchos modelos el título se aprieta un poco arriba (la tarjeta sube hasta 430) para que
-  // las filas no queden chiquitas: se busca que midan 50; con 13 o 14 quedan en 46 y 43.
-  var CAB = 178, PIE = 22;
-  var rh = Math.max(36, Math.min(74, Math.floor((cardBottom - 520 - CAB - PIE) / n)));
+  var CAB = 178, PIE = 22, tope = larga ? 56 : 74;
+  var rh = Math.max(36, Math.min(tope, Math.floor((cardBottom - 520 - CAB - PIE) / n)));
   if(rh < 50) rh = Math.max(36, Math.min(50, Math.floor((cardBottom - 430 - CAB - PIE) / n)));
   var cardH = CAB + PIE + rh * n, cardY = cardBottom - cardH;
   var heroTop = cardY < 520 ? 138 : 150, heroBottom = cardY - 30, heroH = heroBottom - heroTop;
 
-  // La moto del modelo elegido. Recortada: grande, sin recuadro, con una luz detrás; pisa un poco
-  // la tarjeta de la tabla (se dibuja al final, encima). Sin recortar: en una tarjeta blanca.
+  // La moto del modelo elegido. Recortada: grande, sin recuadro, con luz y dos aros detrás; pisa un
+  // poco la tarjeta de la tabla (se dibuja al final, encima). Sin recortar: en una tarjeta blanca.
   var hayFoto = !!r.foto, fw = 0, moto = null;
   if(flota){
     var mw0 = r.foto.naturalWidth || r.foto.width || 1, mh0 = r.foto.naturalHeight || r.foto.height || 1;
     // De alto, hasta donde termina la cabecera (queda un aire bajo «pagasi.io»); pisa 20 de la tarjeta
-    var me = Math.min(540 / mw0, Math.min(cardY - 122, 540) / mh0), mw = mw0 * me, mh = mh0 * me;
-    moto = { x: W - 30 - mw, y: cardY + 20 - mh, w: mw, h: mh };
+    var me = Math.min(560 / mw0, Math.min(cardY - 124, larga ? 640 : 540) / mh0), mw = mw0 * me, mh = mh0 * me;
+    moto = { x: W - 28 - mw, y: cardY + 20 - mh, w: mw, h: mh };
     fw = Math.min(mw - 22, W - 2 * M - 34 - 440);       // al título siempre le quedan 440 de ancho
     var cxL = moto.x + mw / 2, cyL = moto.y + mh * .52, rad = Math.max(mw, mh) * .8;
     var luz = x.createRadialGradient(cxL, cyL, 0, cxL, cyL, rad);
-    luz.addColorStop(0, 'rgba(255,255,255,.34)'); luz.addColorStop(.5, 'rgba(255,255,255,.12)'); luz.addColorStop(1, 'rgba(255,255,255,0)');
+    luz.addColorStop(0, 'rgba(255,255,255,.36)'); luz.addColorStop(.5, 'rgba(255,255,255,.13)'); luz.addColorStop(1, 'rgba(255,255,255,0)');
     x.fillStyle = luz; x.fillRect(cxL - rad, cyL - rad, rad * 2, rad * 2);
+    x.save(); x.strokeStyle = '#fff'; x.lineWidth = 2;
+    x.globalAlpha = .20; x.beginPath(); x.arc(cxL, cyL, rad * .56, 0, Math.PI * 2); x.stroke();
+    x.globalAlpha = .10; x.beginPath(); x.arc(cxL, cyL, rad * .78, 0, Math.PI * 2); x.stroke();
+    x.restore();
   }
   if(hayFoto && !flota){
     fw = 400; var fh = Math.min(heroH - 10, 430), fx = W - M - fw + 6, fy = heroTop + (heroH - fh) / 2;
@@ -226,13 +244,16 @@ function catFolletoDibujar(cv, d, pagina, r){
     x.restore();
   }
 
-  // Título: «Tu Bera.» / «En cuotas.» (inclinado) / «Elige tu modelo y tu plazo.»
+  // Título: «Tu Bera.» / «En cuotas.» (inclinado) / «Elige tu modelo y tu plazo.» (si hay sitio) y
+  // el gancho en una pastilla: «CUOTAS DESDE $37 por quincena» (la cuota más baja del folleto).
   var anchoTxt = hayFoto ? (W - M - fw - 34 - M) : (W - 2 * M);
-  var tam = Math.max(70, Math.min(120, (heroH - 118) / 2.02));
+  var conGancho = d.desde > 0, conSub = heroH >= (conGancho ? 430 : 300);
+  var fijo = 52 + (conSub ? 52 : 0) + (conGancho ? 84 : 0) + 8;
+  var tam = Math.max(66, Math.min(122, (heroH - fijo) / 2.02));
   x.font = _cfFuente(800, tam);
   var ancho = Math.max(x.measureText(d.titulo).width, x.measureText('En cuotas.').width * 1.04);
   if(ancho > anchoTxt) tam = Math.floor(tam * anchoTxt / ancho);
-  var bloque = 118 + tam * 2.02, y0 = heroTop + Math.max(0, (heroH - bloque) / 2);
+  var bloque = fijo + tam * 2.02, y0 = heroTop + Math.max(0, (heroH - bloque) / 2);
   x.fillStyle = '#fff'; x.fillRect(M, y0 + 14, 54, 4);
   _cfEspaciado(x, 'ELIGE TU PRÓXIMA MOTO', M + 74, y0 + 25, { tam: 23, peso: 700, sep: 4.5, color: 'rgba(255,255,255,.95)' });
   var yT = y0 + 52 + tam * .86;
@@ -241,22 +262,41 @@ function catFolletoDibujar(cv, d, pagina, r){
   var yC = yT + tam * 1.0;
   _cfTexto(x, 'En cuotas.', M - 3 + .19 * yC, yC, { tam: tam, peso: 800, color: '#CFE0FF' });
   x.restore();
-  _cfTexto(x, 'Elige tu modelo y tu plazo.', M, yC + 56, { tam: 34, peso: 500, max: anchoTxt });
+  var yBajo = yC + 8;
+  if(conSub){ _cfTexto(x, 'Elige tu modelo y tu plazo.', M, yC + 50, { tam: 33, peso: 500, max: anchoTxt }); yBajo = yC + 60; }
+  if(conGancho){
+    var precio = _catFolletoDinero(d.desde), e1 = 1, medir = function(k){
+      x.font = _cfFuente(700, 18 * k); var a = 0; 'CUOTAS DESDE'.split('').forEach(function(ch){ a += x.measureText(ch).width + 1.6 * k; });
+      x.font = _cfFuente(800, 40 * k); var b = x.measureText(precio).width;
+      x.font = _cfFuente(600, 21 * k); var c = x.measureText('por quincena').width;
+      return { a: a, b: b, c: c, total: 26 * k + a + 12 * k + b + 11 * k + c + 26 * k };
+    };
+    var md = medir(1); if(md.total > anchoTxt){ e1 = anchoTxt / md.total; md = medir(e1); }
+    var ph = Math.round(62 * e1), py = yBajo + 16, cyP = py + ph / 2 + 1, cx = M + 26 * e1;
+    _cfVidrio(x, M, py, md.total, ph);
+    _cfEspaciado(x, 'CUOTAS DESDE', cx, cyP, { tam: 18 * e1, peso: 700, sep: 1.6 * e1, base: 'middle', color: 'rgba(255,255,255,.92)' }); cx += md.a + 12 * e1;
+    _cfTexto(x, precio, cx, cyP, { tam: 40 * e1, peso: 800, base: 'middle' }); cx += md.b + 11 * e1;
+    _cfTexto(x, 'por quincena', cx, cyP, { tam: 21 * e1, peso: 600, base: 'middle', color: 'rgba(255,255,255,.94)' });
+  }
 
   // Tarjeta blanca con la tabla
-  x.save(); x.shadowColor = 'rgba(2,24,96,.30)'; x.shadowBlur = 50; x.shadowOffsetY = 20; x.fillStyle = '#fff'; _cfCaja(x, cardX, cardY, cardW, cardH, 40); x.fill(); x.restore();
-  var colL = cardX + 20, colR = cardX + cardW - 20, bw = 396, bx = colR - bw, cw = bw / d.plazos.length, xIni = bx - 90, xMod = colL + 24;
-  var pagTxt = nPag > 1 ? 'Página ' + (pagina + 1) + ' de ' + nPag : '';
-  var anchoPag = 0;
-  if(pagTxt){ _cfTexto(x, pagTxt, colR - 6, cardY + 60, { tam: 21, peso: 700, al: 'right', color: '#6B7BB8' }); anchoPag = x.measureText(pagTxt).width + 24; }
-  _cfTexto(x, d.nombre + ' · PLANES DISPONIBLES', xMod - 4, cardY + 60, { tam: 28, min: 17, peso: 800, color: MARINO, max: colR - xMod - anchoPag });
-  // Encabezado: MODELO | INICIAL MÍNIMA | franja «CUOTA QUINCENAL» con sus plazos
-  var by = cardY + 84, bh = CAB - 84;
+  x.save(); x.shadowColor = 'rgba(2,24,96,.32)'; x.shadowBlur = 54; x.shadowOffsetY = 22; x.fillStyle = '#fff'; _cfCaja(x, cardX, cardY, cardW, cardH, 40); x.fill(); x.restore();
+  var np = d.plazos.length, colL = cardX + 20, colR = cardX + cardW - 20, bw = 396, bx = colR - bw, cw = bw / np, xIni = bx - 90, xMod = colL + 24;
+  // Título de la tabla y, a la derecha, la etiqueta «INICIAL DESDE 40%»
+  var etq = 'INICIAL DESDE ' + d.inicialPct + '%'; x.font = _cfFuente(800, 18);
+  var wEtq = x.measureText(etq).width + 34;
+  x.fillStyle = '#E4ECFF'; _cfCaja(x, colR - wEtq - 2, cardY + 34, wEtq, 38, 19); x.fill();
+  _cfTexto(x, etq, colR - 2 - wEtq / 2, cardY + 54, { tam: 18, peso: 800, al: 'center', base: 'middle', color: AZUL });
+  _cfTexto(x, d.nombre + ' · PLANES DISPONIBLES', xMod - 4, cardY + 61, { tam: 28, min: 17, peso: 800, color: MARINO, max: colR - wEtq - 22 - xMod });
+  // Encabezado: MODELO | INICIAL MÍNIMA | franja «CUOTA QUINCENAL» con sus plazos (el más largo, que
+  // es la cuota más baja, va resaltado)
+  var by = cardY + 84, bh = CAB - 84, xUlt = bx + cw * (np - 1);
   x.save(); _cfCaja(x, bx, by, bw, bh + 18, 22); x.clip();
   x.fillStyle = '#D6E3FF'; x.fillRect(bx, by, bw, 46); x.fillStyle = '#E6EEFF'; x.fillRect(bx, by + 46, bw, bh - 46);
+  x.fillStyle = AZUL; x.fillRect(xUlt, by + 46, cw, bh - 46);
   x.restore();
   _cfTexto(x, 'CUOTA QUINCENAL', bx + bw / 2, by + 32, { tam: 22, peso: 800, al: 'center', color: MARINO });
-  d.plazos.forEach(function(p, k){ _cfTexto(x, p + ' MESES', bx + cw * (k + .5), by + 78, { tam: 20, peso: 800, al: 'center', color: '#3A4C9E' }); });
+  d.plazos.forEach(function(p, k){ _cfTexto(x, p + ' MESES', bx + cw * (k + .5), by + 78, { tam: 20, peso: 800, al: 'center', color: k === np - 1 ? '#fff' : '#3A4C9E' }); });
   _cfTexto(x, 'MODELO', xMod, by + 78, { tam: 21, peso: 800, color: MARINO });
   _cfTexto(x, 'INICIAL', xIni, by + 52, { tam: 21, peso: 800, al: 'center', color: MARINO });
   _cfTexto(x, 'MÍNIMA', xIni, by + 78, { tam: 21, peso: 800, al: 'center', color: MARINO });
@@ -265,9 +305,10 @@ function catFolletoDibujar(cv, d, pagina, r){
   filas.forEach(function(f, i){
     var fy0 = cardY + CAB + i * rh, cy = fy0 + rh / 2 + 1;
     x.fillStyle = i % 2 ? '#EEF3FF' : '#E2EBFF'; _cfCaja(x, colL, fy0 + 3, colR - colL, rh - 6, 16); x.fill();
+    x.fillStyle = i % 2 ? '#DDE7FF' : '#CFDDFF'; _cfCaja(x, xUlt + 5, fy0 + 3, cw - 5, rh - 6, 16); x.fill();
     _cfModelo(x, f.modelo, xMod, cy, xIni - 74 - xMod, fs, rh, TINTA);
     _cfTexto(x, _catFolletoDinero(f.inicial), xIni, cy, { tam: fs, peso: 800, al: 'center', color: AZUL, base: 'middle', max: 140 });
-    f.cuotas.forEach(function(q, k){ _cfTexto(x, _catFolletoDinero(q), bx + cw * (k + .5), cy, { tam: fs, peso: 800, al: 'center', color: TINTA, base: 'middle', max: cw - 12 }); });
+    f.cuotas.forEach(function(q, k){ _cfTexto(x, _catFolletoDinero(q), bx + cw * (k + .5) + (k === np - 1 ? 2 : 0), cy, { tam: fs, peso: 800, al: 'center', color: k === np - 1 ? AZUL : TINTA, base: 'middle', max: cw - 14 }); });
   });
 
   // La moto recortada, encima de todo: su sombra en el piso y un poco de sombra propia
@@ -276,21 +317,21 @@ function catFolletoDibujar(cv, d, pagina, r){
     x.save(); x.translate(sx, sy); x.scale(1, ry / rx);
     var som = x.createRadialGradient(0, 0, 0, 0, 0, rx); som.addColorStop(0, 'rgba(1,14,70,.50)'); som.addColorStop(.6, 'rgba(1,14,70,.20)'); som.addColorStop(1, 'rgba(1,14,70,0)');
     x.fillStyle = som; x.beginPath(); x.arc(0, 0, rx, 0, Math.PI * 2); x.fill(); x.restore();
-    x.save(); x.shadowColor = 'rgba(1,14,70,.30)'; x.shadowBlur = 26; x.shadowOffsetY = 14;
+    x.save(); x.shadowColor = 'rgba(1,14,70,.32)'; x.shadowBlur = 28; x.shadowOffsetY = 15;
     try{ x.drawImage(r.foto, moto.x, moto.y, moto.w, moto.h); }catch(e){}
     x.restore();
   }
 
   // Botón «Solicitar en pagasi.io →» y la letra pequeña
   var ctaW = 640;
-  x.save(); x.shadowColor = 'rgba(2,24,96,.28)'; x.shadowBlur = 30; x.shadowOffsetY = 12; x.fillStyle = '#fff'; _cfCaja(x, cardX, ctaY, ctaW, ctaH, ctaH / 2); x.fill(); x.restore();
+  x.save(); x.shadowColor = 'rgba(2,24,96,.30)'; x.shadowBlur = 32; x.shadowOffsetY = 13; x.fillStyle = '#fff'; _cfCaja(x, cardX, ctaY, ctaW, ctaH, ctaH / 2); x.fill(); x.restore();
   _cfTexto(x, 'Solicitar en pagasi.io', cardX + 60, ctaY + ctaH / 2 + 2, { tam: 41, peso: 800, color: AZUL, base: 'middle' });
   var ax = cardX + 60 + x.measureText('Solicitar en pagasi.io').width + 26, ay = ctaY + ctaH / 2 + 1;
   x.save(); x.strokeStyle = AZUL; x.lineWidth = 5.5; x.lineCap = 'round'; x.lineJoin = 'round';
   x.beginPath(); x.moveTo(ax, ay); x.lineTo(ax + 44, ay); x.moveTo(ax + 28, ay - 16); x.lineTo(ax + 44, ay); x.lineTo(ax + 28, ay + 16); x.stroke(); x.restore();
   var f = String(d.fecha || '').split('-');
   _cfTexto(x, 'Plan sujeto a evaluación y aprobación. Imagen referencial.' + (f.length === 3 ? ' Precios al ' + f[2] + '/' + f[1] + '/' + f[0] + '.' : ''), M, H - 36, { tam: 22, peso: 500, color: 'rgba(255,255,255,.9)', max: W - 2 * M });
-  return { filas: filas.length, rh: rh, cardY: cardY, cardH: cardH, tam: tam, conFoto: hayFoto, flota: flota, moto: moto };
+  return { filas: filas.length, alto: H, rh: rh, cardY: cardY, cardH: cardH, tam: tam, conFoto: hayFoto, flota: flota, moto: moto };
 }
 
 // ── Recursos (letra, logo, foto) ────────────────────────────────────
@@ -338,7 +379,7 @@ function catFolleto(clave){
   if(!_catFolleto.indice) return _catFolletoIndice().then(function(){ return catFolleto(clave); });
   var d = catFolletoDatos(clave), E = _catEsc;
   if(!d.filas.length){ toast('Este concesionario no tiene modelos visibles en la web con precio: no hay qué poner en el folleto', 'error'); return; }
-  _catFolleto.d = d; _catFolleto.pag = 0; _catFolleto.fotoAuto = true; _catFolleto.fotoId = '';
+  _catFolleto.d = d; _catFolleto.fotoId = _catFolletoFotoInicial(d);
   if(typeof setMicon === 'function') setMicon('editar');
   $('mtt').textContent = 'Folleto de ' + d.nombre;
   $('msb').textContent = d.filas.length + ' modelo' + (d.filas.length === 1 ? '' : 's') + ' · inicial ' + d.inicialPct + '% · los mismos precios y cuotas de la tabla';
@@ -347,12 +388,9 @@ function catFolleto(clave){
     ? '<div class="fg" style="margin:0;flex:1;min-width:180px"><label>Moto de la foto</label><select class="fs" id="cf_foto" onchange="catFolletoFoto(this.value)">'
       + d.fotos.map(function(f){ return '<option value="' + E(f.id) + '">' + E(f.modelo) + '</option>'; }).join('') + '<option value="">Sin foto</option></select></div>'
     : '';
-  var pags = d.paginas.length > 1
-    ? '<div style="display:flex;align-items:center;gap:6px"><button type="button" class="btn btn-g btn-sm" onclick="catFolletoPagina(-1)" title="Página anterior">‹</button><span id="cf_pag" style="font-size:12px;font-weight:700;white-space:nowrap"></span><button type="button" class="btn btn-g btn-sm" onclick="catFolletoPagina(1)" title="Página siguiente">›</button></div>'
-    : '';
   $('mbd').innerHTML = ''
-    + ((fotos || pags) ? '<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">' + fotos + pags + '</div>' : '')
-    + '<div style="background:var(--surf2);border-radius:14px;padding:12px;text-align:center"><canvas id="cf_canvas" width="' + CAT_FOLLETO.W + '" height="' + CAT_FOLLETO.H + '" style="width:100%;max-width:400px;height:auto;border-radius:10px;display:block;margin:0 auto;box-shadow:0 6px 24px rgba(0,0,0,.18)"></canvas></div>'
+    + (fotos ? '<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">' + fotos + '</div>' : '')
+    + '<div style="background:var(--surf2);border-radius:14px;padding:12px;text-align:center"><canvas id="cf_canvas" width="' + CAT_FOLLETO.W + '" height="' + catFolletoAlto(d.filas.length) + '" style="width:auto;height:auto;max-width:min(100%,400px);max-height:58vh;border-radius:10px;display:block;margin:0 auto;box-shadow:0 6px 24px rgba(0,0,0,.18)"></canvas></div>'
     + '<div id="cf_nota" style="font-size:11.5px;color:var(--ink3);line-height:1.5;margin-top:8px"></div>';
   var comparte = _catFolletoPuedeCompartir();
   $('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cerrar</button>'
@@ -365,26 +403,19 @@ function catFolleto(clave){
 function _catFolletoNota(conFoto){
   var d = _catFolleto.d, el = $('cf_nota'); if(!d || !el) return;
   var t = [];
-  if(d.paginas.length > 1) t.push('Son <b>' + d.paginas.length + ' imágenes</b> (' + d.filas.length + ' modelos): descarga cada página.');
+  if(d.filas.length > CAT_FOLLETO.FILAS_NORMAL) t.push('Con ' + d.filas.length + ' modelos la imagen sale <b>más alta</b> (del tamaño de una historia de Instagram o un estado de WhatsApp), para que todos quepan en una sola.');
   if(d.fuera > 0) t.push(d.fuera + ' modelo' + (d.fuera === 1 ? '' : 's') + ' de este concesionario no sale' + (d.fuera === 1 ? '' : 'n') + ' porque está' + (d.fuera === 1 ? '' : 'n') + ' oculto' + (d.fuera === 1 ? '' : 's') + ' o sin precio.');
   if(_catFolleto.fotoId && !conFoto) t.push('<span style="color:var(--amber)">La foto de este modelo no se pudo usar: el folleto sale sin foto. Prueba con otro modelo.</span>');
   el.innerHTML = t.join(' ');
-  var p = $('cf_pag'); if(p) p.textContent = 'Página ' + (_catFolleto.pag + 1) + ' de ' + d.paginas.length;
 }
-// Mientras nadie elija la moto de la foto, sale la primera con foto de la página que se está viendo
-// (en la página 2 de BERA CHACAO, una Zontes y no la de la página 1).
-function _catFolletoFotoDePagina(d, pagina){
-  var ids = {}; (d.paginas[pagina] || []).forEach(function(f){ ids[String(f.id)] = 1; });
-  var deAqui = d.fotos.filter(function(x){ return ids[x.id]; });
-  var f = deAqui.filter(function(x){ return x.recorte; })[0] || d.fotos.filter(function(x){ return x.recorte; })[0] || deAqui[0] || d.fotos[0];
+// La moto que sale sola en la foto: la primera que esté recortada; si ninguna lo está, la primera con foto
+function _catFolletoFotoInicial(d){
+  var f = d.fotos.filter(function(x){ return x.recorte; })[0] || d.fotos[0];
   return f ? f.id : '';
 }
 function _catFolletoPintar(){
   var d = _catFolleto.d, turno = ++_catFolleto.turno; if(!d) return Promise.resolve(null);
-  if(_catFolleto.fotoAuto){
-    _catFolleto.fotoId = _catFolletoFotoDePagina(d, _catFolleto.pag);
-    var sel = $('cf_foto'); if(sel) sel.value = _catFolleto.fotoId;
-  }
+  var sel = $('cf_foto'); if(sel && sel.value !== _catFolleto.fotoId) sel.value = _catFolleto.fotoId;
   var foto = d.fotos.filter(function(f){ return f.id === String(_catFolleto.fotoId); })[0];
   // Primero la moto recortada; si no hay (o no carga), la foto como está, en su recuadro
   var laFoto = _catFolletoImg(foto ? (foto.recorte || foto.url) : '').then(function(im){
@@ -393,17 +424,12 @@ function _catFolletoPintar(){
   });
   return Promise.all([_catFolletoFuente(), _catFolletoImg('assets/pagasi-logo-blanco.png'), laFoto]).then(function(r){
     var cv = $('cf_canvas'); if(!cv || turno !== _catFolleto.turno) return null;
-    var res = catFolletoDibujar(cv, d, _catFolleto.pag, { logo: r[1], foto: r[2].im, recortada: r[2].recortada });
+    var res = catFolletoDibujar(cv, d, { logo: r[1], foto: r[2].im, recortada: r[2].recortada });
     _catFolletoNota(res.conFoto);
     return res;
   });
 }
-function catFolletoFoto(id){ _catFolleto.fotoAuto = false; _catFolleto.fotoId = String(id || ''); return _catFolletoPintar(); }
-function catFolletoPagina(paso){
-  var d = _catFolleto.d; if(!d) return;
-  _catFolleto.pag = (_catFolleto.pag + paso + d.paginas.length) % d.paginas.length;
-  return _catFolletoPintar();
-}
+function catFolletoFoto(id){ _catFolleto.fotoId = String(id || ''); return _catFolletoPintar(); }
 function _catFolletoBlob(){
   var cv = $('cf_canvas');
   return new Promise(function(ok){
@@ -415,10 +441,10 @@ function catFolletoDescargar(){
   return _catFolletoBlob().then(function(blob){
     if(!blob){ toast('No se pudo crear la imagen. Elige «Sin foto» y prueba de nuevo.', 'error'); return false; }
     var a = document.createElement('a'), url = URL.createObjectURL(blob);
-    a.href = url; a.download = catFolletoArchivo(d, _catFolleto.pag); a.style.display = 'none';
+    a.href = url; a.download = catFolletoArchivo(d); a.style.display = 'none';
     document.body.appendChild(a); a.click();
     setTimeout(function(){ try{ URL.revokeObjectURL(url); a.remove(); }catch(e){} }, 2000);
-    if(typeof logActividad === 'function') logActividad('catalogo_folleto', 'catalogo', d.clave, { concesionario: d.nombre, modelos: d.filas.length, pagina: _catFolleto.pag + 1 });
+    if(typeof logActividad === 'function') logActividad('catalogo_folleto', 'catalogo', d.clave, { concesionario: d.nombre, modelos: d.filas.length });
     toast('Folleto descargado: ' + a.download, 'success');
     return true;
   });
@@ -436,9 +462,9 @@ function catFolletoCompartir(){
   var d = _catFolleto.d; if(!d) return Promise.resolve(false);
   return _catFolletoBlob().then(function(blob){
     if(!blob){ toast('No se pudo crear la imagen. Elige «Sin foto» y prueba de nuevo.', 'error'); return false; }
-    var archivo = new File([blob], catFolletoArchivo(d, _catFolleto.pag), { type: 'image/png' });
+    var archivo = new File([blob], catFolletoArchivo(d), { type: 'image/png' });
     if(!_catFolletoPuedeCompartir()) return catFolletoDescargar();
-    if(typeof logActividad === 'function') logActividad('catalogo_folleto', 'catalogo', d.clave, { concesionario: d.nombre, modelos: d.filas.length, pagina: _catFolleto.pag + 1, compartido: true });
+    if(typeof logActividad === 'function') logActividad('catalogo_folleto', 'catalogo', d.clave, { concesionario: d.nombre, modelos: d.filas.length, compartido: true });
     return navigator.share({ files: [archivo], title: 'Pagasi × ' + d.nombre }).then(function(){ return true; }, function(){ return false; });
   });
 }

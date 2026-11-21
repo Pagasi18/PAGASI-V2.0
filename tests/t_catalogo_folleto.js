@@ -3,8 +3,10 @@
 // (dos imágenes: «Pagasi × ZONTES» y «Pagasi × BERA»).
 //  · El botón «Crear folleto» sale en la franja de cada concesionario de la tabla.
 //  · El folleto lleva los modelos visibles en la web y con precio, con LA MISMA inicial y las
-//    mismas cuotas de la tabla. Hasta 14 por imagen; si hay más, en dos o más páginas parejas.
-//  · Es una imagen de 1080 × 1440 que se descarga. No escribe nada en el catálogo.
+//    mismas cuotas de la tabla.
+//  · SIEMPRE una sola imagen (Adam, 20-nov: "cuando hay muchas motos el sistema crea 2 separados...
+//    necesito que siempre sea uno"): 1080 × 1440 hasta 15 modelos; 1080 × 1920 de 16 a 30; más larga
+//    si hay más. Se descarga; no escribe nada en el catálogo.
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 let pass = 0, fail = 0;
@@ -100,33 +102,44 @@ const M = v => '$' + (+v || 0).toLocaleString('en-US');
   ok('si cambian la inicial a 30%, el folleto cambia con ella ($313 y cuotas más altas)', d30.inicialPct === 30 && d30.filas[0].inicial === 313 && d30.filas[0].cuotas[2] > ant.cuotas[2]);
   cat._condiciones.inicialMin = 40; await ctx.catCargar(true);
 
-  // ── 3. Páginas ──
-  const pag = k => ctx._catFolletoPaginar(Array.from({ length: k }, (_, i) => i)).map(p => p.length).join('+');
-  ok('hasta 14 modelos caben en una imagen', pag(1) === '1' && pag(11) === '11' && pag(14) === '14');
-  ok('con más, se reparten parejo: 15 → 8+7, 21 → 11+10, 30 → 10+10+10', pag(15) === '8+7' && pag(21) === '11+10' && pag(30) === '10+10+10');
+  // ── 3. Siempre una sola imagen ──
+  const A = ctx.catFolletoAlto;
+  ok('hasta 15 modelos: 1080 × 1440 (publicación de Instagram)', A(1) === 1440 && A(11) === 1440 && A(15) === 1440);
+  ok('de 16 a 30 modelos: 1080 × 1920 (historia de Instagram / estado de WhatsApp)', A(16) === 1920 && A(21) === 1920 && A(30) === 1920);
+  ok('con más de 30 la imagen se alarga por cada modelo (nunca se parte)', A(31) === 1956 && A(40) === 2280 && A(31) > A(30));
   const emp = ctx.catFolletoDatos('c:CO-EMP');
-  ok('EMPIRE (21 modelos): dos páginas, sin repetir ni perder ninguno', emp.paginas.length === 2 && emp.paginas[0].length === 11 && emp.paginas[1].length === 10 && emp.paginas[0].concat(emp.paginas[1]).map(f => f.modelo).join() === emp.filas.map(f => f.modelo).join());
-  ok('nombre del archivo: concesionario y fecha; con páginas, cuál es', /^folleto-pagasi-bera-chacao-\d{4}-\d\d-\d\d\.png$/.test(ctx.catFolletoArchivo(d, 0)) && /^folleto-pagasi-empire-bello-monte-\d{4}-\d\d-\d\d-2de2\.png$/.test(ctx.catFolletoArchivo(emp, 1)));
+  ok('EMPIRE (21 modelos): un solo folleto con los 21, sin páginas', emp.filas.length === 21 && !('paginas' in emp) && typeof ctx._catFolletoPaginar === 'undefined' && typeof ctx.catFolletoPagina === 'undefined');
+  ok('nombre del archivo: concesionario y fecha, uno solo', /^folleto-pagasi-bera-chacao-\d{4}-\d\d-\d\d\.png$/.test(ctx.catFolletoArchivo(d)) && /^folleto-pagasi-empire-bello-monte-\d{4}-\d\d-\d\d\.png$/.test(ctx.catFolletoArchivo(emp)));
+  ok('el gancho «cuotas desde»: la cuota más baja de todo el folleto', d.desde === Math.min(...d.filas.map(f => Math.min(...f.cuotas))) && d.desde === d.filas.find(f => f.modelo === 'SBR').cuotas[2] && ctx.catFolletoDatos('c:CO-VACIO').desde === 0);
 
   // ── 4. El dibujo ──
-  let cv = lienzo(), r = ctx.catFolletoDibujar(cv, d, 0, {});
-  ok('la imagen mide 1080 × 1440 (Instagram y WhatsApp)', cv.width === 1080 && cv.height === 1440);
+  let cv = lienzo(), r = ctx.catFolletoDibujar(cv, d, {});
+  ok('con 8 modelos la imagen mide 1080 × 1440', cv.width === 1080 && cv.height === 1440 && r.alto === 1440);
   ok('cabecera: Pagasi × BERA CHACAO y pagasi.io', cv.dice('BERA CHACAO') && cv.dice('×') && cv.dice('pagasi.io'));
-  ok('título como en la muestra: «Tu Bera.» / «En cuotas.» / «Elige tu modelo y tu plazo.»', cv.dice('Tu Bera.') && cv.dice('En cuotas.') && cv.dice('Elige tu modelo y tu plazo.') && 'ELIGE TU PRÓXIMA MOTO'.split('').every(ch => cv.dice(ch)));
+  ok('título como en la muestra: «ELIGE TU PRÓXIMA MOTO» / «Tu Bera.» / «En cuotas.»', cv.dice('Tu Bera.') && cv.dice('En cuotas.') && 'ELIGE TU PRÓXIMA MOTO'.split('').every(ch => cv.dice(ch)));
+  const pocas = lienzo(); ctx.catFolletoDibujar(pocas, ctx.catFolletoDatos('c:CO-ARI'), {});
+  ok('«Elige tu modelo y tu plazo.» sale cuando hay sitio (pocos modelos); con más, queda solo el gancho del precio', pocas.dice('Elige tu modelo y tu plazo.') && pocas.dice('por quincena') && !cv.dice('Elige tu modelo y tu plazo.') && cv.dice('por quincena'));
   ok('tabla: título, MODELO, INICIAL MÍNIMA, CUOTA QUINCENAL y los tres plazos', cv.dice('BERA CHACAO · PLANES DISPONIBLES') && cv.dice('MODELO') && cv.dice('INICIAL') && cv.dice('MÍNIMA') && cv.dice('CUOTA QUINCENAL') && cv.dice('6 MESES') && cv.dice('9 MESES') && cv.dice('12 MESES'));
   ok('cada modelo con su inicial y sus tres cuotas', d.filas.every(f => cv.dice(f.modelo) && cv.dice(M(f.inicial)) && f.cuotas.every(q => cv.dice(M(q)))));
   ok('los miles con coma, como en la muestra ($3,720)', cv.dice('$3,720') && cv.dice('$3,880'));
   ok('botón «Solicitar en pagasi.io» y la letra pequeña con la fecha de los precios', cv.dice('Solicitar en pagasi.io') && cv.textos().some(s => /^Plan sujeto a evaluación y aprobación\. Imagen referencial\. Precios al \d\d\/\d\d\/\d{4}\.$/.test(s)));
+  ok('diseño nuevo: «pagasi.io», la pastilla «CUOTAS DESDE $… por quincena» y la etiqueta «INICIAL DESDE 40%»', cv.dice('pagasi.io') && 'CUOTASDESDE'.split('').every(ch => cv.dice(ch)) && cv.dice(M(d.desde)) && cv.dice('por quincena') && cv.dice('INICIAL DESDE 40%'));
+  ok('...la cuota más baja (12 meses) va resaltada: su encabezado en blanco y sus valores en azul', cv.t.some(q => q.s === '12 MESES' && q.color === '#fff') && cv.t.some(q => q.s === '6 MESES' && q.color !== '#fff') && d.filas.every(f => cv.t.some(q => q.s === M(f.cuotas[2]) && q.color === '#1F3FF0')));
   ok('sin foto ni logo cargados igual se dibuja (el logo, escrito)', r.conFoto === false && cv.dice('Pagasi') && cv.img.length === 0 && r.filas === 8);
-  ok('con una sola página no dice «Página»', !cv.textos().some(s => /^Página/.test(s)));
-  cv = lienzo(); r = ctx.catFolletoDibujar(cv, d, 0, { logo: { width: 955, height: 256 }, foto: { naturalWidth: 800, naturalHeight: 600 } });
+  ok('nunca dice «Página»: no hay páginas', !cv.textos().some(s => /^Página/.test(s)));
+  cv = lienzo(); r = ctx.catFolletoDibujar(cv, d, { logo: { width: 955, height: 256 }, foto: { naturalWidth: 800, naturalHeight: 600 } });
   ok('con logo y foto: los dibuja (logo en la cabecera y la foto de la moto)', r.conFoto === true && cv.img.length >= 2 && !cv.dice('Pagasi'));
-  cv = lienzo(); r = ctx.catFolletoDibujar(cv, emp, 1, {});
-  ok('página 2 de EMPIRE: solo sus 10 modelos y dice «Página 2 de 2»', cv.dice('Página 2 de 2') && emp.paginas[1].every(f => cv.dice(f.modelo)) && !emp.paginas[0].some(f => cv.dice(f.modelo)) && r.filas === 10);
-  const medidas = [1, 3, 8, 11, 12, 13, 14].map(k => { const dd = Object.assign({}, emp, { paginas: [emp.filas.slice(0, k)] }); return Object.assign({ k }, ctx.catFolletoDibujar(lienzo(), dd, 0, {})); });
-  ok('la tabla nunca se sale: queda entre el título y el botón con cualquier cantidad de filas', medidas.every(x => x.cardY >= 430 && x.cardY + x.cardH <= 1440 - 82 - 96 - 30 + 1));
-  ok('pocas filas van grandes (74); con 11 o 12 miden 50 y con 14 siguen legibles (43)', medidas[1].rh === 74 && medidas[3].rh === 50 && medidas[4].rh === 50 && medidas[6].rh === 43 && medidas.every((x, i) => !i || x.rh <= medidas[i - 1].rh));
-  const largo = ctx.catFolletoDatos('c:CO-ARI'); cv = lienzo(); ctx.catFolletoDibujar(cv, largo, 0, {});
+  cv = lienzo(); r = ctx.catFolletoDibujar(cv, emp, {});
+  ok('EMPIRE: los 21 modelos en UNA imagen de 1080 × 1920', cv.width === 1080 && cv.height === 1920 && r.alto === 1920 && r.filas === 21 && emp.filas.every(f => cv.dice(f.modelo)) && !cv.textos().some(s => /Página/.test(s)));
+  const con = k => Object.assign({}, emp, { filas: Array.from({ length: k }, (_, i) => emp.filas[i % emp.filas.length]) });
+  const medidas = [1, 3, 8, 11, 12, 14, 15, 16, 21, 26, 30, 31, 40].map(k => Object.assign({ k }, ctx.catFolletoDibujar(lienzo(), con(k), {})));
+  const md = k => medidas.find(q => q.k === k);
+  ok('la tabla nunca se sale: queda entre el título y el botón con cualquier cantidad de filas', medidas.every(q => q.filas === q.k && q.cardY >= 430 && q.cardY + q.cardH <= q.alto - 82 - 96 - 30 + 1));
+  ok('imagen normal: pocas filas van grandes (74); con 11 o 12 miden 50, con 14, 43 y con 15, 40', md(3).rh === 74 && md(11).rh === 50 && md(12).rh === 50 && md(14).rh === 43 && md(15).rh === 40);
+  ok('imagen larga: con 16 las filas vuelven a ser cómodas (56) y con 21 miden 50', md(16).alto === 1920 && md(16).rh === 56 && md(21).rh === 50 && md(26).rh >= 41 && md(30).rh === 36);
+  ok('con 31 o 40 modelos la imagen crece y las filas no bajan de 36', md(31).rh === 36 && md(40).rh === 36 && md(40).alto === 2280);
+  ok('en la imagen larga con pocas filas (16) el título tiene más aire que en la normal llena (15)', md(16).cardY > md(15).cardY + 100);
+  const largo = ctx.catFolletoDatos('c:CO-ARI'); cv = lienzo(); ctx.catFolletoDibujar(cv, largo, {});
   ok('un nombre largo va en dos líneas, sin cortarse', cv.dice('PIAGGIO VESPA GTS') && cv.dice('310CC AÑO 2026') && !cv.textos().some(s => /…/.test(s)));
 
   // ── 4b. La moto recortada (sin fondo): grande y sin recuadro ──
@@ -138,15 +151,15 @@ const M = v => '$' + (+v || 0).toLocaleString('en-US');
   ok('el modelo con recorte al día lo usa (archivo del propio sistema)', fr('MILAN').recorte === 'assets/catalogo-recortes/1.webp' && fr('BRX').recorte === 'assets/catalogo-recortes/4.webp');
   ok('...el de la foto del almacén se reconoce por su ruta, no por la dirección con clave', fr('BRX').url.indexOf('token=') > -1 && fr('BRX').recorte !== '');
   ok('si la foto cambió después del recorte, el recorte viejo NO se usa', fr('ANTIKING').recorte === '' && fr('RUNNER').recorte === '');
-  ok('la foto que sale sola prefiere una moto recortada de la página (BRX antes que ANTIKING)', ctx._catFolletoFotoDePagina(dr, 0) === String(fr('BRX').id));
-  cv = lienzo(); r = ctx.catFolletoDibujar(cv, dr, 0, { logo: { width: 955, height: 256 }, foto: { naturalWidth: 720, naturalHeight: 480 }, recortada: true });
-  ok('recortada: va flotando, grande (más de 480 de ancho) y pisa apenas la tarjeta de la tabla', r.flota === true && r.moto.w > 480 && r.moto.w <= 540 && Math.abs((r.moto.y + r.moto.h) - (r.cardY + 20)) < 1 && r.moto.x + r.moto.w <= 1080 - 30 + 1);
+  ok('la foto que sale sola es la primera moto RECORTADA (BRX antes que ANTIKING, que va primero pero sin recorte)', ctx._catFolletoFotoInicial(dr) === String(fr('BRX').id) && ctx._catFolletoFotoInicial(d) === String(d.fotos[0].id) && ctx._catFolletoFotoInicial({ fotos: [] }) === '');
+  cv = lienzo(); r = ctx.catFolletoDibujar(cv, dr, { logo: { width: 955, height: 256 }, foto: { naturalWidth: 720, naturalHeight: 480 }, recortada: true });
+  ok('recortada: va flotando, grande (más de 480 de ancho) y pisa apenas la tarjeta de la tabla', r.flota === true && r.moto.w > 480 && r.moto.w <= 560 && Math.abs((r.moto.y + r.moto.h) - (r.cardY + 20)) < 1 && r.moto.x + r.moto.w <= 1080 - 28 + 1);
   ok('...sin salirse por arriba de la cabecera y dejando 440 de ancho al título', r.moto.y >= 120 && r.tam >= 70);
-  cv = lienzo(); r = ctx.catFolletoDibujar(cv, dr, 0, { foto: { naturalWidth: 480, naturalHeight: 720 }, recortada: true });
+  cv = lienzo(); r = ctx.catFolletoDibujar(cv, dr, { foto: { naturalWidth: 480, naturalHeight: 720 }, recortada: true });
   ok('una moto vertical (scooter) también cabe: no pasa de la cabecera', r.flota && r.moto.y >= 120 && r.moto.h <= 540);
-  cv = lienzo(); r = ctx.catFolletoDibujar(cv, dr, 0, { foto: { naturalWidth: 800, naturalHeight: 600 }, recortada: false });
+  cv = lienzo(); r = ctx.catFolletoDibujar(cv, dr, { foto: { naturalWidth: 800, naturalHeight: 600 }, recortada: false });
   ok('sin recortar sigue saliendo en su tarjeta blanca', r.flota === false && r.moto === null && r.conFoto === true);
-  const medidasR = [1, 8, 13, 14].map(k => ctx.catFolletoDibujar(lienzo(), Object.assign({}, emp, { paginas: [emp.filas.slice(0, k)] }), 0, { foto: { naturalWidth: 720, naturalHeight: 470 }, recortada: true }));
+  const medidasR = [1, 8, 13, 15, 16, 21, 30, 40].map(k => ctx.catFolletoDibujar(lienzo(), con(k), { foto: { naturalWidth: 720, naturalHeight: 470 }, recortada: true }));
   ok('con cualquier cantidad de filas la moto queda dentro de la imagen', medidasR.every(q => q.moto.y >= 120 && q.moto.x >= 480 && q.moto.w >= 300));
   const pedidos = []; ctx.fetch = u => { pedidos.push(String(u)); return Promise.resolve({ ok: true, json: () => Promise.resolve({ v: 1, motos: { '9': { a: '9.webp', de: 'x', w: 1, h: 1 } } }) }); };
   vm.runInContext('_catFolleto.indice = null; _catFolleto.indiceP = null', ctx);
@@ -181,23 +194,16 @@ const M = v => '$' + (+v || 0).toLocaleString('en-US');
   ok('...y los botones Cerrar y Descargar imagen', /closeM\(\)/.test(el('mft').innerHTML) && /catFolletoDescargar\(\)/.test(el('mft').innerHTML) && /Descargar imagen/.test(el('mft').innerHTML));
   ok('la vista previa quedó dibujada con el folleto', cvVentana.dice('Tu Bera.') && cvVentana.dice('ANTIKING'));
   ok('avisa de los modelos que no salen', /2 modelos de este concesionario no salen porque están ocultos o sin precio/.test(el('cf_nota').innerHTML));
-  ok('una página: no hay botones de página', !/catFolletoPagina/.test(el('mbd').innerHTML));
+  ok('sin flechas de página: es una sola imagen', !/catFolletoPagina|cf_pag|Página/.test(el('mbd').innerHTML) && /<canvas id="cf_canvas" width="1080" height="1440"/.test(el('mbd').innerHTML));
   await ctx.catFolletoDescargar();
   ok('«Descargar imagen» baja un PNG con su nombre', anclas.length === 1 && /^folleto-pagasi-bera-chacao-.*\.png$/.test(anclas[0].download) && anclas[0].href === 'blob:prueba' && avisos.some(a => /Folleto descargado/.test(a)));
-  ok('...queda anotado en el registro quién lo hizo', registro.at(-1).a === 'catalogo_folleto' && registro.at(-1).id === 'c:CO-BERA' && registro.at(-1).d.modelos === 8);
+  ok('...queda anotado en el registro quién lo hizo', registro.at(-1).a === 'catalogo_folleto' && registro.at(-1).id === 'c:CO-BERA' && registro.at(-1).d.modelos === 8 && !('pagina' in registro.at(-1).d));
   await ctx.catFolleto('c:CO-EMP');
-  ok('con dos páginas salen las flechas y dice cuál se ve', /catFolletoPagina\(-1\)/.test(el('mbd').innerHTML) && /catFolletoPagina\(1\)/.test(el('mbd').innerHTML) && el('cf_pag').textContent === 'Página 1 de 2' && /Son <b>2 imágenes<\/b>/.test(el('cf_nota').innerHTML));
-  await ctx.catFolletoPagina(1);
-  ok('la flecha pasa a la página 2 y la dibuja', el('cf_pag').textContent === 'Página 2 de 2' && cvVentana.dice('Página 2 de 2'));
-  ok('la foto que sale sola es la de un modelo de la página que se ve (MODELO 05 está en la 1)', ctx._catFolletoFotoDePagina(emp, 0) === String(emp.filas[4].id) && ctx._catFolletoFotoDePagina(emp, 1) === String(emp.filas[4].id) && ctx._catFolletoFotoDePagina(d, 0) === String(d.filas[0].id));
-  const dosPag = Object.assign({}, d, { paginas: [d.filas.slice(0, 4), d.filas.slice(4)] });
-  ok('...y en la página 2 pasa a una moto de la página 2 (RUNNER), no la de la 1', ctx._catFolletoFotoDePagina(dosPag, 0) === String(d.filas[0].id) && ctx._catFolletoFotoDePagina(dosPag, 1) === String(d.filas.find(f => f.modelo === 'RUNNER').id));
+  ok('con 21 modelos: una sola vista previa, más alta (1920), sin flechas, y lo explica', /<canvas id="cf_canvas" width="1080" height="1920"/.test(el('mbd').innerHTML) && !/catFolletoPagina/.test(el('mbd').innerHTML) && /Con 21 modelos la imagen sale <b>más alta<\/b>/.test(el('cf_nota').innerHTML) && cvVentana.height === 1920 && emp.filas.every(f => cvVentana.dice(f.modelo)));
   await ctx.catFolletoFoto('');
-  ok('si se elige «Sin foto» se respeta al cambiar de página', (await ctx.catFolletoPagina(1), await ctx.catFolletoPagina(1), el('cf_foto').value === '' || true) && vm.runInContext('_catFolleto.fotoId', ctx) === '' && vm.runInContext('_catFolleto.fotoAuto', ctx) === false);
-  await ctx.catFolletoPagina(1);
-  ok('...y de la última vuelve a la primera', el('cf_pag').textContent === 'Página 1 de 2');
-  await ctx.catFolletoPagina(1); await ctx.catFolletoDescargar();
-  ok('se descarga la página que se está viendo', /-2de2\.png$/.test(anclas.at(-1).download) && registro.at(-1).d.pagina === 2);
+  ok('se puede elegir «Sin foto» y se vuelve a dibujar', vm.runInContext('_catFolleto.fotoId', ctx) === '' && cvVentana.dice('Tu Empire.'));
+  await ctx.catFolletoDescargar();
+  ok('se descarga UN archivo con los 21 modelos', /^folleto-pagasi-empire-bello-monte-\d{4}-\d\d-\d\d\.png$/.test(anclas.at(-1).download) && registro.at(-1).d.modelos === 21);
   avisos.length = 0; el('mtt').textContent = 'otra';
   await ctx.catFolleto('c:CO-VACIO');
   ok('concesionario sin modelos visibles: avisa y no abre nada', avisos.some(a => /no tiene modelos visibles en la web con precio/.test(a)) && el('mtt').textContent === 'otra');
