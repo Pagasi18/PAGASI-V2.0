@@ -31,7 +31,7 @@ var CAT_FOLLETO_MARCAS = ['Bera', 'Empire', 'Haojin', 'Toro', 'Veloz', 'Piaggio'
 // se reconoce en el nombre del concesionario. Una marca sin logo aquí sigue saliendo con la moto.
 var CAT_MARCAS_DIR = 'assets/marcas/';
 var CAT_FOLLETO_LOGOS = { Bera: 'bera.png', Empire: 'empire-keeway.png', Haojin: 'haojin.png', Toro: 'toro.png', Veloz: 'veloz.png',
-  Piaggio: 'piaggio.png', Bajaj: 'bajaj.png', Benmo: 'benmo-motos.png' };   // estos tres, buscados en internet el 21-nov-2026 (Adam: "busca los logos que te faltan")
+  Piaggio: 'piaggio.png', Bajaj: 'bajaj.png', Benmo: 'benmo-motos.png' };   // Bajaj y Benmo, buscados en internet el 21-nov-2026 (Adam: "busca los logos que te faltan"); el de Piaggio lo mandó él ("este es el logo de piaggio")
 // Marcas que son TIENDAS y no fábricas: venden motos de varias marcas, así que llevan su logo pero el
 // título es «Tu moto.» (como en los folletos de Benmo que Adam aprobó en noviembre).
 var CAT_FOLLETO_TIENDAS = { Benmo: 1 };
