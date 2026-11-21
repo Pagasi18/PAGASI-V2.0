@@ -251,16 +251,21 @@ function renderContrato(){
 
 // ── ¿Este crédito lleva fiador en el contrato? ─────────────────────────────
 // 21-nov-2026, Adam: "cuando están armando una solicitud nueva viene por default un fiador".
-// La solicitud precarga el fiador que el cliente anotó en la web o le dijo a Paola. Si el
+// La solicitud ofrecía marcado el fiador que el cliente anotó en la web o le dijo a Paola. Si el
 // vendedor lo pasaba a «Sin fiador», el nombre se quedaba en la ficha, y el contrato, que
-// decidía solo por el nombre, salía con fiador y con la cláusula de fianza (13 créditos de
-// PAGASI 26 hasta ese día). Ahora «Sin fiador» manda: primero lo que diga el crédito y, si
-// el crédito no dice nada, lo que diga la ficha. Igual que Cumplimiento (amlFiadoresDe) y
-// el aviso de fiador repetido (_riesgoFiadorEn), que ya ignoraban el nombre con un «no».
+// decidía solo por el nombre, salía con fiador y con la cláusula de fianza (11 créditos de
+// PAGASI 26 hasta ese día). La regla ahora:
+//   · sin nombre de fiador en la ficha, no hay fiador;
+//   · si la venta se hizo con fiador (el crédito dice «si»), sale siempre;
+//   · si no, manda la ficha: «no» lo quita. La solicitud deja la ficha en «no» cuando la venta
+//     se guarda sin fiador, y si después alguien le pone un fiador en la ficha, vuelve a salir.
+// Cumplimiento (amlFiadoresDe) y el aviso de fiador repetido (_riesgoFiadorEn) ya ignoraban el
+// nombre con un «no».
 function _ctrLlevaFiador(c, cli){
   if(!String((cli && cli.fiador_nom) || '').trim()) return false;
-  var marca = String((c && c.fiador_tiene) || '').trim().toLowerCase() || String((cli && cli.fiador) || '').trim().toLowerCase();
-  return marca !== 'no';
+  var marca = function(v){ return String(v == null ? '' : v).trim().toLowerCase(); };
+  if(marca(c && c.fiador_tiene) === 'si') return true;
+  return marca(cli.fiador) !== 'no';
 }
 // La ficha tal como la leen los contratos: sin los datos del fiador cuando el crédito no lo
 // lleva. Es una copia: la ficha guardada no se toca (lo que escribió el cliente sigue ahí).
