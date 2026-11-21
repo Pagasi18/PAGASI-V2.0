@@ -25,6 +25,13 @@ var CAT_FOLLETO_CONTACTO = { instagram: '@pagasi.io', telefono: '0424-217-7798' 
 // Marcas que se reconocen en el nombre del concesionario para el título («Tu Bera.»). Si el
 // nombre no trae ninguna (ARI BENZA), el título es «Tu moto.».
 var CAT_FOLLETO_MARCAS = ['Bera', 'Empire', 'Haojin', 'Toro', 'Veloz', 'Piaggio', 'Bajaj', 'Benmo', 'Zontes', 'Keeway', 'Vespa', 'Suzuki', 'Yamaha', 'Honda', 'Kawasaki', 'Benelli', 'Kymco', 'Hero', 'TVS', 'Lifan', 'Loncin', 'Skygo', 'Escuda'];
+// El logo de la marca, en blanco, va donde antes iba la moto (Adam, 21-nov-2026: "creo que en vez
+// de la moto vamos a poner el logo de la marca.. ejemplo bera" y "pon los logos en blanco").
+// Son archivos del sistema (assets/marcas/, blanco sobre transparente) y se eligen por la marca que
+// se reconoce en el nombre del concesionario. Una marca sin logo aquí sigue saliendo con la moto.
+var CAT_MARCAS_DIR = 'assets/marcas/';
+var CAT_FOLLETO_LOGOS = { Bera: 'bera.png', Empire: 'empire-keeway.png', Haojin: 'haojin.png', Toro: 'toro.png', Veloz: 'veloz.png' };
+var CAT_FOLLETO_LOGO = '__logo';      // el valor de «Logo de la marca» en la lista de imágenes del folleto
 var _catFolleto = { d: null, fotoId: '', imgs: {}, fuente: null, turno: 0, indice: null, indiceP: null };
 // Las motos RECORTADAS (sin fondo), para que en el folleto salgan grandes y «flotando» sobre el
 // azul y no en un recuadro blanco (Adam, 20-nov-2026: "la foto de la moto está muy plana").
@@ -93,6 +100,7 @@ function catFolletoDatos(clave){
     desde: filas.length ? Math.min.apply(null, filas.map(function(f){ return Math.min.apply(null, f.cuotas); })) : 0,
     fotos: filas.filter(function(f){ return f.image; }).map(function(f){ return { id: String(f.id), modelo: f.modelo, url: f.image, recorte: f.rec ? f.rec.url : '', nitidez: f.rec ? f.rec.n : 0, cortada: !!(f.rec && f.rec.c) }; }),
     contacto: { instagram: CAT_FOLLETO_CONTACTO.instagram, telefono: CAT_FOLLETO_CONTACTO.telefono },
+    logoMarca: (marca && CAT_FOLLETO_LOGOS[marca]) ? CAT_MARCAS_DIR + CAT_FOLLETO_LOGOS[marca] : '',
     fuera: todos.length - enWeb.length,
     fecha: (typeof hoyLocalISO === 'function' ? hoyLocalISO() : new Date().toISOString().slice(0, 10))
   };
@@ -185,9 +193,10 @@ function _cfIconoTelefono(x, cx, cy){
   x.beginPath(); x.arc(cx - 5.4, cy - 6.4, 2.3, 0, Math.PI * 2); x.fill(); x.beginPath(); x.arc(cx + 6.4, cy + 5.4, 2.3, 0, Math.PI * 2); x.fill();
   x.restore();
 }
-// Dibuja el folleto `d` en el lienzo: UNA hoja carta (2550 × 3300 px). r = { logo, foto, recortada }:
-// imágenes ya cargadas (o nada). Con la moto recortada sale grande y sin recuadro; si no, en una
-// tarjeta blanca. Todas las medidas de aquí adentro son de la hoja de 1080 × 1398.
+// Dibuja el folleto `d` en el lienzo: UNA hoja carta (2550 × 3300 px). r = { logo, marca, foto, recortada }:
+// imágenes ya cargadas (o nada). Con `marca` (el logo de la marca, en blanco) va el logo a la derecha
+// del título y no se dibuja moto. Si no, la moto: recortada sale grande y sin recuadro; sin recortar,
+// en una tarjeta blanca. Todas las medidas de aquí adentro son de la hoja de 1080 × 1398.
 function catFolletoDibujar(cv, d, r){
   r = r || {};
   var filas = d.filas || [], n = Math.max(filas.length, 1);
@@ -205,7 +214,8 @@ function catFolletoDibujar(cv, d, r){
   x.globalAlpha = .07; x.beginPath(); x.moveTo(W * .40, 0); x.lineTo(W * .74, 0); x.lineTo(W * .74 - H * .36, H); x.lineTo(W * .40 - H * .36, H); x.closePath(); x.fill();
   x.globalAlpha = .045; x.beginPath(); x.moveTo(W * .88, 0); x.lineTo(W * 1.12, 0); x.lineTo(W * 1.12 - H * .36, H); x.lineTo(W * .88 - H * .36, H); x.closePath(); x.fill();
   x.restore();
-  var flota = !!(r.foto && r.recortada), silueta = flota ? _cfSilueta(r.foto) : null;
+  var conMarca = !!r.marca;        // el logo de la marca manda: con él no se dibuja ninguna moto
+  var flota = !conMarca && !!(r.foto && r.recortada), silueta = flota ? _cfSilueta(r.foto) : null;
   [[W - 30, 250, 210, -.22], [W - 26, H * .52, 170, -.22]].forEach(function(t){
     x.save(); x.translate(t[0], t[1]); x.rotate(t[3]); x.globalAlpha = .08; x.fillStyle = '#fff';
     _cfCaja(x, -t[2] / 2, -t[2] / 2, t[2], t[2], 34); x.fill();
@@ -242,7 +252,19 @@ function catFolletoDibujar(cv, d, r){
 
   // La moto del modelo elegido. Recortada: grande, sin recuadro, con luz y dos aros detrás, completa
   // sobre el azul y apoyada justo encima de la tabla (sin pisarla). Sin recortar: en una tarjeta blanca.
-  var hayFoto = !!r.foto, fw = 0, moto = null;
+  var hayFoto = !conMarca && !!r.foto, fw = 0, moto = null, marca = null;
+  if(conMarca){
+    // El logo de la marca, en blanco, a la derecha del título: hasta 440 de ancho y lo que dé el alto
+    var lw0 = r.marca.naturalWidth || r.marca.width || 1, lh0 = r.marca.naturalHeight || r.marca.height || 1;
+    var le = Math.min(440 / lw0, Math.max(60, Math.min(heroH - 30, 250)) / lh0), lw = lw0 * le, lh2 = lh0 * le;
+    marca = { x: W - M - lw, y: heroTop + (heroH - lh2) / 2, w: lw, h: lh2 };
+    fw = lw;
+    var cxM = marca.x + lw / 2, cyM = marca.y + lh2 / 2, radM = Math.max(lw * .62, lh2 * 1.1);
+    var luzM = x.createRadialGradient(cxM, cyM, 0, cxM, cyM, radM);
+    luzM.addColorStop(0, 'rgba(255,255,255,.20)'); luzM.addColorStop(.55, 'rgba(255,255,255,.07)'); luzM.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = luzM; x.fillRect(cxM - radM, cyM - radM, radM * 2, radM * 2);
+    try{ x.drawImage(r.marca, marca.x, marca.y, lw, lh2); }catch(e){}
+  }
   if(flota){
     var mw0 = r.foto.naturalWidth || r.foto.width || 1, mh0 = r.foto.naturalHeight || r.foto.height || 1;
     // De alto, desde donde termina la cabecera (queda un aire bajo «pagasi.io») hasta 6 antes de la tabla
@@ -272,7 +294,7 @@ function catFolletoDibujar(cv, d, r){
   // Título y gancho. Completo: «ELIGE TU PRÓXIMA MOTO» / «Tu Bera.» / «En cuotas.» / [«Elige tu
   // modelo y tu plazo.»] / pastilla «CUOTAS DESDE $37 por quincena». Medio: sin la línea de arriba.
   // Mini (muchos modelos): «Tu Bera. En cuotas.» en una sola línea y la pastilla.
-  var anchoTxt = hayFoto ? (W - M - fw - 34 - M) : (W - 2 * M);
+  var anchoTxt = (hayFoto || conMarca) ? (W - M - fw - 34 - M) : (W - 2 * M);
   var conGancho = d.desde > 0, tam, y0, yBajo, kP;
   if(modo === 'mini'){
     kP = .78; tam = Math.max(38, Math.min(62, heroH - (conGancho ? 62 : 8)));
@@ -385,7 +407,7 @@ function catFolletoDibujar(cv, d, r){
   });
   var f = String(d.fecha || '').split('-');
   _cfTexto(x, 'Plan sujeto a evaluación y aprobación. Imagen referencial.' + (f.length === 3 ? ' Precios al ' + f[2] + '/' + f[1] + '/' + f[0] + '.' : ''), M, H - 28, { tam: 21, peso: 500, color: 'rgba(255,255,255,.9)', max: W - 2 * M });
-  return { filas: filas.length, ancho: W, alto: H, rh: rh, letra: fs, denso: denso, modo: modo, cardY: cardY, cardH: cardH, tam: tam, conFoto: hayFoto, flota: flota, moto: moto };
+  return { filas: filas.length, ancho: W, alto: H, rh: rh, letra: fs, denso: denso, modo: modo, cardY: cardY, cardH: cardH, tam: tam, conFoto: hayFoto, flota: flota, moto: moto, marca: marca };
 }
 
 // ── Recursos (letra, logo, foto) ────────────────────────────────────
@@ -433,14 +455,16 @@ function catFolleto(clave){
   if(!_catFolleto.indice) return _catFolletoIndice().then(function(){ return catFolleto(clave); });
   var d = catFolletoDatos(clave), E = _catEsc;
   if(!d.filas.length){ toast('Este concesionario no tiene modelos visibles en la web con precio: no hay qué poner en el folleto', 'error'); return; }
-  _catFolleto.d = d; _catFolleto.fotoId = _catFolletoFotoInicial(d);
+  _catFolleto.d = d; _catFolleto.fotoId = _catFolletoImagenInicial(d);
   if(typeof setMicon === 'function') setMicon('editar');
   $('mtt').textContent = 'Folleto de ' + d.nombre;
   $('msb').textContent = d.filas.length + ' modelo' + (d.filas.length === 1 ? '' : 's') + ' · inicial ' + d.inicialPct + '% · una hoja tamaño carta, lista para imprimir';
   $('modal-box').className = 'modal';
-  var fotos = d.fotos.length
-    ? '<div class="fg" style="margin:0;flex:1;min-width:180px"><label>Moto de la foto</label><select class="fs" id="cf_foto" onchange="catFolletoFoto(this.value)">'
-      + d.fotos.map(function(f){ return '<option value="' + E(f.id) + '">' + E(f.modelo) + (f.recorte ? (f.cortada ? ' · foto cortada' : (f.nitidez < 500 ? ' · foto pequeña' : '')) : ' · sin recortar') + '</option>'; }).join('') + '<option value="">Sin foto</option></select></div>'
+  // Qué imagen lleva el folleto: el logo de la marca (si la marca tiene), una de las motos, o ninguna
+  var fotos = (d.fotos.length || d.logoMarca)
+    ? '<div class="fg" style="margin:0;flex:1;min-width:180px"><label>Imagen del folleto</label><select class="fs" id="cf_foto" onchange="catFolletoFoto(this.value)">'
+      + (d.logoMarca ? '<option value="' + CAT_FOLLETO_LOGO + '">Logo de ' + E(d.marca) + '</option>' : '')
+      + d.fotos.map(function(f){ return '<option value="' + E(f.id) + '">Moto: ' + E(f.modelo) + (f.recorte ? (f.cortada ? ' · foto cortada' : (f.nitidez < 500 ? ' · foto pequeña' : '')) : ' · sin recortar') + '</option>'; }).join('') + '<option value="">Sin imagen</option></select></div>'
     : '';
   $('mbd').innerHTML = ''
     + (fotos ? '<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">' + fotos + '</div>' : '')
@@ -460,7 +484,10 @@ function _catFolletoNota(conFoto){
   var t = [];
   if(d.filas.length >= 23) t.push('Con ' + d.filas.length + ' modelos la letra de la tabla sale <b>pequeña</b> para que todos quepan en la hoja; impresa en carta se lee bien.');
   if(d.fuera > 0) t.push(d.fuera + ' modelo' + (d.fuera === 1 ? '' : 's') + ' de este concesionario no sale' + (d.fuera === 1 ? '' : 'n') + ' porque está' + (d.fuera === 1 ? '' : 'n') + ' oculto' + (d.fuera === 1 ? '' : 's') + ' o sin precio.');
-  if(_catFolleto.fotoId && !conFoto) t.push('<span style="color:var(--amber)">La foto de este modelo no se pudo usar: el folleto sale sin foto. Prueba con otro modelo.</span>');
+  if(_catFolleto.fotoId && !conFoto) t.push(_catFolleto.fotoId === CAT_FOLLETO_LOGO
+    ? '<span style="color:var(--amber)">El logo de la marca no cargó: el folleto sale sin imagen. Prueba de nuevo o elige una moto.</span>'
+    : '<span style="color:var(--amber)">La foto de este modelo no se pudo usar: el folleto sale sin foto. Prueba con otro modelo.</span>');
+  if(!d.logoMarca && d.fotos.length) t.push('Este concesionario todavía no tiene cargado el logo de su marca: por eso sale con una moto.');
   el.innerHTML = t.join(' ');
 }
 // La moto que sale sola en la foto: de las recortadas, la más nítida que no venga cortada de
@@ -470,19 +497,22 @@ function _catFolletoFotoInicial(d){
   var f = rec[0] || d.fotos[0];
   return f ? f.id : '';
 }
+// Lo que sale solo: el logo de la marca si la marca lo tiene; si no, la moto de siempre
+function _catFolletoImagenInicial(d){ return d.logoMarca ? CAT_FOLLETO_LOGO : _catFolletoFotoInicial(d); }
 function _catFolletoPintar(){
   var d = _catFolleto.d, turno = ++_catFolleto.turno; if(!d) return Promise.resolve(null);
   var sel = $('cf_foto'); if(sel && sel.value !== _catFolleto.fotoId) sel.value = _catFolleto.fotoId;
-  var foto = d.fotos.filter(function(f){ return f.id === String(_catFolleto.fotoId); })[0];
+  var conLogo = _catFolleto.fotoId === CAT_FOLLETO_LOGO && !!d.logoMarca;
+  var foto = conLogo ? null : d.fotos.filter(function(f){ return f.id === String(_catFolleto.fotoId); })[0];
   // Primero la moto recortada; si no hay (o no carga), la foto como está, en su recuadro
   var laFoto = _catFolletoImg(foto ? (foto.recorte || foto.url) : '').then(function(im){
     if(im || !foto || !foto.recorte) return { im: im, recortada: !!(im && foto && foto.recorte) };
     return _catFolletoImg(foto.url).then(function(im2){ return { im: im2, recortada: false }; });
   });
-  return Promise.all([_catFolletoFuente(), _catFolletoImg('assets/pagasi-logo-blanco.png'), laFoto]).then(function(r){
+  return Promise.all([_catFolletoFuente(), _catFolletoImg('assets/pagasi-logo-blanco.png'), laFoto, _catFolletoImg(conLogo ? d.logoMarca : '')]).then(function(r){
     var cv = $('cf_canvas'); if(!cv || turno !== _catFolleto.turno) return null;
-    var res = catFolletoDibujar(cv, d, { logo: r[1], foto: r[2].im, recortada: r[2].recortada });
-    _catFolletoNota(res.conFoto);
+    var res = catFolletoDibujar(cv, d, { logo: r[1], foto: r[2].im, recortada: r[2].recortada, marca: r[3] });
+    _catFolletoNota(res.conFoto || !!res.marca);
     return res;
   });
 }

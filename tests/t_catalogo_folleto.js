@@ -8,6 +8,9 @@
 //    separados... necesito que siempre sea uno" y "esto lo imprimimos... tiene que ser tamaño
 //    estándar"): 2550 × 3300 px (8,5 × 11 pulgadas). Con muchos modelos las filas se achican.
 //  · Abajo van el Instagram y el teléfono. Se descarga o se imprime; no escribe nada en el catálogo.
+//  · En vez de la moto va el LOGO DE LA MARCA, en blanco (Adam, 21-nov: "creo que en vez de la moto
+//    vamos a poner el logo de la marca.. ejemplo bera" y "pon los logos en blanco"). Las marcas que
+//    todavía no tienen logo cargado siguen saliendo con la moto.
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 let pass = 0, fail = 0;
@@ -182,6 +185,24 @@ const M = v => '$' + (+v || 0).toLocaleString('en-US');
   ok('...sin archivos sueltos y sin pesar de más (menos de 16 MB en total)', fs.readdirSync(path.join(ROOT, 'assets/catalogo-recortes')).filter(f => f !== 'indice.json').every(f => idsReal.includes(f.replace('.webp', ''))) && fs.readdirSync(path.join(ROOT, 'assets/catalogo-recortes')).reduce((t, f) => t + fs.statSync(path.join(ROOT, 'assets/catalogo-recortes', f)).size, 0) < 16e6);
   delete cat[4].imagePath; await ctx.catCargar(true);
 
+  // ── 4c. El logo de la marca en vez de la moto ──
+  const LOGOS = vm.runInContext('CAT_FOLLETO_LOGOS', ctx);
+  ok('hay logo en blanco de Bera, Empire (Keeway), Haojin, Toro y Veloz, y los archivos existen', Object.keys(LOGOS).sort().join() === 'Bera,Empire,Haojin,Toro,Veloz' && Object.values(LOGOS).every(f => fs.existsSync(path.join(ROOT, 'assets/marcas', f))));
+  const png = f => { const b = fs.readFileSync(path.join(ROOT, 'assets/marcas', f)); return { ok: b.slice(1, 4).toString() === 'PNG', w: b.readUInt32BE(16), h: b.readUInt32BE(20), alfa: b[25] === 6, kb: b.length / 1024 }; };
+  ok('...son PNG con transparencia, de 1200 de ancho y livianos (menos de 120 KB cada uno)', Object.values(LOGOS).every(f => { const q = png(f); return q.ok && q.alfa && q.w === 1200 && q.h > 100 && q.kb < 120; }));
+  const dB = ctx.catFolletoDatos('c:CO-BERA'), dA = ctx.catFolletoDatos('c:CO-ARI'), dE = ctx.catFolletoDatos('c:CO-EMP');
+  ok('BERA CHACAO → logo de Bera; EMPIRE → Empire Keeway; ARI BENZA (sin marca) → sin logo', dB.logoMarca === 'assets/marcas/bera.png' && dE.logoMarca === 'assets/marcas/empire-keeway.png' && dA.logoMarca === '');
+  ok('por nombre: Toro, Veloz y Haojin tienen logo; Piaggio, Bajaj y Benmo todavía no', ['MOTOS TORO SABANA GRANDE', 'VELOZ PTO LA CRUZ', 'HAOJIN'].every(n => !!LOGOS[ctx._catFolletoMarca(n)]) && ['PIAGGIO EL HATILLO', 'BAJAJ MARQUEZ', 'BENMO MOTOS ANDRES BELLO'].every(n => ctx._catFolletoMarca(n) && !LOGOS[ctx._catFolletoMarca(n)]));
+  ok('con logo, eso es lo que sale solo; sin logo, la moto de siempre', ctx._catFolletoImagenInicial(dB) === '__logo' && ctx._catFolletoImagenInicial(dA) === ctx._catFolletoFotoInicial(dA));
+  cv = lienzo(); r = ctx.catFolletoDibujar(cv, dB, { logo: { width: 955, height: 256 }, marca: { naturalWidth: 1200, naturalHeight: 580 }, foto: { naturalWidth: 720, naturalHeight: 480 }, recortada: true });
+  ok('con el logo de la marca NO se dibuja ninguna moto (aunque llegue una)', !!r.marca && r.moto === null && r.flota === false && r.conFoto === false);
+  ok('...el logo va a la derecha del título, dentro de la hoja y por encima de la tabla', r.marca.w <= 440 && r.marca.w > 300 && r.marca.x + r.marca.w <= 1080 - 54 + 1 && r.marca.y >= 116 && r.marca.y + r.marca.h <= r.cardY);
+  ok('...y el título, el gancho y la tabla siguen saliendo', cv.dice('Tu Bera.') && cv.dice('En cuotas.') && cv.dice('por quincena') && dB.filas.every(f => cv.dice(f.modelo)));
+  const logoR = [1, 9, 16, 21, 30, 40].map(k => ctx.catFolletoDibujar(lienzo(), con(k), { marca: { naturalWidth: 1200, naturalHeight: 427 } }));
+  ok('con cualquier cantidad de modelos el logo cabe entre la cabecera y la tabla', logoR.every(q => q.marca && q.marca.y >= 116 && q.marca.y + q.marca.h <= q.cardY && q.marca.h >= 55));
+  const ancho4 = ctx.catFolletoDibujar(lienzo(), dB, { marca: { naturalWidth: 1200, naturalHeight: 176 } });
+  ok('un logo muy alargado (Haojin) usa todo el ancho permitido', Math.round(ancho4.marca.w) === 440 && ancho4.marca.h < 70);
+
   // ── 5. El botón en la tabla ──
   const grupos = [...tabla.matchAll(/<tr class="cat-grupo"[^]*?<\/tr>/g)].map(x => x[0]);
   ok('cada franja de concesionario trae su botón «Crear folleto»', grupos.length >= 6 && grupos.every(g => (g.match(/>Crear folleto<\/button>/g) || []).length === 1));
@@ -199,7 +220,8 @@ const M = v => '$' + (+v || 0).toLocaleString('en-US');
   const antes = escritos.length;
   await ctx.catFolleto('c:CO-BERA');
   ok('«Crear folleto» abre la ventana con el nombre, cuántos modelos lleva y que es una hoja carta', el('mtt').textContent === 'Folleto de BERA CHACAO' && /^8 modelos · inicial 40% · una hoja tamaño carta/.test(el('msb').textContent) && el('ov').style.display === 'flex');
-  ok('...con la vista previa, la lista de motos para la foto y «Sin foto»', /<canvas id="cf_canvas" width="2550" height="3300"/.test(el('mbd').innerHTML) && /id="cf_foto"/.test(el('mbd').innerHTML) && (el('mbd').innerHTML.match(/<option /g) || []).length === 5 && /Sin foto<\/option>/.test(el('mbd').innerHTML));
+  ok('...con la vista previa y la lista «Imagen del folleto»: el logo de la marca, las motos y «Sin imagen»', /<canvas id="cf_canvas" width="2550" height="3300"/.test(el('mbd').innerHTML) && /<label>Imagen del folleto<\/label>/.test(el('mbd').innerHTML) && /<option value="__logo">Logo de Bera<\/option>/.test(el('mbd').innerHTML) && (el('mbd').innerHTML.match(/<option /g) || []).length === 6 && /Moto: ANTIKING/.test(el('mbd').innerHTML) && /Sin imagen<\/option>/.test(el('mbd').innerHTML));
+  ok('lo que sale solo es el logo de la marca, no una moto', vm.runInContext('_catFolleto.fotoId', ctx) === '__logo');
   ok('...y los botones Cerrar, Imprimir y Descargar imagen', /closeM\(\)/.test(el('mft').innerHTML) && /catFolletoImprimir\(\)/.test(el('mft').innerHTML) && /catFolletoDescargar\(\)/.test(el('mft').innerHTML) && /Descargar imagen/.test(el('mft').innerHTML));
   ok('la vista previa quedó dibujada con el folleto', cvVentana.dice('Tu Bera.') && cvVentana.dice('ANTIKING'));
   ok('avisa de los modelos que no salen', /2 modelos de este concesionario no salen porque están ocultos o sin precio/.test(el('cf_nota').innerHTML));
