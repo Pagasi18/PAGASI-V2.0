@@ -26,6 +26,8 @@ const recordatorios = require('./lib/recordatorios');
 const metricas = require('./lib/metricas');
 const aliados = require('./lib/aliados');
 const grupo = require('./lib/grupo');
+const ai = require('./lib/ai');
+const aiConsultas = require('./lib/ai-consultas');
 
 const VERIFY = defineSecret('WHATSAPP_VERIFY_TOKEN');
 const TOKEN = defineSecret('WHATSAPP_ACCESS_TOKEN');
@@ -55,6 +57,8 @@ async function cfgAsistente() {
     // atiende el equipo) y la calidad de Claude de cada una. Sin escoger, todo encendido y "normal".
     responde: Object.assign({ whatsappCobranza: true, whatsappVentas: true, instagram: true, comentariosIg: true, messenger: true, comentariosFb: true }, c.responde || {}),
     calidad: Object.assign({ cobranza: 'normal', ventas: 'normal' }, c.calidad || {}),
+    // Módulo AI (21-nov-2026): lo más que se puede gastar en Claude por día con las preguntas (dólares)
+    topeAIdia: isFinite(+c.topeAIdia) && +c.topeAIdia > 0 ? +c.topeAIdia : 10,
     // 24-oct-2026: reparto, seguimiento y "Comenta MOTO" se guardan desde la ventana de Paola; sin estas líneas el
     // servidor no los veía y los interruptores no hacían nada
     reparto: c.reparto || {}, seguimiento: c.seguimiento || {}, comentaMoto: c.comentaMoto || {}, instagram: c.instagram || '' };
@@ -110,7 +114,7 @@ function anotarGasto(area, g) {
   if (!g || !g.llamadas) return;
   const inc = {}; ['llamadas', 'entrada', 'salida', 'cacheLeida', 'cacheEscrita'].forEach(k => { inc[k] = FieldValue.increment(g[k] || 0); });
   inc.costo = FieldValue.increment(Math.round((g.costo || 0) * 1e6) / 1e6);
-  bases['26'].collection('config').doc('asistenteUso').set({ dias: { [hoyCaracas()]: { [area === 'cobranza' ? 'cobranza' : 'ventas']: inc } }, actualizado: new Date().toISOString() }, { merge: true }).catch(e => logger.warn('gasto no anotado', { error: String(e && e.message || e).slice(0, 120) }));
+  bases['26'].collection('config').doc('asistenteUso').set({ dias: { [hoyCaracas()]: { [area === 'cobranza' ? 'cobranza' : area === 'ai' ? 'ai' : 'ventas']: inc } }, actualizado: new Date().toISOString() }, { merge: true }).catch(e => logger.warn('gasto no anotado', { error: String(e && e.message || e).slice(0, 120) }));
 }
 
 // Quien escribe desde el panel: su token de Firebase (de la 26 o de la 18) y su ficha en /usuarios
@@ -144,6 +148,7 @@ exports.whatsappWebhook = onRequest({ region: 'us-east1', invoker: 'public', sec
 
   // El panel: POST /equipo { empresa, conv, texto } · { empresa, conv, accion: 'vendedor', vendedor } (Pasar a…)
   //           POST /equipo { accion: 'resumenGrupo', fresco? } (módulo PAGASI 18 + 26)
+  //           POST /equipo { accion: 'preguntaAI', pregunta, historial } (módulo AI)
   if (/\/equipo\/?$/.test(req.path || '')) {
     const quien = await quienEscribe(req);
     if (!quien) return res.status(401).json({ error: 'Sin sesión del sistema' });
@@ -155,6 +160,30 @@ exports.whatsappWebhook = onRequest({ region: 'us-east1', invoker: 'public', sec
         const r = await grupo.resumenGrupo({ bases, hoy: hoyCaracas(), ahora: new Date().toISOString(), log: (q, d) => logger.info(q, d) }, { fresco: (req.body || {}).fresco === true });
         return res.status(200).json(Object.assign({ ok: true }, r));
       } catch (e) { logger.error('grupo', e); return res.status(500).json({ error: 'No se pudo calcular: ' + String(e && e.message || e).slice(0, 160) }); }
+    }
+    // AI (21-nov-2026): las preguntas de los administradores sobre los datos de las dos compañías.
+    // Claude escoge las consultas (functions/lib/ai-consultas.js) y explica lo que dan. Solo lee.
+    if ((req.body || {}).accion === 'preguntaAI') {
+      if (!ai.puedeUsar(quien)) return res.status(403).json({ error: 'No tienes acceso a la AI', codigo: 'permiso' });
+      if (!ai.tope(quien.uid)) return res.status(429).json({ error: 'Muchas preguntas seguidas: espera unos minutos.', codigo: 'tope' });
+      const t0 = Date.now();
+      try {
+        const cfg = await cfgAsistente();
+        const uso = await bases['26'].collection('config').doc('asistenteUso').get().catch(() => null);
+        const gastadoHoy = +(((((uso && uso.exists && uso.data().dias) || {})[hoyCaracas()] || {}).ai || {}).costo) || 0;
+        if (gastadoHoy >= cfg.topeAIdia) return res.status(429).json({ error: ai.MENSAJES.topeDia, codigo: 'topeDia' });
+        const r = await ai.preguntar({ apiKey: sec(ANTHROPIC), datos: () => aiConsultas.cargar(bases, hoyCaracas()), hoy: hoyCaracas(), ahora: new Date(), calidad: cfg.calidad.ai },
+          { pregunta: (req.body || {}).pregunta, historial: (req.body || {}).historial });
+        anotarGasto('ai', r.gasto);
+        const costo = Math.round((r.gasto.costo || 0) * 10000) / 10000;
+        logger.info('ai', { ms: Date.now() - t0, llamadas: r.gasto.llamadas, consultas: r.consultas.length, graficos: r.graficos.length, costo });
+        return res.status(200).json({ ok: true, respuesta: r.respuesta, graficos: r.graficos, consultas: r.consultas, costo });
+      } catch (e) {
+        const cod = e.codigo || 'error';
+        if (e.gasto) anotarGasto('ai', e.gasto);
+        logger.warn('ai-fallo', { codigo: cod, ms: Date.now() - t0, error: String(e && e.message || e).slice(0, 160) });
+        return res.status(cod === 'entrada' ? 400 : ['clave', 'saldo', 'ocupado', 'tiempo', 'red'].includes(cod) ? 503 : 500).json({ error: cod === 'entrada' ? e.message : (ai.MENSAJES[cod] || ai.MENSAJES.error), codigo: cod });
+      }
     }
     if ((req.body || {}).accion === 'vendedor') {
       try {

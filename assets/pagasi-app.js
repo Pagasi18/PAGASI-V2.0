@@ -2036,6 +2036,9 @@ function _rtRedibujar(){
   if((S.page==='redes' || S.page==='redescob') && typeof waRefrescarPorDatos==='function'){
     try{ if(waRefrescarPorDatos()) return; }catch(e){ console.warn('Redes en el sitio:', e); }
   }
+  // AI y PAGASI 18 + 26 (21-nov-2026) no muestran los datos que llegan en tiempo real (los calcula el
+  // servidor): redibujarlas solo borraría lo que se está escribiendo y los gráficos con su globito
+  if(S.page==='ai' || S.page==='grupo') return;
   var focus = _captureFocus();
   window._pgKeep = true;           // nav() lo consume: conserva la paginacion
   window._rtRenderizando = true;   // nav() no muestra el esqueleto
@@ -2719,6 +2722,10 @@ var MODULOS = [
   // 21-nov-2026, Adam: "un modulo nuevo que se llame PAGASI 18 + 26": lo basico de las dos companias
   // juntas. Lo ven los administradores; a los demas se les da marcando este permiso.
   {id:'grupo', label:'PAGASI 18 + 26', grupo:'Análisis'},
+  // 21-nov-2026, Adam: "un modelo como que se llame AI.. donde los administradores de la empresa
+  // podamos buscar...": preguntas sobre los datos de las dos compañías. Lo ven los administradores;
+  // a los demás se les da marcando este permiso (nunca a un vendedor de concesionario).
+  {id:'ai', label:'AI', grupo:'Análisis'},
 ];
 
 // (S.currentUser se inicializa después de declarar S)
@@ -2965,7 +2972,7 @@ function fmtFecha(iso){
 }
 const ini=n=>n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const sbg=s=>({activo:'b-g',mora:'b-r',recuperada:'b-a',recuperado:'b-a',disponible:'b-p',financiada:'b-p',inventario:'b-b',confirmado:'b-g',pendiente:'b-a',completado:'b-g',propia:'b-g',cancelado:'b-r'}[s]||'b-x');
-const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Cobranza',whatsapp:'Canal WhatsApp',instagram:'Canal Instagram',redes:'Redes Ventas',redescob:'Redes Cobranza',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS',notif:'Notificaciones',calculadora:'Calculadora',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios',aprobaciones:'Aprobaciones',recursos:'Files',cumplimiento:'Cumplimiento',catalogo:'Catálogo web',metricas:'Métricas web',grupo:'PAGASI 18 + 26'};
+const PGL={dash:'Dashboard',centro:'Centro de trabajo',clientes:'Clientes',motos:'Motocicletas',creditos:'Créditos',pagos:'Cobranza',whatsapp:'Canal WhatsApp',instagram:'Canal Instagram',redes:'Redes Ventas',redescob:'Redes Cobranza',cobranza:'Cobranza',contratos:'Contratos',gps:'GPS',notif:'Notificaciones',calculadora:'Calculadora',reportes:'Finanzas',cuentas:'Cuentas',comisiones:'Comisiones',conta:'Finanzas',plan:'Plan & Precios',config:'Configuración',scores:'Scores',users:'Usuarios',concesionarios:'Concesionarios',aprobaciones:'Aprobaciones',recursos:'Files',cumplimiento:'Cumplimiento',catalogo:'Catálogo web',metricas:'Métricas web',grupo:'PAGASI 18 + 26',ai:'AI'};
 
 // perm_condiciones (20-nov-2026, Adam: "necesito darle acceso a María Fernanda para que ella pueda
 // cambiar también"): deja cambiar las Condiciones del plan del Catálogo web (tasa, seguro e inicial)
@@ -2987,7 +2994,7 @@ function permisosConCanales(permisos){
 // ══════════════════════════════════════════
 var ROL_PERMISOS = {
   // Acceso total: dueño del sistema
-  Administrador: ['dash','centro','clientes','motos','creditos','pagos','cobranza','redes','redescob','whatsapp','instagram','contratos','notif','reportes','cuentas','plan','config','users','cumplimiento','catalogo','metricas','grupo','perm_delete'],
+  Administrador: ['dash','centro','clientes','motos','creditos','pagos','cobranza','redes','redescob','whatsapp','instagram','contratos','notif','reportes','cuentas','plan','config','users','cumplimiento','catalogo','metricas','grupo','ai','perm_delete'],
   // Supervisa operaciones, ve reportes, NO toca config ni usuarios
   Gerente: ['dash','centro','clientes','motos','creditos','pagos','cobranza','redes','redescob','whatsapp','instagram','contratos','notif','reportes','cuentas'],
   // Cobra en la oficina: ve todos los clientes, registra pagos, ve cobranza y deudores
@@ -3198,6 +3205,7 @@ function _attachCurrentUserListener(uid){
 
 // ── Sidebar dinámico: solo muestra módulos con acceso ──
 var PG_NAVICONS = {
+  ai:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 1.9 1.9.8-1.9.8L19 20.4l-.8-1.9-1.9-.8 1.9-.8z"/></svg>',
   grupo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg>',
   metricas:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>',
   catalogo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.5"/></svg>',
@@ -3266,7 +3274,7 @@ function renderSidebar(){
   if(isEmpleadoRole()){
     var permsEmp = getCurrentPerms();
     var grposEmp = [
-      {label:'Mi Trabajo', keys:['dash','grupo','centro','recursos']},
+      {label:'Mi Trabajo', keys:['dash','grupo','ai','centro','recursos']},
       {label:'Gestión', keys:['clientes','motos','creditos','pagos','redes','redescob']},
       {label:'Operaciones',keys:['contratos','gps','notif','calculadora','aprobaciones']},
       {label:'Análisis', keys:['reportes','cuentas','comisiones','metricas']},
@@ -3333,7 +3341,7 @@ function renderSidebar(){
   // Otros roles: filtrar módulos según permisos
   var perms = getCurrentPerms();
   var grupos = [
-    {label:'Principal', keys:['dash','grupo','centro','recursos']},
+    {label:'Principal', keys:['dash','grupo','ai','centro','recursos']},
     {label:'Gestión', keys:['clientes','motos','creditos','pagos','redes','redescob']},
     {label:'Operaciones',keys:['contratos','gps','notif','calculadora','aprobaciones']},
     {label:'Análisis', keys:['reportes','cuentas','comisiones','metricas']},
