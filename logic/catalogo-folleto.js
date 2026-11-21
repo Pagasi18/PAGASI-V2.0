@@ -240,14 +240,14 @@ function catFolletoDibujar(cv, d, r){
   var heroTop = cardY < 520 ? 130 : 146, heroBottom = cardY - 28, heroH = heroBottom - heroTop;
   var modo = heroH >= 262 ? 'completo' : (heroH >= 180 ? 'medio' : 'mini');
 
-  // La moto del modelo elegido. Recortada: grande, sin recuadro, con luz y dos aros detrás; pisa un
-  // poco la tarjeta de la tabla (se dibuja al final, encima). Sin recortar: en una tarjeta blanca.
+  // La moto del modelo elegido. Recortada: grande, sin recuadro, con luz y dos aros detrás, completa
+  // sobre el azul y apoyada justo encima de la tabla (sin pisarla). Sin recortar: en una tarjeta blanca.
   var hayFoto = !!r.foto, fw = 0, moto = null;
   if(flota){
     var mw0 = r.foto.naturalWidth || r.foto.width || 1, mh0 = r.foto.naturalHeight || r.foto.height || 1;
-    // De alto, hasta donde termina la cabecera (queda un aire bajo «pagasi.io»); pisa 18 de la tarjeta
-    var me = Math.min(560 / mw0, Math.min(cardY + 18 - 118, 560) / mh0), mw = mw0 * me, mh = mh0 * me;
-    moto = { x: W - 28 - mw, y: cardY + 18 - mh, w: mw, h: mh };
+    // De alto, desde donde termina la cabecera (queda un aire bajo «pagasi.io») hasta 6 antes de la tabla
+    var me = Math.min(560 / mw0, Math.min(cardY - 6 - 118, 560) / mh0), mw = mw0 * me, mh = mh0 * me;
+    moto = { x: W - 28 - mw, y: cardY - 6 - mh, w: mw, h: mh };
     fw = Math.min(mw - 22, W - 2 * M - 34 - 440);       // al título siempre le quedan 440 de ancho
     var cxL = moto.x + mw / 2, cyL = moto.y + mh * .52, rad = Math.max(mw, mh) * .8;
     var luz = x.createRadialGradient(cxL, cyL, 0, cxL, cyL, rad);
@@ -356,12 +356,14 @@ function catFolletoDibujar(cv, d, r){
     f.cuotas.forEach(function(q, k){ _cfTexto(x, _catFolletoDinero(q), bx + cw * (k + .5) + (k === np - 1 ? 2 : 0), cy, { tam: fs, peso: 800, al: 'center', color: k === np - 1 ? AZUL : TINTA, base: 'middle', max: cw - 14 }); });
   });
 
-  // La moto recortada, encima de todo, con su sombra en el piso. SIN sombra alrededor del
+  // La moto recortada, con su sombra en el piso (solo sobre el azul: se corta donde empieza la
+  // tabla, para que no deje una franja gris encima del blanco). SIN sombra alrededor del
   // contorno: se la quité porque la hacía ver como una calcomanía pegada (Adam: "se ve recortada").
   if(moto){
-    var sx = moto.x + moto.w / 2, sy = moto.y + moto.h - moto.h * .025, rx = moto.w * .49, ry = Math.max(13, moto.h * .06);
-    x.save(); x.translate(sx, sy); x.scale(1, ry / rx);
-    var som = x.createRadialGradient(0, 0, 0, 0, 0, rx); som.addColorStop(0, 'rgba(1,14,70,.55)'); som.addColorStop(.55, 'rgba(1,14,70,.24)'); som.addColorStop(1, 'rgba(1,14,70,0)');
+    var sx = moto.x + moto.w / 2, sy = moto.y + moto.h - moto.h * .03, rx = moto.w * .49, ry = Math.max(11, moto.h * .05);
+    x.save(); x.beginPath(); x.rect(0, 0, W, cardY); x.clip();
+    x.translate(sx, sy); x.scale(1, ry / rx);
+    var som = x.createRadialGradient(0, 0, 0, 0, 0, rx); som.addColorStop(0, 'rgba(1,14,70,.50)'); som.addColorStop(.55, 'rgba(1,14,70,.22)'); som.addColorStop(1, 'rgba(1,14,70,0)');
     x.fillStyle = som; x.beginPath(); x.arc(0, 0, rx, 0, Math.PI * 2); x.fill(); x.restore();
     try{ x.drawImage(r.foto, moto.x, moto.y, moto.w, moto.h); }catch(e){}
   }

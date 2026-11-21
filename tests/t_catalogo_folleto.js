@@ -58,7 +58,7 @@ function lienzo(){
   const c = { font: '', fillStyle: '', textAlign: '', textBaseline: '', globalAlpha: 1,
     measureText(s){ const px = +(String(c.font).match(/(\d+(?:\.\d+)?)px/) || [0, 20])[1]; return { width: String(s).length * px * .56 }; },
     fillText(s, x, y){ t.push({ s: String(s), x, y, font: c.font, color: c.fillStyle }); }, drawImage(...a){ img.push(a); },
-    fillRect(x, y, w, h){ cajas.push({ x, y, w, h }); }, createLinearGradient(){ return { addColorStop(){} }; }, createRadialGradient(){ return { addColorStop(){} }; }, arc(){}, scale(){}, quadraticCurveTo(){},
+    fillRect(x, y, w, h){ cajas.push({ x, y, w, h }); }, createLinearGradient(){ return { addColorStop(){} }; }, createRadialGradient(){ return { addColorStop(){} }; }, arc(){}, scale(){}, quadraticCurveTo(){}, rect(){},
     save(){}, restore(){}, beginPath(){}, closePath(){}, moveTo(){}, lineTo(){}, arcTo(){}, fill(){}, stroke(){}, clip(){}, translate(){}, rotate(){}, transform(){} };
   const cv = { width: 0, height: 0, getContext(){ return c; }, toBlob(fn){ fn({ size: 1234, type: 'image/png' }); }, t, img };
   cv.dice = s => t.some(q => q.s === s); cv.textos = () => t.map(q => q.s);
@@ -161,9 +161,9 @@ const M = v => '$' + (+v || 0).toLocaleString('en-US');
   ok('cada recorte trae su nitidez y si la foto venía cortada de origen', fr('MILAN').nitidez === 900 && fr('MILAN').cortada === false && fr('BRX').nitidez === 1400 && fr('BRX').cortada === true && fr('RUNNER').nitidez === 430);
   ok('la foto que sale sola: de las recortadas, la más nítida que no venga cortada (MILAN; BRX es más grande pero viene cortada; RUNNER es pequeña)', ctx._catFolletoFotoInicial(dr) === String(fr('MILAN').id) && ctx._catFolletoFotoInicial(d) === String(d.fotos[0].id) && ctx._catFolletoFotoInicial({ fotos: [] }) === '');
   cv = lienzo(); r = ctx.catFolletoDibujar(cv, dr, { logo: { width: 955, height: 256 }, foto: { naturalWidth: 720, naturalHeight: 480 }, recortada: true });
-  ok('recortada: va flotando, grande (más de 480 de ancho) y pisa apenas la tarjeta de la tabla', r.flota === true && r.moto.w > 480 && r.moto.w <= 560 && Math.abs((r.moto.y + r.moto.h) - (r.cardY + 18)) < 1 && r.moto.x + r.moto.w <= 1080 - 28 + 1);
+  ok('recortada: va flotando, grande (más de 440 de ancho), completa sobre el azul y apoyada justo encima de la tabla (sin pisarla)', r.flota === true && r.moto.w > 440 && r.moto.w <= 560 && Math.abs((r.moto.y + r.moto.h) - (r.cardY - 6)) < 1 && r.moto.x + r.moto.w <= 1080 - 28 + 1);
   ok('...sin salirse por arriba de la cabecera y dejando 440 de ancho al título', r.moto.y >= 116 && r.tam >= 60);
-  ok('...y SIN sombra alrededor del contorno (la hacía ver como calcomanía): solo la del piso', !/shadowColor[^;]*;[^\n]*drawImage\(r\.foto, moto\.x/.test(src('logic/catalogo-folleto.js')) && /SIN sombra alrededor del\s*\n?\s*\/\/ contorno/.test(src('logic/catalogo-folleto.js')));
+  ok('...y SIN sombra alrededor del contorno (la hacía ver como calcomanía): solo la del piso, y cortada donde empieza la tabla', !/shadowColor[^;]*;[^\n]*drawImage\(r\.foto, moto\.x/.test(src('logic/catalogo-folleto.js')) && /x\.rect\(0, 0, W, cardY\); x\.clip\(\);/.test(src('logic/catalogo-folleto.js')));
   cv = lienzo(); r = ctx.catFolletoDibujar(cv, dr, { foto: { naturalWidth: 480, naturalHeight: 720 }, recortada: true });
   ok('una moto vertical (scooter) también cabe: no pasa de la cabecera', r.flota && r.moto.y >= 116 && r.moto.h <= 560);
   cv = lienzo(); r = ctx.catFolletoDibujar(cv, dr, { foto: { naturalWidth: 800, naturalHeight: 600 }, recortada: false });
@@ -178,7 +178,7 @@ const M = v => '$' + (+v || 0).toLocaleString('en-US');
   ok('si el índice no se puede leer, el folleto sigue (sin recortes)', JSON.stringify(await ctx._catFolletoIndice()) === '{}' && ctx.catFolletoDatos('c:CO-BERA').fotos.every(f => f.recorte === ''));
   const indReal = JSON.parse(src('assets/catalogo-recortes/indice.json'));
   const idsReal = Object.keys(indReal.motos);
-  ok('los recortes del repositorio (versión 2, borde limpio): cada uno con su archivo, su foto de origen, sus medidas y su nitidez', indReal.v === 2 && idsReal.length >= 150 && idsReal.every(k => { const q = indReal.motos[k]; return q.a === k + '.webp' && q.de && q.w > 0 && q.h > 0 && Math.max(q.w, q.h) <= 1000 && q.n >= Math.max(q.w, q.h) - 2 && (q.c === 0 || q.c === 1) && fs.existsSync(path.join(ROOT, 'assets/catalogo-recortes', q.a)); }));
+  ok('los recortes del repositorio (versión 5: borde limpio y sin el fondo que se veía entre los rayos): cada uno con su archivo, su foto de origen, sus medidas y su nitidez', indReal.v === 5 && idsReal.length >= 150 && idsReal.every(k => { const q = indReal.motos[k]; return q.a === k + '.webp' && q.de && q.w > 0 && q.h > 0 && Math.max(q.w, q.h) <= 1000 && q.n >= Math.max(q.w, q.h) - 2 && (q.c === 0 || q.c === 1) && fs.existsSync(path.join(ROOT, 'assets/catalogo-recortes', q.a)); }));
   ok('...sin archivos sueltos y sin pesar de más (menos de 16 MB en total)', fs.readdirSync(path.join(ROOT, 'assets/catalogo-recortes')).filter(f => f !== 'indice.json').every(f => idsReal.includes(f.replace('.webp', ''))) && fs.readdirSync(path.join(ROOT, 'assets/catalogo-recortes')).reduce((t, f) => t + fs.statSync(path.join(ROOT, 'assets/catalogo-recortes', f)).size, 0) < 16e6);
   delete cat[4].imagePath; await ctx.catCargar(true);
 
