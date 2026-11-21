@@ -21,7 +21,7 @@ function grupoPedir(fresco){
   if(!user){ _grupo.error = 'Sin sesión: vuelve a entrar al sistema.'; _grupoPintar(); return Promise.resolve(); }
   _grupo.pidiendo = true; _grupo.error = '';
   _grupoPintar();
-  _grupo.promesa = user.getIdToken().then(function(tok){
+  _grupo.promesa = Promise.resolve().then(function(){ return user.getIdToken(); }).then(function(tok){
     return fetch(_grupoUrl(), { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + tok }, body: JSON.stringify({ accion: 'resumenGrupo', fresco: !!fresco }) });
   }).then(function(r){
     return r.json().catch(function(){ return {}; }).then(function(j){
@@ -71,7 +71,7 @@ function _g2Cifras(x, grande){
   return '<div class="g2-cifras' + c + '">'
     + '<div class="g2-cifra"><div class="g2-rot">Créditos activos</div><div class="g2-val" data-g2="creditos">' + _g2Num(x.creditos) + '</div><div class="g2-nota">' + _g2Num(x.alDia) + ' al día</div></div>'
     + '<div class="g2-cifra"><div class="g2-rot">Dinero en la calle</div><div class="g2-val" data-g2="cartera">' + _g2Dinero(x.cartera) + '</div><div class="g2-nota">lo que falta por cobrar</div></div>'
-    + '<div class="g2-cifra"><div class="g2-rot">En mora</div><div class="g2-val' + (x.enMora > 0 ? ' g2-rojo' : '') + '" data-g2="mora">' + _g2Num(x.enMora) + '</div><div class="g2-nota">' + _g2Pct(x.enMora, x.creditos) + ' de sus créditos</div></div>'
+    + '<div class="g2-cifra"><div class="g2-rot">En mora</div><div class="g2-val' + (x.enMora > 0 ? ' g2-rojo' : '') + '" data-g2="mora">' + _g2Num(x.enMora) + '</div><div class="g2-nota">' + _g2Pct(x.enMora, x.creditos) + ' de los créditos</div></div>'
     + '<div class="g2-cifra"><div class="g2-rot">Monto vencido</div><div class="g2-val' + (x.vencido > 0 ? ' g2-rojo' : '') + '" data-g2="vencido">' + _g2Dinero(x.vencido) + '</div><div class="g2-nota">cuotas ya vencidas</div></div>'
     + '</div>';
 }
