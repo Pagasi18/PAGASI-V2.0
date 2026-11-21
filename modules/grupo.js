@@ -90,8 +90,145 @@ function _g2Empresa(emp, x){
   var cab = '<div class="g2-cab"><span class="g2-chapa" style="background:' + GRUPO_COLOR[emp] + '">' + emp + '</span><div><div class="g2-nom">' + nombre + '</div><div class="g2-sitio">' + sitio + '</div></div></div>';
   if(!x || x.error || typeof x.creditos !== 'number')
     return '<div class="g2-card" data-g2-emp="' + emp + '">' + cab + '<div class="g2-falla">No se pudo leer esta compañía en este momento. Toca «Actualizar» para intentar otra vez.</div></div>';
-  return '<div class="g2-card" data-g2-emp="' + emp + '">' + cab + _g2Cifras(x, false) + '</div>';
+  return '<div class="g2-card" data-g2-emp="' + emp + '">' + cab + _g2Cifras(x, false) + _g2Historico(x) + '</div>';
 }
+
+// ══ Lo que se agregó el 21-nov (Adam: "dame más data… está muy vacío") ══
+var G2_MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function _g2MesNom(mes){ return G2_MES[(+String(mes).slice(5, 7) || 1) - 1] || ''; }
+function _g2MesCorto(mes){ var n = _g2MesNom(mes); return n === 'septiembre' ? 'sep' : n.slice(0, 3); }
+function _g2Total(c){ return c ? (+c.cuotas || 0) + (+c.iniciales || 0) : 0; }
+function _g2Plata0(v){ return '$' + _g2Num(v); }
+// Para encima de las barras: corto y sin repetirse ("$1,2k", "$84k")
+function _g2Corto(v){
+  v = +v || 0;
+  if(v < 1000) return '$' + Math.round(v);
+  if(v < 10000) return '$' + (Math.round(v / 100) / 10).toLocaleString('es-VE') + 'k';
+  return '$' + Math.round(v / 1000).toLocaleString('es-VE') + 'k';
+}
+// Cuánto pone cada compañía, en una línea chiquita con su color
+function _g2Split(a, b, dinero){
+  var v = function(x){ return dinero ? _g2Plata0(x) : _g2Num(x); };
+  return '<span class="g2-split"><span><b style="background:' + GRUPO_COLOR['18'] + '"></b>18 · ' + v(a) + '</span><span><b style="background:' + GRUPO_COLOR['26'] + '"></b>26 · ' + v(b) + '</span></span>';
+}
+var _g2Ley = '<div class="g2-ley"><span><b style="background:' + GRUPO_COLOR['18'] + '"></b>PAGASI 18</span><span><b style="background:' + GRUPO_COLOR['26'] + '"></b>PAGASI 26</span></div>';
+// Tiene los datos nuevos (un servidor de antes no los manda)
+function _g2Completo(x){ return !!(x && x.cobro && Array.isArray(x.meses) && Array.isArray(x.tramos) && x.semana && x.historico); }
+
+// Desde qué mes mostrar los gráficos: el primero con algo en alguna de las dos (no meses vacíos al principio)
+function _g2Desde(a, b){
+  for(var i = 0; i < a.meses.length; i++){
+    var x = a.meses[i], y = b.meses[i] || {};
+    if(_g2Total(x) || x.ventas || _g2Total(y) || y.ventas) return Math.min(i, Math.max(0, a.meses.length - 3));
+  }
+  return Math.max(0, a.meses.length - 3);
+}
+// Barras por mes, cada una con lo de las dos compañías una encima de la otra (18 abajo, 26 arriba)
+function _g2Columnas(titulo, a, b, valor, dinero, desde){
+  var meses = a.meses.slice(desde), otros = b.meses.slice(desde), ALTO = 132;
+  var max = Math.max.apply(null, [1].concat(meses.map(function(x, i){ return valor(x) + valor(otros[i] || {}); })));
+  var ult = meses.length - 1, f = function(v){ return dinero ? _g2Plata0(v) : _g2Num(v); };
+  var cols = meses.map(function(x, i){
+    var va = valor(x), vb = valor(otros[i] || {}), t = va + vb;
+    var ha = va > 0 ? Math.max(3, Math.round(va / max * ALTO)) : 0, hb = vb > 0 ? Math.max(3, Math.round(vb / max * ALTO)) : 0;
+    var tip = _g2MesNom(x.mes) + ' ' + x.mes.slice(0, 4) + (i === ult ? ' (hasta hoy)' : '') + ': PAGASI 18 ' + f(va) + ' · PAGASI 26 ' + f(vb) + ' · juntas ' + f(t);
+    return '<div class="g2-col' + (i === ult ? ' g2-col-hoy' : '') + '" title="' + tip + '" data-g2-mes="' + x.mes + '">'
+      + '<div class="g2-col-z"><div class="g2-col-v">' + (t > 0 ? (dinero ? _g2Corto(t) : _g2Num(t)) : '') + '</div>'
+      + '<div class="g2-pila">' + (hb ? '<i style="height:' + hb + 'px;background:' + GRUPO_COLOR['26'] + '"></i>' : '') + (ha ? '<i style="height:' + ha + 'px;background:' + GRUPO_COLOR['18'] + '"></i>' : '') + '</div></div>'
+      + '<div class="g2-col-m">' + _g2MesCorto(x.mes) + '</div></div>';
+  }).join('');
+  return '<div class="g2-graf" role="img" aria-label="' + titulo + ' por mes"><div class="g2-cols" style="--g2-n:' + meses.length + '">' + cols + '</div></div>';
+}
+function _g2CabSec(titulo, sub, derecha){
+  return '<div class="g2-sec-cab"><div><div class="g2-sec-t">' + titulo + '</div>' + (sub ? '<div class="g2-sec-s">' + sub + '</div>' : '') + '</div>' + (derecha || '') + '</div>';
+}
+
+// ── Lo cobrado: hoy, 7 días, este mes (con el mes pasado a la misma fecha) y el mes pasado ──
+function _g2Cobrado(a, b, j, hoy){
+  var c = j.cobro, mes = String(hoy || '').slice(0, 7), mesAnt = (a.meses[a.meses.length - 2] || {}).mes || '';
+  var dia = +String(hoy || '').slice(8, 10) || 0;
+  var esteMes = _g2Total(c.mes), antes = _g2Total(c.mesPasadoAFecha);
+  var cambio = antes > 0 ? Math.round((esteMes - antes) * 100 / antes) : null;
+  var compara = cambio === null ? 'el mes pasado no hubo cobros a esta fecha'
+    : '<span class="' + (cambio >= 0 ? 'g2-sube' : 'g2-baja') + '">' + (cambio >= 0 ? '▲ ' : '▼ ') + Math.abs(cambio).toLocaleString('es-VE') + '%</span> vs. ' + _g2Plata0(antes) + ' al ' + dia + ' de ' + _g2MesNom(mesAnt);
+  var celda = function(rot, k, nota, dato){
+    var x = c[k], t = _g2Total(x);
+    return '<div class="g2-cifra"><div class="g2-rot">' + rot + '</div><div class="g2-val" data-g2="' + dato + '">' + _g2Dinero(t) + '</div>'
+      + '<div class="g2-nota">' + nota + '</div>' + _g2Split(_g2Total(a.cobro[k]), _g2Total(b.cobro[k]), true) + '</div>';
+  };
+  var detalle = function(x){ return 'cuotas ' + _g2Plata0(x.cuotas) + ' · iniciales ' + _g2Plata0(x.iniciales); };
+  return '<div class="g2-card g2-sec" data-g2-sec="cobrado">'
+    + _g2CabSec('Lo que entró', 'Pagos confirmados de las dos compañías: cuotas e iniciales', _g2Ley)
+    + '<div class="g2-cobro">'
+    + '<div class="g2-cifras g2-cifras-c">'
+    + celda('Hoy', 'hoy', detalle(c.hoy), 'cobro-hoy')
+    + celda('Últimos 7 días', 'semana', detalle(c.semana), 'cobro-semana')
+    + celda('En ' + _g2MesNom(mes), 'mes', compara, 'cobro-mes')
+    + celda(_g2MesNom(mesAnt).replace(/^./, function(l){ return l.toUpperCase(); }) + ' completo', 'mesPasado', detalle(c.mesPasado), 'cobro-mes-pasado')
+    + '</div>'
+    + '<div class="g2-cobro-g"><div class="g2-rot">Cobrado por mes</div>' + _g2Columnas('Cobrado', a, b, _g2Total, true, _g2Desde(a, b)) + '</div>'
+    + '</div></div>';
+}
+// ── Las motos vendidas por mes ──
+function _g2Ventas(a, b, j, hoy){
+  var desde = _g2Desde(a, b), n = j.meses.length, x = j.meses[n - 1] || {}, y = j.meses[n - 2] || {};
+  return '<div class="g2-card g2-sec" data-g2-sec="ventas">'
+    + _g2CabSec('Motos vendidas', 'Créditos otorgados cada mes', _g2Ley)
+    + '<div class="g2-mini">'
+    + '<div><div class="g2-rot">En ' + _g2MesNom(x.mes) + '</div><div class="g2-val" data-g2="ventas-mes">' + _g2Num(x.ventas) + '</div><div class="g2-nota">' + _g2Plata0(x.financiado) + ' financiado</div></div>'
+    + '<div><div class="g2-rot">En ' + _g2MesNom(y.mes) + '</div><div class="g2-val g2-val-s" data-g2="ventas-mes-pasado">' + _g2Num(y.ventas) + '</div><div class="g2-nota">' + _g2Plata0(y.financiado) + ' financiado</div></div>'
+    + '</div>'
+    + _g2Columnas('Motos vendidas', a, b, function(m){ return +m.ventas || 0; }, false, desde)
+    + '<div class="g2-nota g2-nota-f">Desde el principio, entre las dos: <b>' + _g2Num(j.historico.vendidos) + ' motos</b> · ' + _g2Plata0(j.historico.financiado) + ' financiado.</div>'
+    + '</div>';
+}
+// ── La mora por días de atraso ──
+var G2_TRAMO = { '1-15': 'De 1 a 15 días', '16-30': 'De 16 a 30 días', '31-60': 'De 31 a 60 días', '+60': 'Más de 60 días' };
+function _g2Mora(a, b, j){
+  var max = Math.max.apply(null, [1].concat(j.tramos.map(function(t){ return t.creditos; })));
+  var filas = j.tramos.map(function(t, i){
+    var ta = a.tramos[i] || {}, tb = b.tramos[i] || {};
+    var wa = (ta.creditos || 0) * 100 / max, wb = (tb.creditos || 0) * 100 / max;
+    return '<div class="g2-tramo" data-g2-tramo="' + t.tramo + '"><div class="g2-tramo-r"><span>' + (G2_TRAMO[t.tramo] || t.tramo) + '</span>'
+      + '<b>' + _g2Num(t.creditos) + ' crédito' + (t.creditos === 1 ? '' : 's') + ' · <span class="' + (t.vencido > 0 ? 'g2-rojo-t' : '') + '">' + _g2Plata0(t.vencido) + '</span></b></div>'
+      + '<div class="g2-tramo-b" title="PAGASI 18: ' + _g2Num(ta.creditos) + ' (' + _g2Plata0(ta.vencido) + ') · PAGASI 26: ' + _g2Num(tb.creditos) + ' (' + _g2Plata0(tb.vencido) + ')">'
+      + (wa > 0 ? '<i style="width:' + wa.toFixed(2) + '%;background:' + GRUPO_COLOR['18'] + '"></i>' : '') + (wb > 0 ? '<i style="width:' + wb.toFixed(2) + '%;background:' + GRUPO_COLOR['26'] + '"></i>' : '') + '</div>'
+      + '<div class="g2-tramo-n">' + _g2Split(ta.creditos || 0, tb.creditos || 0, false) + '</div></div>';
+  }).join('');
+  var viejo = j.tramos[j.tramos.length - 1] || { vencido: 0 };
+  var pct = j.vencido > 0 ? Math.round(viejo.vencido * 100 / j.vencido) : 0;
+  return '<div class="g2-card g2-sec" data-g2-sec="mora">'
+    + _g2CabSec('La mora por días de atraso', _g2Num(j.enMora) + ' créditos en mora · ' + _g2Plata0(j.vencido) + ' vencido', '')
+    + '<div class="g2-tramos">' + filas + '</div>'
+    + (viejo.vencido > 0 ? '<div class="g2-nota g2-nota-f">Los de más de 60 días son el ' + pct + '% del monto vencido: son los más difíciles de cobrar.</div>' : '')
+    + '</div>';
+}
+// ── Lo que vence esta semana ──
+function _g2Semana(a, b, j, hoy){
+  var hasta = '';
+  try { var d = new Date(String(hoy) + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + 6); hasta = d.getUTCDate() + ' de ' + G2_MES[d.getUTCMonth()]; } catch(e){}
+  var prom = j.semana.cuotas > 0 ? j.semana.monto / j.semana.cuotas : 0;
+  return '<div class="g2-card g2-sec" data-g2-sec="semana">'
+    + _g2CabSec('Lo que vence esta semana', 'Cuotas que vencen de hoy al ' + hasta, '')
+    + '<div class="g2-val g2-val-g" data-g2="semana-monto">' + _g2Dinero(j.semana.monto) + '</div>'
+    + '<div class="g2-nota">' + _g2Num(j.semana.cuotas) + ' cuotas por cobrar' + (prom ? ' · ' + _g2Plata0(prom) + ' en promedio' : '') + '</div>'
+    + '<div class="g2-reps g2-reps-1">' + _g2Reparto('Monto por compañía', a.semana.monto, b.semana.monto, true) + _g2Reparto('Cuotas por compañía', a.semana.cuotas, b.semana.cuotas, false) + '</div>'
+    + (j.vencido > 0 ? '<div class="g2-nota g2-nota-f" data-g2="semana-con-vencido">Y hay <b>' + _g2Plata0(j.vencido) + '</b> ya vencido sin pagar: si todos se pusieran al día, esta semana entrarían <b>' + _g2Plata0(j.semana.monto + j.vencido) + '</b>.</div>' : '')
+    + '</div>';
+}
+// ── Desde el principio (en la tarjeta de cada compañía) ──
+function _g2Historico(x){
+  if(!_g2Completo(x)) return '';
+  var h = x.historico, cobrado = _g2Total(x.cobro.total);
+  var c = function(rot, v, nota, dato){ return '<div class="g2-cifra"><div class="g2-rot">' + rot + '</div><div class="g2-val g2-val-s" data-g2="' + dato + '">' + v + '</div><div class="g2-nota">' + nota + '</div></div>'; };
+  return '<div class="g2-hist"><div class="g2-hist-t">Desde el principio</div><div class="g2-cifras g2-cifras-4">'
+    + c('Motos vendidas', _g2Num(h.vendidos), _g2Plata0(h.financiado) + ' financiado', 'hist-vendidos')
+    + c('Cobrado', _g2Dinero(cobrado), 'cuotas e iniciales', 'hist-cobrado')
+    + c('Terminaron de pagar', _g2Num(h.terminados), 'créditos completos', 'hist-terminados')
+    + c('Recuperadas', _g2Num(h.recuperados), 'motos devueltas', 'hist-recuperados')
+    + '</div></div>';
+}
+
 function _grupoHtml(){
   var d = _grupo.datos;
   if(!d){
@@ -105,12 +242,19 @@ function _grupoHtml(){
       + _g2Cifras(j, true)
       + '<div class="g2-reps">' + _g2Reparto('Créditos activos', a.creditos, b.creditos, false) + _g2Reparto('Dinero en la calle', a.cartera, b.cartera, true)
       + _g2Reparto('Créditos en mora', a.enMora, b.enMora, false) + _g2Reparto('Monto vencido', a.vencido, b.vencido, true) + '</div></div>';
+    // Lo nuevo solo si las dos lo traen (un servidor de antes no lo manda)
+    if(_g2Completo(a) && _g2Completo(b) && _g2Completo(j) && a.meses.length === b.meses.length && a.meses.length >= 2){
+      h += _g2Cobrado(a, b, j, d.hoy);
+      h += '<div class="g2-tres">' + _g2Ventas(a, b, j, d.hoy) + _g2Mora(a, b, j) + _g2Semana(a, b, j, d.hoy) + '</div>';
+    }
   } else {
     h += '<div class="g2-card g2-aviso"><div class="g2-falla">Falta una de las dos compañías, así que no hay total. Toca «Actualizar» para intentar otra vez.</div></div>';
   }
   h += '<div class="g2-dos">' + _g2Empresa('18', a) + _g2Empresa('26', b) + '</div>';
   h += '<div class="g2-pie"><b>Créditos activos:</b> los que están en cartera (al día o en mora). <b>Dinero en la calle:</b> lo que falta por cobrar de esos créditos, capital e intereses. '
-    + '<b>En mora:</b> los que tienen al menos un día de atraso; el monto vencido es el saldo de sus cuotas ya vencidas. Son las mismas cuentas del Dashboard de cada compañía.</div>';
+    + '<b>En mora:</b> los que tienen al menos un día de atraso; el monto vencido es el saldo de sus cuotas ya vencidas. '
+    + '<b>Lo que entró:</b> los pagos confirmados, cuotas e iniciales, por la fecha del pago. <b>Motos vendidas:</b> los créditos otorgados, por su fecha (sin los anulados ni las solicitudes sin aprobar). '
+    + 'Son las mismas cuentas del Dashboard de cada compañía.</div>';
   return '<div class="' + (_grupo.pidiendo ? 'g2-viejo' : '') + '">' + h + '</div>';
 }
 
