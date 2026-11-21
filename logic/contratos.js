@@ -248,6 +248,29 @@ function renderContrato(){
 }
 
 // Helper: arma el contexto común (datos y estilos) para todos los documentos
+
+// ── ¿Este crédito lleva fiador en el contrato? ─────────────────────────────
+// 21-nov-2026, Adam: "cuando están armando una solicitud nueva viene por default un fiador".
+// La solicitud precarga el fiador que el cliente anotó en la web o le dijo a Paola. Si el
+// vendedor lo pasaba a «Sin fiador», el nombre se quedaba en la ficha, y el contrato, que
+// decidía solo por el nombre, salía con fiador y con la cláusula de fianza (13 créditos de
+// PAGASI 26 hasta ese día). Ahora «Sin fiador» manda: primero lo que diga el crédito y, si
+// el crédito no dice nada, lo que diga la ficha. Igual que Cumplimiento (amlFiadoresDe) y
+// el aviso de fiador repetido (_riesgoFiadorEn), que ya ignoraban el nombre con un «no».
+function _ctrLlevaFiador(c, cli){
+  if(!String((cli && cli.fiador_nom) || '').trim()) return false;
+  var marca = String((c && c.fiador_tiene) || '').trim().toLowerCase() || String((cli && cli.fiador) || '').trim().toLowerCase();
+  return marca !== 'no';
+}
+// La ficha tal como la leen los contratos: sin los datos del fiador cuando el crédito no lo
+// lleva. Es una copia: la ficha guardada no se toca (lo que escribió el cliente sigue ahí).
+function _ctrClienteParaContrato(c, cli){
+  if(!cli || !String(cli.fiador_nom || '').trim() || _ctrLlevaFiador(c, cli)) return cli;
+  var copia = Object.assign({}, cli);
+  ['fiador_nom','fiador_ci','fiador_rif','fiador_dir','fiador_email','fiador_tel','fiador_rel','fiador_ing'].forEach(function(k){ copia[k] = ''; });
+  return copia;
+}
+
 function _docCtx(credIdOverride){
   // credIdOverride permite armar el documento de un credito concreto sin tocar
   // el selector: lo usa la impresion por lote de los contratos del dia.
@@ -258,6 +281,7 @@ function _docCtx(credIdOverride){
   var emp = getEmpresa();
   var empresaUp = (emp.nombre||'PAGASI').toUpperCase();
   var cli = S.clientes.find(function(x){return x.nombre===c.cli;}) || S.clientes.find(function(x){return String(x.id)===String(c.clienteId);}) || {};
+  cli = _ctrClienteParaContrato(c, cli);   // «Sin fiador» manda sobre el nombre que quedó en la ficha (21-nov-2026)
   var moto = S.motos.find(function(m){return String(m.id)===String(c.motoId);}) || {};
   var hoy = new Date().toLocaleDateString('es-VE',{day:'2-digit',month:'long',year:'numeric'});
   var fechaContrato = c.fecha
