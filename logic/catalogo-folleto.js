@@ -30,7 +30,14 @@ var CAT_FOLLETO_MARCAS = ['Bera', 'Empire', 'Haojin', 'Toro', 'Veloz', 'Piaggio'
 // Son archivos del sistema (assets/marcas/, blanco sobre transparente) y se eligen por la marca que
 // se reconoce en el nombre del concesionario. Una marca sin logo aquí sigue saliendo con la moto.
 var CAT_MARCAS_DIR = 'assets/marcas/';
-var CAT_FOLLETO_LOGOS = { Bera: 'bera.png', Empire: 'empire-keeway.png', Haojin: 'haojin.png', Toro: 'toro.png', Veloz: 'veloz.png' };
+var CAT_FOLLETO_LOGOS = { Bera: 'bera.png', Empire: 'empire-keeway.png', Haojin: 'haojin.png', Toro: 'toro.png', Veloz: 'veloz.png',
+  Piaggio: 'piaggio.png', Bajaj: 'bajaj.png', Benmo: 'benmo-motos.png' };   // estos tres, buscados en internet el 21-nov-2026 (Adam: "busca los logos que te faltan")
+// Marcas que son TIENDAS y no fábricas: venden motos de varias marcas, así que llevan su logo pero el
+// título es «Tu moto.» (como en los folletos de Benmo que Adam aprobó en noviembre).
+var CAT_FOLLETO_TIENDAS = { Benmo: 1 };
+// Concesionarios que en el folleto salen con otro nombre que en el sistema.
+// Adam, 21-nov-2026: "Ari Benza [es] Benmo Motos El Llanito".
+var CAT_FOLLETO_NOMBRES = { 'ari benza': 'BENMO MOTOS EL LLANITO' };
 var CAT_FOLLETO_LOGO = '__logo';      // el valor de «Logo de la marca» en la lista de imágenes del folleto
 var _catFolleto = { d: null, fotoId: '', imgs: {}, fuente: null, turno: 0, indice: null, indiceP: null };
 // Las motos RECORTADAS (sin fondo), para que en el folleto salgan grandes y «flotando» sobre el
@@ -92,9 +99,10 @@ function catFolletoDatos(clave){
     if(vistos[k]){ if(!vistos[k].image && m.image){ vistos[k].image = m.image; vistos[k].rec = rec; } return; }
     filas.push(vistos[k] = { id: m.id, modelo: modelo, precio: +m.precio, inicial: b.inicial, cuotas: cuotas, image: m.image || '', rec: rec });
   });
-  var nombre = _catFolletoNombre(clave, todos), marca = _catFolletoMarca(nombre);
+  var enSistema = String(_catFolletoNombre(clave, todos)).replace(/\s+/g, ' ').trim().toUpperCase();
+  var nombre = CAT_FOLLETO_NOMBRES[_catFolletoNorm(enSistema)] || enSistema, marca = _catFolletoMarca(nombre);
   return {
-    clave: clave, nombre: String(nombre).replace(/\s+/g, ' ').trim().toUpperCase(), marca: marca, titulo: 'Tu ' + (marca || 'moto') + '.',
+    clave: clave, nombre: nombre, nombreSistema: enSistema, marca: marca, titulo: 'Tu ' + ((marca && !CAT_FOLLETO_TIENDAS[marca]) ? marca : 'moto') + '.',
     plazos: CAT_PLAZOS_EXCEL.slice(), inicialPct: c.inicialMin, filas: filas,
     // La cuota más baja de todo el folleto, para el gancho «Cuotas desde $…»
     desde: filas.length ? Math.min.apply(null, filas.map(function(f){ return Math.min.apply(null, f.cuotas); })) : 0,
@@ -457,7 +465,7 @@ function catFolleto(clave){
   if(!d.filas.length){ toast('Este concesionario no tiene modelos visibles en la web con precio: no hay qué poner en el folleto', 'error'); return; }
   _catFolleto.d = d; _catFolleto.fotoId = _catFolletoImagenInicial(d);
   if(typeof setMicon === 'function') setMicon('editar');
-  $('mtt').textContent = 'Folleto de ' + d.nombre;
+  $('mtt').textContent = 'Folleto de ' + d.nombreSistema;
   $('msb').textContent = d.filas.length + ' modelo' + (d.filas.length === 1 ? '' : 's') + ' · inicial ' + d.inicialPct + '% · una hoja tamaño carta, lista para imprimir';
   $('modal-box').className = 'modal';
   // Qué imagen lleva el folleto: el logo de la marca (si la marca tiene), una de las motos, o ninguna
@@ -488,6 +496,7 @@ function _catFolletoNota(conFoto){
     ? '<span style="color:var(--amber)">El logo de la marca no cargó: el folleto sale sin imagen. Prueba de nuevo o elige una moto.</span>'
     : '<span style="color:var(--amber)">La foto de este modelo no se pudo usar: el folleto sale sin foto. Prueba con otro modelo.</span>');
   if(!d.logoMarca && d.fotos.length) t.push('Este concesionario todavía no tiene cargado el logo de su marca: por eso sale con una moto.');
+  if(d.nombre !== d.nombreSistema) t.push('En el folleto este concesionario sale como <b>' + _catEsc(d.nombre) + '</b>.');
   el.innerHTML = t.join(' ');
 }
 // La moto que sale sola en la foto: de las recortadas, la más nítida que no venga cortada de

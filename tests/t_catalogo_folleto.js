@@ -187,13 +187,18 @@ const M = v => '$' + (+v || 0).toLocaleString('en-US');
 
   // ── 4c. El logo de la marca en vez de la moto ──
   const LOGOS = vm.runInContext('CAT_FOLLETO_LOGOS', ctx);
-  ok('hay logo en blanco de Bera, Empire (Keeway), Haojin, Toro y Veloz, y los archivos existen', Object.keys(LOGOS).sort().join() === 'Bera,Empire,Haojin,Toro,Veloz' && Object.values(LOGOS).every(f => fs.existsSync(path.join(ROOT, 'assets/marcas', f))));
+  ok('hay logo en blanco de Bajaj, Benmo, Bera, Empire (Keeway), Haojin, Piaggio, Toro y Veloz, y los archivos existen', Object.keys(LOGOS).sort().join() === 'Bajaj,Benmo,Bera,Empire,Haojin,Piaggio,Toro,Veloz' && Object.values(LOGOS).every(f => fs.existsSync(path.join(ROOT, 'assets/marcas', f))) && fs.readdirSync(path.join(ROOT, 'assets/marcas')).sort().join() === Object.values(LOGOS).sort().join());
   const png = f => { const b = fs.readFileSync(path.join(ROOT, 'assets/marcas', f)); return { ok: b.slice(1, 4).toString() === 'PNG', w: b.readUInt32BE(16), h: b.readUInt32BE(20), alfa: b[25] === 6, kb: b.length / 1024 }; };
-  ok('...son PNG con transparencia, de 1200 de ancho y livianos (menos de 120 KB cada uno)', Object.values(LOGOS).every(f => { const q = png(f); return q.ok && q.alfa && q.w === 1200 && q.h > 100 && q.kb < 120; }));
+  ok('...son PNG con transparencia, de 700 a 1200 de ancho y livianos (menos de 120 KB cada uno)', Object.values(LOGOS).every(f => { const q = png(f); return q.ok && q.alfa && q.w >= 700 && q.w <= 1200 && q.h > 100 && q.kb < 120; }));
   const dB = ctx.catFolletoDatos('c:CO-BERA'), dA = ctx.catFolletoDatos('c:CO-ARI'), dE = ctx.catFolletoDatos('c:CO-EMP');
-  ok('BERA CHACAO → logo de Bera; EMPIRE → Empire Keeway; ARI BENZA (sin marca) → sin logo', dB.logoMarca === 'assets/marcas/bera.png' && dE.logoMarca === 'assets/marcas/empire-keeway.png' && dA.logoMarca === '');
-  ok('por nombre: Toro, Veloz y Haojin tienen logo; Piaggio, Bajaj y Benmo todavía no', ['MOTOS TORO SABANA GRANDE', 'VELOZ PTO LA CRUZ', 'HAOJIN'].every(n => !!LOGOS[ctx._catFolletoMarca(n)]) && ['PIAGGIO EL HATILLO', 'BAJAJ MARQUEZ', 'BENMO MOTOS ANDRES BELLO'].every(n => ctx._catFolletoMarca(n) && !LOGOS[ctx._catFolletoMarca(n)]));
-  ok('con logo, eso es lo que sale solo; sin logo, la moto de siempre', ctx._catFolletoImagenInicial(dB) === '__logo' && ctx._catFolletoImagenInicial(dA) === ctx._catFolletoFotoInicial(dA));
+  ok('BERA CHACAO → logo de Bera; EMPIRE → Empire Keeway', dB.logoMarca === 'assets/marcas/bera.png' && dE.logoMarca === 'assets/marcas/empire-keeway.png');
+  ok('por nombre, todos los concesionarios de hoy tienen logo: Toro, Veloz, Haojin, Piaggio, Bajaj y Benmo', ['MOTOS TORO SABANA GRANDE', 'TORO SANTA MONICA', 'VELOZ PTO LA CRUZ', 'VELOZ MOTORCYCLES CHACAO', 'HAOJIN', 'PIAGGIO EL HATILLO', 'BAJAJ MARQUEZ', 'BENMO MOTOS ANDRES BELLO', 'BERA PETARE', 'BERA TRINIDAD', 'EMPIRE Bello Monte'].every(n => !!LOGOS[ctx._catFolletoMarca(n)]));
+  // ARI BENZA es Benmo Motos El Llanito (Adam, 21-nov-2026)
+  ok('ARI BENZA sale en el folleto como BENMO MOTOS EL LLANITO, con el logo de Benmo', dA.nombre === 'BENMO MOTOS EL LLANITO' && dA.nombreSistema === 'ARI BENZA' && dA.marca === 'Benmo' && dA.logoMarca === 'assets/marcas/benmo-motos.png');
+  ok('...Benmo es una tienda de varias marcas: lleva su logo pero el título es «Tu moto.»', dA.titulo === 'Tu moto.' && ctx.catFolletoDatos('c:CO-BERA').titulo === 'Tu Bera.');
+  ok('...y el archivo se llama por el nombre que sale en el folleto', /^folleto-pagasi-benmo-motos-el-llanito-\d{4}-\d\d-\d\d\.png$/.test(ctx.catFolletoArchivo(dA)));
+  const sinLogo = Object.assign({}, dA, { logoMarca: '' });
+  ok('con logo, eso es lo que sale solo; un concesionario sin logo sale con la moto de siempre', ctx._catFolletoImagenInicial(dB) === '__logo' && ctx._catFolletoImagenInicial(dA) === '__logo' && ctx._catFolletoImagenInicial(sinLogo) === ctx._catFolletoFotoInicial(dA));
   cv = lienzo(); r = ctx.catFolletoDibujar(cv, dB, { logo: { width: 955, height: 256 }, marca: { naturalWidth: 1200, naturalHeight: 580 }, foto: { naturalWidth: 720, naturalHeight: 480 }, recortada: true });
   ok('con el logo de la marca NO se dibuja ninguna moto (aunque llegue una)', !!r.marca && r.moto === null && r.flota === false && r.conFoto === false);
   ok('...el logo va a la derecha del título, dentro de la hoja y por encima de la tabla', r.marca.w <= 440 && r.marca.w > 300 && r.marca.x + r.marca.w <= 1080 - 54 + 1 && r.marca.y >= 116 && r.marca.y + r.marca.h <= r.cardY);
