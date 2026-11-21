@@ -76,14 +76,16 @@ function _g2Cifras(x, grande){
     + '</div>';
 }
 // Cuánto pone cada compañía en un total: una barra de dos colores con el nombre y el número al lado
-function _g2Reparto(titulo, a, b, dinero){
+// et (opcional): otras dos partes en vez de las compañías { a, b, na, nb, ca, cb } (etiqueta corta, nombre y color)
+function _g2Reparto(titulo, a, b, dinero, et){
+  et = et || { a: '18', b: '26', na: 'PAGASI 18', nb: 'PAGASI 26', ca: GRUPO_COLOR['18'], cb: GRUPO_COLOR['26'] };
   var t = (+a || 0) + (+b || 0), pa = t > 0 ? Math.round(a * 1000 / t) / 10 : 0, pb = t > 0 ? Math.round((100 - pa) * 10) / 10 : 0;
   var val = function(v){ return dinero ? '$' + _g2Num(v) : _g2Num(v); };
   return '<div class="g2-rep"><div class="g2-rep-t">' + titulo + '</div>'
-    + '<div class="g2-barra" role="img" aria-label="' + titulo + ': PAGASI 18 ' + pa.toLocaleString('es-VE') + '%, PAGASI 26 ' + pb.toLocaleString('es-VE') + '%">'
-    + (t > 0 ? '<i style="width:' + pa + '%;background:' + GRUPO_COLOR['18'] + '"></i><i style="width:' + pb + '%;background:' + GRUPO_COLOR['26'] + '"></i>' : '') + '</div>'
-    + '<div class="g2-rep-l"><span><b style="background:' + GRUPO_COLOR['18'] + '"></b>18 · ' + val(a) + ' · ' + pa.toLocaleString('es-VE') + '%</span>'
-    + '<span><b style="background:' + GRUPO_COLOR['26'] + '"></b>26 · ' + val(b) + ' · ' + pb.toLocaleString('es-VE') + '%</span></div></div>';
+    + '<div class="g2-barra" role="img" aria-label="' + titulo + ': ' + et.na + ' ' + pa.toLocaleString('es-VE') + '%, ' + et.nb + ' ' + pb.toLocaleString('es-VE') + '%">'
+    + (t > 0 ? '<i style="width:' + pa + '%;background:' + et.ca + '"></i><i style="width:' + pb + '%;background:' + et.cb + '"></i>' : '') + '</div>'
+    + '<div class="g2-rep-l"><span><b style="background:' + et.ca + '"></b>' + et.a + ' · ' + val(a) + ' · ' + pa.toLocaleString('es-VE') + '%</span>'
+    + '<span><b style="background:' + et.cb + '"></b>' + et.b + ' · ' + val(b) + ' · ' + pb.toLocaleString('es-VE') + '%</span></div></div>';
 }
 function _g2Empresa(emp, x){
   var nombre = (x && x.nombre) || ('PAGASI ' + emp), sitio = emp === '18' ? '18.pagasi.io · solo cobra' : 'pagasi.io · vende y cobra';
@@ -123,21 +125,31 @@ function _g2Desde(a, b){
   }
   return Math.max(0, a.meses.length - 3);
 }
+// Barras verticales apiladas. cols: [{ partes:[{v, color}] (de abajo hacia arriba), arriba:'texto',
+// abajo:'texto', tip:'texto', hoy:bool, clave }]. o: { alto, aria, ancho (px mínimos por barra), max }
+function _g2Barras(cols, o){
+  o = o || {};
+  var ALTO = o.alto || 132;
+  var max = o.max || Math.max.apply(null, [1].concat(cols.map(function(c){ return c.partes.reduce(function(s, p){ return s + (+p.v || 0); }, 0); })));
+  var html = cols.map(function(c){
+    var segs = c.partes.map(function(p){ var h = p.v > 0 ? Math.max(3, Math.round(p.v / max * ALTO)) : 0; return h ? '<i style="height:' + h + 'px;background:' + p.color + '"></i>' : ''; }).reverse().join('');
+    return '<div class="g2-col' + (c.hoy ? ' g2-col-hoy' : '') + '" title="' + _g2Esc(c.tip || '') + '"' + (c.clave ? ' data-g2-col="' + c.clave + '"' : '') + '>'
+      + '<div class="g2-col-z" style="height:' + (ALTO + 24) + 'px"><div class="g2-col-v">' + (c.arriba || '') + '</div><div class="g2-pila">' + segs + '</div></div>'
+      + '<div class="g2-col-m">' + (c.abajo || '') + '</div></div>';
+  }).join('');
+  var w = o.ancho || 30;
+  return '<div class="g2-graf" role="img" aria-label="' + _g2Esc(o.aria || '') + '"><div class="g2-cols' + (w < 30 ? ' g2-cols-d' : '') + '" style="--g2-n:' + cols.length + ';--g2-w:' + w + 'px">' + html + '</div></div>';
+}
+function _g2Esc(s){ return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 // Barras por mes, cada una con lo de las dos compañías una encima de la otra (18 abajo, 26 arriba)
 function _g2Columnas(titulo, a, b, valor, dinero, desde){
-  var meses = a.meses.slice(desde), otros = b.meses.slice(desde), ALTO = 132;
-  var max = Math.max.apply(null, [1].concat(meses.map(function(x, i){ return valor(x) + valor(otros[i] || {}); })));
-  var ult = meses.length - 1, f = function(v){ return dinero ? _g2Plata0(v) : _g2Num(v); };
-  var cols = meses.map(function(x, i){
+  var meses = a.meses.slice(desde), otros = b.meses.slice(desde), ult = meses.length - 1, f = function(v){ return dinero ? _g2Plata0(v) : _g2Num(v); };
+  return _g2Barras(meses.map(function(x, i){
     var va = valor(x), vb = valor(otros[i] || {}), t = va + vb;
-    var ha = va > 0 ? Math.max(3, Math.round(va / max * ALTO)) : 0, hb = vb > 0 ? Math.max(3, Math.round(vb / max * ALTO)) : 0;
-    var tip = _g2MesNom(x.mes) + ' ' + x.mes.slice(0, 4) + (i === ult ? ' (hasta hoy)' : '') + ': PAGASI 18 ' + f(va) + ' · PAGASI 26 ' + f(vb) + ' · juntas ' + f(t);
-    return '<div class="g2-col' + (i === ult ? ' g2-col-hoy' : '') + '" title="' + tip + '" data-g2-mes="' + x.mes + '">'
-      + '<div class="g2-col-z"><div class="g2-col-v">' + (t > 0 ? (dinero ? _g2Corto(t) : _g2Num(t)) : '') + '</div>'
-      + '<div class="g2-pila">' + (hb ? '<i style="height:' + hb + 'px;background:' + GRUPO_COLOR['26'] + '"></i>' : '') + (ha ? '<i style="height:' + ha + 'px;background:' + GRUPO_COLOR['18'] + '"></i>' : '') + '</div></div>'
-      + '<div class="g2-col-m">' + _g2MesCorto(x.mes) + '</div></div>';
-  }).join('');
-  return '<div class="g2-graf" role="img" aria-label="' + titulo + ' por mes"><div class="g2-cols" style="--g2-n:' + meses.length + '">' + cols + '</div></div>';
+    return { clave: x.mes, hoy: i === ult, partes: [{ v: va, color: GRUPO_COLOR['18'] }, { v: vb, color: GRUPO_COLOR['26'] }],
+      arriba: t > 0 ? (dinero ? _g2Corto(t) : _g2Num(t)) : '', abajo: _g2MesCorto(x.mes),
+      tip: _g2MesNom(x.mes) + ' ' + x.mes.slice(0, 4) + (i === ult ? ' (hasta hoy)' : '') + ': PAGASI 18 ' + f(va) + ' · PAGASI 26 ' + f(vb) + ' · juntas ' + f(t) };
+  }), { aria: titulo + ' por mes' });
 }
 function _g2CabSec(titulo, sub, derecha){
   return '<div class="g2-sec-cab"><div><div class="g2-sec-t">' + titulo + '</div>' + (sub ? '<div class="g2-sec-s">' + sub + '</div>' : '') + '</div>' + (derecha || '') + '</div>';
@@ -229,6 +241,133 @@ function _g2Historico(x){
     + '</div></div>';
 }
 
+// ══ Más gráficos (21-nov, Adam: "ponme más data… ponme charts etc") ══
+var G2_VERDE = '#16A34A', G2_AMBAR = '#F59E0B', G2_ROJO = '#E11D48';
+var G2_DIA = ['dom','lun','mar','mié','jue','vie','sáb'];
+function _g2FechaLarga(iso){ var d = new Date(String(iso) + 'T12:00:00Z'); return isNaN(d.getTime()) ? '' : G2_DIA[d.getUTCDay()] + ' ' + d.getUTCDate() + ' de ' + G2_MES[d.getUTCMonth()]; }
+// ── Cobrado día por día (últimos 30 días) ──
+function _g2Dias(a, b, j){
+  var lista = j.dias, n = lista.length, ult = n - 1, mejor = null, suma = 0;
+  lista.forEach(function(x){ var t = _g2Total(x); suma += t; if(!mejor || t > _g2Total(mejor)) mejor = x; });
+  var cols = lista.map(function(x, i){
+    var va = _g2Total(a.dias[i]), vb = _g2Total(b.dias[i]), d = +x.dia.slice(8, 10);
+    var finDe = new Date(x.dia + 'T12:00:00Z').getUTCDay() === 0;
+    return { clave: x.dia, hoy: i === ult, partes: [{ v: va, color: GRUPO_COLOR['18'] }, { v: vb, color: GRUPO_COLOR['26'] }],
+      arriba: '', abajo: d === 1 ? '<b>1</b>' : (finDe ? '<span class="g2-dom">' + d + '</span>' : String(d)),
+      tip: _g2FechaLarga(x.dia) + (i === ult ? ' (hasta ahora)' : '') + ': ' + _g2Plata0(va + vb) + ' (cuotas ' + _g2Plata0(x.cuotas) + ', iniciales ' + _g2Plata0(x.iniciales) + ') · PAGASI 18 ' + _g2Plata0(va) + ' · PAGASI 26 ' + _g2Plata0(vb) };
+  });
+  var cab = '<div class="g2-mini g2-mini-3">'
+    + '<div><div class="g2-rot">En 30 días</div><div class="g2-val g2-val-s" data-g2="dias-total">' + _g2Plata0(suma) + '</div></div>'
+    + '<div><div class="g2-rot">Promedio por día</div><div class="g2-val g2-val-s">' + _g2Plata0(suma / (n || 1)) + '</div></div>'
+    + '<div><div class="g2-rot">El mejor día</div><div class="g2-val g2-val-s">' + _g2Plata0(_g2Total(mejor)) + '</div><div class="g2-nota">' + (mejor ? _g2FechaLarga(mejor.dia) : '') + '</div></div></div>';
+  return '<div class="g2-card g2-sec" data-g2-sec="dias">' + _g2CabSec('Cobrado día por día', 'Los últimos 30 días, del ' + _g2FechaLarga(lista[0] && lista[0].dia).replace(/^\S+ /, '') + ' a hoy (los domingos en gris)', _g2Ley)
+    + cab + _g2Barras(cols, { aria: 'Cobrado cada día de los últimos 30', ancho: 16, alto: 190 }) + '</div>';
+}
+// ── Cómo pagan: lo cobrado este mes por forma de pago ──
+var G2_METODO = { banco: 'Banco (transferencia y pago móvil)', binance: 'Binance', efectivo: 'Efectivo', zelle: 'Zelle', concesionario: 'En el concesionario (iniciales)', otros: 'Otras' };
+function _g2Metodos(a, b, j, hoy){
+  var claves = Object.keys(G2_METODO).filter(function(k){ return (j.metodos[k] || 0) > 0; }).sort(function(x, y){ return j.metodos[y] - j.metodos[x]; });
+  var total = claves.reduce(function(s, k){ return s + j.metodos[k]; }, 0), max = claves.length ? j.metodos[claves[0]] : 1;
+  var filas = claves.map(function(k){
+    var v = j.metodos[k], va = a.metodos[k] || 0, vb = b.metodos[k] || 0;
+    return '<div class="g2-fila" data-g2-metodo="' + k + '" title="PAGASI 18: ' + _g2Plata0(va) + ' · PAGASI 26: ' + _g2Plata0(vb) + '"><div class="g2-fila-r"><span>' + G2_METODO[k] + '</span><b>' + _g2Plata0(v) + ' <em>' + _g2Pct(v, total) + '</em></b></div>'
+      + '<div class="g2-fila-b"><i style="width:' + (va * 100 / max).toFixed(2) + '%;background:' + GRUPO_COLOR['18'] + '"></i><i style="width:' + (vb * 100 / max).toFixed(2) + '%;background:' + GRUPO_COLOR['26'] + '"></i></div></div>';
+  }).join('');
+  var m = j.cobro.mes;
+  return '<div class="g2-card g2-sec" data-g2-sec="metodos">' + _g2CabSec('Cómo pagan', 'Lo cobrado en ' + _g2MesNom(String(hoy).slice(0, 7)) + ' por forma de pago', '')
+    + (filas ? '<div class="g2-filas">' + filas + '</div>' : '<div class="g2-nota">Todavía no hay cobros este mes.</div>')
+    + '<div class="g2-reps g2-reps-1">' + _g2Reparto('Cuotas o iniciales', m.cuotas, m.iniciales, true, { a: 'Cuotas', b: 'Iniciales', na: 'Cuotas', nb: 'Iniciales', ca: '#6366F1', cb: '#F59E0B' })
+    + _g2Reparto('Por compañía', _g2Total(a.cobro.mes), _g2Total(b.cobro.mes), true) + '</div></div>';
+}
+// ── Cómo se pagan las cuotas: a tiempo, tarde o sin pagar (por el mes en que vencían) ──
+function _g2Puntualidad(a, b, j){
+  var lista = j.puntualidad, ult = lista.length - 1;
+  var pct = function(x, k){ return x && x.monto > 0 ? Math.round(x[k] * 100 / x.monto) : 0; };
+  var cols = lista.map(function(x, i){
+    var t = x.monto || 0;
+    return { clave: x.mes, hoy: i === ult, partes: [{ v: x.aTiempo, color: G2_VERDE }, { v: x.tarde, color: G2_AMBAR }, { v: x.sinPagar, color: G2_ROJO }],
+      arriba: t > 0 ? pct(x, 'aTiempo') + '%' : '', abajo: _g2MesCorto(x.mes),
+      tip: _g2MesNom(x.mes) + (i === ult ? ' (las que ya vencieron)' : '') + ': ' + _g2Num(x.cuotas) + ' cuotas por ' + _g2Plata0(t) + ' · a tiempo ' + pct(x, 'aTiempo') + '% · tarde ' + pct(x, 'tarde') + '% · sin pagar ' + pct(x, 'sinPagar') + '%' };
+  });
+  var x = lista[ult] || {}, xa = a.puntualidad[ult], xb = b.puntualidad[ult];
+  var ley = '<div class="g2-ley"><span><b style="background:' + G2_VERDE + '"></b>A tiempo</span><span><b style="background:' + G2_AMBAR + '"></b>Tarde</span><span><b style="background:' + G2_ROJO + '"></b>Sin pagar</span></div>';
+  return '<div class="g2-card g2-sec" data-g2-sec="puntualidad">' + _g2CabSec('Cómo se pagan las cuotas', 'Las cuotas que vencieron cada mes, las dos compañías', ley)
+    + _g2Barras(cols, { aria: 'Cuotas pagadas a tiempo, tarde y sin pagar por mes', max: 1e-9 + Math.max.apply(null, [1].concat(lista.map(function(y){ return y.monto || 0; }))) })
+    + '<div class="g2-nota g2-nota-f">En ' + _g2MesNom(x.mes) + ' se pagó a tiempo el <b data-g2="puntual-mes">' + pct(x, 'aTiempo') + '%</b> de lo que venció; ' + pct(x, 'tarde') + '% llegó tarde y ' + pct(x, 'sinPagar') + '% sigue sin pagar. '
+    + 'A tiempo: PAGASI 18 ' + pct(xa, 'aTiempo') + '% · PAGASI 26 ' + pct(xb, 'aTiempo') + '%.</div></div>';
+}
+// ── Mora según el mes de venta (cómo están hoy las motos vendidas cada mes) ──
+function _g2Cosechas(a, b, j, desde){
+  while(desde < j.cosechas.length - 3 && (j.cosechas[desde].vendidos || 0) < 10) desde++;   // un mes con 3 ventas daba porcentajes engañosos
+  var lista = j.cosechas.slice(desde), ult = lista.length - 1, peor = null;
+  var pct = function(x){ return x && x.vendidos > 0 ? Math.round(x.enMora * 1000 / x.vendidos) / 10 : 0; };
+  lista.forEach(function(x){ if(x.vendidos >= 10 && (!peor || pct(x) > pct(peor))) peor = x; });
+  var max = Math.max.apply(null, [5].concat(lista.map(pct)));
+  var cols = lista.map(function(x, i){
+    var p = pct(x), xa = a.cosechas[desde + i] || {}, xb = b.cosechas[desde + i] || {};
+    var p30 = x.vendidos > 0 ? x.mas30 * 100 / x.vendidos : 0;
+    return { clave: x.mes, hoy: i === ult, partes: [{ v: Math.max(0, p - p30), color: '#FDA4AF' }, { v: p30, color: G2_ROJO }],
+      arriba: x.vendidos ? p.toLocaleString('es-VE') + '%' : '', abajo: _g2MesCorto(x.mes),
+      tip: 'Vendidas en ' + _g2MesNom(x.mes) + ': ' + _g2Num(x.vendidos) + ' · hoy en mora ' + _g2Num(x.enMora) + ' (' + _g2Num(x.mas30) + ' con más de 30 días) · PAGASI 18 ' + _g2Num(xa.enMora) + ' de ' + _g2Num(xa.vendidos) + ' · PAGASI 26 ' + _g2Num(xb.enMora) + ' de ' + _g2Num(xb.vendidos) };
+  });
+  var ley = '<div class="g2-ley"><span><b style="background:#FDA4AF"></b>1 a 30 días</span><span><b style="background:' + G2_ROJO + '"></b>Más de 30 días</span></div>';
+  return '<div class="g2-card g2-sec" data-g2-sec="cosechas">' + _g2CabSec('Mora según el mes de venta', 'De las motos vendidas cada mes, qué porcentaje está hoy en mora', ley)
+    + _g2Barras(cols, { aria: 'Porcentaje en mora por mes de venta', max: max })
+    + (peor ? '<div class="g2-nota g2-nota-f">Las vendidas en <b>' + _g2MesNom(peor.mes) + '</b> son las que peor pagan: ' + pct(peor).toLocaleString('es-VE') + '% en mora (' + _g2Num(peor.enMora) + ' de ' + _g2Num(peor.vendidos) + '). Las más nuevas todavía tienen pocas cuotas vencidas.</div>' : '')
+    + '</div>';
+}
+// ── La venta promedio (últimos 90 días) ──
+function _g2Promedio(a, b, j){
+  var col = function(x){
+    var p = x && x.promedio, n = p ? p.ventas : 0;
+    if(!n) return ['—', '—', '—', '—', '0'];
+    return [_g2Plata0(p.precio / n), _g2Plata0(p.inicial / n) + ' <em>' + (p.precio > 0 ? Math.round(p.inicial * 100 / p.precio) : 0) + '%</em>', _g2Plata0(p.cuota / n), (Math.round(p.plazo / n * 10) / 10).toLocaleString('es-VE') + ' meses', _g2Num(n)];
+  };
+  var cj = col(j), ca = col(a), cb = col(b), rot = ['Precio de la moto', 'Inicial', 'Cuota quincenal', 'Plazo', 'Ventas contadas'];
+  var filas = rot.map(function(r, i){ return '<tr><th>' + r + '</th><td data-g2="prom-' + i + '"><b>' + cj[i] + '</b></td><td>' + ca[i] + '</td><td>' + cb[i] + '</td></tr>'; }).join('');
+  return '<div class="g2-card g2-sec" data-g2-sec="promedio">' + _g2CabSec('La venta promedio', 'De las motos vendidas en los últimos 90 días', '')
+    + '<div class="g2-tabla-w"><table class="g2-tabla"><thead><tr><th></th><th>Las dos</th><th><b style="background:' + GRUPO_COLOR['18'] + '"></b>18</th><th><b style="background:' + GRUPO_COLOR['26'] + '"></b>26</th></tr></thead><tbody>' + filas + '</tbody></table></div></div>';
+}
+// ── Los que más venden: concesionarios y modelos (se juntan por su clave) ──
+function _g2Juntar(la, lb, clave){
+  var m = {};
+  [[la, 'a'], [lb, 'b']].forEach(function(par){
+    (par[0] || []).forEach(function(x){
+      var k = String(x[clave] || '').toUpperCase(), y = m[k] || (m[k] = { clave: k, nombre: '', a: null, b: null });
+      y[par[1]] = x; if(x.nombre) y.nombre = x.nombre;
+    });
+  });
+  return Object.keys(m).map(function(k){ return m[k]; });
+}
+function _g2Ranking(titulo, sub, sec, filas, conMora){
+  var top = filas.slice(0, 10), max = top.length ? top[0].total : 1;
+  var html = top.map(function(f, i){
+    var moraTxt = '';
+    if(conMora){ var p = f.activos > 0 ? Math.round(f.enMora * 100 / f.activos) : 0; moraTxt = ' <em class="' + (p >= 10 ? 'g2-rojo-t' : '') + '">' + p + '% en mora</em>'; }
+    return '<div class="g2-fila" data-g2-' + sec + '="' + _g2Esc(f.clave) + '" title="' + _g2Esc(f.nombre + ': PAGASI 18 ' + f.va + ' · PAGASI 26 ' + f.vb + ' · este mes ' + f.mes) + '">'
+      + '<div class="g2-fila-r"><span><i class="g2-pos">' + (i + 1) + '</i>' + _g2Esc(f.nombre) + '</span><b>' + _g2Num(f.total) + moraTxt + '</b></div>'
+      + '<div class="g2-fila-b"><i style="width:' + (f.va * 100 / max).toFixed(2) + '%;background:' + GRUPO_COLOR['18'] + '"></i><i style="width:' + (f.vb * 100 / max).toFixed(2) + '%;background:' + GRUPO_COLOR['26'] + '"></i></div></div>';
+  }).join('');
+  return '<div class="g2-card g2-sec" data-g2-sec="' + sec + '">' + _g2CabSec(titulo, sub, _g2Ley) + (html ? '<div class="g2-filas">' + html + '</div>' : '<div class="g2-nota">Sin ventas todavía.</div>') + '</div>';
+}
+function _g2Concesionarios(a, b){
+  var filas = _g2Juntar(a.concesionarios, b.concesionarios, 'conc').map(function(y){
+    var A = y.a || {}, B = y.b || {};
+    return { clave: y.clave, nombre: y.clave ? (String(B.nombre || A.nombre || '').toUpperCase() || 'Concesionario ' + y.clave) : 'Sin concesionario', va: A.vendidos || 0, vb: B.vendidos || 0,
+      total: (A.vendidos || 0) + (B.vendidos || 0), mes: (A.mes || 0) + (B.mes || 0), activos: (A.activos || 0) + (B.activos || 0), enMora: (A.enMora || 0) + (B.enMora || 0) };
+  }).sort(function(x, y){ return y.total - x.total || x.nombre.localeCompare(y.nombre); });
+  return _g2Ranking('Los concesionarios que más venden', 'Motos vendidas desde el principio y cuántas de las que siguen pagando están en mora', 'conc', filas, true);
+}
+function _g2Modelos(a, b){
+  var filas = _g2Juntar(a.modelos, b.modelos, 'modelo').map(function(y){
+    var A = y.a || {}, B = y.b || {};
+    return { clave: y.clave, nombre: y.clave, va: A.vendidos || 0, vb: B.vendidos || 0, total: (A.vendidos || 0) + (B.vendidos || 0), mes: (A.mes || 0) + (B.mes || 0) };
+  }).sort(function(x, y){ return y.total - x.total || x.nombre.localeCompare(y.nombre); });
+  return _g2Ranking('Las motos más vendidas', 'Por modelo, desde el principio', 'modelo', filas, false);
+}
+var _g2Tiene = function(x, k){ return !!(x && x[k] != null); };
+function _g2Titulo(t){ return '<div class="g2-titulo">' + t + '</div>'; }
+
 function _grupoHtml(){
   var d = _grupo.datos;
   if(!d){
@@ -244,8 +383,19 @@ function _grupoHtml(){
       + _g2Reparto('Créditos en mora', a.enMora, b.enMora, false) + _g2Reparto('Monto vencido', a.vencido, b.vencido, true) + '</div></div>';
     // Lo nuevo solo si las dos lo traen (un servidor de antes no lo manda)
     if(_g2Completo(a) && _g2Completo(b) && _g2Completo(j) && a.meses.length === b.meses.length && a.meses.length >= 2){
+      var todo = ['dias', 'puntualidad', 'cosechas', 'metodos', 'promedio'].every(function(k){ return _g2Tiene(a, k) && _g2Tiene(b, k) && _g2Tiene(j, k); }) && Array.isArray(a.concesionarios) && Array.isArray(b.concesionarios);
       h += _g2Cobrado(a, b, j, d.hoy);
-      h += '<div class="g2-tres">' + _g2Ventas(a, b, j, d.hoy) + _g2Mora(a, b, j) + _g2Semana(a, b, j, d.hoy) + '</div>';
+      if(todo){
+        h += _g2Titulo('Cobranza');
+        h += '<div class="g2-fila-21">' + _g2Dias(a, b, j) + _g2Metodos(a, b, j, d.hoy) + '</div>';
+        h += '<div class="g2-tres">' + _g2Puntualidad(a, b, j) + _g2Mora(a, b, j) + _g2Semana(a, b, j, d.hoy) + '</div>';
+        h += _g2Titulo('Ventas');
+        h += '<div class="g2-tres">' + _g2Ventas(a, b, j, d.hoy) + _g2Cosechas(a, b, j, _g2Desde(a, b)) + _g2Promedio(a, b, j) + '</div>';
+        h += '<div class="g2-dos">' + _g2Concesionarios(a, b) + _g2Modelos(a, b) + '</div>';
+        h += _g2Titulo('Cada compañía');
+      } else {
+        h += '<div class="g2-tres">' + _g2Ventas(a, b, j, d.hoy) + _g2Mora(a, b, j) + _g2Semana(a, b, j, d.hoy) + '</div>';
+      }
     }
   } else {
     h += '<div class="g2-card g2-aviso"><div class="g2-falla">Falta una de las dos compañías, así que no hay total. Toca «Actualizar» para intentar otra vez.</div></div>';
@@ -254,6 +404,7 @@ function _grupoHtml(){
   h += '<div class="g2-pie"><b>Créditos activos:</b> los que están en cartera (al día o en mora). <b>Dinero en la calle:</b> lo que falta por cobrar de esos créditos, capital e intereses. '
     + '<b>En mora:</b> los que tienen al menos un día de atraso; el monto vencido es el saldo de sus cuotas ya vencidas. '
     + '<b>Lo que entró:</b> los pagos confirmados, cuotas e iniciales, por la fecha del pago. <b>Motos vendidas:</b> los créditos otorgados, por su fecha (sin los anulados ni las solicitudes sin aprobar). '
+    + '<b>Cuotas a tiempo:</b> lo pagado hasta el día en que vencía la cuota; tarde, lo pagado después (los pagos se aplican a la cuota más vieja primero). '
     + 'Son las mismas cuentas del Dashboard de cada compañía.</div>';
   return '<div class="' + (_grupo.pidiendo ? 'g2-viejo' : '') + '">' + h + '</div>';
 }
