@@ -270,7 +270,7 @@ ok('las herramientas que ve Claude: ventas, cobros, cartera, créditos, puntuali
   const t0 = Date.now(); let n = 0; while (AI.tope('u1', t0 + n * 1000)) n++;
   ok('tope por persona: 12 preguntas cada 5 minutos', n === 12 && AI.tope('u1', t0 + 6 * 60 * 1000) && AI.tope('u2', t0));
   ok('cada error tiene su mensaje en sencillo', ['clave', 'saldo', 'ocupado', 'tiempo', 'red', 'topeDia', 'apagada', 'claude', 'error'].every(k => typeof AI.MENSAJES[k] === 'string' && AI.MENSAJES[k].length > 20));
-  ok('lo que se aparta del tope mientras una pregunta está en curso: más con Opus', AI.reservaDe('normal') === 0.6 && AI.reservaDe('maxima') === 1.8 && AI.reservaDe('otra') === 0.6);
+  ok('lo que se aparta del tope mientras una pregunta está en curso cubre lo más que puede costar (8 vueltas con toda la salida): más con Opus', AI.reservaDe('normal') === 0.9 && AI.reservaDe('maxima') === 2.4 && AI.reservaDe('otra') === 0.9 && AI.RONDAS * AI.CALIDADES.normal.tope * 10 / 1e6 < 0.9 && AI.RONDAS * AI.CALIDADES.maxima.tope * 20 / 1e6 < 2.4);
 
   // ══ 3. La puerta del servidor ══
   const idx = src('functions/index.js'), ruta = idx.slice(idx.indexOf("if (/\\/equipo\\/?$/.test(req.path || '')) {"), idx.indexOf("if (/\\/aliados\\/?$/.test(req.path || '')) {"));

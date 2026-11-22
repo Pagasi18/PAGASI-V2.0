@@ -18,17 +18,19 @@ const cerebro = require('./cerebro');
 
 const URL = 'https://api.anthropic.com/v1/messages';
 // La calidad se puede subir a Opus en config/asistente.calidad.ai = 'maxima' (si no, Sonnet)
+// tope = max_tokens: cuenta el razonamiento (thinking) Y la respuesta con su tabla y gráficos; con 4.000 se cortaba
 const CALIDADES = {
-  normal: { modelo: 'claude-sonnet-5-5', tope: 4000, extra: { output_config: { effort: 'medium' } } },
-  maxima: { modelo: 'claude-opus-5-5', tope: 6000, extra: {} }
+  normal: { modelo: 'claude-sonnet-5-5', tope: 8000, extra: { output_config: { effort: 'medium' } } },
+  maxima: { modelo: 'claude-opus-5-5', tope: 12000, extra: {} }
 };
 const RONDAS = 8;                 // vueltas de consultas como mucho por pregunta
 const PLAZO_MS = 100 * 1000;      // toda la pregunta, desde que entra al servidor: la puerta pública corta a los 120 s
 const VUELTA_MIN_MS = 20 * 1000;  // con menos que esto ya no se empieza otra vuelta
 const LLAMADA_MS = 60 * 1000;     // una sola llamada a Claude, como mucho
 const MAX_PREGUNTA = 1000;
-// Lo que se aparta del tope diario mientras una pregunta está en curso (lo más que podría costar)
-const RESERVA = { normal: 0.6, maxima: 1.8 };
+// Lo que se aparta del tope diario mientras una pregunta está en curso: lo más que podría costar
+// (8 vueltas con toda la salida: Sonnet 8 × 8.000 × $10/M ≈ $0,64 + la entrada; Opus 8 × 12.000 × $20/M ≈ $1,92 + la entrada)
+const RESERVA = { normal: 0.9, maxima: 2.4 };
 const reservaDe = calidad => RESERVA[calidad] || RESERVA.normal;
 
 const SISTEMA = `Eres «AI», la analista de datos de PAGASI para los administradores de la empresa. Contestas preguntas sobre los números del negocio usando SOLO las consultas (herramientas) que tienes.
