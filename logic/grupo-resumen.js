@@ -283,10 +283,11 @@
     redondear([promedio], ['precio', 'inicial', 'cuota', 'plazo']);
     ['hoy', 'semana', 'mes'].forEach(function(k){ METODOS.forEach(function(m){ metodosPor[k][m] = centavos(metodosPor[k][m]); }); });
     r.cobro = cobro; r.meses = meses; r.tramos = tramos; r.semana = semana; r.historico = historico;
-    r.dias = dias; r.puntualidad = puntualidad; r.puntualidadQ = puntualidadQ; r.cosechas = cosechas; r.metodos = metodos; r.metodosPor = metodosPor; r.promedio = promedio;
+    // «dias» sigue con los últimos 30: la pantalla publicada antes del 21-nov lo suma como «En 30 días»
+    r.dias = dias.slice(-30); r.diasLargo = dias; r.puntualidad = puntualidad; r.puntualidadQ = puntualidadQ; r.cosechas = cosechas; r.metodos = metodos; r.metodosPor = metodosPor; r.promedio = promedio;
     // Los concesionarios y los modelos van por compañía (la pantalla los junta por su clave)
     r.concesionarios = Object.keys(porConc).map(function(k){ return porConc[k]; }).sort(function(a, b){ return b.vendidos - a.vendidos || a.conc.localeCompare(b.conc); });
-    r.modelos = Object.keys(porModelo).map(function(k){ return porModelo[k]; }).sort(function(a, b){ return b.vendidos - a.vendidos || a.modelo.localeCompare(b.modelo); }).slice(0, 15);
+    r.modelos = Object.keys(porModelo).map(function(k){ return porModelo[k]; }).sort(function(a, b){ return b.vendidos - a.vendidos || a.modelo.localeCompare(b.modelo); });   // todos: «Este mes» ordena por otra cifra
     return r;
   }
 

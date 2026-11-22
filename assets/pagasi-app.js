@@ -3621,6 +3621,8 @@ function nav(p){
       _pushNavState(p);
     }
   }
+  // Al salir de PAGASI 18 + 26 o de la AI, sus gráficos se destruyen (si no, Chart.js los deja vivos vigilando la página)
+  if(S.page !== p){ if(S.page==='grupo' && typeof grupoGraficosFuera==='function') grupoGraficosFuera(); if(S.page==='ai' && typeof aiGraficosFuera==='function') aiGraficosFuera(); }
   if(typeof _pagosIdxInvalidar==='function') _pagosIdxInvalidar();   // cada redibujo parte de un indice fresco
   S.page=p;
   S.clienteFiltro='';
@@ -4585,6 +4587,8 @@ function doLogout() {
   if(typeof pgMobileMenuClose==='function')pgMobileMenuClose({navigation:true});
   // Log antes de cerrar (mientras S.currentUser aún existe)
   try { if(typeof logActividad === 'function') logActividad('logout','auth',(S.currentUser&&S.currentUser.uid)||'',null); } catch(e){}
+  // La conversación con la AI no se queda en la pestaña para el que entre después
+  try { if(typeof aiOlvidar === 'function') aiOlvidar(); } catch(e){}
   // Cerrar perfil overlay si está abierto
   var overlay = document.getElementById('profile-overlay');
   if (overlay) overlay.style.display = 'none';

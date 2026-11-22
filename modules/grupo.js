@@ -235,8 +235,10 @@ function _g2Metodos(a, b, j){
 }
 // ── Cómo se pagan las cuotas: a tiempo, tarde o sin pagar ──
 function _g2Puntualidad(a, b, j){
-  var pl = _g2PuntualLista(a, b, j), lista = pl.lista || [], x = lista[lista.length - 1] || {};
-  var ult = j.puntualidad.length - 1, xa = a.puntualidad[ult], xb = b.puntualidad[ult], xm = j.puntualidad[ult] || {};
+  // El primer día del período (el 1, o el 16 en quincenas) todavía no vence ninguna cuota: se muestra el anterior
+  var conCuotas = function(l){ var k = l.length - 1; while(k > 0 && !((l[k] || {}).monto > 0)) k--; return k; };
+  var pl = _g2PuntualLista(a, b, j), lista = pl.lista || [], x = lista[conCuotas(lista)] || {};
+  var ult = conCuotas(j.puntualidad), xa = a.puntualidad[ult], xb = b.puntualidad[ult], xm = j.puntualidad[ult] || {};
   var quien = _g2Vista.puntualEmp === 'juntas' ? 'las dos compañías' : 'PAGASI ' + _g2Vista.puntualEmp;
   var periodo = pl.q ? 'en la ' + _g2NomQuincena(x.quincena || '') : 'en ' + _g2MesNom(x.mes);
   var ley = '<div class="g2-ley"><span><b style="background:' + G2_VERDE + '"></b>A tiempo</span><span><b style="background:' + G2_AMBAR + '"></b>Tarde</span><span><b style="background:' + G2_ROJO + '"></b>Sin pagar</span></div>';

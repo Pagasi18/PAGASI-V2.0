@@ -45,7 +45,9 @@ function _g2SegPeriodo(clave, opciones){
   return _g2Seg(clave, opciones.map(function(p){ return [p, G2_PERIODO_TXT[p]]; }), _g2Vista[clave]);
 }
 function _g2SegEmpresa(clave){ return _g2Seg(clave, [['juntas', 'Las dos'], ['18', '18'], ['26', '26']], _g2Vista[clave]); }
-function _g2Lienzo(id, alto){ return '<div class="g2-lienzo" style="height:' + alto + 'px"><canvas id="' + id + '" role="img"></canvas></div>'; }
+var G2_NOMBRE_LIENZO = { 'g2c-cobro': 'Gráfico de lo cobrado', 'g2c-ventas': 'Gráfico de las motos vendidas', 'g2c-puntual': 'Gráfico de las cuotas a tiempo, tarde y sin pagar', 'g2c-metodos': 'Gráfico de las formas de pago',
+  'g2c-mora': 'Gráfico de la mora por días de atraso', 'g2c-cosechas': 'Gráfico de la mora según el mes de venta', 'g2c-conc': 'Gráfico de los concesionarios que más venden', 'g2c-modelo': 'Gráfico de las motos más vendidas' };
+function _g2Lienzo(id, alto){ var nom = G2_NOMBRE_LIENZO[id] || 'Gráfico'; return '<div class="g2-lienzo" style="height:' + alto + 'px"><canvas id="' + id + '" role="img" aria-label="' + nom + '. Pasa el mouse o toca cada barra para ver el detalle."></canvas></div>'; }
 
 // ── Las series de Día / Quinc. / Mes ──
 function _g2Quincena(iso){ return String(iso).slice(0, 7) + '-' + (+String(iso).slice(8, 10) <= 15 ? '1' : '2'); }
@@ -65,7 +67,8 @@ function _g2Serie(a, b, periodo){
   }
   if(periodo === 'quincenal'){
     var orden = [], ga = {}, gb = {};
-    (a.dias || []).forEach(function(x, i){ var q = _g2Quincena(x.dia); if(!ga[q]){ ga[q] = []; gb[q] = []; orden.push(q); } ga[q].push(x); gb[q].push((b.dias || [])[i]); });
+    var la = a.diasLargo || a.dias || [], lb = b.diasLargo || b.dias || [];
+    la.forEach(function(x, i){ var q = _g2Quincena(x.dia); if(!ga[q]){ ga[q] = []; gb[q] = []; orden.push(q); } ga[q].push(x); gb[q].push(lb[i]); });
     orden = orden.slice(-8);
     filas = orden.map(function(q){ return { etiqueta: +q.slice(5, 7) + '/Q' + q.slice(-1), titulo: _g2NomQuincena(q) + ' ' + q.slice(0, 4), a: _g2SumaFilas(ga[q]), b: _g2SumaFilas(gb[q]) }; });
     return { filas: filas, unidad: 'quincena', sub: 'Últimas ' + filas.length + ' quincenas' };
@@ -103,7 +106,8 @@ function _g2OpcionesBarras(t, o){
   if(o.max != null) ejeValor.max = o.max;
   var ejeCat = { stacked: true, grid: { display: false }, border: { display: false }, ticks: { color: t.ink3, font: { size: 9 }, autoSkip: true, maxRotation: 0 } };
   return { responsive: true, maintainAspectRatio: false, indexAxis: o.horizontal ? 'y' : 'x',
-    interaction: { mode: 'index', intersect: false },
+    // en barras acostadas el globito busca la fila por la altura del mouse (Chart.js mira el eje x si no se dice)
+    interaction: { mode: 'index', intersect: false, axis: o.horizontal ? 'y' : 'x' },
     plugins: { legend: { display: false }, tooltip: Object.assign({}, t.tip, { callbacks: o.callbacks || {} }) },
     scales: o.horizontal ? { x: ejeValor, y: Object.assign({}, ejeCat, { ticks: Object.assign({}, ejeCat.ticks, { font: { size: 10 }, autoSkip: false }) }) } : { x: ejeCat, y: ejeValor } };
 }
@@ -250,9 +254,9 @@ function _g2RankingGraf(a, b, tipo, sinAnimar){
 function grupoGraficos(o){
   o = o || {};
   var d = typeof _grupo !== 'undefined' && _grupo.datos;
-  if(!d || !d.juntas || !d.empresas) return;
+  if(!d || !d.juntas || !d.empresas){ grupoGraficosFuera(); return; }
   var a = d.empresas['18'], b = d.empresas['26'], j = d.juntas, sa = !!o.sinAnimar;
-  if(!_g2ConGraficos(a, b, j)) return;
+  if(!_g2ConGraficos(a, b, j)){ grupoGraficosFuera(); return; }
   _g2CobroGraf(a, b, sa);
   _g2VentasGraf(a, b, sa);
   _g2PuntualGraf(a, b, j, sa);
@@ -275,7 +279,9 @@ function grupoVista(clave, valor){
   var sec = G2_TARJETA[clave], viejo = typeof document !== 'undefined' && document.querySelector ? document.querySelector('[data-g2-sec="' + sec + '"]') : null;
   var a = d.empresas['18'], b = d.empresas['26'], j = d.juntas;
   var html = _g2Tarjeta(sec, a, b, j, d.hoy);
+  var conFoco = !!(viejo && typeof document !== 'undefined' && document.activeElement && viejo.contains && viejo.contains(document.activeElement));
   if(viejo && html && 'outerHTML' in viejo) viejo.outerHTML = html;
+  if(conFoco){ var btn = document.querySelector('[data-g2-seg="' + clave + '"] button.on'); if(btn && btn.focus) try { btn.focus({ preventScroll: true }); } catch(e){} }
   var dibujar = {
     cobrado: function(){ _g2CobroGraf(a, b); }, ventas: function(){ _g2VentasGraf(a, b); }, puntualidad: function(){ _g2PuntualGraf(a, b, j); },
     metodos: function(){ _g2MetodosGraf(a, b, j); }, mora: function(){ _g2MoraGraf(a, b, j); }, cosechas: function(){ _g2CosechasGraf(a, b, j, _g2Desde(a, b)); },

@@ -113,6 +113,19 @@ const cb = (c, nombre, it) => c.config.options.plugins.tooltip.callbacks[nombre]
 ctx.grupoGraficos({});
 ok('se crean los 8 gráficos: lo cobrado, motos vendidas, cuotas a tiempo, formas de pago, mora por días, mora por mes de venta, concesionarios y modelos', vivos().length === 8 && ['cobro', 'ventas', 'puntual', 'metodos', 'mora', 'cosechas', 'conc', 'modelo'].every(k => !!de(k)));
 ok('...de barras como el Dashboard (la mora por días, los concesionarios y los modelos, acostadas) y una torta para las formas de pago', de('cobro').config.type === 'bar' && de('metodos').config.type === 'doughnut' && ['mora', 'conc', 'modelo'].every(k => de(k).config.options.indexAxis === 'y') && de('ventas').config.options.indexAxis === 'x');
+ok('las barras acostadas buscan la fila por la altura del mouse (axis «y»); las paradas, por el ancho (revisión 21-nov: el globito caía en otra fila)', ['mora', 'conc', 'modelo'].every(k => de(k).config.options.interaction.axis === 'y') && ['cobro', 'ventas', 'puntual', 'cosechas'].every(k => de(k).config.options.interaction.axis === 'x'));
+ok('cada gráfico tiene nombre para el lector de pantalla', ['cobro', 'ventas', 'puntual', 'metodos', 'mora', 'cosechas', 'conc', 'modelo'].every(k => new RegExp('<canvas id="g2c-' + k + '" role="img" aria-label="Gráfico de [^"]+"').test(pantalla)));
+ok('al salir del módulo (nav a otra página) se destruyen sus gráficos y los de la AI', /if\(S\.page !== p\)\{ if\(S\.page==='grupo' && typeof grupoGraficosFuera==='function'\) grupoGraficosFuera\(\); if\(S\.page==='ai' && typeof aiGraficosFuera==='function'\) aiGraficosFuera\(\); \}/.test(fs.readFileSync(path.join(ROOT, 'assets/pagasi-app.js'), 'utf8')));
+ok('al tocar un botón, el foco vuelve al botón marcado de ese control (la tarjeta se reemplaza entera)', /btn\.focus\(\{ preventScroll: true \}\)/.test(fs.readFileSync(path.join(ROOT, 'modules/grupo-graficos.js'), 'utf8')));
+ok('«Cómo se pagan las cuotas» el día 1: el mes de hoy todavía no tiene cuotas vencidas y el número grande es el del mes anterior, no «0%»', (() => {
+  const vacio = { cuotas: 0, monto: 0, aTiempo: 0, tarde: 0, sinPagar: 0 };
+  const pun = [Object.assign({ mes: '2026-10' }, vacio, { cuotas: 4, monto: 100, aTiempo: 90, tarde: 10 }), Object.assign({ mes: '2026-11' }, vacio)];
+  const a2 = Object.assign({}, A, { puntualidad: pun }), b2 = Object.assign({}, B, { puntualidad: pun }), j2 = Object.assign({}, DATOS.juntas, { puntualidad: pun });
+  const viejo = vm.runInContext('_g2Vista.puntual', ctx); vm.runInContext('_g2Vista.puntual = "mensual"; _g2Vista.puntualEmp = "juntas";', ctx);
+  const h = vm.runInContext('_g2Puntualidad', ctx)(a2, b2, j2);
+  vm.runInContext('_g2Vista.puntual = ' + JSON.stringify(viejo), ctx);
+  return /90% a tiempo/.test(h) && /en octubre/.test(h) && !/>0% a tiempo/.test(h);
+})());
 const desde = vm.runInContext('_g2Desde', ctx)(A, B);
 const totMes = x => (+x.cuotas || 0) + (+x.iniciales || 0);
 ok('lo cobrado empieza por Mes: una barra por mes desde el primero con datos, 18 abajo y 26 arriba', de('cobro').config.data.labels.length === A.meses.length - desde && suma(datos(de('cobro'), 0)) === suma(A.meses.slice(desde).map(totMes)) && suma(datos(de('cobro'), 1)) === suma(B.meses.slice(desde).map(totMes)) && de('cobro').config.data.datasets[0].label === 'PAGASI 18');
@@ -140,9 +153,9 @@ ok('...la tarjeta se redibuja con «Día» marcado y el total de esos 30 días a
 ok('...y el globito dice el día de la semana', /^(dom|lun|mar|mié|jue|vie|sáb) \d+ de [a-z]+ \(hasta hoy\)$/.test(cb(de('cobro'), 'title', ultimo(30))));
 ctx.grupoVista('cobro', 'quincenal');
 const quinc = iso => iso.slice(0, 7) + '-' + (+iso.slice(8, 10) <= 15 ? '1' : '2');
-const ultimasQ = [...new Set(A.dias.map(x => quinc(x.dia)))].slice(-8);
-ok('Quinc.: las últimas 8 quincenas, cada una con la suma de sus días (como «11/Q2» en el Dashboard)', de('cobro').config.data.labels.length === 8 && de('cobro').config.data.labels[7] === (+HOY.slice(5, 7)) + '/Q' + (+HOY.slice(8, 10) <= 15 ? 1 : 2) && suma(datos(de('cobro'), 0)) === suma(A.dias.filter(x => ultimasQ.includes(quinc(x.dia))).map(totMes)) && /^(1ª|2ª) quincena de [a-z]+ \d{4} \(hasta hoy\)$/.test(cb(de('cobro'), 'title', ultimo(8))));
-ok('...las 8 quincenas están completas en los 135 días que manda el servidor', A.dias.filter(x => quinc(x.dia) === ultimasQ[0])[0].dia.slice(8, 10) === (ultimasQ[0].slice(-1) === '1' ? '01' : '16'));
+const ultimasQ = [...new Set(A.diasLargo.map(x => quinc(x.dia)))].slice(-8);
+ok('Quinc.: las últimas 8 quincenas, cada una con la suma de sus días (como «11/Q2» en el Dashboard)', de('cobro').config.data.labels.length === 8 && de('cobro').config.data.labels[7] === (+HOY.slice(5, 7)) + '/Q' + (+HOY.slice(8, 10) <= 15 ? 1 : 2) && suma(datos(de('cobro'), 0)) === suma(A.diasLargo.filter(x => ultimasQ.includes(quinc(x.dia))).map(totMes)) && /^(1ª|2ª) quincena de [a-z]+ \d{4} \(hasta hoy\)$/.test(cb(de('cobro'), 'title', ultimo(8))));
+ok('...las 8 quincenas están completas en los 135 días que manda el servidor («diasLargo»)', A.diasLargo.filter(x => quinc(x.dia) === ultimasQ[0])[0].dia.slice(8, 10) === (ultimasQ[0].slice(-1) === '1' ? '01' : '16'));
 ctx.grupoVista('ventas', 'mensual');
 ok('motos vendidas por Mes: las del mes de cada crédito', suma(datos(de('ventas'), 0)) === suma(A.meses.slice(desde).map(x => x.ventas)) && suma(datos(de('ventas'), 1)) === suma(B.meses.slice(desde).map(x => x.ventas)));
 ctx.grupoVista('puntual', 'quincenal');
