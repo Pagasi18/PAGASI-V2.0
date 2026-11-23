@@ -2072,6 +2072,8 @@ function creditoHTML(c){
   var atrasado = est._nVencidas > 0;
   var completado = est.cuotasPagadas >= est.totalCuotas;
   var cuotaPlena = parseFloat(c.cuotaQ||c.cuota||0);
+  // la cuota que toca con su cargo extra (23-nov-2026, el aceite del 440): el ledger ya la trae en est._prox
+  var cuotaToca = (est && est._prox && est._prox.monto > 0) ? est._prox.monto : cuotaPlena;
   var h = '';
   if(S.creditos.length > 1) h += '<div class="cred-titulo"><b>' + esc(moto) + '</b> · ' + esc(c.id) + '</div>';
 
@@ -2083,7 +2085,7 @@ function creditoHTML(c){
   else if(est._prox){
     var dd = diasHasta(est._prox.fechaVence);
     sub = (dd === 0 ? 'Vence hoy' : dd === 1 ? 'Vence mañana' : dd > 1 ? 'Vence en ' + dd + ' días' : 'Vence el ' + fechaLarga(est._prox.fechaVence)) + (dd > 1 ? ' · ' + fechaCorta(est._prox.fechaVence) : '');
-    if(est._prox.pagado > 0.001 && cuotaPlena > 0) sub += ' · ya abonaste ' + fmt(est._prox.pagado) + ' de ' + fmt(cuotaPlena);
+    if(est._prox.pagado > 0.001 && cuotaToca > 0) sub += ' · ya abonaste ' + fmt(est._prox.pagado) + ' de ' + fmt(cuotaToca);
   }
   h += '<div class="fila">'
     + '<section class="card c3 rev"><div class="et">' + (completado ? 'Crédito pagado' : (atrasado ? 'Debes ahora' : 'Tu próximo pago')) + '</div>'
@@ -2093,7 +2095,7 @@ function creditoHTML(c){
     +   '<div class="sub" style="margin-top:8px"><span class="pill ' + (completado ? 'azul' : atrasado ? 'mal' : 'bien') + '">' + (completado?'Completado':(atrasado?'En atraso':'Al día')) + '</span></div></section>'
     + '<section class="card c3 rev"><div class="et">Ya pagaste</div><div class="num money" style="color:var(--bien)" data-cuenta="' + (parseFloat(est.totalPagado)||0) + '">' + fmt(est.totalPagado) + '</div><div class="sub">' + est.cuotasPagadas + ' de ' + est.totalCuotas + ' cuotas</div><div class="barra-p"><i style="width:' + (est.totalCuotas ? Math.round(est.cuotasPagadas/est.totalCuotas*100) : 0) + '%"></i></div></section>'
     + '<section class="card c3 rev"><div class="et">Te falta</div><div class="num money" data-cuenta="' + (parseFloat(est.saldoPendiente)||0) + '">' + fmt(est.saldoPendiente) + '</div><div class="sub">' + Math.max(0, est.totalCuotas - est.cuotasPagadas) + ' cuotas por pagar</div></section>'
-    + '<section class="card c3 rev"><div class="et">Tu cuota</div><div class="num money">' + fmt(cuotaPlena) + '</div><div class="sub">' + (String(c.frecuencia||'quincenal') === 'mensual' ? 'cada mes' : 'cada quincena') + '</div></section>'
+    + '<section class="card c3 rev"><div class="et">Tu cuota</div><div class="num money">' + fmt(cuotaToca) + '</div>' + ((est && est._prox && est._prox.cargo > 0) ? '<div class="sub">incluye ' + fmt(est._prox.cargo) + ' de ' + esc(String(est._prox.conceptoCargo || 'cargo extra').toLowerCase()) + '</div>' : '') + '<div class="sub">' + (String(c.frecuencia||'quincenal') === 'mensual' ? 'cada mes' : 'cada quincena') + '</div></section>'
     + '</div>';
 
   /* ── Fila 2: la moto y la constancia ── */
