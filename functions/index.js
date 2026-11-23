@@ -106,7 +106,7 @@ function armarDeps(cfg) {
   // Bajar una foto por su enlace (las de Instagram) para guardarla en Storage antes de que venza
   // tope (bytes): si pesa más no se baja (23-nov-2026: también audios, videos y archivos)
   const bajarUrl = async (url, tope) => {
-    const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status);
+    const r = await fetch(url, { signal: AbortSignal.timeout(25000) }); if (!r.ok) throw new Error('HTTP ' + r.status);
     const grande = () => Object.assign(new Error('El archivo pesa más de lo que se puede guardar'), { codigo: 'grande' });
     if (tope && +r.headers.get('content-length') > tope) throw grande();
     const bytes = Buffer.from(await r.arrayBuffer()); if (tope && bytes.length > tope) throw grande();

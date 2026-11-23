@@ -200,10 +200,15 @@ function _waSuenaAlgo(cont){
   for(var i = 0; i < L.length; i++){ if(L[i] && L[i].paused === false && !L[i].ended) return true; }
   return false;
 }
-function _waSonPara(){ var id = window._waHiloPendiente; if(!id) return; window._waHiloPendiente = null; setTimeout(function(){ _waPintarHilo(id); }, 0); }
-function _waPintarHilo(id){
+function _waSonPara(){
+  var id = window._waHiloPendiente, todo = window._waSeleccionPendiente; if(!id && !todo) return;
+  window._waHiloPendiente = null; window._waSeleccionPendiente = false;
+  setTimeout(function(){ if(todo) _waPintarSeleccion(); else _waPintarHilo(id); }, 0);
+}
+// forzar: lo que hace quien usa el panel (mandar un mensaje) se pinta siempre, suene lo que suene
+function _waPintarHilo(id, forzar){
   var cont = document.getElementById('wa-burbujas'); if(!cont || window._waSel !== id) return;
-  if(_waSuenaAlgo(cont)){ window._waHiloPendiente = id; return; }
+  if(!forzar && _waSuenaAlgo(cont)){ window._waHiloPendiente = id; return; }
   window._waHiloPendiente = null;
   var msgs = window._waMsgs[id] || [], conv = _waConv(id), asis = _waNombreAsis(conv), ini = _waIni(conv && (conv.nombre || conv.clienteNombre)), antes = 0;
   cont.innerHTML = msgs.length ? msgs.map(function(m){
@@ -327,7 +332,13 @@ function _waRefrescarEnSitio(forzar){
   if((e = document.getElementById('wa-st-leads'))) e.textContent = convs.filter(function(c){ return c.borrador && c.borrador.tipo === 'lead'; }).length;
   if((e = document.getElementById('wa-tab-conv'))) e.textContent = 'Conversaciones' + (esperan ? ' · ' + esperan + ' esperan' : '');
   var sel = _waSeleccionada(ctx);
-  if(forzar || _waFirmaDe(sel) !== window._waFirma) _waPintarSeleccion(); else _waPintarLista();
+  // Si llega algo mientras suena una nota de voz o un video, no se rehace el hilo (se cortaría): se pinta la lista y
+  // el resto queda pendiente hasta que pare. Lo que hace la persona (forzar) sí se pinta al momento.
+  if(forzar) _waPintarSeleccion();
+  else if(_waFirmaDe(sel) !== window._waFirma){
+    if(_waSuenaAlgo(document.getElementById('wa-burbujas'))){ window._waSeleccionPendiente = true; _waPintarLista(); }
+    else _waPintarSeleccion();
+  } else _waPintarLista();
   return true;
 }
 function _waHtmlHilo(sel, ctx, conectado){
@@ -513,8 +524,14 @@ function waAdjuntoRevisar(id, file){
     + '<textarea class="fta" id="wa-adj-txt" rows="3">' + _waEsc(ta && ta.getAttribute && ta.getAttribute('data-conv') === id ? ta.value : (window._waBorradores[id] || '')) + '</textarea></div></div>'
     + '<div class="cs" id="wa-adj-est" style="margin-top:10px"></div></div>';
   S.saveFn = null;
-  document.getElementById('mft').innerHTML = '<button class="btn btn-g" onclick="closeM()">Cancelar</button><button class="btn btn-p" id="wa-adj-btn" onclick="waAdjuntoEnviar()">Enviar</button>';
+  document.getElementById('mft').innerHTML = '<button class="btn btn-g" onclick="waAdjuntoCancelar()">Cancelar</button><button class="btn btn-p" id="wa-adj-btn" onclick="waAdjuntoEnviar()">Enviar</button>';
   document.getElementById('ov').style.display = 'flex';
+}
+// Cancelar corta también una subida a medias: el archivo ya no sale
+function waAdjuntoCancelar(){
+  var a = window._waAdj; window._waAdj = null;
+  if(a){ a.cancelado = true; try{ if(a.tarea && typeof a.tarea.cancel === 'function') a.tarea.cancel(); }catch(e){} try{ if(a.vista) URL.revokeObjectURL(a.vista); }catch(e){} }
+  closeM();
 }
 // La foto se achica en el navegador (lado mayor 1600 px, JPG sobre fondo blanco): pesa poco y WhatsApp la recibe siempre
 function _waAchicarFoto(file){
@@ -546,7 +563,10 @@ function waAdjuntoEnviar(){
   var decir = function(t){ if(est) est.textContent = t; };
   var soltar = function(){ a.ocupado = false; if(btn){ btn.disabled = false; btn.textContent = 'Enviar'; } };
   var mime = _waAdjMime(a.file, a.tipo), nombre = String(a.file.name || 'archivo').slice(0, 120);
+  // Si mientras subía la ventana se cerró (Cancelar, la X o un toque afuera) o se abrió otro archivo, este ya no sale
+  var vigente = function(){ return !a.cancelado && window._waAdj === a && !!document.getElementById('wa-adj-btn'); };
   var listo = function(url){
+    if(!vigente()){ a.ocupado = false; return; }
     if(!waEnviarEquipo(a.id, txt, '', { url: url, tipo: a.tipo, nombre: nombre, mime: mime })){ soltar(); return; }
     var ta = document.getElementById('wa-texto'); if(ta && ta.getAttribute && ta.getAttribute('data-conv') === a.id) ta.value = '';
     _waGuardarBorrador(a.id, '');
@@ -561,11 +581,13 @@ function waAdjuntoEnviar(){
   decir(a.tipo === 'imagen' ? 'Preparando la foto…' : 'Subiendo…');
   (a.tipo === 'imagen' ? _waAchicarFoto(a.file) : Promise.resolve(a.file)).then(function(blob){
     decir('Subiendo…');
+    if(!vigente()) throw { cancelado: true };
     var ref = storage.ref().child(waAdjRuta(a.id, nombre, a.tipo)), tarea = ref.put(blob, { contentType: mime });
+    a.tarea = tarea;
     if(tarea && typeof tarea.on === 'function') tarea.on('state_changed', function(sn){ if(sn && sn.totalBytes > 0) decir('Subiendo… ' + Math.round(sn.bytesTransferred / sn.totalBytes * 100) + '%'); }, function(){});
     return Promise.resolve(tarea).then(function(){ return ref.getDownloadURL(); });
   }).then(function(url){ decir(''); listo(url); })
-    .catch(function(e){ soltar(); decir(''); toast('No se pudo subir el archivo: ' + (e && (e.message || e.code) || e), 'error'); });
+    .catch(function(e){ if(a.cancelado || (e && (e.cancelado || e.code === 'storage/canceled')) || !vigente()){ a.ocupado = false; return; } soltar(); decir(''); toast('No se pudo subir el archivo: ' + (e && (e.message || e.code) || e), 'error'); });
 }
 
 // ── Del chat a la solicitud (Adam, 24-oct-2026: "arranca con todo") ──

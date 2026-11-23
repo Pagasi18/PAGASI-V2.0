@@ -124,10 +124,11 @@ function cliente(cfg) {
     // Un medio que mando el cliente: primero la URL temporal, despues los bytes. Meta lo guarda 7 dias.
     // tope (bytes): si el archivo pesa mas, no se baja (e.codigo = 'grande')
     async bajarMedio(mediaId, tope) {
-      const info = await (await fetch(`${GRAPH}/${mediaId}`, { headers: { authorization: 'Bearer ' + cfg.accessToken } })).json();
+      // con tiempo límite: una descarga colgada no puede dejar el aviso de Meta sin terminar (revisión 23-nov-2026)
+      const info = await (await fetch(`${GRAPH}/${mediaId}`, { headers: { authorization: 'Bearer ' + cfg.accessToken }, signal: AbortSignal.timeout(10000) })).json();
       if (!info || !info.url) { const e = new Error('Meta no devolvió la URL del medio'); e.codigo = 'vencido'; throw e; }
       if (tope && +info.file_size > tope) { const e = new Error('El archivo pesa más de lo que se puede guardar'); e.codigo = 'grande'; throw e; }
-      const r = await fetch(info.url, { headers: { authorization: 'Bearer ' + cfg.accessToken } });
+      const r = await fetch(info.url, { headers: { authorization: 'Bearer ' + cfg.accessToken }, signal: AbortSignal.timeout(25000) });
       if (!r.ok) throw new Error('No se pudo bajar el medio (HTTP ' + r.status + ')');
       return { bytes: Buffer.from(await r.arrayBuffer()), mime: info.mime_type || r.headers.get('content-type') || 'application/octet-stream', tamano: info.file_size || 0 };
     }

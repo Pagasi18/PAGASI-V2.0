@@ -264,6 +264,65 @@ const URL_OK = 'https://firebasestorage.googleapis.com/v0/b/pagasi26-65ced.fireb
   audio.paused = true; ctx._waSonPara(); flush();
   ok('...y se pinta en cuanto para', cont.innerHTML !== 'ANTES' && /wa-b/.test(cont.innerHTML) && !ctx._waHiloPendiente);
 
+  // ══ 9. Lo que encontró el revisor (23-nov-2026) ══
+  // 9.1 Los ids de Instagram son largos e iguales al principio: dos notas de voz de la misma persona no se pisan
+  t = armar();
+  const largo = 'aWdfZAG1faXRlbToxOklHTWVzc2FnZAUlEOjE3ODQxNDI1MzQ4MzUxOTU4OjM0MDI4MjM2Njg0MTcxMDMwMTI0NDI1OTQ1NTQ5NTMyNDkwNjk5NjozMjU';
+  await procesar.procesarMensaje(t.deps, { canal: 'instagram', metaId: largo + 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA1111', de: '9001', nombre: '', tipo: 'audio', texto: '', medio: { url: 'https://cdn.meta/audio1', mime: '', tipoMeta: 'audio' }, hora: AHORA });
+  await procesar.procesarMensaje(t.deps, { canal: 'instagram', metaId: largo + 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2222', de: '9001', nombre: '', tipo: 'audio', texto: '', medio: { url: 'https://cdn.meta/audio2', mime: '', tipoMeta: 'audio' }, hora: AHORA });
+  ok('Instagram: dos notas de voz de la misma persona quedan en dos archivos distintos (antes la segunda pisaba a la primera)', t.subidos.length === 2 && t.subidos[0].ruta !== t.subidos[1].ruta && /1111\.m4a$/.test(t.subidos[0].ruta) && /2222\.m4a$/.test(t.subidos[1].ruta));
+  // 9.2 Un reel compartido no se copia; un video que manda la persona, sí
+  t = armar();
+  t.deps.bajarUrl = async () => ({ bytes: Buffer.from('mp4'), mime: 'video/mp4' });
+  await procesar.procesarMensaje(t.deps, { canal: 'instagram', metaId: 'mid.reel', de: '9001', nombre: '', tipo: 'video', texto: '', medio: { url: 'https://cdn.meta/reel', mime: '', tipoMeta: 'ig_reel' }, hora: AHORA });
+  await procesar.procesarMensaje(t.deps, { canal: 'instagram', metaId: 'mid.video', de: '9001', nombre: '', tipo: 'video', texto: '', medio: { url: 'https://cdn.meta/video', mime: '', tipoMeta: 'video' }, hora: AHORA });
+  ok('Instagram: un reel compartido no se baja; un video que manda la persona sí', t.subidos.length === 1 && /mid\.video\.mp4$/.test(t.subidos[0].ruta) && !t.db26._store.get('conversaciones/ig:9001/mensajes/mid.reel').medio.path);
+  // 9.3 La descarga corre a la par: la asistente piensa sin esperar a que baje el archivo
+  t = armar();
+  t.deps.cfg.responde = { whatsappVentas: true, instagram: true, whatsappCobranza: true };
+  const orden = [];
+  let soltarBajada; const bajada = new Promise(r => { soltarBajada = r; });
+  t.deps.meta.bajarMedio = async () => { orden.push('baja-empieza'); await bajada; orden.push('baja-termina'); return { bytes: Buffer.from('ogg'), mime: 'audio/ogg' }; };
+  t.deps.cerebro.pensar = async () => { orden.push('piensa'); soltarBajada(); return { reply: 'Hola, ya te atiendo.', draft: null, summary: '', handoff: false, handoffReason: '' }; };
+  await procesar.procesarMensaje(t.deps, { canal: 'whatsapp', metaId: 'wamid.par', de: '584141234567', nombre: 'María', tipo: 'audio', texto: '', medio: { id: 'voz1', mime: 'audio/ogg', nombre: '', voz: true }, hora: AHORA, telefonoNegocio: '584146401617' });
+  msg = t.db26._store.get('conversaciones/wa:+584141234567/mensajes/wamid.par');
+  ok('la asistente contesta sin esperar a que termine de bajar la nota de voz, y el archivo igual queda guardado', orden.join(',') === 'baja-empieza,piensa,baja-termina' && !!msg.medio.url && t.llamadas.some(x => x.q === 'texto'));
+  // 9.4 A la asistente se le dice quién mandó el archivo
+  const cerebro = require(path.join(F, 'cerebro.js'));
+  if (cerebro.turnos) {
+    const T = cerebro.turnos([{ autor: 'cliente', direccion: 'entrante', tipo: 'texto', texto: 'hola' }, { autor: 'equipo', direccion: 'saliente', tipo: 'documento', texto: '' }, { autor: 'cliente', direccion: 'entrante', tipo: 'documento', texto: '' }]);
+    ok('lo que mandó el equipo no se le cuenta a la asistente como «el cliente mandó…»', /\[respuesta del equipo de Pagasi\] \[el equipo le mandó un documento\]/.test(T[1].content) && /\[el cliente mandó un documento\]/.test(T[2].content));
+  } else ok('cerebro.turnos se puede probar', false);
+  // 9.5 El tipo del adjunto: solo los cuatro
+  t = armar();
+  await t.db26.collection('conversaciones').doc('wav:+584145550000').set({ canal: 'whatsapp', area: 'ventas', telE164: '+584145550000', ultimoEntranteHora: AHORA });
+  let errTipo = ''; try { await procesar.enviarEquipo(t.deps, { empresa: '26', convId: 'wav:+584145550000', texto: '', por: 'Adam', quien: admin, adjunto: { url: URL_OK, tipo: 'constructor', nombre: 'x' } }); } catch (x) { errTipo = x.codigo; }
+  ok('un tipo de adjunto inventado («constructor») se rechaza antes de mandar nada', errTipo === 'adjunto' && t.llamadas.length === 0);
+
+  // 9.6 Cancelar mientras sube: el archivo ya no sale
+  pedidos.length = 0; puestos.length = 0; toasts.length = 0; ctx._cerrado = 0;
+  let soltarSubida; const subida = new Promise(r => { soltarSubida = r; });
+  let canceladaTarea = false;
+  ctx.storage = { ref: () => ({ child: (ruta) => ({ put: (blob, m) => { puestos.push({ ruta }); const p = subida.then(() => ({})); p.on = () => {}; p.cancel = () => { canceladaTarea = true; }; return p; }, getDownloadURL: () => Promise.resolve('https://firebasestorage.googleapis.com/v0/b/pagasi26-65ced.firebasestorage.app/o/' + encodeURIComponent(ruta) + '?alt=media&token=aaaa-bbbb') }) }) };
+  ctx._waMsgs['wav:+584145550000'] = [];
+  ctx.waAdjuntoRevisar('wav:+584145550000', A('Equivocado.pdf', 'application/pdf', 14));
+  els['wa-adj-txt'] = { value: '' };
+  ok('el botón Cancelar de la ventana corta el envío (waAdjuntoCancelar)', /onclick="waAdjuntoCancelar\(\)"/.test(els.mft.innerHTML));
+  ctx.waAdjuntoEnviar();
+  for (let i = 0; i < 3; i++) await tic();
+  ctx.waAdjuntoCancelar();
+  soltarSubida();
+  for (let i = 0; i < 6; i++) await tic();
+  ok('cancelar a mitad de la subida: se corta la subida y el archivo NO se le manda a la persona', puestos.length === 1 && canceladaTarea === true && !pedidos.some(x => x.cuerpo.adjunto) && ctx._waMsgs['wav:+584145550000'].length === 0 && !toasts.some(x => /enviado/.test(x)));
+  // 9.7 Mandar un mensaje mientras suena una nota de voz: el mensaje propio se ve al momento
+  audio.paused = false; cont.innerHTML = 'ANTES'; els['wa-burbujas'] = cont; ctx._waSel = 'wav:+584145550000';
+  ctx.waEnviarEquipo('wav:+584145550000', 'ya te la mando');
+  ok('el mensaje propio aparece aunque esté sonando una nota de voz', /ya te la mando/.test(cont.innerHTML));
+  // ...y un mensaje nuevo de la persona no rehace el hilo mientras suena
+  ['wa-items', 'wa-hilo', 'wa-ficha'].forEach(el); els['wa-hilo'].innerHTML = 'HILO'; ctx._waFirma = 'otra';
+  ctx._waRefrescarEnSitio();
+  ok('si llega algo mientras suena, el hilo no se rehace (queda pendiente) y se pinta al parar', els['wa-hilo'].innerHTML === 'HILO' && ctx._waSeleccionPendiente === true && (audio.paused = true, ctx._waSonPara(), flush(), els['wa-hilo'].innerHTML !== 'HILO' && !ctx._waSeleccionPendiente));
+
   console.log('\n' + pass + ' pruebas OK, ' + fail + ' fallas');
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.log('FALLA la prueba se cayó: ' + (e && e.stack || e)); process.exit(1); });

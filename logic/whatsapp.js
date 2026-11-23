@@ -383,7 +383,7 @@ function waEnviarEquipo(id, texto, imagen, adjunto){
   Object.assign(c, { ultimoMensaje: texto || (adjunto ? (adjunto.voz ? '🎤 Nota de voz' : WA_ADJ_ETIQUETA[adjunto.tipo]) : '📷 Foto'), ultimoMensajeHora: m.hora, modo: 'humano', atendidoPor: m.por, vendedor: c.vendedor || m.por, atencion: '', noLeidos: 0 });   // ya la atendieron
   if(waConectadoCanal(c.canal)) _waMandarAlServidor(id, texto, m, imagen, adjunto);
   if(typeof logActividad === 'function') logActividad('wa_mensaje_equipo', 'whatsapp', id, { largo: texto.length });
-  if(typeof _waPintarHilo === 'function') _waPintarHilo(id);
+  if(typeof _waPintarHilo === 'function') _waPintarHilo(id, true);   // el mensaje propio se ve aunque esté sonando una nota de voz
   return true;
 }
 // Con Meta conectado el mensaje del equipo lo manda el servidor (Cloud Functions): él habla con
@@ -419,7 +419,7 @@ function waPedirMedio(id, msgId, boton){
 }
 function _waMandarAlServidor(id, texto, m, imagen, adjunto){
   var url = (_waRoot._waCfg && _waRoot._waCfg.urlEquipo) || WA_URL_EQUIPO;
-  var fallo = function(msg){ m.estado = 'fallo'; toast('No se pudo enviar: ' + msg, 'error'); if(typeof _waPintarHilo === 'function') _waPintarHilo(id); };
+  var fallo = function(msg){ m.estado = 'fallo'; toast('No se pudo enviar: ' + msg, 'error'); if(typeof _waPintarHilo === 'function') _waPintarHilo(id, true); };
   var user = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) || null;
   if(!user){ fallo('sin sesión'); return Promise.resolve(); }
   return user.getIdToken().then(function(tok){
