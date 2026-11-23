@@ -2178,7 +2178,7 @@ function estadoCuentaHTML(){
       + '<div class="est-kpis"><div class="est-kpi"><small>' + (completado ? 'Crédito pagado' : atrasado ? 'Debes ahora' : 'Próximo pago') + '</small><b>' + fmt(completado ? est.totalPagado : atrasado ? est._vencido : (est._prox ? est._prox.saldo : 0)) + '</b><span>' + (completado ? 'Completado' : atrasado ? est._nVencidas + ' cuotas vencidas' : (est._prox ? 'vence el ' + fechaLarga(est._prox.fechaVence) : '')) + '</span></div>'
       + '<div class="est-kpi"><small>Ya pagaste</small><b>' + fmt(est.totalPagado) + '</b><span>' + est.cuotasPagadas + ' de ' + est.totalCuotas + ' cuotas</span></div>'
       + '<div class="est-kpi"><small>Te falta</small><b>' + fmt(est.saldoPendiente) + '</b><span>' + Math.max(0, est.totalCuotas - est.cuotasPagadas) + ' cuotas</span></div>'
-      + '<div class="est-kpi"><small>Tu cuota</small><b>' + fmt(parseFloat(c.cuotaQ||c.cuota||0)) + '</b><span>' + (String(c.frecuencia||'quincenal') === 'mensual' ? 'mensual' : 'quincenal') + '</span></div></div>'
+      + '<div class="est-kpi"><small>Tu cuota</small><b>' + fmt((est._prox && est._prox.cargo > 0) ? est._prox.monto : parseFloat(c.cuotaQ||c.cuota||0)) + '</b><span>' + ((est._prox && est._prox.cargo > 0) ? 'incluye ' + fmt(est._prox.cargo) + ' de ' + esc(String(est._prox.conceptoCargo || 'cargo extra').toLowerCase()) + ' · ' : '') + (String(c.frecuencia||'quincenal') === 'mensual' ? 'mensual' : 'quincenal') + '</span></div></div>'
       + '<table><thead><tr><th>Cuota</th><th>Vence</th><th class="r">Monto</th><th class="r">Pagado</th><th class="r">Saldo</th><th>Estado</th></tr></thead><tbody>';
     (est.cuotas||[]).forEach(function(q){
       var pagada = q.saldo <= 0.001, vencida = !pagada && q.fechaVence <= hoyISO();
