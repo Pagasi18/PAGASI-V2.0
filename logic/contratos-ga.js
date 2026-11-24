@@ -1,22 +1,54 @@
 // ══════════════════════════════════════════════════════════════════════════
 // CONTRATO DE FINANCIAMIENTO CON GARANTÍAS Y GASTO ADMINISTRATIVO
-// (versión del abogado recibida el 17-nov-2026: «Aceptación Anticipada»)
+// (versión del abogado del 17-nov-2026, «Aceptación Anticipada», + anexo «USD únicamente» del 24-nov)
 // ══════════════════════════════════════════════════════════════════════════
 // Es el contrato v3 (contratos-protect.js) revisado por el abogado:
 //   · sale el Programa «Pagasi Protect» y todo lo del GPS (dispositivos, apagado remoto,
 //     geolocalización, 11.3 y 11.7); en su lugar va el GASTO ADMINISTRATIVO (cláusula 2 y Anexo B);
 //   · entra la 3.20: ajuste de cuotas con aceptación anticipada del Comprador;
+//   · entra la 3.14 bis, en hoja firmada aparte: la deuda se paga solo en dólares;
 //   · lo demás es igual: 12 % anual sistema francés, mora 3 % desde el día 6, 5 días de gracia.
 // Las cláusulas que no cambiaron son copia literal de las del v3; las que cambiaron traen el texto
 // del abogado tal cual. tests/t_contrato_ga.js compara este cuerpo con el documento recibido.
 //
-// TODAVÍA NO ESTÁ CONECTADO: ningún crédito imprime esta versión. _contratoVersionDe() no la
-// conoce, no hay fecha de inicio y admin.html no carga este archivo. Falta que el abogado
-// responda (desglose del Anexo B, GPS en hoja aparte, fianza) y que Adam diga desde cuándo aplica.
+// 24-nov-2026, Adam: «este va a ser el contrato nuevo... quiero que lo montes». El documento que mandó
+// ese día («USD únicamente») es el mismo del 17-nov, palabra por palabra, más UNA hoja: el anexo
+// contractual «Pago exclusivo en dólares estadounidenses» (3.14 bis), que va firmado aparte.
+//
+// DESDE CUÁNDO Y DÓNDE: lo imprimen los créditos con fecha del 24-nov-2026 en adelante
+// (_CONTRATO_GA_DESDE), y solo fuera de PAGASI 18: el documento es de PAGASI 26 y la 18 ya no vende.
+// Va por la FECHA DEL CRÉDITO, esté o no marcado como firmado: un crédito anterior conserva la hoja
+// que firmó (Protect) aunque le marquen la firma después. _contratoVersionDe() pregunta aquí
+// (_contratoGaLeToca) antes que nada, salvo que el crédito traiga su versión grabada.
+//
+// Sigue sin respuesta del abogado: el desglose del Anexo B (salen renglones para llenar), si el GPS
+// va en hoja aparte y la fianza (con fiador se conserva la cláusula 14 del v3 con el nombre cambiado).
 //
 // La cuenta es la misma del v3 (_protectFinanzas): la cuota ya la fijó el sistema; se despeja el
 // Monto Financiado que esa cuota amortiza al 12 % y el Gasto Administrativo es lo que sobra entre
 // ese monto y el saldo del precio que no cubrió la inicial.
+var _CONTRATO_GA_DESDE = '2026-11-24';
+// ¿Esta compañía firma el contrato nuevo? Todas menos PAGASI 18.
+function _contratoGaAqui(){
+  return !(typeof _esLaBaseDe18==='function' && _esLaBaseDe18());
+}
+// ¿A este crédito le toca el contrato nuevo? Por su fecha, firmado o no.
+function _contratoGaLeToca(c){
+  if(!c || !_contratoGaAqui()) return false;
+  var f = String(c.fecha||'').slice(0,10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(f) && f >= _CONTRATO_GA_DESDE;
+}
+// La opción del desplegable «Tipo de documento» (modules/contratos.js). Va al final de la lista y
+// sale ELEGIDA cuando al crédito que la pantalla trae puesto (el primero) le toca este contrato: así
+// «Descargar PDF» nunca saca una hoja que no es la del crédito por no haber pasado por «Vista Previa».
+function _gaOpcionHtml(c){
+  if(!_contratoGaAqui()) return '';
+  var d = _CONTRATO_GA_DESDE.split('-'), M = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  var desde = parseInt(d[2],10)+'-'+M[parseInt(d[1],10)-1]+'-'+d[0];
+  var elegida = (c && typeof _contratoVersionDe==='function' && _contratoVersionDe(c)==='ga') ? ' selected' : '';
+  return '<option value="ga"'+elegida+'>Gasto Administrativo y pago en dólares — el que se firma desde el '+desde+'</option>';
+}
+
 function _gaDatos(credId){
   var D = _protectDatos(credId); if(!D) return null;
   D.gasto = D.protect;            // mismo número, otro nombre: US$ con dos decimales, en negrita
@@ -235,6 +267,25 @@ function _gaFirmas(D, incluirPagasi){
        + f.map(function(x){ return _draFirma(x[0], x[1], x[2], n); }).join('') + '</div>';
 }
 
+// ── Anexo contractual: pago exclusivo en dólares (3.14 bis) ─────────────
+// Hoja que el abogado agregó el 24-nov-2026 («USD únicamente»). El texto es el suyo, tal cual. En su
+// documento es una hoja suelta con dos firmas; aquí es un bloque que no se parte entre dos hojas y
+// va justo después de las firmas del contrato, antes del Anexo A, con las mismas firmas del resto
+// (el Fiador también, cuando hay).
+var _GA_USD = [
+  '<strong>3.14 bis. Moneda de pago y liberación de la deuda.</strong> Las Partes acuerdan expresamente que el Dólar de los Estados Unidos de América (USD) constituye tanto la moneda de cuenta como la moneda de pago de todas las obligaciones derivadas del presente Contrato. En consecuencia, el Comprador deberá pagar y extinguir sus obligaciones exclusivamente mediante la entrega efectiva de dólares estadounidenses a Pagasi, a través de los medios de pago en dicha moneda que esta haya autorizado por escrito.',
+  'El Comprador no podrá imponer la cancelación total o parcial de la deuda mediante bolívares ni mediante otra moneda, activo o instrumento de pago, salvo autorización previa, expresa y escrita de Pagasi para el pago específico correspondiente. Dicha autorización indicará, cuando proceda, el medio de pago, la tasa de conversión legalmente aplicable, la fecha de referencia y las condiciones de acreditación. La aceptación excepcional de un pago distinto de USD no constituirá renuncia ni autorización para pagos posteriores.',
+  '<strong>Prelación e interpretación.</strong> Esta disposición complementa la Sección 3.14 y prevalece, en caso de contradicción, sobre la enumeración de medios de pago en bolívares, Pago Móvil u otros instrumentos contenida en la Sección 3.15. La sola inclusión de dichos medios en la Sección 3.15 no implica autorización general para utilizarlos. Las restantes disposiciones del Contrato, incluida la Sección 3.20 sobre ajustes, permanecen sin modificación.',
+  '<strong>Salvedad legal.</strong> Lo anterior se aplicará únicamente en la medida permitida por las normas imperativas venezolanas vigentes, incluidas las reglas sobre obligaciones en moneda extranjera y los derechos irrenunciables del consumidor. Si una norma imperativa reconoce al Comprador una facultad de pago en bolívares que no pueda excluirse contractualmente, prevalecerá dicha norma.',
+  'Las Partes aceptan expresamente esta estipulación y la integran al Contrato.'
+];
+function _gaAnexoUSD(D, S_, fecha){
+  return '<div style="'+S_.h1+'">ANEXO CONTRACTUAL — PAGO EXCLUSIVO EN DÓLARES ESTADOUNIDENSES</div>'
+    + '<p style="'+S_.p+';color:#555">Contrato N° <strong>'+D.c.id+'</strong> · Fecha: <strong>'+fecha+'</strong></p>'
+    + _GA_USD.map(function(t){ return '<p style="'+S_.p+'">'+t+'</p>'; }).join('')
+    + _gaFirmas(D);
+}
+
 // ── Anexo A: cronograma con capital, interes y saldo ────────────────────
 function _gaCronograma(D, S_){
   var F = D.F, num = D.num;
@@ -382,6 +433,8 @@ function _htmlContratoGA(credId){
     +   _draParrafo(_GA_CIERRE, S_)
     +   _gaFirmas(D)
     + '</div>'
+    // ── Anexo contractual «pago exclusivo en dólares»: entero en una hoja, nunca partido ──
+    + '<div style="'+S_.anexo+';break-inside:avoid;page-break-inside:avoid">' + _gaAnexoUSD(D, S_, fecha) + '</div>'
     // ── Anexos: fluyen uno tras otro; cada uno evita partirse, pero no fuerza hoja nueva ──
     + anexo('<div style="'+S_.h1+'">ANEXO “A” — CRONOGRAMA DE PAGOS</div>'
       + '<p style="'+S_.p+'">El presente Anexo forma parte integrante del Contrato y refleja el calendario de vencimiento de las Cuotas Quincenales a cargo del Comprador, con el desglose de capital, Intereses Financieros y saldo insoluto.</p>'
@@ -390,7 +443,8 @@ function _htmlContratoGA(credId){
       +   '<p style="'+S_.p+';margin-top:6px">El Comprador'+(D.hayFiador?' y el Fiador declaran':' declara')+' conocer y aceptar el presente cronograma de pagos.</p>'
       +   _gaFirmas(D, false)
       + '</div>')
-    + anexo(_gaAnexoB(D, S_))
+    // El Anexo B es corto: va entero, para que «B.1 Monto» no quede al pie de una hoja y la cifra en la siguiente
+    + '<div style="'+S_.anexo+';break-inside:avoid;page-break-inside:avoid">' + _gaAnexoB(D, S_) + '</div>'
     + anexo(_gaAnexoC(D, S_))
     // El Anexo D (recaudos y KYC) va entero en su propia hoja: es el que se
     // llena a mano con el cliente delante y no puede quedar partido.

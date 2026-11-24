@@ -1,7 +1,8 @@
 // 18-nov-2026: el abogado mandó el contrato v3 revisado («Aceptación Anticipada»): sale Pagasi Protect
 // y todo lo del GPS, entra el Gasto Administrativo (cláusula 2 y Anexo B) y la 3.20 de ajuste de cuotas.
-// Adam: "¿la podrías ajustar a nuestro sistema pero solo una foto a ver cómo quedaría?". Por eso
-// logic/contratos-ga.js existe pero NO está conectado: ningún crédito lo imprime todavía.
+// 24-nov-2026, Adam: «este va a ser el contrato nuevo... quiero que lo montes», con una hoja más del
+// abogado: el anexo «Pago exclusivo en dólares estadounidenses» (3.14 bis). Desde ese día lo imprimen
+// los créditos nuevos de PAGASI 26; los anteriores, y todos los de PAGASI 18, conservan su hoja.
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 let pass = 0, fail = 0;
@@ -22,9 +23,12 @@ const archivos = [...fs.readFileSync(path.join(ROOT,'admin.html'),'utf8').matchA
 vm.createContext(ctx); vm.runInContext(archivos.map(f=>fs.readFileSync(path.join(ROOT,f),'utf8')).join('\n;\n'), ctx, {filename:'app.js'});
 ctx.toast = () => {};
 const admin = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
-ok('el contrato nuevo todavía no se carga en el sistema (admin.html no lo nombra)', admin.indexOf('contratos-ga.js') < 0);
-ok('...ni lo conoce el selector de versiones: un crédito nuevo sigue imprimiendo el v3', ctx._contratoVersionDe({ id:'X', fecha:'2026-12-01', contratoFirmado:false }) === 'protect' && typeof ctx._htmlContratoGA === 'undefined');
-vm.runInContext(fs.readFileSync(path.join(ROOT, 'logic/contratos-ga.js'), 'utf8'), ctx, { filename:'contratos-ga.js' });
+ok('el sistema carga el contrato nuevo, después del v3 del que toma los datos y la cuenta',
+  admin.indexOf('logic/contratos-ga.js') > admin.indexOf('logic/contratos-protect.js') && admin.indexOf('logic/contratos-protect.js') > 0 && typeof ctx._htmlContratoGA === 'function');
+// Las pruebas corren igual en el repo de la 18 y en el de la 26: la compañía se fija aquí a mano.
+const en26 = () => { ctx.FIREBASE_CONFIG.projectId = 'pagasi26-65ced'; };
+const en18 = () => { ctx.FIREBASE_CONFIG.projectId = 'pagasi-v2'; };
+en26();
 
 ctx._empresa = { nombre:'PAGASI 26, C.A.', rif:'J-50856275-5', ciudad:'Caracas', tel:'0414-0000000', email:'contacto@ejemplo.com', direccion:'Av. de Ejemplo', rm:'Séptimo', rmEstado:'Distrito Capital', rmNum:'8', rmTomo:'58-A', rmFecha:'14/07/2026', bancoUsd:'BANCO', cuentaUsd:'0000', cuentaBs:'0001', pagoMovil:'0414', billetera:'Binance', billeteraCuenta:'x@y' };
 const S = ctx.S;
@@ -75,6 +79,76 @@ ok('sin fiador, no', !/14\. FIANZA/.test(t) && !/Fiador/.test(t.replace(/Y DEL F
 // ════════ 5. El v3 no se tocó ════════
 const v3 = limpio(ctx._htmlContratoProtect('M-1'));
 ok('el contrato v3 sigue imprimiendo Pagasi Protect y el GPS, igual que antes', /PAGASI PROTECT/.test(v3) && /2\.7 Protocolo de Apagado Remoto/.test(v3) && /GPS-SERIAL-9/.test(v3) && !/3\.20 /.test(v3));
+
+// ════════ 6. La hoja nueva: pago exclusivo en dólares (3.14 bis) ════════
+const iFirma = t.indexOf('Las Partes firman el presente Contrato'), iUsd = t.indexOf('ANEXO CONTRACTUAL — PAGO EXCLUSIVO EN DÓLARES ESTADOUNIDENSES'), iA = t.indexOf('ANEXO “A” — CRONOGRAMA DE PAGOS');
+ok('va después de las firmas del contrato y antes del Anexo A', iFirma > 0 && iUsd > iFirma && iA > iUsd);
+ok('lleva el número del contrato y su fecha', /ESTADOUNIDENSES Contrato N° M-1 · Fecha: 18 de noviembre de 2026/.test(t));
+ok('la 3.14 bis: el dólar es moneda de cuenta y de pago, y la deuda se extingue solo con dólares',
+  /3\.14 bis\. Moneda de pago y liberación de la deuda\. Las Partes acuerdan expresamente que el Dólar de los Estados Unidos de América \(USD\) constituye tanto la moneda de cuenta como la moneda de pago de todas las obligaciones derivadas del presente Contrato\./.test(t)
+  && /exclusivamente mediante la entrega efectiva de dólares estadounidenses a Pagasi, a través de los medios de pago en dicha moneda que esta haya autorizado por escrito\./.test(t));
+ok('...el Comprador no puede imponer el pago en bolívares, salvo autorización escrita para ese pago',
+  /El Comprador no podrá imponer la cancelación total o parcial de la deuda mediante bolívares ni mediante otra moneda, activo o instrumento de pago, salvo autorización previa, expresa y escrita de Pagasi para el pago específico correspondiente\./.test(t)
+  && /La aceptación excepcional de un pago distinto de USD no constituirá renuncia ni autorización para pagos posteriores\./.test(t));
+ok('...manda sobre la lista de medios de pago de la 3.15 y deja la 3.20 como está',
+  /Prelación e interpretación\. Esta disposición complementa la Sección 3\.14 y prevalece, en caso de contradicción, sobre la enumeración de medios de pago en bolívares, Pago Móvil u otros instrumentos contenida en la Sección 3\.15\./.test(t)
+  && /Las restantes disposiciones del Contrato, incluida la Sección 3\.20 sobre ajustes, permanecen sin modificación\./.test(t));
+ok('...con la salvedad legal y la aceptación expresa',
+  /Salvedad legal\. Lo anterior se aplicará únicamente en la medida permitida por las normas imperativas venezolanas vigentes/.test(t)
+  && /Si una norma imperativa reconoce al Comprador una facultad de pago en bolívares que no pueda excluirse contractualmente, prevalecerá dicha norma\./.test(t)
+  && /Las Partes aceptan expresamente esta estipulación y la integran al Contrato\./.test(t));
+const usd = t.slice(iUsd, iA), usdF = tf.slice(tf.indexOf('ANEXO CONTRACTUAL — PAGO EXCLUSIVO'), tf.indexOf('ANEXO “A” — CRONOGRAMA DE PAGOS'));
+ok('la firman el Comprador y Pagasi; con fiador, también el Fiador', /Por el Comprador/.test(usd) && /Por Pagasi/.test(usd) && !/Por el Fiador/.test(usd) && /Por el Fiador/.test(usdF) && /FIADOR DE PRUEBA/.test(usdF));
+const bloque = h.slice(h.indexOf('ANEXO CONTRACTUAL — PAGO EXCLUSIVO') - 400, h.indexOf('ANEXO CONTRACTUAL — PAGO EXCLUSIVO'));
+ok('la hoja no se parte entre dos páginas', /break-inside:avoid;page-break-inside:avoid">\s*<div[^>]*>$/.test(bloque));
+ok('la 3.14 y la 3.15 del cuerpo siguen como las escribió el abogado', /3\.14 Moneda del Contrato\. El Financiamiento se otorga en Dólares\./.test(t) && /3\.15 Medios de Pago\. Los pagos deberán realizarse exclusivamente a favor de Pagasi/.test(t));
+ok('el v3 no lleva esta hoja', !/3\.14 bis|PAGO EXCLUSIVO EN DÓLARES/.test(v3));
+
+// ════════ 7. A quién le toca: créditos nuevos de PAGASI 26, por la fecha del crédito ════════
+const V = ctx._contratoVersionDe;
+ok('rige desde el 24-nov-2026', ctx._CONTRATO_GA_DESDE === '2026-11-24');
+en26();
+ok('PAGASI 26: un crédito del 24-nov lleva el contrato nuevo, firmado o no',
+  V({ id:'M-5', fecha:'2026-11-24' }) === 'ga' && V({ id:'M-5', fecha:'2026-11-24', contratoFirmado:true, fechaContratoFirmado:'2026-11-24' }) === 'ga' && V({ id:'M-6', fecha:'2027-01-15' }) === 'ga');
+ok('...uno del 23-nov conserva el de Protect, firmado o no', V({ id:'M-4', fecha:'2026-11-23' }) === 'protect' && V({ id:'M-4', fecha:'2026-11-23', contratoFirmado:true, fechaContratoFirmado:'2026-11-23' }) === 'protect');
+ok('...y lo conserva aunque le marquen la firma días después (manda la fecha del crédito, no la de la marca)',
+  V({ id:'M-3', fecha:'2026-11-20', contratoFirmado:true, fechaContratoFirmado:'2026-11-26' }) === 'protect');
+ok('...si el crédito trae grabada su versión, esa manda', V({ id:'M-7', fecha:'2026-12-01', contratoVersion:'protect' }) === 'protect' && V({ id:'M-8', fecha:'2026-10-01', contratoVersion:'ga' }) === 'ga');
+ok('...sin fecha, o con una fecha mal escrita, no cae en el nuevo', V({ id:'M-9' }) !== 'ga' && V({ id:'M-9', fecha:'24/11/2026' }) !== 'ga' && V(null) !== 'ga');
+en18();
+ok('PAGASI 18 nunca imprime el contrato nuevo', V({ id:'CRED-900', fecha:'2026-11-24' }) === 'protect' && V({ id:'CRED-901', fecha:'2027-03-01', contratoFirmado:true, fechaContratoFirmado:'2027-03-01' }) === 'protect' && ctx._contratoGaLeToca({ fecha:'2026-12-01' }) === false);
+ok('...ni lo ofrece en el desplegable', ctx._gaOpcionHtml({ id:'CRED-900', fecha:'2026-11-24' }) === '');
+en26();
+
+// ════════ 8. La pantalla de Contratos y la impresión por lote ════════
+const modSrc = fs.readFileSync(path.join(ROOT, 'modules/contratos.js'), 'utf8');
+const lineaSel = modSrc.split('\n').find(l => l.indexOf('id="sel-tipo-doc"') > -1) || '';
+ok('el desplegable «Tipo de documento» pide la opción nueva para el crédito que la pantalla trae puesto',
+  /<\/option>\$\{typeof _gaOpcionHtml==='function' \? _gaOpcionHtml\(credsActivos\[0\]\) : ''\}<\/select>/.test(lineaSel));
+ok('la opción dice desde cuándo se firma', /^<option value="ga">Gasto Administrativo y pago en dólares — el que se firma desde el 24-nov-2026<\/option>$/.test(ctx._gaOpcionHtml({ id:'M-4', fecha:'2026-11-23' })));
+ok('...y sale elegida solo cuando al crédito le toca', /<option value="ga" selected>/.test(ctx._gaOpcionHtml({ id:'M-5', fecha:'2026-11-24' })) && !/selected/.test(ctx._gaOpcionHtml({ id:'M-4', fecha:'2026-11-23' })) && !/selected/.test(ctx._gaOpcionHtml(undefined)));
+S.creds = [cred('M-1', 'K1'), cred('M-2', 'K2'), Object.assign(cred('M-3', 'K1'), { fecha:'2026-11-24' }), Object.assign(cred('M-4', 'K1'), { fecha:'2026-11-25', estado:'cancelado' })];
+const pag = ctx.PG.contratos();
+const selHtml = (pag.match(/<select class="fs" id="sel-tipo-doc"[\s\S]*?<\/select>/) || [''])[0];
+ok('la pantalla pinta la opción nueva al final y deja elegida la del primer crédito (uno anterior: Protect)',
+  /<option value="protect">[\s\S]*<option value="ga">[^<]*<\/option><\/select>$/.test(selHtml) && !/selected/.test(selHtml));
+S.creds = [Object.assign(cred('M-3', 'K1'), { fecha:'2026-11-24' }), cred('M-1', 'K1')];
+ok('...y si el primer crédito es nuevo, la opción nueva sale elegida', /<option value="ga" selected>/.test(ctx.PG.contratos()));
+els['sel-cred'] = Object.assign(elemento(), { value:'M-3' }); els['sel-tipo-doc'] = Object.assign(elemento(), { value:'' }); els['cz'] = elemento();
+ctx.onCredContratoChange();
+ok('al elegir un crédito nuevo, el tipo pasa al contrato nuevo y la vista previa lo pinta', els['sel-tipo-doc'].value === 'ga' && /2\. GASTO ADMINISTRATIVO/.test(els['cz'].innerHTML) && /3\.14 bis/.test(els['cz'].innerHTML) && !/PAGASI PROTECT/.test(els['cz'].innerHTML));
+els['sel-cred'].value = 'M-1';
+ctx.onCredContratoChange();
+ok('al elegir uno anterior, vuelve al de Protect', els['sel-tipo-doc'].value === 'protect' && /PAGASI PROTECT/.test(els['cz'].innerHTML) && !/3\.14 bis/.test(els['cz'].innerHTML));
+S.creds = [Object.assign(cred('M-3', 'K1'), { fecha:'2026-11-24' }), Object.assign(cred('M-5', 'K2'), { fecha:'2026-11-24' })];
+const lote = ctx._htmlContratosDelDia('2026-11-24');
+ok('«Contratos del día» saca el contrato nuevo para los créditos de ese día', (lote.match(/3\.14 bis/g) || []).length === 2 && !/PAGASI PROTECT/.test(lote));
+S.creds = [cred('M-1', 'K1')];
+ok('...y el de Protect para los de un día anterior', /PAGASI PROTECT/.test(ctx._htmlContratosDelDia('2026-11-18')) && !/3\.14 bis/.test(ctx._htmlContratosDelDia('2026-11-18')));
+en18();
+S.creds = [Object.assign(cred('CRED-900', 'K1'), { fecha:'2026-11-24' })];
+ok('en PAGASI 18 la pantalla no ofrece la opción nueva y el lote del día sigue con Protect', !/value="ga"/.test(ctx.PG.contratos()) && /PAGASI PROTECT/.test(ctx._htmlContratosDelDia('2026-11-24')));
+en26();
 
 console.log('\n' + pass + ' pruebas OK, ' + fail + ' fallas');
 process.exit(fail ? 1 : 0);
