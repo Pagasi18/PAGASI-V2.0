@@ -150,5 +150,32 @@ S.creds = [Object.assign(cred('CRED-900', 'K1'), { fecha:'2026-11-24' })];
 ok('en PAGASI 18 la pantalla no ofrece la opción nueva y el lote del día sigue con Protect', !/value="ga"/.test(ctx.PG.contratos()) && /PAGASI PROTECT/.test(ctx._htmlContratosDelDia('2026-11-24')));
 en26();
 
+// ════════ 9. «Descargar PDF» desde la lista: sale el contrato de ESE crédito y los desplegables quedan en él ════════
+// Con dos contratos vivos en la misma compañía, el tipo de documento no puede quedarse en el del crédito anterior.
+// Y un crédito archivado (cancelado o recuperado) no está en el desplegable: antes lo dejaba vacío y el PDF salía con
+// el contrato del primer crédito de la lista bajo el nombre del que se pidió.
+function selectFalso(vals){
+  const s = elemento(); let v = vals[0] || '';
+  s.options = vals.map(x => ({ value:x }));
+  Object.defineProperty(s, 'value', { get(){ return v; }, set(x){ v = s.options.some(o => String(o.value) === String(x)) ? String(x) : ''; } });
+  s.appendChild = o => { s.options.push(o); };
+  return s;
+}
+en26();
+S.creds = [cred('M-1', 'K1'), Object.assign(cred('M-3', 'K1'), { fecha:'2026-11-24' }), Object.assign(cred('M-4', 'K2'), { fecha:'2026-11-24', estado:'cancelado' })];
+els['sel-cred'] = selectFalso(['M-1', 'M-3']); els['sel-tipo-doc'] = selectFalso(['protect', 'ga']); els['cz'] = elemento();
+const impresos = []; ctx.open = () => { const d = { html:'' }; impresos.push(d); return { document:{ write(x){ d.html += x; }, close(){} } }; };
+const tOrig = ctx.setTimeout; ctx.setTimeout = fn => { fn(); return 0; };
+const num = d => ((d && d.html.match(/N° de Contrato:<\/strong> ([A-Z]+-\d+)/)) || ['', ''])[1];
+ctx.descargarContratoPDFById('M-3');
+ok('un crédito nuevo baja con el contrato nuevo y los desplegables quedan en él', num(impresos[0]) === 'M-3' && /3\.14 bis/.test(impresos[0].html) && els['sel-cred'].value === 'M-3' && els['sel-tipo-doc'].value === 'ga');
+ctx.descargarContratoPDFById('M-1');
+ok('uno anterior baja con el de Protect y el tipo NO se queda en el del crédito anterior', num(impresos[1]) === 'M-1' && /PAGASI PROTECT/.test(impresos[1].html) && !/3\.14 bis/.test(impresos[1].html) && els['sel-cred'].value === 'M-1' && els['sel-tipo-doc'].value === 'protect');
+ctx.descargarContratoPDF();
+ok('...así «Descargar PDF» saca después ese mismo crédito con su misma hoja', num(impresos[2]) === 'M-1' && /PAGASI PROTECT/.test(impresos[2].html) && !/3\.14 bis/.test(impresos[2].html));
+ctx.descargarContratoPDFById('M-4');
+ok('un crédito archivado baja con SU contrato, no con el del primero de la lista', num(impresos[3]) === 'M-4' && /CLIENTE CON FIADOR/.test(impresos[3].html) && /3\.14 bis/.test(impresos[3].html) && els['sel-cred'].value === 'M-4' && els['sel-tipo-doc'].value === 'ga');
+ctx.setTimeout = tOrig;
+
 console.log('\n' + pass + ' pruebas OK, ' + fail + ' fallas');
 process.exit(fail ? 1 : 0);
