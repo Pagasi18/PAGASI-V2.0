@@ -1,0 +1,43 @@
+name: Lista negra - mala paga automatica
+
+# Dos veces al dia revisa los creditos de PAGASI 18 y PAGASI 26 y anota en la Lista negra de la 26
+# a quien tenga mas de 30 dias de atraso o una moto recuperada; quita a quien se puso al dia.
+# Lo anotado a mano por Verificacion no se toca. El log es publico: solo cantidades, sin nombres.
+on:
+  schedule:
+    - cron: '20 10,17 * * *'   # 6:20 am y 1:20 pm de Venezuela
+  workflow_dispatch:
+    inputs:
+      solo_leer:
+        description: 'Solo calcular y mostrar, sin escribir'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: lista-negra
+  cancel-in-progress: false
+
+jobs:
+  mala-paga:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          project_id: pagasi-v2
+          workload_identity_provider: projects/951911859002/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: firebase-adminsdk-fbsvc@pagasi-v2.iam.gserviceaccount.com
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - working-directory: bot
+        run: npm install --omit=dev
+      - working-directory: bot
+        env:
+          SOLO_LEER: ${{ inputs.solo_leer && '1' || '' }}
+        run: node lista-negra.js
