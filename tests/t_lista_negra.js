@@ -52,8 +52,10 @@ const credAtrasado = { id: 'M-9', fecha: '2026-08-01', cuotaQ: 80, totalCuotas: 
 ok('los días de atraso salen del mismo motor de cuotas del sistema', bot.atrasoDe(credAtrasado, [], '2026-11-26') > 90 && bot.atrasoDe(Object.assign({}, credAtrasado, { fecha: '2026-11-20' }), [], '2026-11-26') === 0);
 const deEmp = bot.autoDeEmpresa('18', { creditos: [credAtrasado], pagos: [], clientes: [{ id: 'K1', nombre: 'UNO', cedula: 'V-11111111' }].map(c => c) }, '2026-11-26');
 ok('...y un crédito sin cliente enlazado no rompe nada', Object.keys(deEmp).length === 0);
-const wf = src('.github/workflows/lista-negra.yml');
-ok('el robot corre dos veces al día y se puede lanzar a mano sin escribir', /cron: '20 10,17 \* \* \*'/.test(wf) && /solo_leer/.test(wf) && /node lista-negra\.js/.test(wf));
+// El robot corre desde el repositorio de PAGASI 18 (lee las dos bases y escribe en la 26): el otro no lleva este archivo.
+const wfRuta = path.join(ROOT, '.github/workflows/lista-negra.yml');
+if (fs.existsSync(wfRuta)) { const wf = fs.readFileSync(wfRuta, 'utf8'); ok('el robot corre dos veces al día y se puede lanzar a mano sin escribir', /cron: '20 10,17 \* \* \*'/.test(wf) && /solo_leer/.test(wf) && /node lista-negra\.js/.test(wf)); }
+else ok('(en este repositorio el robot no se programa: corre desde el de PAGASI 18)', true);
 
 // ════════ 4. El panel ════════
 function elemento(){ return { innerHTML:'', textContent:'', value:'', className:'', id:'', style:{}, dataset:{}, checked:false, disabled:false, parentNode:null, classList:{add(){},remove(){},contains(){return false;},toggle(){}}, children:[], appendChild(){}, removeChild(){}, remove(){}, insertBefore(){}, setAttribute(){}, getAttribute(){return null;}, removeAttribute(){}, addEventListener(){}, removeEventListener(){}, click(){}, focus(){}, blur(){}, select(){}, closest(){return null;}, matches(){return false;}, getBoundingClientRect(){return {top:0,left:0,width:0,height:0,bottom:0,right:0};}, querySelector(){return null;}, querySelectorAll(){return [];} }; }
