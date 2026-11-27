@@ -33,3 +33,5 @@ jobs:
         run: npx firebase emulators:exec --config tests/reglas/firebase.json --only firestore --project demo-pagasi "node tests/reglas/t_reglas_aliado.js"
       - name: Probar reglas de la cobranza por WhatsApp
         run: npx firebase emulators:exec --config tests/reglas/firebase.json --only firestore --project demo-pagasi "node tests/reglas/t_reglas_whatsapp.js"
+      - name: Probar reglas de la Lista negra
+        run: npx firebase emulators:exec --config tests/reglas/firebase.json --only firestore --project demo-pagasi "node tests/reglas/t_reglas_lista_negra.js"
